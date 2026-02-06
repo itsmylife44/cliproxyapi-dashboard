@@ -2,6 +2,49 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await verifySession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  try {
+    const body = await request.json();
+    const syncApiKey = typeof body.syncApiKey === "string" ? body.syncApiKey : null;
+
+    const existingToken = await prisma.syncToken.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+
+    if (!existingToken) {
+      return NextResponse.json({ error: "Token not found" }, { status: 404 });
+    }
+
+    if (existingToken.userId !== session.userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    await prisma.syncToken.update({
+      where: { id },
+      data: { syncApiKey: syncApiKey || null },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to update sync token:", error);
+    return NextResponse.json(
+      { error: "Failed to update token" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

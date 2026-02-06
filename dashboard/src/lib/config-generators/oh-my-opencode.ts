@@ -5,6 +5,7 @@ import {
   hasProvider,
   getActiveOAuthProviderTypes,
 } from "./shared";
+import type { OhMyOpenCodeFullConfig } from "./oh-my-opencode-types";
 
 export type { OAuthAccount, ConfigData, ModelsDevData } from "./shared";
 
@@ -324,25 +325,39 @@ export function enrichTierForRole(tier: readonly string[], modelsDevData: import
   return [...tier];
 }
 
+// Backward compatibility type alias
+export type AgentModelOverrides = OhMyOpenCodeFullConfig;
+
 export function buildOhMyOpenCodeConfig(
   availableModels: string[],
-  modelsDevData: import("./shared").ModelsDevData | null
+  modelsDevData: import("./shared").ModelsDevData | null,
+  overrides?: OhMyOpenCodeFullConfig
 ): Record<string, unknown> | null {
   const agents: Record<string, ModelAssignment> = {};
   for (const [agent, role] of Object.entries(AGENT_ROLES)) {
-    const enrichedTier = enrichTierForRole(role.tier, modelsDevData);
-    const model = pickBestModel(availableModels, enrichedTier);
-    if (model) {
-      agents[agent] = { model: `cliproxyapi/${model}` };
+    const overrideModel = overrides?.agents?.[agent];
+    if (overrideModel && availableModels.includes(overrideModel)) {
+      agents[agent] = { model: `cliproxyapi/${overrideModel}` };
+    } else {
+      const enrichedTier = enrichTierForRole(role.tier, modelsDevData);
+      const model = pickBestModel(availableModels, enrichedTier);
+      if (model) {
+        agents[agent] = { model: `cliproxyapi/${model}` };
+      }
     }
   }
 
   const categories: Record<string, ModelAssignment> = {};
   for (const [category, role] of Object.entries(CATEGORY_ROLES)) {
-    const enrichedTier = enrichTierForRole(role.tier, modelsDevData);
-    const model = pickBestModel(availableModels, enrichedTier);
-    if (model) {
-      categories[category] = { model: `cliproxyapi/${model}` };
+    const overrideModel = overrides?.categories?.[category];
+    if (overrideModel && availableModels.includes(overrideModel)) {
+      categories[category] = { model: `cliproxyapi/${overrideModel}` };
+    } else {
+      const enrichedTier = enrichTierForRole(role.tier, modelsDevData);
+      const model = pickBestModel(availableModels, enrichedTier);
+      if (model) {
+        categories[category] = { model: `cliproxyapi/${model}` };
+      }
     }
   }
 
@@ -363,17 +378,28 @@ export function buildOhMyOpenCodeConfig(
   }
 
   config.auto_update = false;
-  config.sisyphus_agent = {
-    planner_enabled: true,
-    replace_plan: true,
-  };
-  config.git_master = {
-    commit_footer: false,
-    include_co_authored_by: false,
-  };
-  config.background_task = {
-    defaultConcurrency: 5,
-  };
+
+  // Disabled arrays — only include if non-empty
+  if (overrides?.disabled_agents?.length) config.disabled_agents = overrides.disabled_agents;
+  if (overrides?.disabled_skills?.length) config.disabled_skills = overrides.disabled_skills;
+  if (overrides?.disabled_hooks?.length) config.disabled_hooks = overrides.disabled_hooks;
+  if (overrides?.disabled_commands?.length) config.disabled_commands = overrides.disabled_commands;
+  if (overrides?.disabled_mcps?.length) config.disabled_mcps = overrides.disabled_mcps;
+
+  // Tmux — only include if user configured it
+  if (overrides?.tmux) config.tmux = overrides.tmux;
+
+  // Background task — merge user overrides with defaults
+  config.background_task = { defaultConcurrency: 5, ...overrides?.background_task };
+
+  // Browser automation — only if configured
+  if (overrides?.browser_automation_engine) config.browser_automation_engine = overrides.browser_automation_engine;
+
+  // Sisyphus agent — merge with defaults
+  config.sisyphus_agent = { planner_enabled: true, replace_plan: true, ...overrides?.sisyphus_agent };
+
+  // Git master — merge with defaults
+  config.git_master = { commit_footer: false, include_co_authored_by: false, ...overrides?.git_master };
 
   return config;
 }

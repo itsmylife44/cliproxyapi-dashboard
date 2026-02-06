@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { buildAvailableModels, PROXY_URL } from "@/lib/config-generators/opencode";
 import { buildAvailableModelIds, buildOhMyOpenCodeConfig } from "@/lib/config-generators/oh-my-opencode";
+import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import type { ConfigData, OAuthAccount, ModelsDevData } from "@/lib/config-generators/shared";
 
 interface ManagementFetchParams {
@@ -79,7 +80,7 @@ interface ConfigBundle {
   ohMyOpencode: Record<string, unknown> | null;
 }
 
-export async function generateConfigBundle(userId: string): Promise<ConfigBundle> {
+export async function generateConfigBundle(userId: string, syncApiKey?: string | null): Promise<ConfigBundle> {
   // 1. Fetch management config
   const managementConfig = await fetchManagementJson({ path: "config" });
 
@@ -91,13 +92,15 @@ export async function generateConfigBundle(userId: string): Promise<ConfigBundle
   const modelsDevData: ModelsDevData | null = await fetchModelsDevData();
 
   // 4. Fetch api-keys from management API
-  const apiKeysData = await fetchManagementJson({ path: "config" });
+  const apiKeysData = await fetchManagementJson({ path: "api-keys" });
   const apiKeyStrings = extractApiKeyStrings(apiKeysData);
 
-  // 5. Fetch user's ModelPreference from Prisma
-  const modelPreference = await prisma.modelPreference.findUnique({
-    where: { userId },
-  });
+  // 5. Fetch user's ModelPreference and AgentModelOverride from Prisma
+  const [modelPreference, agentOverride] = await Promise.all([
+    prisma.modelPreference.findUnique({ where: { userId } }),
+    prisma.agentModelOverride.findUnique({ where: { userId } }),
+  ]);
+  const agentOverrides = agentOverride?.overrides as OhMyOpenCodeFullConfig | undefined;
 
   // 6. Extract excluded models from preferences
   const excludedModels = new Set(modelPreference?.excludedModels || []);
@@ -113,8 +116,8 @@ export async function generateConfigBundle(userId: string): Promise<ConfigBundle
     Object.entries(allModels).filter(([modelId]) => !excludedModels.has(modelId))
   );
 
-  // 8. Get API key (first available or fallback)
-  const apiKey = apiKeyStrings.length > 0 ? apiKeyStrings[0] : "your-api-key";
+  // 8. Get API key: prefer syncApiKey from token, then first available, then placeholder
+  const apiKey = syncApiKey || (apiKeyStrings.length > 0 ? apiKeyStrings[0] : "your-api-key");
 
   // 9. Build opencode config object (replicate generateConfigJson but return object)
   const modelEntries: Record<string, Record<string, unknown>> = {};
@@ -164,7 +167,8 @@ export async function generateConfigBundle(userId: string): Promise<ConfigBundle
   );
   const ohMyOpencodeConfig = buildOhMyOpenCodeConfig(
     filteredModelIds,
-    modelsDevData
+    modelsDevData,
+    agentOverrides
   );
 
   // 11. Compute version hash

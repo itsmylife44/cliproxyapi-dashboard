@@ -43,6 +43,7 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
     : allModels;
   const hasModels = Object.keys(availableModels).length > 0;
   const hasKeys = apiKeys.length > 0;
+  const hasActiveOAuth = oauthAccounts.some((a) => !a.disabled);
 
   const activeKey = hasKeys
     ? apiKeys[selectedKeyIndex] ?? apiKeys[0]
@@ -104,6 +105,13 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
             </span>
           </div>
         )
+      ) : hasActiveOAuth ? (
+        <div className="flex items-center gap-2 text-xs text-white/50">
+          <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+          <span>
+            OAuth providers connected — using placeholder key <code className="px-1.5 py-0.5 rounded bg-white/10 text-orange-300 font-mono">your-api-key-from-dashboard</code>
+          </span>
+        </div>
       ) : (
         <div className="border-l-4 border-amber-400/60 bg-amber-500/10 backdrop-blur-xl p-4 text-sm rounded-r-xl">
           <p className="text-white/90 font-medium mb-1">No API keys found</p>
@@ -112,7 +120,11 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
             <a href="/dashboard/api-keys" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
               API Keys
             </a>{" "}
-            page, then come back here. The config below uses a placeholder.
+            page or connect an OAuth provider on the{" "}
+            <a href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
+              Providers
+            </a>{" "}
+            page. The config below uses a placeholder.
           </p>
         </div>
       )}

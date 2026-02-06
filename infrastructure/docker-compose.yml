@@ -86,7 +86,7 @@ services:
       - ./.env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /opt/cliproxyapi/infrastructure:/opt/cliproxyapi/infrastructure:ro
+      - ${INSTALL_DIR:-.}/infrastructure:/opt/cliproxyapi/infrastructure:ro
     depends_on:
       postgres:
         condition: service_healthy

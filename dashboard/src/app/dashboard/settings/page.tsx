@@ -19,6 +19,7 @@ interface UpdateInfo {
 interface SyncToken {
   id: string;
   name: string;
+  syncApiKey: string | null;
   createdAt: string;
   lastUsedAt: string | null;
   isRevoked: boolean;
@@ -41,6 +42,7 @@ export default function SettingsPage() {
   const [generatingToken, setGeneratingToken] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [availableApiKeys, setAvailableApiKeys] = useState<string[]>([]);
   
   const { showToast } = useToast();
   const router = useRouter();
@@ -99,6 +101,20 @@ export default function SettingsPage() {
     fetchVersion();
     fetchUpdateInfo();
     fetchSyncTokens();
+
+    const fetchApiKeys = async () => {
+      try {
+        const res = await fetch("/api/management/api-keys");
+        if (res.ok) {
+          const data = await res.json();
+          const keys = data?.["api-keys"];
+          if (Array.isArray(keys)) {
+            setAvailableApiKeys(keys.filter((k: unknown): k is string => typeof k === "string"));
+          }
+        }
+      } catch {}
+    };
+    fetchApiKeys();
   }, [fetchUpdateInfo, fetchSyncTokens]);
 
   const handlePasswordChange = async (e: { preventDefault: () => void }) => {
@@ -218,6 +234,28 @@ export default function SettingsPage() {
 
       showToast("Token revoked successfully", "success");
       fetchSyncTokens();
+    } catch {
+      showToast("Network error", "error");
+    }
+  };
+
+  const handleUpdateTokenApiKey = async (tokenId: string, syncApiKey: string) => {
+    try {
+      const res = await fetch(`/api/config-sync/tokens/${tokenId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ syncApiKey: syncApiKey || null }),
+      });
+
+      if (res.ok) {
+        showToast("API key updated for sync token", "success");
+        setSyncTokens((prev) =>
+          prev.map((t) => (t.id === tokenId ? { ...t, syncApiKey: syncApiKey || null } : t))
+        );
+      } else {
+        const data = await res.json();
+        showToast(data.error || "Failed to update API key", "error");
+      }
     } catch {
       showToast("Network error", "error");
     }
@@ -471,33 +509,65 @@ export default function SettingsPage() {
                 {syncTokens.map((token) => (
                   <div
                     key={token.id}
-                    className="flex items-center justify-between rounded-lg border border-white/20 bg-white/5 p-4"
+                    className="rounded-lg border border-white/20 bg-white/5 p-4 space-y-3"
                   >
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="text-sm font-medium text-white">{token.name}</div>
-                        {token.isRevoked && (
-                          <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400">
-                            Revoked
-                          </span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-medium text-white">{token.name}</div>
+                          {token.isRevoked && (
+                            <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400">
+                              Revoked
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-white/70">
+                          Created: {new Date(token.createdAt).toLocaleDateString()}
+                        </div>
+                        {token.lastUsedAt && (
+                          <div className="text-xs text-white/60">
+                            Last used: {new Date(token.lastUsedAt).toLocaleDateString()}
+                          </div>
                         )}
                       </div>
-                      <div className="text-xs text-white/70">
-                        Created: {new Date(token.createdAt).toLocaleDateString()}
-                      </div>
-                      {token.lastUsedAt && (
-                        <div className="text-xs text-white/60">
-                          Last used: {new Date(token.lastUsedAt).toLocaleDateString()}
-                        </div>
+                      {!token.isRevoked && (
+                        <Button
+                          variant="danger"
+                          onClick={() => handleRevokeToken(token.id)}
+                        >
+                          Revoke
+                        </Button>
                       )}
                     </div>
                     {!token.isRevoked && (
-                      <Button
-                        variant="danger"
-                        onClick={() => handleRevokeToken(token.id)}
-                      >
-                        Revoke
-                      </Button>
+                      <div className="flex items-center gap-3 pt-1 border-t border-white/10">
+                        <label htmlFor={`sync-api-key-${token.id}`} className="text-xs font-medium text-white/50 whitespace-nowrap">
+                          Sync API Key
+                        </label>
+                        <select
+                          id={`sync-api-key-${token.id}`}
+                          value={token.syncApiKey || ""}
+                          onChange={(e) => handleUpdateTokenApiKey(token.id, e.target.value)}
+                          className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white/90 font-mono focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+                        >
+                          {availableApiKeys.length > 0 ? (
+                            <>
+                              <option value="" className="bg-[#1a1a2e] text-white">
+                                Auto (first available)
+                              </option>
+                              {availableApiKeys.map((key) => (
+                                <option key={key} value={key} className="bg-[#1a1a2e] text-white">
+                                  {key.length > 24 ? `${key.slice(0, 10)}...${key.slice(-6)}` : key}
+                                </option>
+                              ))}
+                            </>
+                          ) : (
+                            <option value="" className="bg-[#1a1a2e] text-white">
+                              No API keys — uses placeholder
+                            </option>
+                          )}
+                        </select>
+                      </div>
                     )}
                   </div>
                 ))}

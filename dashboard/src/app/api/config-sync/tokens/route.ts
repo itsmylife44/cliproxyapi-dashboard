@@ -48,6 +48,7 @@ export async function GET(_request: NextRequest) {
       select: {
         id: true,
         name: true,
+        syncApiKey: true,
         createdAt: true,
         lastUsedAt: true,
         revokedAt: true,
@@ -57,6 +58,7 @@ export async function GET(_request: NextRequest) {
     const tokens = syncTokens.map((token) => ({
       id: token.id,
       name: token.name,
+      syncApiKey: token.syncApiKey,
       createdAt: token.createdAt.toISOString(),
       lastUsedAt: token.lastUsedAt?.toISOString() || null,
       isRevoked: token.revokedAt !== null,

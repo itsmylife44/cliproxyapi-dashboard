@@ -324,6 +324,9 @@ MANAGEMENT_API_KEY=$MANAGEMENT_API_KEY
 # Management API URL
 CLIPROXYAPI_MANAGEMENT_URL=http://cliproxyapi:8317/v0/management
 
+# Installation directory (host path for volume mounts)
+INSTALL_DIR=$INSTALL_DIR
+
 # Timezone
 TZ=UTC
 
@@ -404,194 +407,22 @@ echo ""
 # SCRIPTS INSTALLATION
 # ============================================================================
 
-log_info "=== Backup/Restore Scripts Installation ==="
+log_info "=== Backup/Restore Scripts Setup ==="
 echo ""
 
 SCRIPTS_DIR="$INSTALL_DIR/scripts"
-mkdir -p "$SCRIPTS_DIR"
 
-# Create backup script
-log_info "Creating backup script..."
-cat > "$SCRIPTS_DIR/backup.sh" << 'EOF'
-#!/bin/bash
-#
-# CLIProxyAPI Stack Backup Script
-# Backs up Postgres database, config.yaml, and auth directory
-#
-
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-BACKUP_DIR="$PROJECT_DIR/backups"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="cliproxyapi_backup_${TIMESTAMP}.tar.gz"
-
-# Create backup directory
-mkdir -p "$BACKUP_DIR"
-
-echo "[INFO] Starting backup at $(date)"
-echo "[INFO] Backup location: $BACKUP_DIR/$BACKUP_FILE"
-
-# Create temporary directory for backup
-TMP_DIR=$(mktemp -d)
-trap "rm -rf $TMP_DIR" EXIT
-
-# Backup Postgres database
-echo "[INFO] Backing up Postgres database..."
-cd "$PROJECT_DIR/infrastructure"
-docker compose exec -T postgres pg_dump -U cliproxyapi -d cliproxyapi > "$TMP_DIR/database.sql"
-
-# Backup config.yaml
-echo "[INFO] Backing up config.yaml..."
-cp config/config.yaml "$TMP_DIR/config.yaml"
-
-# Backup auth directory from volume
-echo "[INFO] Backing up auth directory..."
-docker run --rm \
-    -v cliproxyapi_cliproxyapi_auths:/data:ro \
-    -v "$TMP_DIR":/backup \
-    alpine tar czf /backup/auth-dir.tar.gz -C /data .
-
-# Create final backup tarball
-echo "[INFO] Creating backup archive..."
-cd "$TMP_DIR"
-tar czf "$BACKUP_DIR/$BACKUP_FILE" database.sql config.yaml auth-dir.tar.gz
-
-echo "[SUCCESS] Backup completed: $BACKUP_DIR/$BACKUP_FILE"
-echo "[INFO] Backup size: $(du -h "$BACKUP_DIR/$BACKUP_FILE" | cut -f1)"
-EOF
+if [ ! -d "$SCRIPTS_DIR" ] || [ ! -f "$SCRIPTS_DIR/backup.sh" ]; then
+    log_error "Scripts directory not found at $SCRIPTS_DIR"
+    log_error "Ensure the repository was cloned correctly (scripts/ should exist)"
+    exit 1
+fi
 
 chmod +x "$SCRIPTS_DIR/backup.sh"
-
-# Create restore script
-log_info "Creating restore script..."
-cat > "$SCRIPTS_DIR/restore.sh" << 'EOF'
-#!/bin/bash
-#
-# CLIProxyAPI Stack Restore Script
-# Restores Postgres database, config.yaml, and auth directory from backup
-#
-
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-
-# Check if backup file provided
-if [ $# -ne 1 ]; then
-    echo "[ERROR] Usage: $0 <backup_file.tar.gz>"
-    echo ""
-    echo "Available backups:"
-    ls -lh "$PROJECT_DIR/backups" 2>/dev/null || echo "  No backups found"
-    exit 1
-fi
-
-BACKUP_FILE="$1"
-
-if [ ! -f "$BACKUP_FILE" ]; then
-    echo "[ERROR] Backup file not found: $BACKUP_FILE"
-    exit 1
-fi
-
-echo "[WARNING] This will restore data from backup and overwrite current data!"
-echo "[INFO] Backup file: $BACKUP_FILE"
-read -p "Continue with restore? [y/N]: " CONFIRM
-if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
-    echo "[INFO] Restore cancelled"
-    exit 0
-fi
-
-# Create temporary directory
-TMP_DIR=$(mktemp -d)
-trap "rm -rf $TMP_DIR" EXIT
-
-# Extract backup
-echo "[INFO] Extracting backup..."
-tar xzf "$BACKUP_FILE" -C "$TMP_DIR"
-
-# Stop stack
-echo "[INFO] Stopping CLIProxyAPI stack..."
-cd "$PROJECT_DIR/infrastructure"
-docker compose down
-
-# Restore database
-echo "[INFO] Starting Postgres for restore..."
-docker compose up -d postgres
-sleep 10  # Wait for Postgres to be ready
-
-echo "[INFO] Restoring database..."
-docker compose exec -T postgres psql -U cliproxyapi -d cliproxyapi < "$TMP_DIR/database.sql"
-
-# Restore config.yaml
-echo "[INFO] Restoring config.yaml..."
-cp "$TMP_DIR/config.yaml" config/config.yaml
-
-# Restore auth directory
-echo "[INFO] Restoring auth directory..."
-docker run --rm \
-    -v cliproxyapi_cliproxyapi_auths:/data \
-    -v "$TMP_DIR":/backup \
-    alpine sh -c "cd /data && rm -rf * && tar xzf /backup/auth-dir.tar.gz"
-
-# Restart stack
-echo "[INFO] Starting CLIProxyAPI stack..."
-docker compose up -d --wait
-
-echo "[SUCCESS] Restore completed successfully"
-EOF
-
 chmod +x "$SCRIPTS_DIR/restore.sh"
-
-# Create backup rotation script
-log_info "Creating backup rotation script..."
-cat > "$SCRIPTS_DIR/rotate-backups.sh" << 'EOF'
-#!/bin/bash
-#
-# Backup Rotation Script
-# Removes old backups keeping only the specified number of recent backups
-#
-
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-BACKUP_DIR="$PROJECT_DIR/backups"
-
-# Number of backups to keep (passed as argument or default to 4)
-KEEP_COUNT=${1:-4}
-
-if [ ! -d "$BACKUP_DIR" ]; then
-    echo "[INFO] No backups directory found"
-    exit 0
-fi
-
-# Count current backups
-BACKUP_COUNT=$(find "$BACKUP_DIR" -name "cliproxyapi_backup_*.tar.gz" | wc -l)
-
-if [ "$BACKUP_COUNT" -le "$KEEP_COUNT" ]; then
-    echo "[INFO] Current backups ($BACKUP_COUNT) within retention limit ($KEEP_COUNT)"
-    exit 0
-fi
-
-echo "[INFO] Rotating backups (keep $KEEP_COUNT, remove $((BACKUP_COUNT - KEEP_COUNT)))"
-
-# Remove old backups (keep most recent N)
-find "$BACKUP_DIR" -name "cliproxyapi_backup_*.tar.gz" -type f -printf '%T@ %p\n' | \
-    sort -rn | \
-    tail -n +$((KEEP_COUNT + 1)) | \
-    cut -d' ' -f2- | \
-    while read -r file; do
-        echo "[INFO] Removing old backup: $(basename "$file")"
-        rm -f "$file"
-    done
-
-echo "[SUCCESS] Backup rotation completed"
-EOF
-
 chmod +x "$SCRIPTS_DIR/rotate-backups.sh"
 
-log_success "Backup/restore scripts created in $SCRIPTS_DIR"
+log_success "Backup/restore scripts ready in $SCRIPTS_DIR"
 
 echo ""
 
@@ -637,22 +468,22 @@ echo ""
 log_success "CLIProxyAPI Stack installation completed successfully!"
 echo ""
 log_info "Next steps:"
-echo "  1. Review and customize config.yaml:"
-echo "     $INSTALL_DIR/infrastructure/config/config.yaml"
-echo ""
-echo "  2. Start the stack:"
+echo "  1. Start the stack:"
 echo "     sudo systemctl start cliproxyapi-stack"
 echo ""
-echo "  3. Check status:"
+echo "  2. Check status:"
 echo "     sudo systemctl status cliproxyapi-stack"
 echo ""
-echo "  4. View logs:"
+echo "  3. View logs:"
 echo "     cd $INSTALL_DIR/infrastructure"
 echo "     docker compose logs -f"
 echo ""
-echo "  5. Access services:"
+echo "  4. Access services:"
 echo "     Dashboard: https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
 echo "     API: https://${API_SUBDOMAIN}.${DOMAIN}"
+echo ""
+echo "  5. Create your admin account at the dashboard, then configure"
+echo "     API keys and providers through the Configuration page."
 echo ""
 log_info "Backup commands:"
 echo "  Manual backup:  $SCRIPTS_DIR/backup.sh"
@@ -661,6 +492,5 @@ if [ "$BACKUP_INTERVAL" != "none" ]; then
     echo "  Automated:      $BACKUP_INTERVAL backups at 2 AM (keep last $BACKUP_RETENTION)"
 fi
 echo ""
-log_warning "Important: Review the generated config.yaml and replace CHANGE_ME values!"
 log_warning "Secrets are stored in: $ENV_FILE (DO NOT commit to git)"
 echo ""

@@ -17,8 +17,9 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  modelPreference ModelPreference?
-  syncTokens      SyncToken[]
+  modelPreference     ModelPreference?
+  agentModelOverrides AgentModelOverride?
+  syncTokens          SyncToken[]
 
   @@map("users")
 }
@@ -35,11 +36,24 @@ model ModelPreference {
   @@map("model_preferences")
 }
 
+model AgentModelOverride {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  overrides Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("agent_model_overrides")
+}
+
 model SyncToken {
   id         String    @id @default(cuid())
   userId     String
   name       String    @default("Default")
   tokenHash  String
+  syncApiKey String?
   lastUsedAt DateTime?
   revokedAt  DateTime?
   createdAt  DateTime  @default(now())

@@ -132,10 +132,6 @@ The installer will:
 After installation completes:
 
 ```bash
-# Configure CLIProxyAPI
-# Edit the config file and replace CHANGE_ME values with your API keys
-nano infrastructure/config/config.yaml
-
 # Start the stack
 sudo systemctl start cliproxyapi-stack
 
@@ -151,7 +147,9 @@ Access the dashboard at:
 - **Dashboard**: `https://dashboard.yourdomain.com`
 - **API**: `https://api.yourdomain.com`
 
-**Default Login**: `admin` / `admin123` (change password immediately after first login)
+**First Login**: On first access you'll be redirected to a setup wizard where you create your administrator account (username + password). There are no default credentials.
+
+After logging in, use the **Configuration** page in the dashboard to set up your API keys and AI providers — no manual file editing required.
 
 > **Important**: Caddy will automatically request Let's Encrypt TLS certificates on first startup. Ensure your DNS records are correctly configured.
 
@@ -257,6 +255,7 @@ POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 JWT_SECRET=${JWT_SECRET}
 MANAGEMENT_API_KEY=${MANAGEMENT_API_KEY}
 CLIPROXYAPI_MANAGEMENT_URL=http://cliproxyapi:8317/v0/management
+INSTALL_DIR=$(pwd)
 TZ=UTC
 DASHBOARD_URL=https://dashboard.example.com
 API_URL=https://api.example.com
@@ -270,20 +269,7 @@ Replace `example.com` with your actual domain.
 
 #### 5. Configure CLIProxyAPI
 
-Edit `infrastructure/config/config.yaml` and replace all `CHANGE_ME` values:
-
-```yaml
-api-keys:
-  - "YOUR_GENERATED_API_KEY_1"
-  - "YOUR_GENERATED_API_KEY_2"
-```
-
-Generate API keys with:
-```bash
-openssl rand -hex 32
-```
-
-Add your AI provider credentials (Gemini API keys, Claude OAuth, etc.) following the examples in the config file.
+API keys and AI providers can be configured through the Dashboard UI after first login. Alternatively, you can edit `infrastructure/config/config.yaml` directly.
 
 #### 6. Create Systemd Service
 
@@ -658,22 +644,20 @@ docker compose logs dashboard
 
 ### Can't Login to Dashboard
 
-**Default credentials:**
-- Username: `admin`
-- Password: `admin123`
+There are no default credentials. On first access, navigate to `https://dashboard.yourdomain.com/setup` to create your admin account.
 
-**Reset admin password:**
+If you forgot your password, you can reset it via the database:
 ```bash
-cd dashboard
-docker compose exec dashboard npx prisma studio
-# Access Prisma Studio to reset user password
+cd infrastructure
+docker compose exec postgres psql -U cliproxyapi -d cliproxyapi -c "DELETE FROM users;"
 ```
+Then visit `/setup` again to create a new admin account.
 
 ## Security
 
 ### Best Practices
 
-1. **Change Default Password**: Immediately change the default `admin/admin123` password after first login
+1. **Use a Strong Password**: Choose a strong password during the initial setup wizard
 
 2. **Secure Environment File**:
    ```bash

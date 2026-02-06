@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const bundle = await generateConfigBundle(authResult.userId);
+    const bundle = await generateConfigBundle(authResult.userId, authResult.syncApiKey);
 
     return NextResponse.json({
       version: bundle.version,

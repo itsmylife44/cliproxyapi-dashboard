@@ -4,6 +4,7 @@ import { CopyBlock } from "@/components/copy-block";
 import { QuickStartConfigSection } from "@/components/quick-start-config-section";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
+import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 
 const PROXY_URL = "https://proxy.loen-api.xyz";
 
@@ -266,10 +267,14 @@ export default async function QuickStartPage() {
     verifySession(),
   ]);
 
-  const modelPreference = session
-    ? await prisma.modelPreference.findUnique({ where: { userId: session.userId } })
-    : null;
+  const [modelPreference, agentOverride] = session
+    ? await Promise.all([
+        prisma.modelPreference.findUnique({ where: { userId: session.userId } }),
+        prisma.agentModelOverride.findUnique({ where: { userId: session.userId } }),
+      ])
+    : [null, null];
   const initialExcludedModels = modelPreference?.excludedModels ?? [];
+  const agentOverrides = (agentOverride?.overrides ?? {}) as OhMyOpenCodeFullConfig;
 
   const apiKeys = extractApiKeyStrings(apiKeysData);
   const oauthAccounts = extractOAuthAccounts(oauthData);
@@ -371,6 +376,7 @@ export default async function QuickStartPage() {
         modelsDevData={modelsDevData}
         availableModels={availableModelIds}
         initialExcludedModels={initialExcludedModels}
+        agentOverrides={agentOverrides}
       />
 
       <Card>

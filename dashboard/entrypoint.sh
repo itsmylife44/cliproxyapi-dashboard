@@ -42,8 +42,25 @@ client.connect()
     );
     CREATE INDEX IF NOT EXISTS \"sync_tokens_userId_idx\" ON \"sync_tokens\"(\"userId\");
     DO \$\$ BEGIN
-      ALTER TABLE \"sync_tokens\" ADD CONSTRAINT \"sync_tokens_userId_fkey\"
-        FOREIGN KEY (\"userId\") REFERENCES \"users\"(\"id\") ON DELETE CASCADE;
+      ALTER TABLE "sync_tokens" ADD CONSTRAINT "sync_tokens_userId_fkey"
+        FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
+    DO \$\$ BEGIN
+      ALTER TABLE "sync_tokens" ADD COLUMN "syncApiKey" TEXT;
+    EXCEPTION WHEN duplicate_column THEN NULL; END \$\$;
+
+    CREATE TABLE IF NOT EXISTS "agent_model_overrides" (
+      "id" TEXT NOT NULL,
+      "userId" TEXT NOT NULL,
+      "overrides" JSONB NOT NULL DEFAULT '{}',
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      CONSTRAINT "agent_model_overrides_pkey" PRIMARY KEY ("id")
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS "agent_model_overrides_userId_key" ON "agent_model_overrides"("userId");
+    DO \$\$ BEGIN
+      ALTER TABLE "agent_model_overrides" ADD CONSTRAINT "agent_model_overrides_userId_fkey"
+        FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
     EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
   \`))
   .then(() => { console.log('[dashboard] Tables ready'); client.end(); })

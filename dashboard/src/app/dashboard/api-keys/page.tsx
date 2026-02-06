@@ -6,6 +6,46 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 
+function CopyIcon({ className }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function useCopyToClipboard() {
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copy = useCallback(async (text: string, id?: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setCopiedKey(id ?? text);
+    setTimeout(() => setCopiedKey(null), 2000);
+  }, []);
+
+  return { copiedKey, copy };
+}
+
 const EMPTY_KEYS: string[] = [];
 
 export default function ApiKeysPage() {
@@ -15,6 +55,7 @@ export default function ApiKeysPage() {
   const [newKeyValue, setNewKeyValue] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const { showToast } = useToast();
+  const { copiedKey, copy } = useCopyToClipboard();
 
   const fetchApiKeys = useCallback(async () => {
     setLoading(true);
@@ -126,20 +167,33 @@ export default function ApiKeysPage() {
                   key={apiKey}
                   className="flex items-center justify-between backdrop-blur-xl bg-white/5 border border-white/20 rounded-xl p-4"
                 >
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-white">
                       API Key
                     </div>
-                    <div className="mt-1 text-xs text-white/70 font-mono">
-                      {apiKey.substring(0, 8)}...
+                    <div className="mt-1 text-xs text-white/70 font-mono truncate">
+                      {apiKey.substring(0, 8)}{"..."}
                     </div>
                   </div>
-                  <Button
-                    variant="danger"
-                    onClick={() => handleDeleteKey(apiKey)}
-                  >
-                    Delete
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        copy(apiKey, apiKey);
+                        showToast("API key copied", "success");
+                      }}
+                      className="p-2 rounded-lg border border-white/15 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/90 transition-all duration-200 active:scale-95"
+                      title="Copy API key"
+                    >
+                      {copiedKey === apiKey ? <CheckIcon /> : <CopyIcon />}
+                    </button>
+                    <Button
+                      variant="danger"
+                      onClick={() => handleDeleteKey(apiKey)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -155,8 +209,23 @@ export default function ApiKeysPage() {
           <div className="space-y-4">
             <div className="backdrop-blur-xl bg-white/10 border border-white/20 p-4 text-sm rounded-xl">
               <div className="mb-2 font-medium text-white">Copy this key now</div>
-              <div className="break-all backdrop-blur-xl bg-white/5 border border-white/20 p-3 text-xs text-white font-mono rounded-lg">
-                {newKeyValue}
+              <div className="relative group">
+                <div className="break-all backdrop-blur-xl bg-white/5 border border-white/20 p-3 pr-12 text-xs text-white font-mono rounded-lg">
+                  {newKeyValue}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newKeyValue) {
+                      copy(newKeyValue, "modal");
+                      showToast("API key copied", "success");
+                    }
+                  }}
+                  className="absolute top-2.5 right-2.5 p-1.5 rounded-md border border-white/15 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/90 transition-all duration-200 active:scale-95"
+                  title="Copy API key"
+                >
+                  {copiedKey === "modal" ? <CheckIcon /> : <CopyIcon />}
+                </button>
               </div>
             </div>
             <div className="border-l-4 border-yellow-400/60 bg-yellow-500/20 backdrop-blur-xl p-3 text-sm rounded-r-xl">

@@ -31,7 +31,7 @@ export function verifySyncToken(token: string, hash: string): boolean {
 
 export async function validateSyncTokenFromHeader(
   request: NextRequest
-): Promise<{ userId: string } | null> {
+): Promise<{ userId: string; syncApiKey: string | null } | null> {
   const authHeader = request.headers.get("Authorization");
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -50,6 +50,7 @@ export async function validateSyncTokenFromHeader(
       select: {
         id: true,
         userId: true,
+        syncApiKey: true,
       },
     });
 
@@ -62,7 +63,7 @@ export async function validateSyncTokenFromHeader(
       data: { lastUsedAt: new Date() },
     });
 
-    return { userId: syncToken.userId };
+    return { userId: syncToken.userId, syncApiKey: syncToken.syncApiKey };
   } catch {
     return null;
   }

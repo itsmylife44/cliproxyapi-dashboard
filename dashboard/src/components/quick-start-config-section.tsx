@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ModelSelector } from "@/components/model-selector";
 import { OpenCodeConfigGenerator } from "@/components/opencode-config-generator";
 import { OhMyOpenCodeConfigGenerator } from "@/components/oh-my-opencode-config-generator";
+import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 
 interface OAuthAccountEntry {
   id: string;
@@ -47,6 +48,7 @@ interface QuickStartConfigSectionProps {
   modelsDevData: unknown;
   availableModels: string[];
   initialExcludedModels: string[];
+  agentOverrides?: OhMyOpenCodeFullConfig;
 }
 
 export function QuickStartConfigSection({
@@ -56,6 +58,7 @@ export function QuickStartConfigSection({
   modelsDevData,
   availableModels,
   initialExcludedModels,
+  agentOverrides,
 }: QuickStartConfigSectionProps) {
   const [excludedModels, setExcludedModels] = useState<string[]>(initialExcludedModels);
 
@@ -148,6 +151,7 @@ export function QuickStartConfigSection({
             oauthAccounts={oauthAccounts}
             modelsDevData={modelsDevData as ModelsDevData | null}
             excludedModels={excludedModels}
+            agentOverrides={agentOverrides}
           />
         </CardContent>
       </Card>

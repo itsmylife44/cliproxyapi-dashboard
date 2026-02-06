@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/setup")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.setupRequired) {
+          router.replace("/setup");
+        } else {
+          setReady(true);
+        }
+      })
+      .catch(() => setReady(true));
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +52,10 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (!ready) {
+    return <div className="flex min-h-screen items-center justify-center" />;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">

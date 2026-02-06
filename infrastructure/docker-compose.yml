@@ -1,0 +1,160 @@
+# CLIProxyAPI + Dashboard Docker Compose Stack
+# Network Architecture:
+# - frontend: Public network (Caddy <-> Dashboard, Caddy <-> CLIProxyAPI)
+# - backend: Internal network (CLIProxyAPI <-> Postgres, Dashboard <-> Postgres)
+
+services:
+  # Postgres Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: cliproxyapi-postgres
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      POSTGRES_DB: cliproxyapi
+      POSTGRES_USER: cliproxyapi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ}
+    env_file:
+      - ./.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cliproxyapi -d cliproxyapi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # CLIProxyAPI Service
+  cliproxyapi:
+    image: eceasy/cli-proxy-api:latest
+    container_name: cliproxyapi
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    environment:
+      MANAGEMENT_PASSWORD: ${MANAGEMENT_API_KEY}
+      DEPLOY: production
+      TZ: ${TZ}
+    env_file:
+      - ./.env
+    ports:
+      # Main API port (proxied by Caddy, not directly exposed)
+      - "127.0.0.1:8317:8317"
+      
+      # OAuth callback ports (must be accessible for OAuth flows)
+      - "8085:8085"    # Primary OAuth callback
+      - "1455:1455"    # Alternate OAuth callback
+      - "54545:54545"  # Alternate OAuth callback
+      - "51121:51121"  # Alternate OAuth callback
+      - "11451:11451"  # Alternate OAuth callback
+    volumes:
+      - ./config/config.yaml:/CLIProxyAPI/config.yaml
+      - cliproxyapi_auths:/root/.cli-proxy-api
+      - cliproxyapi_logs:/CLIProxyAPI/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "-O", "/dev/null", "http://localhost:8317/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Dashboard Service
+  dashboard:
+    build:
+      context: ../dashboard
+      dockerfile: Dockerfile
+    image: cliproxyapi-dashboard:latest
+    container_name: cliproxyapi-dashboard
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    environment:
+      DATABASE_URL: postgresql://cliproxyapi:${POSTGRES_PASSWORD}@postgres:5432/cliproxyapi
+      CLIPROXYAPI_MANAGEMENT_URL: http://cliproxyapi:8317/v0/management
+      MANAGEMENT_API_KEY: ${MANAGEMENT_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      NODE_ENV: production
+    env_file:
+      - ./.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/cliproxyapi/infrastructure:/opt/cliproxyapi/infrastructure:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      cliproxyapi:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Caddy Reverse Proxy
+  caddy:
+    image: caddy:2-alpine
+    container_name: cliproxyapi-caddy
+    restart: unless-stopped
+    networks:
+      - frontend
+    env_file:
+      - ./.env
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3 support
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      cliproxyapi:
+        condition: service_healthy
+      dashboard:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+# Named Volumes
+volumes:
+  # Database persistence
+  postgres_data:
+    driver: local
+  
+  # CLIProxyAPI persistence
+  cliproxyapi_auths:
+    driver: local
+  cliproxyapi_logs:
+    driver: local
+  
+  # Caddy TLS certificate persistence
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
+
+# Network Definitions
+networks:
+  # Public-facing network (Caddy <-> Services)
+  frontend:
+    driver: bridge
+    name: cliproxyapi_frontend
+  
+  # Internal backend network (Services <-> Database)
+  backend:
+    driver: bridge
+    name: cliproxyapi_backend
+    internal: true  # No external internet access

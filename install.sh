@@ -1,0 +1,666 @@
+#!/bin/bash
+#
+# CLIProxyAPI Stack Installation Script
+# Installs Docker, Docker Compose, configures UFW, generates secrets, and sets up systemd service
+#
+# Usage: sudo ./install.sh
+#
+
+set -euo pipefail
+
+# Color codes for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Log functions
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Check if running as root
+if [ "$EUID" -ne 0 ]; then
+    log_error "This script must be run as root (use sudo)"
+    exit 1
+fi
+
+# Detect installation directory (where script is located)
+INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+log_info "Installation directory: $INSTALL_DIR"
+
+# Check if running on Ubuntu/Debian
+if ! command -v apt-get &> /dev/null; then
+    log_error "This script only supports Ubuntu/Debian systems"
+    exit 1
+fi
+
+log_info "Starting CLIProxyAPI Stack installation..."
+echo ""
+
+# ============================================================================
+# INTERACTIVE CONFIGURATION
+# ============================================================================
+
+log_info "=== Configuration ==="
+echo ""
+
+# Domain configuration
+while true; do
+    read -p "Enter your domain (e.g., example.com): " DOMAIN
+    if [ -z "$DOMAIN" ]; then
+        log_error "Domain cannot be empty"
+        continue
+    fi
+    # Basic validation
+    if [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+        log_error "Invalid domain format"
+        continue
+    fi
+    break
+done
+
+# Dashboard subdomain
+read -p "Enter dashboard subdomain [default: dashboard]: " DASHBOARD_SUBDOMAIN
+DASHBOARD_SUBDOMAIN="${DASHBOARD_SUBDOMAIN:-dashboard}"
+
+# API subdomain
+read -p "Enter API subdomain [default: api]: " API_SUBDOMAIN
+API_SUBDOMAIN="${API_SUBDOMAIN:-api}"
+
+# Backup interval
+echo ""
+log_info "Select backup interval:"
+echo "  1) Daily backups (keep last 7)"
+echo "  2) Weekly backups (keep last 4)"
+echo "  3) No automated backups"
+while true; do
+    read -p "Enter choice [1-3]: " BACKUP_CHOICE
+    case $BACKUP_CHOICE in
+        1)
+            BACKUP_INTERVAL="daily"
+            BACKUP_RETENTION=7
+            break
+            ;;
+        2)
+            BACKUP_INTERVAL="weekly"
+            BACKUP_RETENTION=4
+            break
+            ;;
+        3)
+            BACKUP_INTERVAL="none"
+            BACKUP_RETENTION=0
+            break
+            ;;
+        *)
+            log_error "Invalid choice"
+            ;;
+    esac
+done
+
+echo ""
+log_info "Configuration summary:"
+log_info "  Domain: $DOMAIN"
+log_info "  Dashboard: ${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
+log_info "  API: ${API_SUBDOMAIN}.${DOMAIN}"
+log_info "  Backup interval: $BACKUP_INTERVAL"
+echo ""
+
+read -p "Continue with installation? [y/N]: " CONFIRM
+if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+    log_warning "Installation cancelled"
+    exit 0
+fi
+
+echo ""
+
+# ============================================================================
+# DOCKER INSTALLATION
+# ============================================================================
+
+log_info "=== Docker Installation ==="
+echo ""
+
+if command -v docker &> /dev/null; then
+    DOCKER_VERSION=$(docker --version)
+    log_success "Docker already installed: $DOCKER_VERSION"
+    
+    # Check if Docker Compose plugin is installed
+    if docker compose version &> /dev/null; then
+        COMPOSE_VERSION=$(docker compose version)
+        log_success "Docker Compose already installed: $COMPOSE_VERSION"
+    else
+        log_warning "Docker Compose plugin not found, installing..."
+        apt-get update
+        apt-get install -y docker-compose-plugin
+        log_success "Docker Compose plugin installed"
+    fi
+else
+    log_info "Installing Docker..."
+    
+    # Update package index
+    apt-get update
+    
+    # Install prerequisites
+    apt-get install -y \
+        ca-certificates \
+        curl \
+        gnupg \
+        lsb-release
+    
+    # Add Docker GPG key
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+    
+    # Add Docker repository
+    echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    
+    # Install Docker Engine
+    apt-get update
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    
+    # Enable and start Docker
+    systemctl enable docker
+    systemctl start docker
+    
+    log_success "Docker installed successfully"
+fi
+
+echo ""
+
+# ============================================================================
+# UFW FIREWALL CONFIGURATION
+# ============================================================================
+
+log_info "=== UFW Firewall Configuration ==="
+echo ""
+
+if ! command -v ufw &> /dev/null; then
+    log_info "Installing UFW..."
+    apt-get install -y ufw
+fi
+
+# Check if UFW is active
+UFW_STATUS=$(ufw status | head -n 1)
+
+if [[ "$UFW_STATUS" == *"inactive"* ]]; then
+    log_info "Configuring UFW rules..."
+    
+    # SSH first to prevent lockout
+    log_info "Allowing SSH (port 22) to prevent lockout..."
+    ufw limit 22/tcp comment 'SSH with rate limiting'
+    
+    # HTTP/HTTPS (Caddy)
+    log_info "Allowing HTTP/HTTPS (ports 80, 443)..."
+    ufw allow 80/tcp comment 'HTTP'
+    ufw allow 443/tcp comment 'HTTPS'
+    ufw allow 443/udp comment 'HTTP/3 (QUIC)'
+    
+    # OAuth callback ports
+    log_info "Allowing OAuth callback ports..."
+    ufw allow 8085/tcp comment 'CLIProxyAPI OAuth callback 1'
+    ufw allow 1455/tcp comment 'CLIProxyAPI OAuth callback 2'
+    ufw allow 54545/tcp comment 'CLIProxyAPI OAuth callback 3'
+    ufw allow 51121/tcp comment 'CLIProxyAPI OAuth callback 4'
+    ufw allow 11451/tcp comment 'CLIProxyAPI OAuth callback 5'
+    
+    # Enable UFW
+    log_warning "Enabling UFW firewall..."
+    echo "y" | ufw enable
+    
+    log_success "UFW configured and enabled"
+else
+    log_warning "UFW already active, checking rules..."
+    
+    # Add missing rules if needed
+    RULES_ADDED=0
+    
+    # Helper function to check and add rule
+    add_rule_if_missing() {
+        local PORT=$1
+        local PROTO=$2
+        local COMMENT=$3
+        
+        if ! ufw status | grep -q "$PORT/$PROTO"; then
+            ufw allow "$PORT/$PROTO" comment "$COMMENT"
+            log_info "Added rule: $PORT/$PROTO"
+            RULES_ADDED=1
+        fi
+    }
+    
+    add_rule_if_missing 22 tcp "SSH with rate limiting"
+    add_rule_if_missing 80 tcp "HTTP"
+    add_rule_if_missing 443 tcp "HTTPS"
+    add_rule_if_missing 443 udp "HTTP/3 (QUIC)"
+    add_rule_if_missing 8085 tcp "CLIProxyAPI OAuth callback 1"
+    add_rule_if_missing 1455 tcp "CLIProxyAPI OAuth callback 2"
+    add_rule_if_missing 54545 tcp "CLIProxyAPI OAuth callback 3"
+    add_rule_if_missing 51121 tcp "CLIProxyAPI OAuth callback 4"
+    add_rule_if_missing 11451 tcp "CLIProxyAPI OAuth callback 5"
+    
+    if [ $RULES_ADDED -eq 0 ]; then
+        log_success "All required UFW rules already configured"
+    else
+        ufw reload
+        log_success "UFW rules updated"
+    fi
+fi
+
+echo ""
+
+# ============================================================================
+# SECRET GENERATION
+# ============================================================================
+
+log_info "=== Secret Generation ==="
+echo ""
+
+JWT_SECRET=$(openssl rand -base64 32)
+MANAGEMENT_API_KEY=$(openssl rand -hex 32)
+POSTGRES_PASSWORD=$(openssl rand -base64 32)
+
+log_success "Secrets generated"
+
+echo ""
+
+# ============================================================================
+# ENVIRONMENT FILE CONFIGURATION
+# ============================================================================
+
+log_info "=== Environment Configuration ==="
+echo ""
+
+ENV_FILE="$INSTALL_DIR/infrastructure/.env"
+
+if [ -f "$ENV_FILE" ]; then
+    log_warning ".env file already exists"
+    read -p "Overwrite .env file? [y/N]: " OVERWRITE_ENV
+    if [[ ! "$OVERWRITE_ENV" =~ ^[Yy]$ ]]; then
+        log_info "Keeping existing .env file"
+        SKIP_ENV=1
+    else
+        SKIP_ENV=0
+    fi
+else
+    SKIP_ENV=0
+fi
+
+if [ $SKIP_ENV -eq 0 ]; then
+    log_info "Creating .env file..."
+
+    cat > "$ENV_FILE" << EOF
+# CLIProxyAPI Stack Environment Configuration
+# Generated by install.sh on $(date)
+
+# Domain configuration
+DOMAIN=$DOMAIN
+DASHBOARD_SUBDOMAIN=$DASHBOARD_SUBDOMAIN
+API_SUBDOMAIN=$API_SUBDOMAIN
+
+# Database configuration
+DATABASE_URL=postgresql://cliproxyapi:${POSTGRES_PASSWORD}@postgres:5432/cliproxyapi
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+
+# Dashboard secrets
+JWT_SECRET=$JWT_SECRET
+MANAGEMENT_API_KEY=$MANAGEMENT_API_KEY
+
+# Management API URL
+CLIPROXYAPI_MANAGEMENT_URL=http://cliproxyapi:8317/v0/management
+
+# Timezone
+TZ=UTC
+
+# Full URLs (for reference)
+DASHBOARD_URL=https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}
+API_URL=https://${API_SUBDOMAIN}.${DOMAIN}
+EOF
+    
+    chmod 600 "$ENV_FILE"
+    log_success ".env file created"
+fi
+
+echo ""
+
+# ============================================================================
+# SYSTEMD SERVICE INSTALLATION
+# ============================================================================
+
+log_info "=== Systemd Service Installation ==="
+echo ""
+
+SERVICE_FILE="/etc/systemd/system/cliproxyapi-stack.service"
+
+if [ -f "$SERVICE_FILE" ]; then
+    log_warning "Systemd service already exists"
+    read -p "Overwrite service file? [y/N]: " OVERWRITE_SERVICE
+    if [[ ! "$OVERWRITE_SERVICE" =~ ^[Yy]$ ]]; then
+        log_info "Keeping existing service file"
+        SKIP_SERVICE=1
+    else
+        SKIP_SERVICE=0
+    fi
+else
+    SKIP_SERVICE=0
+fi
+
+if [ $SKIP_SERVICE -eq 0 ]; then
+    log_info "Creating systemd service..."
+    
+    cat > "$SERVICE_FILE" << EOF
+[Unit]
+Description=CLIProxyAPI Stack (Docker Compose)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+WorkingDirectory=$INSTALL_DIR/infrastructure
+ExecStart=/usr/bin/docker compose up -d --wait
+ExecStop=/usr/bin/docker compose down
+TimeoutStartSec=300
+TimeoutStopSec=120
+
+# Restart policy
+Restart=on-failure
+RestartSec=10s
+
+# Security
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    # Reload systemd and enable service
+    systemctl daemon-reload
+    systemctl enable cliproxyapi-stack.service
+    
+    log_success "Systemd service installed and enabled"
+fi
+
+echo ""
+
+# ============================================================================
+# SCRIPTS INSTALLATION
+# ============================================================================
+
+log_info "=== Backup/Restore Scripts Installation ==="
+echo ""
+
+SCRIPTS_DIR="$INSTALL_DIR/scripts"
+mkdir -p "$SCRIPTS_DIR"
+
+# Create backup script
+log_info "Creating backup script..."
+cat > "$SCRIPTS_DIR/backup.sh" << 'EOF'
+#!/bin/bash
+#
+# CLIProxyAPI Stack Backup Script
+# Backs up Postgres database, config.yaml, and auth directory
+#
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+BACKUP_DIR="$PROJECT_DIR/backups"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="cliproxyapi_backup_${TIMESTAMP}.tar.gz"
+
+# Create backup directory
+mkdir -p "$BACKUP_DIR"
+
+echo "[INFO] Starting backup at $(date)"
+echo "[INFO] Backup location: $BACKUP_DIR/$BACKUP_FILE"
+
+# Create temporary directory for backup
+TMP_DIR=$(mktemp -d)
+trap "rm -rf $TMP_DIR" EXIT
+
+# Backup Postgres database
+echo "[INFO] Backing up Postgres database..."
+cd "$PROJECT_DIR/infrastructure"
+docker compose exec -T postgres pg_dump -U cliproxyapi -d cliproxyapi > "$TMP_DIR/database.sql"
+
+# Backup config.yaml
+echo "[INFO] Backing up config.yaml..."
+cp config/config.yaml "$TMP_DIR/config.yaml"
+
+# Backup auth directory from volume
+echo "[INFO] Backing up auth directory..."
+docker run --rm \
+    -v cliproxyapi_cliproxyapi_auths:/data:ro \
+    -v "$TMP_DIR":/backup \
+    alpine tar czf /backup/auth-dir.tar.gz -C /data .
+
+# Create final backup tarball
+echo "[INFO] Creating backup archive..."
+cd "$TMP_DIR"
+tar czf "$BACKUP_DIR/$BACKUP_FILE" database.sql config.yaml auth-dir.tar.gz
+
+echo "[SUCCESS] Backup completed: $BACKUP_DIR/$BACKUP_FILE"
+echo "[INFO] Backup size: $(du -h "$BACKUP_DIR/$BACKUP_FILE" | cut -f1)"
+EOF
+
+chmod +x "$SCRIPTS_DIR/backup.sh"
+
+# Create restore script
+log_info "Creating restore script..."
+cat > "$SCRIPTS_DIR/restore.sh" << 'EOF'
+#!/bin/bash
+#
+# CLIProxyAPI Stack Restore Script
+# Restores Postgres database, config.yaml, and auth directory from backup
+#
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Check if backup file provided
+if [ $# -ne 1 ]; then
+    echo "[ERROR] Usage: $0 <backup_file.tar.gz>"
+    echo ""
+    echo "Available backups:"
+    ls -lh "$PROJECT_DIR/backups" 2>/dev/null || echo "  No backups found"
+    exit 1
+fi
+
+BACKUP_FILE="$1"
+
+if [ ! -f "$BACKUP_FILE" ]; then
+    echo "[ERROR] Backup file not found: $BACKUP_FILE"
+    exit 1
+fi
+
+echo "[WARNING] This will restore data from backup and overwrite current data!"
+echo "[INFO] Backup file: $BACKUP_FILE"
+read -p "Continue with restore? [y/N]: " CONFIRM
+if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+    echo "[INFO] Restore cancelled"
+    exit 0
+fi
+
+# Create temporary directory
+TMP_DIR=$(mktemp -d)
+trap "rm -rf $TMP_DIR" EXIT
+
+# Extract backup
+echo "[INFO] Extracting backup..."
+tar xzf "$BACKUP_FILE" -C "$TMP_DIR"
+
+# Stop stack
+echo "[INFO] Stopping CLIProxyAPI stack..."
+cd "$PROJECT_DIR/infrastructure"
+docker compose down
+
+# Restore database
+echo "[INFO] Starting Postgres for restore..."
+docker compose up -d postgres
+sleep 10  # Wait for Postgres to be ready
+
+echo "[INFO] Restoring database..."
+docker compose exec -T postgres psql -U cliproxyapi -d cliproxyapi < "$TMP_DIR/database.sql"
+
+# Restore config.yaml
+echo "[INFO] Restoring config.yaml..."
+cp "$TMP_DIR/config.yaml" config/config.yaml
+
+# Restore auth directory
+echo "[INFO] Restoring auth directory..."
+docker run --rm \
+    -v cliproxyapi_cliproxyapi_auths:/data \
+    -v "$TMP_DIR":/backup \
+    alpine sh -c "cd /data && rm -rf * && tar xzf /backup/auth-dir.tar.gz"
+
+# Restart stack
+echo "[INFO] Starting CLIProxyAPI stack..."
+docker compose up -d --wait
+
+echo "[SUCCESS] Restore completed successfully"
+EOF
+
+chmod +x "$SCRIPTS_DIR/restore.sh"
+
+# Create backup rotation script
+log_info "Creating backup rotation script..."
+cat > "$SCRIPTS_DIR/rotate-backups.sh" << 'EOF'
+#!/bin/bash
+#
+# Backup Rotation Script
+# Removes old backups keeping only the specified number of recent backups
+#
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+BACKUP_DIR="$PROJECT_DIR/backups"
+
+# Number of backups to keep (passed as argument or default to 4)
+KEEP_COUNT=${1:-4}
+
+if [ ! -d "$BACKUP_DIR" ]; then
+    echo "[INFO] No backups directory found"
+    exit 0
+fi
+
+# Count current backups
+BACKUP_COUNT=$(find "$BACKUP_DIR" -name "cliproxyapi_backup_*.tar.gz" | wc -l)
+
+if [ "$BACKUP_COUNT" -le "$KEEP_COUNT" ]; then
+    echo "[INFO] Current backups ($BACKUP_COUNT) within retention limit ($KEEP_COUNT)"
+    exit 0
+fi
+
+echo "[INFO] Rotating backups (keep $KEEP_COUNT, remove $((BACKUP_COUNT - KEEP_COUNT)))"
+
+# Remove old backups (keep most recent N)
+find "$BACKUP_DIR" -name "cliproxyapi_backup_*.tar.gz" -type f -printf '%T@ %p\n' | \
+    sort -rn | \
+    tail -n +$((KEEP_COUNT + 1)) | \
+    cut -d' ' -f2- | \
+    while read -r file; do
+        echo "[INFO] Removing old backup: $(basename "$file")"
+        rm -f "$file"
+    done
+
+echo "[SUCCESS] Backup rotation completed"
+EOF
+
+chmod +x "$SCRIPTS_DIR/rotate-backups.sh"
+
+log_success "Backup/restore scripts created in $SCRIPTS_DIR"
+
+echo ""
+
+# ============================================================================
+# CRON JOB SETUP (if backup interval selected)
+# ============================================================================
+
+if [ "$BACKUP_INTERVAL" != "none" ]; then
+    log_info "=== Automated Backup Setup ==="
+    echo ""
+    
+    # Determine cron schedule
+    if [ "$BACKUP_INTERVAL" == "daily" ]; then
+        CRON_SCHEDULE="0 2 * * *"  # 2 AM daily
+        CRON_COMMENT="CLIProxyAPI daily backup"
+    else
+        CRON_SCHEDULE="0 2 * * 0"  # 2 AM Sunday
+        CRON_COMMENT="CLIProxyAPI weekly backup"
+    fi
+    
+    # Check if cron job already exists
+    if crontab -l 2>/dev/null | grep -q "$SCRIPTS_DIR/backup.sh"; then
+        log_warning "Backup cron job already exists"
+    else
+        log_info "Installing backup cron job ($BACKUP_INTERVAL)..."
+        
+        # Add cron job
+        (crontab -l 2>/dev/null || true; echo "# $CRON_COMMENT"; echo "$CRON_SCHEDULE $SCRIPTS_DIR/backup.sh >> $INSTALL_DIR/backups/backup.log 2>&1 && $SCRIPTS_DIR/rotate-backups.sh $BACKUP_RETENTION >> $INSTALL_DIR/backups/backup.log 2>&1") | crontab -
+        
+        log_success "Backup cron job installed (runs $BACKUP_INTERVAL at 2 AM)"
+    fi
+    
+    echo ""
+fi
+
+# ============================================================================
+# FINAL STEPS
+# ============================================================================
+
+log_info "=== Installation Complete ==="
+echo ""
+
+log_success "CLIProxyAPI Stack installation completed successfully!"
+echo ""
+log_info "Next steps:"
+echo "  1. Review and customize config.yaml:"
+echo "     $INSTALL_DIR/infrastructure/config/config.yaml"
+echo ""
+echo "  2. Start the stack:"
+echo "     sudo systemctl start cliproxyapi-stack"
+echo ""
+echo "  3. Check status:"
+echo "     sudo systemctl status cliproxyapi-stack"
+echo ""
+echo "  4. View logs:"
+echo "     cd $INSTALL_DIR/infrastructure"
+echo "     docker compose logs -f"
+echo ""
+echo "  5. Access services:"
+echo "     Dashboard: https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
+echo "     API: https://${API_SUBDOMAIN}.${DOMAIN}"
+echo ""
+log_info "Backup commands:"
+echo "  Manual backup:  $SCRIPTS_DIR/backup.sh"
+echo "  Restore:        $SCRIPTS_DIR/restore.sh <backup_file>"
+if [ "$BACKUP_INTERVAL" != "none" ]; then
+    echo "  Automated:      $BACKUP_INTERVAL backups at 2 AM (keep last $BACKUP_RETENTION)"
+fi
+echo ""
+log_warning "Important: Review the generated config.yaml and replace CHANGE_ME values!"
+log_warning "Secrets are stored in: $ENV_FILE (DO NOT commit to git)"
+echo ""

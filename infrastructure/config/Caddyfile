@@ -1,0 +1,76 @@
+{
+	log {
+		output stdout
+		format json
+		level INFO
+	}
+	
+	servers {
+		protocols h1 h2 h3
+	}
+}
+
+{$DASHBOARD_SUBDOMAIN:dashboard}.{$DOMAIN:localhost} {
+	log {
+		output stdout
+		format json
+	}
+	
+	encode gzip zstd
+	
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		-Server
+	}
+	
+	reverse_proxy dashboard:3000 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		
+		health_uri /api/health
+		health_interval 30s
+		health_timeout 10s
+	}
+}
+
+{$API_SUBDOMAIN:api}.{$DOMAIN:localhost} {
+	log {
+		output stdout
+		format json
+	}
+	
+	encode gzip zstd
+	
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		-Server
+	}
+	
+	@management {
+		path /v0/management/*
+	}
+	handle @management {
+		respond "Management API not accessible via public domain" 403
+	}
+	
+	reverse_proxy cliproxyapi:8317 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		
+		health_uri /
+		health_interval 30s
+		health_timeout 10s
+	}
+}

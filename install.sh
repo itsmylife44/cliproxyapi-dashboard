@@ -35,7 +35,6 @@ log_error() {
 # Preflight conflict detection functions
 check_port_conflict() {
     local port=$1
-    local service_name=$2
     
     # Try ss (preferred, available on most Linux systems)
     if command -v ss &> /dev/null; then

@@ -40,6 +40,7 @@ function formatUptime(seconds: number): string {
 export default function ContainersPage() {
   const [containers, setContainers] = useState<ContainerInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [selectedContainer, setSelectedContainer] = useState<string | null>(null);
   const [logLines, setLogLines] = useState<LogEntry[]>([]);
@@ -59,9 +60,18 @@ export default function ContainersPage() {
         if (res.ok) {
           const data = await res.json();
           setContainers(Array.isArray(data) ? data : []);
+          setFetchError(null);
+        } else {
+          const data = await res.json().catch(() => ({}));
+          const message =
+            typeof data.error === "string"
+              ? data.error
+              : `Failed to load containers (${res.status})`;
+          setFetchError(message);
         }
       } catch (error) {
         console.error("Failed to fetch containers:", error);
+        setFetchError("Network error while loading containers.");
       } finally {
         setLoading(false);
       }
@@ -92,6 +102,14 @@ export default function ContainersPage() {
       if (refreshRes.ok) {
         const data = await refreshRes.json();
         setContainers(Array.isArray(data) ? data : []);
+        setFetchError(null);
+      } else {
+        const data = await refreshRes.json().catch(() => ({}));
+        const message =
+          typeof data.error === "string"
+            ? data.error
+            : `Failed to refresh containers (${refreshRes.status})`;
+        setFetchError(message);
       }
     } catch {
       alert("Network error");
@@ -186,6 +204,16 @@ export default function ContainersPage() {
         <div className="text-sm text-white/60">Loading containers...</div>
       ) : (
         <>
+          {fetchError && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="rounded-xl bg-red-500/20 border border-red-400/30 p-3 text-sm text-red-300">
+                  {fetchError}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid gap-4 md:grid-cols-2">
             {containers.map((container) => {
               const isActionLoading = actionLoading[container.name] || false;

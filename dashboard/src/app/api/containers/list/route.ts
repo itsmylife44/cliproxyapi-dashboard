@@ -5,6 +5,15 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 
 const execFileAsync = promisify(execFile);
+const DOCKER_COMMAND_TIMEOUT_MS = 8000;
+const DOCKER_MAX_BUFFER_BYTES = 1024 * 1024;
+
+async function runDockerCommand(args: string[]) {
+  return execFileAsync("docker", args, {
+    timeout: DOCKER_COMMAND_TIMEOUT_MS,
+    maxBuffer: DOCKER_MAX_BUFFER_BYTES,
+  });
+}
 
 interface ContainerInfo {
   name: string;
@@ -33,7 +42,7 @@ export async function GET() {
       (name) => ["--filter", `name=^/${name}$`]
     );
 
-    const { stdout } = await execFileAsync("docker", [
+    const { stdout } = await runDockerCommand([
       "ps", "-a",
       ...filterArgs,
       "--format", "{{.Names}}\t{{.Status}}\t{{.State}}",
@@ -57,7 +66,7 @@ export async function GET() {
 
         if (state === "running") {
           try {
-            const { stdout: startedAt } = await execFileAsync("docker", [
+            const { stdout: startedAt } = await runDockerCommand([
               "inspect", name,
               "--format", "{{.State.StartedAt}}",
             ]);
@@ -68,7 +77,7 @@ export async function GET() {
           }
 
           try {
-            const { stdout: statsOutput } = await execFileAsync("docker", [
+            const { stdout: statsOutput } = await runDockerCommand([
               "stats", name,
               "--no-stream",
               "--format", "{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}",

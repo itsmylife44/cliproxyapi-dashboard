@@ -16,11 +16,11 @@ function isMcpEntry(value: unknown): value is McpEntry {
   if (typeof obj.name !== "string" || !obj.name) return false;
   if (typeof obj.type !== "string") return false;
   
-  if (obj.type === "stdio") {
-    return typeof obj.command === "string";
+  if (obj.type === "local") {
+    return Array.isArray(obj.command) && obj.command.every((c) => typeof c === "string");
   }
   
-  if (obj.type === "http") {
+  if (obj.type === "remote") {
     return typeof obj.url === "string";
   }
   
@@ -98,6 +98,15 @@ export async function PUT(request: NextRequest) {
       );
     }
     
+    const userExists = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { id: true },
+    });
+    
+    if (!userExists) {
+      return NextResponse.json({ error: "User not found - please log in again" }, { status: 401 });
+    }
+
     const existing = await prisma.agentModelOverride.findUnique({
       where: { userId: session.userId },
     });

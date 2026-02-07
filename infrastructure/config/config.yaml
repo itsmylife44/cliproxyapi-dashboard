@@ -50,6 +50,8 @@ auth-dir: "/root/.cli-proxy-api"
 # WARNING: Keep these secret! Never commit real keys to version control.
 api-keys:
   - ***REMOVED***
+  - ***REMOVED***
+  - ***REMOVED***
 # ============================================================================
 # LOGGING & DEBUGGING
 # ============================================================================

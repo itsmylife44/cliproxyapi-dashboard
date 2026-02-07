@@ -46,9 +46,8 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
    const [pluginInput, setPluginInput] = useState("");
   const [mcps, setMcps] = useState<McpEntry[]>([]);
   const [mcpName, setMcpName] = useState("");
-  const [mcpType, setMcpType] = useState<"stdio" | "http">("stdio");
+  const [mcpType, setMcpType] = useState<"local" | "remote">("local");
   const [mcpCommand, setMcpCommand] = useState("");
-  const [mcpArgs, setMcpArgs] = useState("");
   const [mcpUrl, setMcpUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -159,28 +158,26 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
       return;
     }
 
-    if (mcpType === "http") {
+    if (mcpType === "remote") {
       const trimmedUrl = mcpUrl.trim();
       if (!trimmedUrl) return;
-      setMcps([...mcps, { name: trimmedName, type: "http", url: trimmedUrl }]);
+      setMcps([...mcps, { name: trimmedName, type: "remote", url: trimmedUrl }]);
       setMcpName("");
       setMcpUrl("");
     } else {
       const trimmedCommand = mcpCommand.trim();
       if (!trimmedCommand) return;
-      const argsArray = mcpArgs.trim() ? mcpArgs.trim().split(/\s+/) : undefined;
+      const commandArray = trimmedCommand.split(/\s+/);
       setMcps([
         ...mcps,
         {
           name: trimmedName,
-          type: "stdio",
-          command: trimmedCommand,
-          ...(argsArray && { args: argsArray }),
+          type: "local",
+          command: commandArray,
         },
       ]);
       setMcpName("");
       setMcpCommand("");
-      setMcpArgs("");
     }
   };
 
@@ -383,21 +380,21 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
                 />
                 <select
                   value={mcpType}
-                  onChange={(e) => setMcpType(e.target.value as "stdio" | "http")}
+                  onChange={(e) => setMcpType(e.target.value as "local" | "remote")}
                   className="backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
                 >
-                  <option value="stdio" className="bg-[#1a1a2e] text-white">STDIO</option>
-                  <option value="http" className="bg-[#1a1a2e] text-white">HTTP</option>
+                  <option value="local" className="bg-[#1a1a2e] text-white">Local</option>
+                  <option value="remote" className="bg-[#1a1a2e] text-white">Remote</option>
                 </select>
               </div>
-              {mcpType === "http" ? (
+              {mcpType === "remote" ? (
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={mcpUrl}
                     onChange={(e) => setMcpUrl(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAddMcp()}
-                    placeholder="http://127.0.0.1:13337/mcp"
+                    placeholder="https://mcp.example.com/mcp"
                     className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
                   />
                   <button
@@ -414,15 +411,8 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
                     type="text"
                     value={mcpCommand}
                     onChange={(e) => setMcpCommand(e.target.value)}
-                    placeholder="command (e.g., python)"
-                    className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
-                  />
-                  <input
-                    type="text"
-                    value={mcpArgs}
-                    onChange={(e) => setMcpArgs(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAddMcp()}
-                    placeholder="args (optional, space-separated)"
+                    placeholder="npx -y @modelcontextprotocol/server-everything"
                     className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
                   />
                   <button
@@ -445,21 +435,15 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
                     <div className="flex items-center gap-2 text-xs font-mono">
                       <span className="text-blue-300">{mcp.name}</span>
                       <span className="text-white/30">→</span>
-                      {mcp.type === "http" ? (
+                      {mcp.type === "remote" ? (
                         <>
-                          <span className="text-purple-400">HTTP</span>
+                          <span className="text-purple-400">Remote</span>
                           <span className="text-white/60">{mcp.url}</span>
                         </>
                       ) : (
                         <>
-                          <span className="text-emerald-400">STDIO</span>
-                          <span className="text-white/60">{mcp.command}</span>
-                          {mcp.args && mcp.args.length > 0 && (
-                            <>
-                              <span className="text-white/30">+</span>
-                              <span className="text-white/50">{mcp.args.join(" ")}</span>
-                            </>
-                          )}
+                          <span className="text-emerald-400">Local</span>
+                          <span className="text-white/60">{mcp.command.join(" ")}</span>
                         </>
                       )}
                     </div>

@@ -104,12 +104,11 @@ export default function SettingsPage() {
 
     const fetchApiKeys = async () => {
       try {
-        const res = await fetch("/api/management/api-keys");
+        const res = await fetch("/api/user/api-keys");
         if (res.ok) {
           const data = await res.json();
-          const keys = data?.["api-keys"];
-          if (Array.isArray(keys)) {
-            setAvailableApiKeys(keys.filter((k: unknown): k is string => typeof k === "string"));
+          if (Array.isArray(data.keys)) {
+            setAvailableApiKeys(data.keys.map((k: { key: string }) => k.key));
           }
         }
       } catch {}

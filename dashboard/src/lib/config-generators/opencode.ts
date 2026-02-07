@@ -1,6 +1,5 @@
 import {
   PROVIDER_KEYS,
-  type ModelsDevModel,
   isRecord,
   hasProvider,
   getActiveOAuthProviderTypes,
@@ -369,8 +368,8 @@ export function buildAvailableModels(
 }
 
 export type McpEntry =
-  | { name: string; type: "stdio"; command: string; args?: string[] }
-  | { name: string; type: "http"; url: string };
+  | { name: string; type: "local"; command: string[] }
+  | { name: string; type: "remote"; url: string };
 
 export interface LspEntry {
   language: string;
@@ -434,16 +433,15 @@ export function generateConfigJson(
   if (options?.mcps && options.mcps.length > 0) {
     const mcpServers: Record<string, Record<string, unknown>> = {};
     for (const mcp of options.mcps) {
-      if (mcp.type === "http") {
+      if (mcp.type === "remote") {
         mcpServers[mcp.name] = {
-          type: "http",
+          type: "remote",
           url: mcp.url,
         };
-      } else if (mcp.type === "stdio") {
-        const args = mcp.args ?? [];
+      } else if (mcp.type === "local") {
         mcpServers[mcp.name] = {
+          type: "local",
           command: mcp.command,
-          ...(args.length > 0 && { args }),
         };
       }
     }

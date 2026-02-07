@@ -12,6 +12,7 @@ import {
 import { prisma } from "@/lib/db";
 import { generateApiKey } from "@/lib/api-keys/generate";
 import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
+import { cascadeDeleteUserProviders } from "@/lib/providers/cascade";
 
 async function requireAdmin(
   request: NextRequest
@@ -188,6 +189,74 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("User creation error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const authResult = await requireAdmin(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  const originError = validateOrigin(request);
+  if (originError) {
+    return originError;
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const userIdToDelete = searchParams.get("userId");
+
+    if (!userIdToDelete || typeof userIdToDelete !== "string") {
+      return NextResponse.json(
+        { error: "userId query parameter is required" },
+        { status: 400 }
+      );
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userIdToDelete },
+      select: { id: true, username: true, isAdmin: true },
+    });
+
+    if (!targetUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    if (targetUser.id === authResult.userId) {
+      return NextResponse.json(
+        { error: "Cannot delete your own account" },
+        { status: 400 }
+      );
+    }
+
+    const cascadeResult = await cascadeDeleteUserProviders(userIdToDelete, true);
+
+    await prisma.user.delete({
+      where: { id: userIdToDelete },
+    });
+
+    console.log(
+      `Admin ${authResult.username} deleted user ${targetUser.username} (${userIdToDelete}). Cascade: ${cascadeResult.keysRemoved} keys, ${cascadeResult.oauthRemoved} OAuth removed; ${cascadeResult.keysFailedToRemove} keys failed, ${cascadeResult.oauthFailedToRemove} OAuth failed`
+    );
+
+    return NextResponse.json({
+      success: true,
+      username: targetUser.username,
+      cascade: {
+        keysRemoved: cascadeResult.keysRemoved,
+        oauthRemoved: cascadeResult.oauthRemoved,
+        failedOperations:
+          cascadeResult.keysFailedToRemove + cascadeResult.oauthFailedToRemove,
+        errors: cascadeResult.errors,
+      },
+    });
+  } catch (error) {
+    console.error("User deletion error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -90,7 +90,7 @@ export function QuickStartConfigSection({
           <div className="space-y-4">
             <p className="text-sm text-white/70">
               {hasSyncActive ? (
-                <span>Config auto-syncs via <code className="px-1.5 py-0.5 rounded bg-white/10 text-violet-300 text-xs font-mono">opencode-cliproxyapi-sync</code> plugin.</span>
+                <span>Config auto-syncs via <code className="px-1.5 py-0.5 rounded bg-white/10 text-violet-300 text-xs font-mono">opencode-cliproxyapi-sync@latest</code> plugin.</span>
               ) : (
                 <span>Place at <code className="px-1.5 py-0.5 rounded bg-white/10 text-orange-300 text-xs font-mono break-all">~/.config/opencode/opencode.json</code> or project root.</span>
               )}
@@ -119,7 +119,7 @@ export function QuickStartConfigSection({
             <div className="flex items-start gap-3 mt-4 p-3 rounded-lg bg-white/5 border border-white/10">
               <span className="text-lg">💡</span>
               <p className="text-sm text-white/70">
-                Auto-sync: Get token in <a href="/dashboard/settings" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">Settings</a>, install <code className="px-1.5 py-0.5 rounded bg-white/10 text-violet-300 text-xs font-mono">opencode-cliproxyapi-sync</code>
+                Auto-sync: Get token in <a href="/dashboard/settings" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">Settings</a>, install <code className="px-1.5 py-0.5 rounded bg-white/10 text-violet-300 text-xs font-mono">opencode-cliproxyapi-sync@latest</code>
               </p>
             </div>
          </CardContent>

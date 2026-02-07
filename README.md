@@ -2,7 +2,7 @@
 
 A modern web-based management interface for [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI), featuring real-time monitoring, structured configuration, API key management, and OAuth provider integration.
 
-![CLIProxyAPI Dashboard](docs/screenshots/02-quick-start.png)
+![CLIProxyAPI Dashboard](docs/screenshots/1.png)
 
 ## What is CLIProxyAPI?
 
@@ -53,35 +53,9 @@ Built with **Next.js 16**, **React 19**, **Tailwind CSS v4**, **Prisma**, and **
 
 ## Screenshots
 
-<details>
-<summary>View all screenshots</summary>
+![Dashboard Screenshot 1](docs/screenshots/1.png)
 
-### Login
-![Login Page](docs/screenshots/01-login.png)
-
-### Quick Start
-![Quick Start Page](docs/screenshots/02-quick-start.png)
-![Quick Start - Claude Integration](docs/screenshots/03-quick-start-claude.png)
-
-### Monitoring
-![Monitoring Dashboard](docs/screenshots/04-monitoring.png)
-
-### Configuration
-![Configuration Editor](docs/screenshots/05-config.png)
-
-### API Keys
-![API Key Management](docs/screenshots/06-api-keys.png)
-
-### Providers
-![Provider Management](docs/screenshots/07-providers.png)
-
-### Usage Analytics
-![Usage Statistics](docs/screenshots/08-usage.png)
-
-### Settings
-![System Settings](docs/screenshots/09-settings.png)
-
-</details>
+![Dashboard Screenshot 2](docs/screenshots/2.png)
 
 ## Prerequisites
 

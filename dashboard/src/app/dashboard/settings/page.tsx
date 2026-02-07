@@ -586,9 +586,9 @@ export default function SettingsPage() {
             </button>
             {showInstructions && (
               <div className="mt-3 space-y-2 rounded-lg bg-white/5 p-4 text-sm text-white/80">
-                <div className="font-medium text-white">1. Add to opencode.json plugins:</div>
+                <div className="font-medium text-white">1. Add to opencode.jsonc plugin array:</div>
                 <div className="rounded bg-black/30 p-2 font-mono text-xs">
-                  {`"plugins": ["opencode-cliproxyapi-sync@latest", ...]`}
+                  {`"plugin": ["opencode-cliproxyapi-sync@latest", ...]`}
                 </div>
                 
                 <div className="font-medium text-white">2. Create config file:</div>

@@ -130,6 +130,8 @@ run_migrations() {
         npx prisma migrate resolve --applied 20250206_add_model_preferences >/dev/null 2>&1 || true
         npx prisma migrate resolve --applied 20260206_add_sync_tokens >/dev/null 2>&1 || true
         npx prisma migrate resolve --applied 20260207_add_user_api_keys_and_admin >/dev/null 2>&1 || true
+        npx prisma migrate resolve --applied 20260207_add_config_sharing >/dev/null 2>&1 || true
+        npx prisma migrate resolve --applied 20260207_add_provider_ownership_models >/dev/null 2>&1 || true
     fi
     
     if npx prisma migrate deploy; then

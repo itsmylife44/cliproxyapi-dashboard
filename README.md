@@ -31,8 +31,10 @@ Built with **Next.js 16**, **React 19**, **Tailwind CSS v4**, **Prisma**, and **
 - **API Key Management**: Full lifecycle management for API keys
 - **Multi-Provider Support**: Claude Code, Gemini, OpenAI/Codex, and OpenAI-compatible endpoints
 - **OAuth Account Management**: Connect and manage OAuth sessions for Claude, Gemini, and Codex
+- **Per-User Provider Ownership**: Users contribute their own API keys to the shared pool with ownership tracking
 - **Usage Statistics**: Comprehensive usage tracking and analytics
 - **Config Sync**: Auto-sync OpenCode configs via sync tokens and the `opencode-cliproxyapi-sync` plugin
+- **Config Sharing**: Publishers share their model configurations via share codes, subscribers auto-sync
 - **Dynamic Config Generation**: Auto-generate `opencode.json` and `oh-my-opencode.json` with provider-aware model selection
 - **Model Selection UI**: Enable/disable individual models from config generation with per-user preferences
 - **OAuth Model Detection**: Automatically detects OAuth-connected providers and includes their models in generated configs
@@ -437,9 +439,20 @@ Manage dashboard API keys (not CLIProxyAPI API keys):
 
 Manage AI provider connections:
 - **OAuth Accounts**: Connect Claude, Gemini, and Codex OAuth accounts
+- **API Key Contribution**: Add your own API keys to the shared provider pool
+- **Ownership Tracking**: See which keys/accounts you own vs. others (anonymized)
 - **Provider Status**: View connection status and account details
-- **Account Management**: Add/remove/reconnect OAuth accounts
+- **Account Management**: Add/remove/reconnect OAuth accounts (only your own)
 - **Usage Tracking**: Per-provider usage statistics
+
+### Config Sharing
+
+Share your configuration with others:
+- **Publish**: Generate a unique share code (format: `XXXX-XXXX`) for your config
+- **Subscribe**: Enter a share code to sync with a publisher's model selection
+- **Automatic Sync**: Subscribers see publisher's models on page reload
+- **Subscriber Isolation**: Subscribers keep their own MCP servers and plugins
+- **Mutual Exclusivity**: Users can be either publisher OR subscriber, not both
 
 ### Usage Statistics
 

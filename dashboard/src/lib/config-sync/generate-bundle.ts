@@ -9,6 +9,50 @@ interface ManagementFetchParams {
   path: string;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readStringArray(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  const filtered = value.filter((item): item is string => typeof item === "string");
+  return filtered.length > 0 ? filtered : null;
+}
+
+function getFrozenExcludedModels(frozenConfig: unknown): string[] | null {
+  if (!isRecord(frozenConfig)) return null;
+  
+  if (Array.isArray(frozenConfig.excludedModels)) {
+    return readStringArray(frozenConfig.excludedModels);
+  }
+  
+  if (isRecord(frozenConfig.modelPreference)) {
+    const modelPref = frozenConfig.modelPreference;
+    if (Array.isArray(modelPref.excludedModels)) {
+      return readStringArray(modelPref.excludedModels);
+    }
+  }
+  
+  return null;
+}
+
+function getFrozenOverrides(frozenConfig: unknown): OhMyOpenCodeFullConfig | undefined {
+  if (!isRecord(frozenConfig)) return undefined;
+  
+  if (isRecord(frozenConfig.overrides)) {
+    return frozenConfig.overrides as OhMyOpenCodeFullConfig;
+  }
+  
+  if (isRecord(frozenConfig.agentModelOverride)) {
+    const agentOverride = frozenConfig.agentModelOverride;
+    if (isRecord(agentOverride.overrides)) {
+      return agentOverride.overrides as OhMyOpenCodeFullConfig;
+    }
+  }
+  
+  return undefined;
+}
+
 async function fetchManagementJson({ path }: ManagementFetchParams) {
   try {
     const baseUrl =
@@ -95,19 +139,86 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
   const apiKeysData = await fetchManagementJson({ path: "api-keys" });
   const apiKeyStrings = extractApiKeyStrings(apiKeysData);
 
-  // 5. Fetch user's ModelPreference, AgentModelOverride, and UserApiKey from Prisma
-  const [modelPreference, agentOverride, userApiKey] = await Promise.all([
+  // 5. Fetch user's ModelPreference, AgentModelOverride, UserApiKey, and ConfigSubscription from Prisma
+  const [modelPreference, agentOverride, userApiKey, subscription] = await Promise.all([
     prisma.modelPreference.findUnique({ where: { userId } }),
     prisma.agentModelOverride.findUnique({ where: { userId } }),
     prisma.userApiKey.findFirst({
       where: { userId },
       orderBy: { createdAt: "asc" },
     }),
+    prisma.configSubscription.findUnique({
+      where: { userId },
+      include: { template: true },
+    }),
   ]);
-  const agentOverrides = agentOverride?.overrides as OhMyOpenCodeFullConfig | undefined;
 
-  // 6. Extract excluded models from preferences
-  const excludedModels = new Set(modelPreference?.excludedModels || []);
+  // 6. Parse frozen config if subscription exists
+  const frozenExcludedModels = subscription?.frozenConfig 
+    ? getFrozenExcludedModels(subscription.frozenConfig)
+    : null;
+  const frozenOverrides = subscription?.frozenConfig
+    ? getFrozenOverrides(subscription.frozenConfig)
+    : undefined;
+  
+  // 7. Check if subscription is active and template exists
+  const hasActiveSubscription = subscription?.isActive && subscription.template?.isActive;
+  
+  // 8. Load publisher's live config if subscription is active and no frozen data available
+  let publisherModelPreference = null;
+  let publisherAgentOverride = null;
+  
+  if (hasActiveSubscription && !frozenExcludedModels && !frozenOverrides && subscription?.template) {
+    const publisherId = subscription.template.userId;
+    [publisherModelPreference, publisherAgentOverride] = await Promise.all([
+      prisma.modelPreference.findUnique({ where: { userId: publisherId } }),
+      prisma.agentModelOverride.findUnique({ where: { userId: publisherId } }),
+    ]);
+  }
+
+  // 9. Determine which config to use for model selection
+  let effectiveExcludedModels: string[];
+  if (frozenExcludedModels !== null) {
+    effectiveExcludedModels = frozenExcludedModels;
+  } else if (hasActiveSubscription && publisherModelPreference) {
+    effectiveExcludedModels = publisherModelPreference.excludedModels;
+  } else {
+    effectiveExcludedModels = modelPreference?.excludedModels || [];
+  }
+  
+  const subscriberOverrides = agentOverride?.overrides as OhMyOpenCodeFullConfig | undefined;
+  const publisherOverrides = publisherAgentOverride?.overrides as OhMyOpenCodeFullConfig | undefined;
+  
+  // 10. Determine base overrides (frozen, live publisher, or subscriber)
+  let baseOverrides: OhMyOpenCodeFullConfig | undefined;
+  if (frozenOverrides !== undefined) {
+    baseOverrides = frozenOverrides;
+  } else if (hasActiveSubscription && publisherOverrides) {
+    baseOverrides = publisherOverrides;
+  } else {
+    baseOverrides = subscriberOverrides;
+  }
+  
+  // 11. Merge overrides: use base (frozen/publisher), merge subscriber MCPs and plugins on top
+  let agentOverrides: OhMyOpenCodeFullConfig | undefined;
+  if (frozenOverrides !== undefined || (hasActiveSubscription && publisherOverrides)) {
+    agentOverrides = {
+      ...baseOverrides,
+      mcpServers: [
+        ...(baseOverrides?.mcpServers ?? []),
+        ...(subscriberOverrides?.mcpServers ?? []),
+      ],
+      customPlugins: [
+        ...(baseOverrides?.customPlugins ?? []),
+        ...(subscriberOverrides?.customPlugins ?? []),
+      ],
+    };
+  } else {
+    agentOverrides = subscriberOverrides;
+  }
+
+  // 13. Extract excluded models from effective config
+  const excludedModels = new Set(effectiveExcludedModels);
 
   // 7. Build available models and filter out excluded
   const allModels = buildAvailableModels(
@@ -170,16 +281,15 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
   if (mcpEntries.length > 0) {
     const mcpServers: Record<string, Record<string, unknown>> = {};
     for (const mcp of mcpEntries) {
-      if (mcp.type === "http") {
+      if (mcp.type === "remote") {
         mcpServers[mcp.name] = {
-          type: "http",
+          type: "remote",
           url: mcp.url,
         };
-      } else if (mcp.type === "stdio") {
-        const args = mcp.args ?? [];
+      } else if (mcp.type === "local") {
         mcpServers[mcp.name] = {
+          type: "local",
           command: mcp.command,
-          ...(args.length > 0 && { args }),
         };
       }
     }

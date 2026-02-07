@@ -64,6 +64,15 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    const userExists = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { id: true },
+    });
+    
+    if (!userExists) {
+      return NextResponse.json({ error: "User not found - please log in again" }, { status: 401 });
+    }
+
     const modelPreference = await prisma.modelPreference.upsert({
       where: { userId: session.userId },
       create: {

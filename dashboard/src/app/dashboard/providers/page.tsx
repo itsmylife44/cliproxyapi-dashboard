@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 
-// ── API Key Providers ──────────────────────────────────────────────────────────
+// ── Types & Constants ──────────────────────────────────────────────────────────
 
 const PROVIDER_IDS = {
   CLAUDE: "claude",
@@ -18,79 +18,65 @@ const PROVIDER_IDS = {
 
 type ProviderId = (typeof PROVIDER_IDS)[keyof typeof PROVIDER_IDS];
 
+interface CurrentUser {
+  id: string;
+  username: string;
+  isAdmin: boolean;
+}
+
+interface KeyWithOwnership {
+  keyHash: string;
+  maskedKey: string;
+  provider: string;
+  ownerUsername: string | null;
+  ownerUserId: string | null;
+  isOwn: boolean;
+}
+
+interface OAuthAccountWithOwnership {
+  id: string;
+  accountName: string;
+  accountEmail: string | null;
+  provider: string;
+  ownerUsername: string | null;
+  ownerUserId: string | null;
+  isOwn: boolean;
+}
+
 const PROVIDERS = [
   {
     id: PROVIDER_IDS.CLAUDE,
     name: "Claude (Anthropic)",
     description: "Official Anthropic API",
-    endpoint: "/api/management/claude-api-key",
-    responseKey: "claude-api-key",
     icon: "🤖",
-    defaultBaseUrl: "",
   },
   {
     id: PROVIDER_IDS.GEMINI,
     name: "Gemini (Google)",
     description: "Google Gemini API",
-    endpoint: "/api/management/gemini-api-key",
-    responseKey: "gemini-api-key",
     icon: "✨",
-    defaultBaseUrl: "https://generativelanguage.googleapis.com",
   },
   {
     id: PROVIDER_IDS.CODEX,
     name: "OpenAI / Codex",
     description: "OpenAI API including GPT models",
-    endpoint: "/api/management/codex-api-key",
-    responseKey: "codex-api-key",
     icon: "🔮",
-    defaultBaseUrl: "https://api.openai.com/v1",
   },
   {
     id: PROVIDER_IDS.OPENAI,
     name: "OpenAI Compatible",
     description: "Custom providers like OpenRouter",
-    endpoint: "/api/management/openai-compatibility",
-    responseKey: "openai-compatibility",
     icon: "🔌",
-    defaultBaseUrl: "",
   },
 ] as const;
 
-type ProviderConfig = (typeof PROVIDERS)[number];
-
-interface ApiKeyEntry {
-  "api-key": string;
-  prefix?: string;
-  "base-url"?: string;
-  "proxy-url"?: string;
-  headers?: Record<string, string>;
-  "excluded-models"?: string[];
-}
-
-interface OpenAIKeyEntry {
-  "api-key": string;
-}
-
-interface OpenAIProviderEntry {
-  name: string;
-  prefix?: string;
-  "base-url"?: string;
-  "api-key-entries": OpenAIKeyEntry[];
-  models?: string[];
-  headers?: Record<string, string>;
-}
-
-interface OpenAIProviderState {
-  name: string;
-  prefix?: string;
-  baseUrl?: string;
-  apiKeys: string[];
+interface OwnerBadgeProps {
+  ownerUsername: string | null;
+  isOwn: boolean;
 }
 
 interface ProviderState {
-  keys: string[];
-  openAIProviders: OpenAIProviderState[];
+  keys: KeyWithOwnership[];
 }
 
 // ── OAuth Providers ────────────────────────────────────────────────────────────
@@ -146,20 +132,7 @@ const CALLBACK_VALIDATION = {
 type CallbackValidation =
   (typeof CALLBACK_VALIDATION)[keyof typeof CALLBACK_VALIDATION];
 
-interface AuthFileEntry {
-  id: string;
-  name: string;
-  type?: string;
-  provider?: string;
-  label?: string;
-  status?: string;
-  disabled?: boolean;
-  email?: string;
-}
 
-interface AuthFilesResponse {
-  files?: AuthFileEntry[];
-}
 
 interface AuthUrlResponse {
   status?: string;
@@ -177,15 +150,36 @@ interface OAuthCallbackResponse {
   error?: string;
 }
 
+// ── UI Components ──────────────────────────────────────────────────────────────
+
+function OwnerBadge({ ownerUsername, isOwn }: OwnerBadgeProps) {
+  if (!ownerUsername) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/20 px-2.5 py-1 text-xs font-medium text-white/50">
+        <span className="size-1.5 rounded-full bg-white/30"></span>
+        Unassigned
+      </span>
+    );
+  }
+
+  if (isOwn) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-500/30 to-cyan-500/30 border border-blue-400/50 px-2.5 py-1 text-xs font-bold text-blue-300 shadow-sm">
+        <span className="size-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+        You
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-2.5 py-1 text-xs font-medium text-white/70">
+      <span className="size-1.5 rounded-full bg-purple-400"></span>
+      {ownerUsername}
+    </span>
+  );
+}
+
 // ── Utility Functions ──────────────────────────────────────────────────────────
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const maskKey = (value: string) => {
-  if (value.length <= 12) return value;
-  return `${value.slice(0, 8)}...${value.slice(-4)}`;
-};
 
 const getOAuthProviderById = (id: OAuthProviderId | null) =>
   OAUTH_PROVIDERS.find((provider) => provider.id === id) || null;
@@ -221,126 +215,25 @@ const validateCallbackUrl = (value: string) => {
   };
 };
 
-const extractApiKeys = (data: unknown, responseKey: string) => {
-  if (!isRecord(data)) return [];
-  const value = data[responseKey];
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((entry) => {
-      if (!isRecord(entry)) return null;
-      const apiKeyValue = entry["api-key"];
-      if (typeof apiKeyValue !== "string") return null;
-      return apiKeyValue;
-    })
-    .filter((entry): entry is string => typeof entry === "string");
-};
-
-const isOpenAIProviderState = (
-  entry: OpenAIProviderState | null
-): entry is OpenAIProviderState => entry !== null;
-
-const extractOpenAIProviders = (data: unknown): OpenAIProviderState[] => {
-  if (!isRecord(data)) return [];
-  const value = data["openai-compatibility"];
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((entry): OpenAIProviderState | null => {
-      if (!isRecord(entry)) return null;
-      const name = entry.name;
-      const apiKeyEntries = entry["api-key-entries"];
-      if (typeof name !== "string" || !Array.isArray(apiKeyEntries)) return null;
-      const keys = apiKeyEntries
-        .map((keyEntry) => {
-          if (!isRecord(keyEntry)) return null;
-          const apiKeyValue = keyEntry["api-key"];
-          return typeof apiKeyValue === "string" ? apiKeyValue : null;
-        })
-        .filter((key): key is string => typeof key === "string");
-      const provider: OpenAIProviderState = {
-        name,
-        apiKeys: keys,
-      };
-      if (typeof entry.prefix === "string") {
-        provider.prefix = entry.prefix;
-      }
-      if (typeof entry["base-url"] === "string") {
-        provider.baseUrl = entry["base-url"];
-      }
-      return provider;
-    })
-    .filter(isOpenAIProviderState);
-};
-
-const extractOpenAIEntriesForPut = (data: unknown): OpenAIProviderEntry[] => {
-  if (!isRecord(data)) return [];
-  const value = data["openai-compatibility"];
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((entry) => {
-      if (!isRecord(entry)) return null;
-      const name = entry.name;
-      const apiKeyEntries = entry["api-key-entries"];
-      if (typeof name !== "string" || !Array.isArray(apiKeyEntries)) return null;
-      const keys = apiKeyEntries
-        .map((keyEntry) => {
-          if (!isRecord(keyEntry)) return null;
-          const apiKeyValue = keyEntry["api-key"];
-          return typeof apiKeyValue === "string" ? { "api-key": apiKeyValue } : null;
-        })
-        .filter((key): key is OpenAIKeyEntry => key !== null);
-      const providerEntry: OpenAIProviderEntry = {
-        name,
-        "api-key-entries": keys,
-      };
-      if (typeof entry.prefix === "string") {
-        providerEntry.prefix = entry.prefix;
-      }
-      if (typeof entry["base-url"] === "string") {
-        providerEntry["base-url"] = entry["base-url"];
-      }
-      if (Array.isArray(entry.models)) {
-        providerEntry.models = entry.models.filter((model) => typeof model === "string");
-      }
-      if (isRecord(entry.headers)) {
-        const headers: Record<string, string> = {};
-        Object.entries(entry.headers).forEach(([key, value]) => {
-          if (typeof value === "string") {
-            headers[key] = value;
-          }
-        });
-        providerEntry.headers = headers;
-      }
-      return providerEntry;
-    })
-    .filter((entry): entry is OpenAIProviderEntry => entry !== null);
-};
-
 const loadProvidersData = async (): Promise<Record<ProviderId, ProviderState>> => {
   const newConfigs: Record<ProviderId, ProviderState> = {
-    [PROVIDER_IDS.CLAUDE]: { keys: [], openAIProviders: [] },
-    [PROVIDER_IDS.GEMINI]: { keys: [], openAIProviders: [] },
-    [PROVIDER_IDS.CODEX]: { keys: [], openAIProviders: [] },
-    [PROVIDER_IDS.OPENAI]: { keys: [], openAIProviders: [] },
+    [PROVIDER_IDS.CLAUDE]: { keys: [] },
+    [PROVIDER_IDS.GEMINI]: { keys: [] },
+    [PROVIDER_IDS.CODEX]: { keys: [] },
+    [PROVIDER_IDS.OPENAI]: { keys: [] },
   };
 
   for (const provider of PROVIDERS) {
     try {
-      const res = await fetch(provider.endpoint);
+      const res = await fetch(`/api/providers/keys?provider=${provider.id}`);
       if (res.ok) {
         const data = await res.json();
-        if (provider.id === PROVIDER_IDS.OPENAI) {
-          const openAIProviders = extractOpenAIProviders(data);
-          const keys = openAIProviders.flatMap((entry) => entry.apiKeys);
-          newConfigs[provider.id] = { keys, openAIProviders };
-        } else {
-          const keys = extractApiKeys(data, provider.responseKey);
-          newConfigs[provider.id] = { keys, openAIProviders: [] };
+        if (Array.isArray(data.keys)) {
+          newConfigs[provider.id] = { keys: data.keys };
         }
-      } else {
-        newConfigs[provider.id] = { keys: [], openAIProviders: [] };
       }
-    } catch {
-      newConfigs[provider.id] = { keys: [], openAIProviders: [] };
+    } catch (error) {
+      console.error(`Failed to load keys for ${provider.id}:`, error);
     }
   }
 
@@ -350,25 +243,24 @@ const loadProvidersData = async (): Promise<Record<ProviderId, ProviderState>> =
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function ProvidersPage() {
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [configs, setConfigs] = useState<Record<ProviderId, ProviderState>>(() => {
     const initialState: Record<ProviderId, ProviderState> = {
-      [PROVIDER_IDS.CLAUDE]: { keys: [], openAIProviders: [] },
-      [PROVIDER_IDS.GEMINI]: { keys: [], openAIProviders: [] },
-      [PROVIDER_IDS.CODEX]: { keys: [], openAIProviders: [] },
-      [PROVIDER_IDS.OPENAI]: { keys: [], openAIProviders: [] },
+      [PROVIDER_IDS.CLAUDE]: { keys: [] },
+      [PROVIDER_IDS.GEMINI]: { keys: [] },
+      [PROVIDER_IDS.CODEX]: { keys: [] },
+      [PROVIDER_IDS.OPENAI]: { keys: [] },
     };
     return initialState;
   });
+  const [maxKeysPerUser, setMaxKeysPerUser] = useState<number>(10);
   const [modalProvider, setModalProvider] = useState<ProviderId | null>(null);
   const [apiKey, setApiKey] = useState("");
-  const [prefix, setPrefix] = useState("");
-  const [baseUrl, setBaseUrl] = useState("");
-  const [providerName, setProviderName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { showToast } = useToast();
 
-  const [accounts, setAccounts] = useState<AuthFileEntry[]>([]);
+  const [accounts, setAccounts] = useState<OAuthAccountWithOwnership[]>([]);
   const [oauthAccountsLoading, setOauthAccountsLoading] = useState(true);
   const [isOAuthModalOpen, setIsOAuthModalOpen] = useState(false);
   const [oauthModalStatus, setOauthModalStatus] = useState<ModalStatus>(MODAL_STATUS.IDLE);
@@ -387,6 +279,37 @@ export default function ProvidersPage() {
 
   // ── API Key handlers ───────────────────────────────────────────────────────
 
+  const loadCurrentUser = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentUser({ id: data.id, username: data.username, isAdmin: data.isAdmin });
+      }
+    } catch (error) {
+      console.error("Failed to load current user:", error);
+    }
+  }, []);
+
+  const loadMaxKeysPerUser = useCallback(async () => {
+    if (!currentUser?.isAdmin) return;
+    try {
+      const res = await fetch("/api/admin/settings");
+      if (res.ok) {
+        const data = await res.json();
+        const setting = data.settings?.find((s: { key: string; value: string }) => s.key === "max_provider_keys_per_user");
+        if (setting) {
+          const parsed = parseInt(setting.value, 10);
+          if (!isNaN(parsed) && parsed > 0) {
+            setMaxKeysPerUser(parsed);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load max keys per user:", error);
+    }
+  }, [currentUser]);
+
   const refreshProviders = async () => {
     setLoading(true);
     const newConfigs = await loadProvidersData();
@@ -397,6 +320,7 @@ export default function ProvidersPage() {
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
+      await loadCurrentUser();
       const newConfigs = await loadProvidersData();
       if (!isMounted) return;
       setConfigs(newConfigs);
@@ -407,13 +331,16 @@ export default function ProvidersPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [loadCurrentUser]);
+
+  useEffect(() => {
+    if (currentUser?.isAdmin) {
+      void loadMaxKeysPerUser();
+    }
+  }, [currentUser, loadMaxKeysPerUser]);
 
   const resetForm = () => {
     setApiKey("");
-    setPrefix("");
-    setBaseUrl("");
-    setProviderName("");
   };
 
   const openModal = (providerId: ProviderId) => {
@@ -432,113 +359,59 @@ export default function ProvidersPage() {
       showToast("API key is required", "error");
       return;
     }
-    if (modalProvider === PROVIDER_IDS.OPENAI && !providerName.trim()) {
-      showToast("Provider name is required for OpenAI compatibility", "error");
-      return;
-    }
 
     setSaving(true);
-    const provider = PROVIDERS.find((item) => item.id === modalProvider);
-    if (!provider) {
-      setSaving(false);
-      return;
-    }
 
     try {
-      const listRes = await fetch(provider.endpoint);
-      if (!listRes.ok) {
-        showToast("Failed to load current keys", "error");
+      const res = await fetch("/api/providers/keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: modalProvider,
+          apiKey: apiKey.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 409) {
+          showToast("This API key has already been contributed", "error");
+        } else if (res.status === 403) {
+          showToast(data.error || "Key limit reached", "error");
+        } else {
+          showToast(data.error || "Failed to add provider key", "error");
+        }
         setSaving(false);
         return;
       }
-      const data = await listRes.json();
 
-      if (provider.id === PROVIDER_IDS.OPENAI) {
-        const existing = extractOpenAIEntriesForPut(data);
-        const newEntry: OpenAIProviderEntry = {
-          name: providerName.trim(),
-          "api-key-entries": [{ "api-key": apiKey.trim() }],
-          models: [],
-          headers: {},
-        };
-        if (prefix.trim()) {
-          newEntry.prefix = prefix.trim();
-        }
-        if (baseUrl.trim()) {
-          newEntry["base-url"] = baseUrl.trim();
-        }
-        const res = await fetch(provider.endpoint, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify([...existing, newEntry]),
-        });
-        if (!res.ok) {
-          showToast("Failed to save provider key", "error");
-          setSaving(false);
-          return;
-        }
-      } else {
-        const currentEntries = extractApiKeys(data, provider.responseKey).map((key) => ({
-          "api-key": key,
-        }));
-        const newEntry: ApiKeyEntry = { "api-key": apiKey.trim() };
-        if (prefix.trim()) {
-          newEntry.prefix = prefix.trim();
-        }
-        const res = await fetch(provider.endpoint, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify([...currentEntries, newEntry]),
-        });
-        if (!res.ok) {
-          showToast("Failed to save provider key", "error");
-          setSaving(false);
-          return;
-        }
-      }
-
-      showToast("Provider key added", "success");
+      showToast("Provider key added successfully", "success");
       closeModal();
       await refreshProviders();
-    } catch {
+    } catch (error) {
+      console.error("Add key error:", error);
       showToast("Network error", "error");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteKey = async (provider: ProviderConfig, key: string) => {
+  const handleDeleteKey = async (keyHash: string) => {
     if (!confirm("Are you sure you want to remove this key?")) return;
     try {
-      const res = await fetch(
-        `${provider.endpoint}?api-key=${encodeURIComponent(key)}`,
-        { method: "DELETE" }
-      );
+      const res = await fetch(`/api/providers/keys/${keyHash}`, {
+        method: "DELETE",
+      });
       if (!res.ok) {
-        showToast("Failed to delete provider key", "error");
+        const data = await res.json();
+        showToast(data.error || "Failed to delete provider key", "error");
         return;
       }
       showToast("Provider key deleted", "success");
-      refreshProviders();
-    } catch {
-      showToast("Network error", "error");
-    }
-  };
-
-  const handleDeleteOpenAIProvider = async (providerNameValue: string) => {
-    if (!confirm("Are you sure you want to remove this provider?")) return;
-    try {
-      const res = await fetch(
-        `/api/management/openai-compatibility?name=${encodeURIComponent(providerNameValue)}`,
-        { method: "DELETE" }
-      );
-      if (!res.ok) {
-        showToast("Failed to delete provider", "error");
-        return;
-      }
-      showToast("Provider deleted", "success");
-      refreshProviders();
-    } catch {
+      await refreshProviders();
+    } catch (error) {
+      console.error("Delete key error:", error);
       showToast("Network error", "error");
     }
   };
@@ -556,17 +429,18 @@ export default function ProvidersPage() {
   const loadAccounts = useCallback(async () => {
     setOauthAccountsLoading(true);
     try {
-      const res = await fetch("/api/management/auth-files");
+      const res = await fetch("/api/providers/oauth");
       if (!res.ok) {
         showToast("Failed to load OAuth accounts", "error");
         setOauthAccountsLoading(false);
         return;
       }
 
-      const data: AuthFilesResponse = await res.json();
-      setAccounts(Array.isArray(data.files) ? data.files : []);
+      const data = await res.json();
+      setAccounts(Array.isArray(data.accounts) ? data.accounts : []);
       setOauthAccountsLoading(false);
-    } catch {
+    } catch (error) {
+      console.error("Load accounts error:", error);
       setOauthAccountsLoading(false);
       showToast("Network error", "error");
       setOauthErrorMessage("Network error while loading accounts.");
@@ -758,40 +632,23 @@ export default function ProvidersPage() {
     }
   };
 
-  const handleToggleDisabled = async (account: AuthFileEntry) => {
-    if (!account.name) return;
+  const handleOAuthDelete = async (accountId: string) => {
+    const account = accounts.find((a) => a.id === accountId);
+    if (!account) return;
+    if (!confirm(`Remove OAuth account ${account.accountName}?`)) return;
     try {
-      const res = await fetch("/api/management/auth-files/status", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: account.name, disabled: !account.disabled }),
+      const res = await fetch(`/api/providers/oauth/${accountId}`, {
+        method: "DELETE",
       });
       if (!res.ok) {
-        showToast("Failed to update account status", "error");
-        return;
-      }
-      showToast("Account status updated", "success");
-      void loadAccounts();
-    } catch {
-      showToast("Network error", "error");
-    }
-  };
-
-  const handleOAuthDelete = async (account: AuthFileEntry) => {
-    if (!account.name) return;
-    if (!confirm(`Remove OAuth account ${account.name}?`)) return;
-    try {
-      const res = await fetch(
-        `/api/management/auth-files?name=${encodeURIComponent(account.name)}`,
-        { method: "DELETE" }
-      );
-      if (!res.ok) {
-        showToast("Failed to remove OAuth account", "error");
+        const data = await res.json();
+        showToast(data.error || "Failed to remove OAuth account", "error");
         return;
       }
       showToast("OAuth account removed", "success");
       void loadAccounts();
-    } catch {
+    } catch (error) {
+      console.error("Delete OAuth error:", error);
       showToast("Network error", "error");
     }
   };
@@ -844,7 +701,7 @@ export default function ProvidersPage() {
              <div className="grid gap-4 lg:grid-cols-2">
               {PROVIDERS.map((provider) => {
                 const config = configs[provider.id];
-                const isOpenAI = provider.id === PROVIDER_IDS.OPENAI;
+                const userKeyCount = currentUser ? config.keys.filter((k) => k.isOwn).length : 0;
                 const configuredCount = config.keys.length;
                 const isConfigured = configuredCount > 0;
 
@@ -885,70 +742,35 @@ export default function ProvidersPage() {
                             <p className="text-sm font-medium text-white/80">No API keys configured</p>
                             <p className="mt-1 text-xs text-white/60">Add your first API key to get started</p>
                           </div>
-                        ) : isOpenAI ? (
-                          <div className="space-y-3">
-                            {config.openAIProviders.map((openaiProvider, idx) => (
-                              <div
-                                key={openaiProvider.name}
-                                className="group relative overflow-hidden rounded-xl border border-white/20 bg-gradient-to-br from-white/5 to-white/[0.02] p-4 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
-                                style={{ animationDelay: `${idx * 50}ms` }}
-                              >
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <h4 className="text-sm font-bold text-white">{openaiProvider.name}</h4>
-                                      <span className="rounded bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-300">
-                                        {openaiProvider.apiKeys.length}
-                                      </span>
-                                    </div>
-                                    {openaiProvider.baseUrl && (
-                                      <p className="mt-1.5 truncate text-xs text-white/60">
-                                        {openaiProvider.baseUrl}
-                                      </p>
-                                    )}
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                      {openaiProvider.apiKeys.map((key) => (
-                                        <div
-                                          key={key}
-                                          className="inline-flex items-center gap-2 rounded-lg bg-black/20 px-3 py-1.5 font-mono text-xs text-white/80"
-                                        >
-                                          {maskKey(key)}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <Button
-                                    variant="danger"
-                                    className="shrink-0 px-4 py-2 text-xs"
-                                    onClick={() => handleDeleteOpenAIProvider(openaiProvider.name)}
-                                  >
-                                    Remove
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
                         ) : (
                           <div className="space-y-2">
-                            {config.keys.map((key, idx) => (
+                            {config.keys.map((keyInfo, idx) => (
                               <div
-                                key={key}
+                                key={keyInfo.keyHash}
                                 className="group flex items-center justify-between gap-3 rounded-xl border border-white/20 bg-gradient-to-r from-white/5 to-white/[0.02] px-4 py-3 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
                                 style={{ animationDelay: `${idx * 50}ms` }}
                               >
-                                <div className="flex items-center gap-3">
-                                  <div className="flex size-8 items-center justify-center rounded-lg bg-purple-500/20 text-xs font-bold text-purple-300">
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <div className="flex size-8 items-center justify-center rounded-lg bg-purple-500/20 text-xs font-bold text-purple-300 shrink-0">
                                     {idx + 1}
                                   </div>
-                                  <span className="font-mono text-sm text-white/90">{maskKey(key)}</span>
+                                  <span className="font-mono text-sm text-white/90 shrink-0">{keyInfo.maskedKey}</span>
+                                  {currentUser && (
+                                    <OwnerBadge
+                                      ownerUsername={keyInfo.ownerUsername}
+                                      isOwn={keyInfo.isOwn}
+                                    />
+                                  )}
                                 </div>
-                                <Button
-                                  variant="danger"
-                                  className="px-3 py-1.5 text-xs opacity-0 transition-opacity group-hover:opacity-100"
-                                  onClick={() => handleDeleteKey(provider, key)}
-                                >
-                                  Remove
-                                </Button>
+                                {currentUser && (keyInfo.isOwn || currentUser.isAdmin) && (
+                                  <Button
+                                    variant="danger"
+                                    className="px-3 py-1.5 text-xs shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                                    onClick={() => handleDeleteKey(keyInfo.keyHash)}
+                                  >
+                                    Remove
+                                  </Button>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -958,9 +780,17 @@ export default function ProvidersPage() {
                           <Button 
                             onClick={() => openModal(provider.id)}
                             className="flex-1"
+                            disabled={!currentUser}
                           >
                             + Add API Key
                           </Button>
+                          {currentUser && (
+                            <div className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/20 px-3 py-2 text-xs text-white/70">
+                              <span className="font-medium text-white/90">{userKeyCount}</span>
+                              <span>/</span>
+                              <span>{maxKeysPerUser}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -1012,56 +842,49 @@ export default function ProvidersPage() {
                      No OAuth accounts connected yet. Connect your first account below.
                    </div>
                  ) : (
-                   <div className="space-y-3">
-                     {accounts.map((account) => (
-                       <div
-                         key={account.id || account.name}
-                         className="group rounded-xl border border-white/20 bg-gradient-to-r from-white/5 to-white/[0.02] p-4 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
-                       >
-                         <div className="flex items-start justify-between gap-4">
-                           <div className="flex-1 min-w-0 space-y-2">
-                             <div className="flex items-center gap-3 flex-wrap">
-                               <span className="text-base font-bold text-white">
-                                 {account.provider || account.type || "Unknown"}
-                               </span>
-                               <span
-                                 className={
-                                   account.disabled
-                                     ? "rounded-full bg-white/10 border border-white/20 px-2.5 py-1 text-xs font-medium text-white/50"
-                                     : account.status === "active"
-                                       ? "rounded-full bg-gradient-to-r from-green-500/30 to-emerald-500/30 border border-green-400/50 px-2.5 py-1 text-xs font-medium text-green-300"
-                                       : "rounded-full bg-white/10 border border-white/20 px-2.5 py-1 text-xs font-medium text-white/70"
-                                 }
-                               >
-                                 {account.disabled ? "disabled" : account.status || "unknown"}
-                               </span>
-                             </div>
-                             {(account.email || account.label) && (
-                               <p className="truncate text-sm text-white/70">
-                                 {account.email || account.label}
-                               </p>
-                             )}
-                           </div>
-                           <div className="flex items-center gap-2 shrink-0">
-                             <Button
-                               variant={account.disabled ? "secondary" : "ghost"}
-                               className="px-4 py-2 text-xs"
-                               onClick={() => handleToggleDisabled(account)}
-                             >
-                               {account.disabled ? "Enable" : "Disable"}
-                             </Button>
-                             <Button
-                               variant="danger"
-                               className="px-4 py-2 text-xs"
-                               onClick={() => handleOAuthDelete(account)}
-                             >
-                               Disconnect
-                             </Button>
-                           </div>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
+                    <div className="space-y-3">
+                      {accounts.map((account) => (
+                        <div
+                          key={account.id}
+                          className="group rounded-xl border border-white/20 bg-gradient-to-r from-white/5 to-white/[0.02] p-4 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0 space-y-2">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <span className="text-base font-bold text-white">
+                                  {account.provider}
+                                </span>
+                                {currentUser && (
+                                  <OwnerBadge
+                                    ownerUsername={account.ownerUsername}
+                                    isOwn={account.isOwn}
+                                  />
+                                )}
+                              </div>
+                              {account.accountEmail && (
+                                <p className="truncate text-sm text-white/70">
+                                  {account.accountEmail}
+                                </p>
+                              )}
+                              <p className="truncate text-xs text-white/50 font-mono">
+                                {account.accountName}
+                              </p>
+                            </div>
+                            {currentUser && (account.isOwn || currentUser.isAdmin) && (
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Button
+                                  variant="danger"
+                                  className="px-4 py-2 text-xs"
+                                  onClick={() => handleOAuthDelete(account.id)}
+                                >
+                                  Disconnect
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                  )}
                </CardContent>
              </Card>
@@ -1107,8 +930,82 @@ export default function ProvidersPage() {
                    ))}
                  </div>
                </CardContent>
-             </Card>
+              </Card>
            </section>
+
+           {/* ── Admin Settings ────────────────────────────────────────────────── */}
+           {currentUser?.isAdmin && (
+             <section className="space-y-4">
+               <div className="flex items-center gap-3 border-b border-white/10 pb-3">
+                 <div className="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-xl backdrop-blur-xl">
+                   ⚙️
+                 </div>
+                 <div>
+                   <h2 className="text-xl font-bold text-white">Admin Settings</h2>
+                   <p className="text-sm text-white/60">Configure provider key limits and policies</p>
+                 </div>
+               </div>
+
+               <Card>
+                 <CardHeader>
+                   <CardTitle className="text-lg">Key Contribution Limits</CardTitle>
+                   <p className="mt-1 text-sm text-white/60">
+                     Control how many provider keys each user can contribute
+                   </p>
+                 </CardHeader>
+                 <CardContent>
+                   <div className="flex items-center gap-4">
+                     <div className="flex-1">
+                       <label htmlFor="max-keys" className="mb-2 block text-sm font-semibold text-white">
+                         Max Keys Per User
+                       </label>
+                       <Input
+                         type="number"
+                         name="max-keys"
+                         value={maxKeysPerUser.toString()}
+                         onChange={(value) => {
+                           const parsed = parseInt(value, 10);
+                           if (!isNaN(parsed) && parsed > 0 && parsed <= 100) {
+                             setMaxKeysPerUser(parsed);
+                           }
+                         }}
+                       />
+                       <p className="mt-1.5 text-xs text-white/50">
+                         Maximum number of provider keys a single user can contribute (current: {maxKeysPerUser})
+                       </p>
+                     </div>
+                     <Button
+                       variant="secondary"
+                       className="mt-6"
+                       onClick={async () => {
+                         try {
+                           const res = await fetch("/api/admin/settings", {
+                             method: "PUT",
+                             headers: { "Content-Type": "application/json" },
+                             body: JSON.stringify({
+                               key: "max_provider_keys_per_user",
+                               value: maxKeysPerUser.toString(),
+                             }),
+                           });
+                           if (res.ok) {
+                             showToast("Setting updated successfully", "success");
+                           } else {
+                             const data = await res.json();
+                             showToast(data.error || "Failed to update setting", "error");
+                           }
+                         } catch (error) {
+                           console.error("Update setting error:", error);
+                           showToast("Network error", "error");
+                         }
+                       }}
+                     >
+                       Save
+                     </Button>
+                   </div>
+                 </CardContent>
+               </Card>
+             </section>
+           )}
         </>
       )}
 
@@ -1121,22 +1018,6 @@ export default function ProvidersPage() {
         </ModalHeader>
         <ModalContent>
           <div className="space-y-5">
-            {modalProvider === PROVIDER_IDS.OPENAI && (
-              <div>
-                <label htmlFor="provider-name" className="mb-2 block text-sm font-semibold text-white">
-                  Provider Name <span className="text-red-400">*</span>
-                </label>
-                <Input
-                  type="text"
-                  name="provider-name"
-                  value={providerName}
-                  onChange={setProviderName}
-                  placeholder="e.g., openrouter, together-ai"
-                  required
-                />
-                <p className="mt-1.5 text-xs text-white/50">A unique identifier for this provider</p>
-              </div>
-            )}
             <div>
               <label htmlFor="api-key" className="mb-2 block text-sm font-semibold text-white">
                 API Key <span className="text-red-400">*</span>
@@ -1148,35 +1029,15 @@ export default function ProvidersPage() {
                 onChange={setApiKey}
                 placeholder="sk-..."
                 required
+                disabled={saving}
               />
-              <p className="mt-1.5 text-xs text-white/50">Your API key will be encrypted and stored securely</p>
+              <p className="mt-1.5 text-xs text-white/50">Your API key will be stored securely and associated with your account</p>
             </div>
-            <div>
-              <label htmlFor="prefix" className="mb-2 block text-sm font-semibold text-white">
-                Model Prefix <span className="text-white/40">(Optional)</span>
-              </label>
-              <Input
-                type="text"
-                name="prefix"
-                value={prefix}
-                onChange={setPrefix}
-                placeholder="e.g., gemini-, gpt-"
-              />
-              <p className="mt-1.5 text-xs text-white/50">Prefix to identify models from this key</p>
-            </div>
-            {modalProvider === PROVIDER_IDS.OPENAI && (
-              <div>
-                <label htmlFor="base-url" className="mb-2 block text-sm font-semibold text-white">
-                  Base URL <span className="text-white/40">(Optional)</span>
-                </label>
-                <Input
-                  type="text"
-                  name="base-url"
-                  value={baseUrl}
-                  onChange={setBaseUrl}
-                  placeholder="https://openrouter.ai/api/v1"
-                />
-                <p className="mt-1.5 text-xs text-white/50">The API endpoint for this provider</p>
+            {currentUser && (
+              <div className="rounded-xl border-l-4 border-blue-400/60 bg-blue-500/10 p-3 text-sm backdrop-blur-xl">
+                <p className="text-white/90">
+                  <strong>Usage:</strong> You have contributed {currentUser ? configs[PROVIDER_IDS.CLAUDE].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.GEMINI].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.CODEX].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.OPENAI].keys.filter((k) => k.isOwn).length : 0} / {maxKeysPerUser} keys total
+                </p>
               </div>
             )}
           </div>

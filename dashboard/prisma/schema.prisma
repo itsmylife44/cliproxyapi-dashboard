@@ -24,6 +24,8 @@ model User {
   apiKeys             UserApiKey[]
   configTemplate      ConfigTemplate?
   configSubscription  ConfigSubscription?
+  providerKeys        ProviderKeyOwnership[]
+  providerOAuth       ProviderOAuthOwnership[]
 
   @@map("users")
 }
@@ -113,4 +115,41 @@ model ConfigSubscription {
 
   @@index([templateId])
   @@map("config_subscriptions")
+}
+
+model ProviderKeyOwnership {
+  id            String   @id @default(cuid())
+  userId        String
+  provider      String
+  keyIdentifier String
+  keyHash       String   @unique
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([provider])
+  @@map("provider_key_ownerships")
+}
+
+model ProviderOAuthOwnership {
+  id           String    @id @default(cuid())
+  userId       String
+  provider     String
+  accountName  String    @unique
+  accountEmail String?
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("provider_oauth_ownerships")
+}
+
+model SystemSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+
+  @@map("system_settings")
 }

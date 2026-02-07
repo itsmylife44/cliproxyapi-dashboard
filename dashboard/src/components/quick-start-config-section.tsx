@@ -51,6 +51,7 @@ interface QuickStartConfigSectionProps {
   initialExcludedModels: string[];
   agentOverrides?: OhMyOpenCodeFullConfig;
   hasSyncActive: boolean;
+  isSubscribed?: boolean;
 }
 
 export function QuickStartConfigSection({
@@ -63,6 +64,7 @@ export function QuickStartConfigSection({
   initialExcludedModels,
   agentOverrides,
   hasSyncActive,
+  isSubscribed = false,
 }: QuickStartConfigSectionProps) {
   const [excludedModels, setExcludedModels] = useState<string[]>(initialExcludedModels);
 
@@ -74,6 +76,7 @@ export function QuickStartConfigSection({
           modelSourceMap={modelSourceMap}
           initialExcludedModels={initialExcludedModels}
           onSelectionChange={setExcludedModels}
+          isLocked={isSubscribed}
         />
       )}
 

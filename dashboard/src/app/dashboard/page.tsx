@@ -2,11 +2,13 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CopyBlock } from "@/components/copy-block";
 import { QuickStartConfigSection } from "@/components/quick-start-config-section";
+import { ConfigPublisher } from "@/components/config-publisher";
+import { ConfigSubscriber } from "@/components/config-subscriber";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 
-const PROXY_URL = "https://proxy.loen-api.xyz";
+const PROXY_URL = process.env.CLIPROXYAPI_PROXY_URL || "https://proxy.loen-api.xyz";
 
 interface ManagementFetchParams {
   path: string;
@@ -66,13 +68,7 @@ const CLAUDE_CODE_ENV = `export ANTHROPIC_BASE_URL=${PROXY_URL}
 export ANTHROPIC_AUTH_TOKEN=your-api-key
 export ANTHROPIC_DEFAULT_SONNET_MODEL=gemini-2.5-flash`;
 
-function extractApiKeyStrings(data: unknown): string[] {
-  if (typeof data !== "object" || data === null) return [];
-  const record = data as Record<string, unknown>;
-  const keys = record["api-keys"];
-  if (!Array.isArray(keys)) return [];
-  return keys.filter((key): key is string => typeof key === "string");
-}
+
 
 interface OAuthAccountEntry {
   id: string;
@@ -270,16 +266,15 @@ function buildAllAvailableModelIds(
 }
 
 export default async function QuickStartPage() {
-  const [config, isHealthy, apiKeysData, oauthData, modelsDevData, session] = await Promise.all([
+  const [config, isHealthy, oauthData, modelsDevData, session] = await Promise.all([
     fetchManagementJson({ path: "config" }),
     getServiceHealth(),
-    fetchManagementJson({ path: "api-keys" }),
     fetchManagementJson({ path: "auth-files" }),
     fetchModelsDevData(),
     verifySession(),
   ]);
 
-  const [modelPreference, agentOverride, activeSyncTokens] = session
+  const [modelPreference, agentOverride, activeSyncTokens, publishStatus, subscribeStatus, userApiKeys] = session
     ? await Promise.all([
         prisma.modelPreference.findUnique({ where: { userId: session.userId } }),
         prisma.agentModelOverride.findUnique({ where: { userId: session.userId } }),
@@ -287,13 +282,46 @@ export default async function QuickStartPage() {
           where: { userId: session.userId, revokedAt: null },
           select: { id: true },
         }),
+        prisma.configTemplate.findUnique({ where: { userId: session.userId } }),
+        prisma.configSubscription.findUnique({ 
+          where: { userId: session.userId },
+          include: { template: true },
+        }),
+        prisma.userApiKey.findMany({
+          where: { userId: session.userId },
+          select: { id: true, key: true },
+        }),
       ])
-    : [null, null, []];
-  const initialExcludedModels = modelPreference?.excludedModels ?? [];
-  const agentOverrides = (agentOverride?.overrides ?? {}) as OhMyOpenCodeFullConfig;
+    : [null, null, [], null, null, []];
   const hasSyncActive = activeSyncTokens.length > 0;
+  const hasApiKey = userApiKeys.length > 0;
+  const isPublisher = publishStatus !== null;
+  const isSubscriber = subscribeStatus !== null && subscribeStatus.isActive && subscribeStatus.template?.isActive;
 
-  const apiKeys = extractApiKeyStrings(apiKeysData);
+  // Load publisher's config if user is an active subscriber
+  let publisherModelPreference = null;
+  let publisherAgentOverride = null;
+  if (isSubscriber && subscribeStatus?.template) {
+    const publisherId = subscribeStatus.template.userId;
+    [publisherModelPreference, publisherAgentOverride] = await Promise.all([
+      prisma.modelPreference.findUnique({ where: { userId: publisherId } }),
+      prisma.agentModelOverride.findUnique({ where: { userId: publisherId } }),
+    ]);
+  }
+
+  // Use publisher's excluded models if subscribed, otherwise own
+  const initialExcludedModels = isSubscriber && publisherModelPreference
+    ? publisherModelPreference.excludedModels
+    : (modelPreference?.excludedModels ?? []);
+  
+  // Use publisher's overrides for model selection, but keep subscriber's MCPs
+  const publisherOverrides = (publisherAgentOverride?.overrides ?? {}) as OhMyOpenCodeFullConfig;
+  const subscriberOverrides = (agentOverride?.overrides ?? {}) as OhMyOpenCodeFullConfig;
+  const agentOverrides: OhMyOpenCodeFullConfig = isSubscriber
+    ? { ...publisherOverrides, mcpServers: subscriberOverrides.mcpServers, customPlugins: subscriberOverrides.customPlugins }
+    : subscriberOverrides;
+
+  const apiKeys = userApiKeys.map((k) => k.key);
   const oauthAccounts = extractOAuthAccounts(oauthData);
 
   const providerKeys = [
@@ -396,7 +424,11 @@ export default async function QuickStartPage() {
         initialExcludedModels={initialExcludedModels}
         agentOverrides={agentOverrides}
         hasSyncActive={hasSyncActive}
+        isSubscribed={isSubscriber}
       />
+
+      {!isSubscriber && <ConfigPublisher />}
+      {!isPublisher && <ConfigSubscriber hasApiKey={hasApiKey} />}
 
       <Card>
         <CardHeader>

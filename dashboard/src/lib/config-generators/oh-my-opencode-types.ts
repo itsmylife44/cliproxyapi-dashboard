@@ -423,37 +423,31 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
      }
    }
 
-   // Validate mcpServers array
    if (Array.isArray(obj.mcpServers)) {
      const mcpServers: McpEntry[] = [];
      for (const entry of obj.mcpServers) {
        if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
        const mcpObj = entry as Record<string, unknown>;
 
-       // Validate MCP entry type and required fields
        if (typeof mcpObj.name !== "string" || !mcpObj.name) continue;
        const mcpType = mcpObj.type;
 
-       if (mcpType === "stdio") {
-         if (typeof mcpObj.command === "string") {
-           const mcpEntry: McpEntry = {
-             name: mcpObj.name,
-             type: "stdio",
-             command: mcpObj.command,
-           };
-           if (Array.isArray(mcpObj.args)) {
-             const args = mcpObj.args.filter((a): a is string => typeof a === "string");
-             if (args.length > 0) {
-               mcpEntry.args = args;
-             }
+       if (mcpType === "local") {
+         if (Array.isArray(mcpObj.command)) {
+           const command = mcpObj.command.filter((c): c is string => typeof c === "string");
+           if (command.length > 0) {
+             mcpServers.push({
+               name: mcpObj.name,
+               type: "local",
+               command,
+             });
            }
-           mcpServers.push(mcpEntry);
          }
-       } else if (mcpType === "http") {
+       } else if (mcpType === "remote") {
          if (typeof mcpObj.url === "string" && mcpObj.url) {
            mcpServers.push({
              name: mcpObj.name,
-             type: "http",
+             type: "remote",
              url: mcpObj.url,
            });
          }

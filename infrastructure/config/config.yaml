@@ -49,7 +49,9 @@ auth-dir: "/root/.cli-proxy-api"
 # Replace with strong, randomly generated keys (e.g., use `openssl rand -hex 32`).
 # WARNING: Keep these secret! Never commit real keys to version control.
 api-keys:
-  - sk-643cabee4bc7abd74d260677c58269fbd90bbf9e1dbb0e1aa8740d8176608391
+  - sk-619292ce7a202bcf6f48d924a93828d88d3f1793055b176efa14675908431301
+  - sk-298bf06e2dbe36979fed4bda0e23109f57c81405b6bcc9bc66371f16bdbb8606
+  - sk-8bc096690f726b310b7163c4665006cba8d33b61f1fe5b2e2084531eb75dccef
 # ============================================================================
 # LOGGING & DEBUGGING
 # ============================================================================

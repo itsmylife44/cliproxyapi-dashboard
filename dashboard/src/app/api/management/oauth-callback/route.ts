@@ -131,41 +131,56 @@ export async function POST(request: NextRequest) {
   callbackTarget.searchParams.set("code", callbackParams.code);
   callbackTarget.searchParams.set("state", callbackParams.state);
 
-  const beforeAuthFiles = await fetchAuthFiles();
-  const beforeNames = new Set((beforeAuthFiles || []).map((file) => file.name));
+   const beforeAuthFiles = await fetchAuthFiles();
+   const beforeNames = new Set((beforeAuthFiles || []).map((file) => file.name));
+   console.log("[OAuth DEBUG] beforeNames:", Array.from(beforeNames));
 
-  try {
-    const response = await fetch(callbackTarget.toString(), { method: "GET" });
+   try {
+     console.log("[OAuth DEBUG] provider:", provider, "userId:", session.userId);
+     
+     const response = await fetch(callbackTarget.toString(), { method: "GET" });
+     console.log("[OAuth DEBUG] fetch response.status:", response.status, "response.ok:", response.ok);
 
-    if (response.ok) {
-      const afterAuthFiles = await fetchAuthFiles();
+     if (response.ok) {
+       const afterAuthFiles = await fetchAuthFiles();
+       if (afterAuthFiles) {
+         console.log("[OAuth DEBUG] afterAuthFiles names:", afterAuthFiles.map(f => ({ name: f.name, provider: f.provider, type: f.type })));
+       }
 
-      if (afterAuthFiles) {
-        const candidateFiles = afterAuthFiles.filter((file) => {
-          const fileProvider = file.provider || file.type;
-          const providerMatches = !fileProvider || fileProvider === provider;
-          return !beforeNames.has(file.name) && providerMatches;
-        });
+       if (afterAuthFiles) {
+         const candidateFiles = afterAuthFiles.filter((file) => {
+           const fileProvider = file.provider || file.type;
+           const providerMatches = !fileProvider || fileProvider === provider;
+           const isNew = !beforeNames.has(file.name);
+           console.log("[OAuth DEBUG] filter check - file.name:", file.name, "isNew:", isNew, "fileProvider:", fileProvider, "providerMatches:", providerMatches);
+           return isNew && providerMatches;
+         });
 
-        for (const file of candidateFiles) {
-          const existingOwnership = await prisma.providerOAuthOwnership.findUnique({
-            where: { accountName: file.name },
-            select: { id: true },
-          });
+         console.log("[OAuth DEBUG] candidateFiles count:", candidateFiles.length);
 
-          if (!existingOwnership) {
-            await prisma.providerOAuthOwnership.create({
-              data: {
-                userId: session.userId,
-                provider,
-                accountName: file.name,
-                accountEmail: file.email || null,
-              },
-            });
-          }
-        }
-      }
-    }
+         for (const file of candidateFiles) {
+           const existingOwnership = await prisma.providerOAuthOwnership.findUnique({
+             where: { accountName: file.name },
+             select: { id: true },
+           });
+           console.log("[OAuth DEBUG] file.name:", file.name, "existingOwnership found:", !!existingOwnership);
+
+           if (!existingOwnership) {
+             await prisma.providerOAuthOwnership.create({
+               data: {
+                 userId: session.userId,
+                 provider,
+                 accountName: file.name,
+                 accountEmail: file.email || null,
+               },
+             });
+             console.log("[OAuth DEBUG] created ownership for file:", file.name);
+           }
+         }
+       }
+     } else {
+       console.log("[OAuth DEBUG] response.ok is false, skipping ownership creation block");
+     }
 
     const payload: OAuthCallbackResponse = { status: response.status };
 

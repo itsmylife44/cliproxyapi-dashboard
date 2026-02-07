@@ -22,6 +22,8 @@ model User {
   agentModelOverrides AgentModelOverride?
   syncTokens          SyncToken[]
   apiKeys             UserApiKey[]
+  configTemplate      ConfigTemplate?
+  configSubscription  ConfigSubscription?
 
   @@map("users")
 }
@@ -78,4 +80,37 @@ model UserApiKey {
 
   @@index([userId])
   @@map("user_api_keys")
+}
+
+model ConfigTemplate {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  shareCode String   @unique
+  name      String   @default("My Config")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptions ConfigSubscription[]
+
+  @@index([shareCode])
+  @@map("config_templates")
+}
+
+model ConfigSubscription {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  templateId     String
+  isActive       Boolean   @default(true)
+  frozenConfig   Json?
+  previousConfig Json?
+  subscribedAt   DateTime  @default(now())
+  lastSyncedAt   DateTime?
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template ConfigTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("config_subscriptions")
 }

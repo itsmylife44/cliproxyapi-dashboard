@@ -69,8 +69,11 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
         if (data.mcpServers && Array.isArray(data.mcpServers)) {
           setMcps(data.mcpServers);
         }
-        if (data.customPlugins && Array.isArray(data.customPlugins)) {
-          setPlugins(data.customPlugins);
+        if (data.customPlugins && Array.isArray(data.customPlugins) && data.customPlugins.length > 0) {
+          const normalizedPlugins = data.customPlugins.map((p: string) =>
+            p === "opencode-cliproxyapi-sync" ? "opencode-cliproxyapi-sync@latest" : p
+          );
+          setPlugins(normalizedPlugins);
         }
       } catch (error) {
         console.error("Failed to load config:", error);

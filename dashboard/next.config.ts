@@ -21,7 +21,7 @@ const getCSP = (): string => {
   // Production CSP: stricter than dev, but without nonce placeholders
   return [
     "default-src 'self'",
-    "script-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",

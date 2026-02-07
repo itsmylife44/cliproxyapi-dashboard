@@ -588,7 +588,7 @@ export default function SettingsPage() {
               <div className="mt-3 space-y-2 rounded-lg bg-white/5 p-4 text-sm text-white/80">
                 <div className="font-medium text-white">1. Install the plugin:</div>
                 <div className="rounded bg-black/30 p-2 font-mono text-xs">
-                  npm install opencode-cliproxyapi-sync
+                   npx opencode install opencode-cliproxyapi-sync
                 </div>
                 
                 <div className="font-medium text-white">2. Add to opencode.json plugins:</div>

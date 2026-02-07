@@ -11,11 +11,13 @@ const PROVIDERS = {
 
 type Provider = (typeof PROVIDERS)[keyof typeof PROVIDERS];
 
+const CLIPROXYAPI_BASE = process.env.CLIPROXYAPI_MANAGEMENT_URL?.replace("/v0/management", "") || "http://cliproxyapi:8317";
+
 const CALLBACK_PATHS: Record<Provider, string> = {
-  [PROVIDERS.CLAUDE]: "http://cliproxyapi:8317/anthropic/callback",
-  [PROVIDERS.GEMINI_CLI]: "http://cliproxyapi:8317/google/callback",
-  [PROVIDERS.CODEX]: "http://cliproxyapi:8317/codex/callback",
-  [PROVIDERS.ANTIGRAVITY]: "http://cliproxyapi:8317/antigravity/callback",
+  [PROVIDERS.CLAUDE]: `${CLIPROXYAPI_BASE}/anthropic/callback`,
+  [PROVIDERS.GEMINI_CLI]: `${CLIPROXYAPI_BASE}/google/callback`,
+  [PROVIDERS.CODEX]: `${CLIPROXYAPI_BASE}/codex/callback`,
+  [PROVIDERS.ANTIGRAVITY]: `${CLIPROXYAPI_BASE}/antigravity/callback`,
 };
 
 interface OAuthCallbackRequestBody {

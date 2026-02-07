@@ -668,17 +668,44 @@ if [ "$BACKUP_INTERVAL" != "none" ]; then
 fi
 
 # ============================================================================
+# EXTERNAL PROXY MODE SETUP
+# ============================================================================
+
+if [ $EXTERNAL_PROXY -eq 1 ]; then
+    echo ""
+    log_info "=== External Proxy Mode Setup ==="
+    echo ""
+    
+    # Create docker-compose.override.yml to expose dashboard on localhost:3000
+    OVERRIDE_FILE="$INSTALL_DIR/infrastructure/docker-compose.override.yml"
+    
+    log_info "Creating docker-compose.override.yml to expose dashboard on 127.0.0.1:3000..."
+    
+    cat > "$OVERRIDE_FILE" << 'COMPOSE_OVERRIDE'
+services:
+  dashboard:
+    ports:
+      - "127.0.0.1:3000:3000"
+COMPOSE_OVERRIDE
+    
+    chmod 644 "$OVERRIDE_FILE"
+    log_success "Override file created at $OVERRIDE_FILE"
+    log_info "Dashboard will be accessible at http://127.0.0.1:3000 for your reverse proxy"
+    echo ""
+fi
+
+# ============================================================================
 # CADDY INTEGRATION (if external proxy mode)
 # ============================================================================
 
 if [ $EXTERNAL_PROXY -eq 1 ]; then
     echo ""
-    log_info "=== Caddy Integration Setup ==="
+    log_info "=== Reverse Proxy Integration Setup ==="
     echo ""
     
-    # Generate Caddy configuration snippet
-    CADDY_SNIPPET=$(cat << 'CADDY_CONFIG'
-# BEGIN CLIPROXYAPI-AUTO
+    # Generate Caddy configuration snippet for host Caddy (localhost upstream)
+    CADDY_SNIPPET_HOST=$(cat << 'CADDY_CONFIG'
+# BEGIN CLIPROXYAPI-AUTO (Host Caddy - localhost upstream)
 ${DASHBOARD_SUBDOMAIN}.${DOMAIN} {
     reverse_proxy localhost:3000
 }
@@ -690,19 +717,58 @@ ${API_SUBDOMAIN}.${DOMAIN} {
 CADDY_CONFIG
 )
     
-    # Replace template variables
-    CADDY_SNIPPET="${CADDY_SNIPPET//\$\{DASHBOARD_SUBDOMAIN\}/$DASHBOARD_SUBDOMAIN}"
-    CADDY_SNIPPET="${CADDY_SNIPPET//\$\{API_SUBDOMAIN\}/$API_SUBDOMAIN}"
-    CADDY_SNIPPET="${CADDY_SNIPPET//\$\{DOMAIN\}/$DOMAIN}"
+    # Generate Caddy configuration snippet for Dockerized Caddy (service name upstream)
+    CADDY_SNIPPET_DOCKER=$(cat << 'CADDY_DOCKER_CONFIG'
+# BEGIN CLIPROXYAPI-AUTO (Docker Caddy - container upstream)
+${DASHBOARD_SUBDOMAIN}.${DOMAIN} {
+    reverse_proxy cliproxyapi-dashboard:3000
+}
+
+${API_SUBDOMAIN}.${DOMAIN} {
+    reverse_proxy cliproxyapi:8317
+}
+# END CLIPROXYAPI-AUTO
+CADDY_DOCKER_CONFIG
+)
     
-    log_info "Generated Caddy configuration:"
+    # Replace template variables in both snippets
+    CADDY_SNIPPET_HOST="${CADDY_SNIPPET_HOST//\$\{DASHBOARD_SUBDOMAIN\}/$DASHBOARD_SUBDOMAIN}"
+    CADDY_SNIPPET_HOST="${CADDY_SNIPPET_HOST//\$\{API_SUBDOMAIN\}/$API_SUBDOMAIN}"
+    CADDY_SNIPPET_HOST="${CADDY_SNIPPET_HOST//\$\{DOMAIN\}/$DOMAIN}"
+    
+    CADDY_SNIPPET_DOCKER="${CADDY_SNIPPET_DOCKER//\$\{DASHBOARD_SUBDOMAIN\}/$DASHBOARD_SUBDOMAIN}"
+    CADDY_SNIPPET_DOCKER="${CADDY_SNIPPET_DOCKER//\$\{API_SUBDOMAIN\}/$API_SUBDOMAIN}"
+    CADDY_SNIPPET_DOCKER="${CADDY_SNIPPET_DOCKER//\$\{DOMAIN\}/$DOMAIN}"
+    
+    log_info "Generated Caddy configurations for both host and Docker Caddy:"
     echo ""
-    echo "$CADDY_SNIPPET"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "OPTION 1: Host Caddy (Caddy running on your system)"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "$CADDY_SNIPPET_HOST"
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "OPTION 2: Docker Caddy (Caddy running in a container)"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "$CADDY_SNIPPET_DOCKER"
+    echo ""
+    echo "If using Docker Caddy, also connect it to the CLIProxyAPI frontend network:"
+    echo "  ${YELLOW}docker network connect cliproxyapi_frontend <your-caddy-container-name>${NC}"
     echo ""
     
     read -p "Apply configuration to Caddy? [y/N]: " APPLY_CADDY
     if [[ "$APPLY_CADDY" =~ ^[Yy]$ ]]; then
         echo ""
+        read -p "Is your Caddy running on the host system or in Docker? [host/docker]: " CADDY_MODE
+        
+        if [[ "$CADDY_MODE" =~ ^[Dd]ocker$ ]]; then
+            SELECTED_SNIPPET="$CADDY_SNIPPET_DOCKER"
+            log_info "Using Docker Caddy configuration (will use container names)"
+        else
+            SELECTED_SNIPPET="$CADDY_SNIPPET_HOST"
+            log_info "Using host Caddy configuration (will use localhost)"
+        fi
+        
         read -p "Enter Caddyfile path [default: /etc/caddy/Caddyfile]: " CADDYFILE_PATH
         CADDYFILE_PATH="${CADDYFILE_PATH:-/etc/caddy/Caddyfile}"
         
@@ -723,12 +789,12 @@ CADDY_CONFIG
                     /# BEGIN CLIPROXYAPI-AUTO/ { in_section = 1; if (!section_printed) { print new_config; section_printed = 1 } next }
                     /# END CLIPROXYAPI-AUTO/ { in_section = 0; next }
                     !in_section { print }
-                ' new_config="$CADDY_SNIPPET" "$CADDYFILE_PATH" > "${CADDYFILE_PATH}.tmp"
+                ' new_config="$SELECTED_SNIPPET" "$CADDYFILE_PATH" > "${CADDYFILE_PATH}.tmp"
             else
                 {
                     cat "$CADDYFILE_PATH"
                     echo ""
-                    echo "$CADDY_SNIPPET"
+                    echo "$SELECTED_SNIPPET"
                 } > "${CADDYFILE_PATH}.tmp"
             fi
             
@@ -780,8 +846,11 @@ CADDY_CONFIG
             fi
         fi
     else
-        log_info "Skipping auto-apply. Please manually add this configuration to your Caddyfile:"
-        echo "$CADDY_SNIPPET"
+        log_info "Skipping auto-apply. Please manually add one of the configurations above to your Caddyfile."
+        if [[ "$CADDY_MODE" =~ ^[Dd]ocker$ ]]; then
+            log_info "Remember to connect Caddy to the frontend network:"
+            echo "  ${YELLOW}docker network connect cliproxyapi_frontend <your-caddy-container-name>${NC}"
+        fi
     fi
     
     echo ""

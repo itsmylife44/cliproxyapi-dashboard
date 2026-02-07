@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useMobileSidebar } from "@/components/mobile-sidebar-context";
 
 export function MobileTopBar() {
@@ -32,7 +31,8 @@ export function MobileTopBar() {
           </svg>
         </button>
         <div className="flex items-center gap-2">
-          <Image 
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img 
             src="/icon.png" 
             alt="CLIProxy Logo" 
             width={24} 

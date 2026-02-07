@@ -82,7 +82,8 @@ export async function syncKeysToCliProxyApi(): Promise<SyncResult> {
 
     const keyList = allKeys.map((uk) => uk.key);
 
-    const payload = { "api-keys": keyList };
+    // CLIProxyAPI expects a plain array, not {"api-keys": [...]}
+    const payload = keyList;
 
     let lastError: Error | null = null;
     const maxRetries = 3;

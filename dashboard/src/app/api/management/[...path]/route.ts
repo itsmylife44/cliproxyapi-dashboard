@@ -16,6 +16,18 @@ const ALLOWED_HOST = (() => {
   }
 })();
 
+const NON_ADMIN_OAUTH_PATHS = new Set<string>([
+  "anthropic-auth-url",
+  "gemini-cli-auth-url",
+  "codex-auth-url",
+  "antigravity-auth-url",
+  "get-auth-status",
+]);
+
+function isNonAdminAllowedManagementRequest(method: string, path: string): boolean {
+  return method === "GET" && NON_ADMIN_OAUTH_PATHS.has(path);
+}
+
 async function proxyRequest(
   method: string,
   path: string,
@@ -35,7 +47,7 @@ async function proxyRequest(
     select: { isAdmin: true },
   });
 
-  if (!user?.isAdmin) {
+  if (!user?.isAdmin && !isNonAdminAllowedManagementRequest(method, path)) {
     return NextResponse.json(
       { error: "Forbidden: Admin access required" },
       { status: 403 }

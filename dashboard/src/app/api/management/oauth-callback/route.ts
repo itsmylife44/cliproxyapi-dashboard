@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
+import { prisma } from "@/lib/db";
 
 const PROVIDERS = {
   CLAUDE: "claude",
@@ -12,6 +13,8 @@ const PROVIDERS = {
 type Provider = (typeof PROVIDERS)[keyof typeof PROVIDERS];
 
 const CLIPROXYAPI_BASE = process.env.CLIPROXYAPI_MANAGEMENT_URL?.replace("/v0/management", "") || "http://cliproxyapi:8317";
+const CLIPROXYAPI_MANAGEMENT_URL = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
+const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
 
 const CALLBACK_PATHS: Record<Provider, string> = {
   [PROVIDERS.CLAUDE]: `${CLIPROXYAPI_BASE}/anthropic/callback`,
@@ -27,6 +30,13 @@ interface OAuthCallbackRequestBody {
 
 interface OAuthCallbackResponse {
   status: number;
+}
+
+interface AuthFileEntry {
+  name: string;
+  provider?: string;
+  type?: string;
+  email?: string;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -57,6 +67,30 @@ const extractCallbackParams = (callbackUrl: string) => {
   if (!code || !state) return null;
 
   return { code, state };
+};
+
+const fetchAuthFiles = async (): Promise<AuthFileEntry[] | null> => {
+  if (!MANAGEMENT_API_KEY) return null;
+
+  try {
+    const response = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/auth-files`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+    });
+
+    if (!response.ok) return null;
+
+    const data: unknown = await response.json();
+    if (!isRecord(data) || !Array.isArray(data.files)) return null;
+
+    const files = data.files.filter(
+      (entry): entry is AuthFileEntry => isRecord(entry) && typeof entry.name === "string"
+    );
+
+    return files;
+  } catch {
+    return null;
+  }
 };
 
 export async function POST(request: NextRequest) {
@@ -97,8 +131,42 @@ export async function POST(request: NextRequest) {
   callbackTarget.searchParams.set("code", callbackParams.code);
   callbackTarget.searchParams.set("state", callbackParams.state);
 
+  const beforeAuthFiles = await fetchAuthFiles();
+  const beforeNames = new Set((beforeAuthFiles || []).map((file) => file.name));
+
   try {
     const response = await fetch(callbackTarget.toString(), { method: "GET" });
+
+    if (response.ok) {
+      const afterAuthFiles = await fetchAuthFiles();
+
+      if (afterAuthFiles) {
+        const candidateFiles = afterAuthFiles.filter((file) => {
+          const fileProvider = file.provider || file.type;
+          const providerMatches = !fileProvider || fileProvider === provider;
+          return !beforeNames.has(file.name) && providerMatches;
+        });
+
+        for (const file of candidateFiles) {
+          const existingOwnership = await prisma.providerOAuthOwnership.findUnique({
+            where: { accountName: file.name },
+            select: { id: true },
+          });
+
+          if (!existingOwnership) {
+            await prisma.providerOAuthOwnership.create({
+              data: {
+                userId: session.userId,
+                provider,
+                accountName: file.name,
+                accountEmail: file.email || null,
+              },
+            });
+          }
+        }
+      }
+    }
+
     const payload: OAuthCallbackResponse = { status: response.status };
 
     return NextResponse.json(payload, { status: response.status });

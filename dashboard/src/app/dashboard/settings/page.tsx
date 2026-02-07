@@ -586,17 +586,12 @@ export default function SettingsPage() {
             </button>
             {showInstructions && (
               <div className="mt-3 space-y-2 rounded-lg bg-white/5 p-4 text-sm text-white/80">
-                <div className="font-medium text-white">1. Install the plugin:</div>
-                <div className="rounded bg-black/30 p-2 font-mono text-xs">
-                   npx opencode install opencode-cliproxyapi-sync
-                </div>
-                
-                <div className="font-medium text-white">2. Add to opencode.json plugins:</div>
+                <div className="font-medium text-white">1. Add to opencode.json plugins:</div>
                 <div className="rounded bg-black/30 p-2 font-mono text-xs">
                   {`"plugins": ["opencode-cliproxyapi-sync", ...]`}
                 </div>
                 
-                <div className="font-medium text-white">3. Create config file:</div>
+                <div className="font-medium text-white">2. Create config file:</div>
                 <div className="text-xs text-white/70 mb-1">
                   ~/.config/opencode-cliproxyapi-sync/config.json
                 </div>
@@ -605,6 +600,10 @@ export default function SettingsPage() {
   "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
   "syncToken": "paste-token-here"
 }`}
+                </div>
+                
+                <div className="text-xs text-white/60 mt-2">
+                  The plugin will be auto-installed from npm when opencode starts.
                 </div>
               </div>
             )}

@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/icon.png?v=2",
     shortcut: "/icon.png?v=2",
-    apple: "/apple-icon.png?v=2",
+    apple: "/icon.png?v=2",
   },
 };
 

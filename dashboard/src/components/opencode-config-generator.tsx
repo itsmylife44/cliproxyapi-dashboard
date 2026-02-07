@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CopyBlock } from "@/components/copy-block";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +50,72 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
   const [mcpCommand, setMcpCommand] = useState("");
   const [mcpArgs, setMcpArgs] = useState("");
   const [mcpUrl, setMcpUrl] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load persisted config on mount
+  useEffect(() => {
+    async function loadConfig() {
+      try {
+        const response = await fetch("/api/user/config");
+        if (!response.ok) {
+          if (response.status !== 401) {
+            console.error("Failed to load config:", response.status);
+          }
+          return;
+        }
+        const data = await response.json();
+        if (data.mcpServers && Array.isArray(data.mcpServers)) {
+          setMcps(data.mcpServers);
+        }
+        if (data.customPlugins && Array.isArray(data.customPlugins)) {
+          setPlugins(data.customPlugins);
+        }
+      } catch (error) {
+        console.error("Failed to load config:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadConfig();
+  }, []);
+
+  // Auto-save config changes with debounce
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        setSaveError(null);
+        const response = await fetch("/api/user/config", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mcpServers: mcps,
+            customPlugins: plugins,
+          }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          setSaveError(errorData.error || "Failed to save config");
+        }
+      } catch (error) {
+        setSaveError("Network error while saving config");
+        console.error("Failed to save config:", error);
+      }
+    }, 300);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [mcps, plugins, isLoading]);
 
   const allModels = buildAvailableModels(config, oauthAccounts, modelsDevData);
   const availableModels = excludedModels
@@ -142,8 +208,24 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-center gap-3 py-8">
+          <div className="h-5 w-5 rounded-full border-2 border-white/20 border-t-purple-400 animate-spin" />
+          <span className="text-sm text-white/60">Loading configuration...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {saveError && (
+        <div className="border-l-4 border-red-400/60 bg-red-500/10 backdrop-blur-xl p-3 text-sm rounded-r-xl">
+          <p className="text-red-300 text-xs">{saveError}</p>
+        </div>
+      )}
       {hasKeys ? (
         apiKeys.length > 1 ? (
           <div className="space-y-2">

@@ -183,8 +183,9 @@ export function ModelSelector({
       clearTimeout(savedTimeoutRef.current);
     }
 
-    setSaveStatus(SAVE_STATUS.SAVING);
     saveTimeoutRef.current = setTimeout(() => {
+      setSaveStatus(SAVE_STATUS.SAVING);
+      
       const saveData = async () => {
         try {
           const response = await fetch("/api/model-preferences", {

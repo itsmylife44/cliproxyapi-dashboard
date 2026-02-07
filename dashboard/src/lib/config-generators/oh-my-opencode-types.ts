@@ -5,6 +5,8 @@
  * oh-my-opencode optional configuration sections.
  */
 
+import type { McpEntry } from "./opencode";
+
 // ============================================================================
 // INTERFACES
 // ============================================================================
@@ -59,6 +61,9 @@ export interface OhMyOpenCodeFullConfig {
   sisyphus_agent?: SisyphusAgentConfig;
   git_master?: GitMasterConfig;
   lsp?: Record<string, LspEntry>;
+  mcpServers?: McpEntry[];
+  customPlugins?: string[];
+  configSchemaVersion?: number;
 }
 
 // ============================================================================
@@ -382,41 +387,97 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
     }
   }
 
-  // Validate lsp config
-  if (
-    obj.lsp &&
-    typeof obj.lsp === "object" &&
-    !Array.isArray(obj.lsp)
-  ) {
-    const lspObj = obj.lsp as Record<string, unknown>;
-    const lspConfig: Record<string, LspEntry> = {};
+   // Validate lsp config
+   if (
+     obj.lsp &&
+     typeof obj.lsp === "object" &&
+     !Array.isArray(obj.lsp)
+   ) {
+     const lspObj = obj.lsp as Record<string, unknown>;
+     const lspConfig: Record<string, LspEntry> = {};
 
-    for (const [key, value] of Object.entries(lspObj)) {
-      if (!value || typeof value !== "object" || Array.isArray(value)) continue;
-      const entryObj = value as Record<string, unknown>;
+     for (const [key, value] of Object.entries(lspObj)) {
+       if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+       const entryObj = value as Record<string, unknown>;
 
-      // Validate required command field
-      if (!Array.isArray(entryObj.command)) continue;
-      const command = entryObj.command.filter((c): c is string => typeof c === "string");
-      if (command.length === 0) continue;
+       // Validate required command field
+       if (!Array.isArray(entryObj.command)) continue;
+       const command = entryObj.command.filter((c): c is string => typeof c === "string");
+       if (command.length === 0) continue;
 
-      const entry: LspEntry = { command };
+       const entry: LspEntry = { command };
 
-      // Validate optional extensions field
-      if (Array.isArray(entryObj.extensions)) {
-        const extensions = entryObj.extensions.filter((e): e is string => typeof e === "string");
-        if (extensions.length > 0) {
-          entry.extensions = extensions;
-        }
-      }
+       // Validate optional extensions field
+       if (Array.isArray(entryObj.extensions)) {
+         const extensions = entryObj.extensions.filter((e): e is string => typeof e === "string");
+         if (extensions.length > 0) {
+           entry.extensions = extensions;
+         }
+       }
 
-      lspConfig[key] = entry;
-    }
+       lspConfig[key] = entry;
+     }
 
-    if (Object.keys(lspConfig).length > 0) {
-      result.lsp = lspConfig;
-    }
-  }
+     if (Object.keys(lspConfig).length > 0) {
+       result.lsp = lspConfig;
+     }
+   }
 
-  return result;
-}
+   // Validate mcpServers array
+   if (Array.isArray(obj.mcpServers)) {
+     const mcpServers: McpEntry[] = [];
+     for (const entry of obj.mcpServers) {
+       if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+       const mcpObj = entry as Record<string, unknown>;
+
+       // Validate MCP entry type and required fields
+       if (typeof mcpObj.name !== "string" || !mcpObj.name) continue;
+       const mcpType = mcpObj.type;
+
+       if (mcpType === "stdio") {
+         if (typeof mcpObj.command === "string") {
+           const mcpEntry: McpEntry = {
+             name: mcpObj.name,
+             type: "stdio",
+             command: mcpObj.command,
+           };
+           if (Array.isArray(mcpObj.args)) {
+             const args = mcpObj.args.filter((a): a is string => typeof a === "string");
+             if (args.length > 0) {
+               mcpEntry.args = args;
+             }
+           }
+           mcpServers.push(mcpEntry);
+         }
+       } else if (mcpType === "http") {
+         if (typeof mcpObj.url === "string" && mcpObj.url) {
+           mcpServers.push({
+             name: mcpObj.name,
+             type: "http",
+             url: mcpObj.url,
+           });
+         }
+       }
+     }
+     if (mcpServers.length > 0) {
+       result.mcpServers = mcpServers;
+     }
+   }
+
+   // Validate customPlugins array
+   if (Array.isArray(obj.customPlugins)) {
+     const customPlugins: string[] = obj.customPlugins.filter(
+       (v): v is string => typeof v === "string" && v.length > 0
+     );
+     if (customPlugins.length > 0) {
+       result.customPlugins = customPlugins;
+     }
+   }
+
+   // Validate configSchemaVersion number
+   if (typeof obj.configSchemaVersion === "number" && obj.configSchemaVersion > 0) {
+     result.configSchemaVersion = obj.configSchemaVersion;
+   }
+
+   return result;
+ }

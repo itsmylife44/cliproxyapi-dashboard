@@ -6,6 +6,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 
+interface ApiKey {
+  id: string;
+  name: string;
+  keyPreview: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
 function CopyIcon({ className }: { className?: string }) {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
@@ -46,10 +54,10 @@ function useCopyToClipboard() {
   return { copiedKey, copy };
 }
 
-const EMPTY_KEYS: string[] = [];
+const EMPTY_KEYS: ApiKey[] = [];
 
 export default function ApiKeysPage() {
-  const [apiKeys, setApiKeys] = useState<string[]>(EMPTY_KEYS);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>(EMPTY_KEYS);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newKeyValue, setNewKeyValue] = useState<string | null>(null);
@@ -60,7 +68,7 @@ export default function ApiKeysPage() {
   const fetchApiKeys = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/management/api-keys");
+      const res = await fetch("/api/user/api-keys");
       if (!res.ok) {
         showToast("Failed to load API keys", "error");
         setLoading(false);
@@ -68,7 +76,7 @@ export default function ApiKeysPage() {
       }
 
       const data = await res.json();
-      const keys = Array.isArray(data["api-keys"]) ? data["api-keys"] : [];
+      const keys = Array.isArray(data.apiKeys) ? data.apiKeys : [];
       setApiKeys(keys);
       setLoading(false);
     } catch {
@@ -78,21 +86,18 @@ export default function ApiKeysPage() {
   }, [showToast]);
 
   useEffect(() => {
-    fetchApiKeys();
-  }, [fetchApiKeys]);
+    void fetchApiKeys();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCreateKey = async () => {
     setCreating(true);
 
     try {
-      const randomBytes = new Uint8Array(32);
-      crypto.getRandomValues(randomBytes);
-      const generatedKey = `sk-${Array.from(randomBytes).map((b) => b.toString(16).padStart(2, "0")).join("")}`;
-      const nextKeys = [...apiKeys, generatedKey];
-      const res = await fetch("/api/management/api-keys", {
-        method: "PUT",
+      const res = await fetch("/api/user/api-keys", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(nextKeys),
+        body: JSON.stringify({ name: "Default" }),
       });
 
       if (!res.ok) {
@@ -101,23 +106,24 @@ export default function ApiKeysPage() {
         return;
       }
 
+      const newKey = await res.json();
       showToast("API key created successfully", "success");
-      setNewKeyValue(generatedKey);
-      setApiKeys(nextKeys);
+      setNewKeyValue(newKey.key);
       setIsModalOpen(true);
       setCreating(false);
+      await fetchApiKeys();
     } catch {
       showToast("Network error", "error");
       setCreating(false);
     }
   };
 
-  const handleDeleteKey = async (key: string) => {
+  const handleDeleteKey = async (id: string) => {
     if (!confirm("Are you sure you want to delete this API key?")) return;
 
     try {
       const res = await fetch(
-        `/api/management/api-keys?value=${encodeURIComponent(key)}`,
+        `/api/user/api-keys?id=${encodeURIComponent(id)}`,
         {
         method: "DELETE",
         }
@@ -129,7 +135,7 @@ export default function ApiKeysPage() {
       }
 
       showToast("API key deleted successfully", "success");
-      setApiKeys((prev) => prev.filter((item) => item !== key));
+      setApiKeys((prev) => prev.filter((item) => item.id !== id));
     } catch {
       showToast("Network error", "error");
     }
@@ -166,32 +172,21 @@ export default function ApiKeysPage() {
               <div className="space-y-3">
               {apiKeys.map((apiKey) => (
                 <div
-                  key={apiKey}
+                  key={apiKey.id}
                   className="flex items-center justify-between backdrop-blur-xl bg-white/5 border border-white/20 rounded-xl p-4"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-white">
-                      API Key
+                      {apiKey.name}
                     </div>
                     <div className="mt-1 text-xs text-white/70 font-mono truncate">
-                      {apiKey.substring(0, 8)}{"..."}
+                      {apiKey.keyPreview}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        copy(apiKey, apiKey);
-                        showToast("API key copied", "success");
-                      }}
-                      className="p-2 rounded-lg border border-white/15 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/90 transition-all duration-200 active:scale-95"
-                      title="Copy API key"
-                    >
-                      {copiedKey === apiKey ? <CheckIcon /> : <CopyIcon />}
-                    </button>
                     <Button
                       variant="danger"
-                      onClick={() => handleDeleteKey(apiKey)}
+                      onClick={() => handleDeleteKey(apiKey.id)}
                     >
                       Delete
                     </Button>

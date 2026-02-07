@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserCount, createUser } from "@/lib/auth/dal";
+import { getUserCount } from "@/lib/auth/dal";
 import { hashPassword } from "@/lib/auth/password";
 import { signToken } from "@/lib/auth/jwt";
 import { createSession } from "@/lib/auth/session";
@@ -10,6 +10,9 @@ import {
   USERNAME_MIN_LENGTH,
   isValidUsernameFormat,
 } from "@/lib/auth/validation";
+import { prisma } from "@/lib/db";
+import { generateApiKey } from "@/lib/api-keys/generate";
+import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,29 +67,58 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const passwordHash = await hashPassword(password);
-    const user = await createUser(username, passwordHash);
+     const passwordHash = await hashPassword(password);
+     
+     // Create user and API key in single transaction
+     const { user, apiKey } = await prisma.$transaction(async (tx) => {
+       // Create first user as admin
+       const newUser = await tx.user.create({
+         data: {
+           username,
+           passwordHash,
+           isAdmin: true, // First user is admin
+         },
+       });
 
-    const token = await signToken({
-      userId: user.id,
-      username: user.username,
-    });
+       // Generate and create API key
+       const generatedKey = generateApiKey();
+       await tx.userApiKey.create({
+         data: {
+           userId: newUser.id,
+           key: generatedKey,
+           name: "Initial Setup Key",
+         },
+       });
 
-    await createSession(
-      { userId: user.id, username: user.username },
-      token
-    );
+       return { user: newUser, apiKey: generatedKey };
+     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        user: {
-          id: user.id,
-          username: user.username,
-        },
-      },
-      { status: 201 }
-    );
+     // Sync keys to CLIProxyAPI (fire and forget, don't block response)
+     syncKeysToCliProxyApi().catch((err) => {
+       console.error("Failed to sync keys after setup:", err);
+     });
+
+     const token = await signToken({
+       userId: user.id,
+       username: user.username,
+     });
+
+     await createSession(
+       { userId: user.id, username: user.username },
+       token
+     );
+
+     return NextResponse.json(
+       {
+         success: true,
+         user: {
+           id: user.id,
+           username: user.username,
+         },
+         apiKeyProvisioned: true,
+       },
+       { status: 201 }
+     );
   } catch (error) {
     console.error("Setup error:", error);
     return NextResponse.json(

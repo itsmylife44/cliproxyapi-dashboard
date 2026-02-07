@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
-import { buildAvailableModels, PROXY_URL } from "@/lib/config-generators/opencode";
+import { buildAvailableModels, PROXY_URL, type McpEntry } from "@/lib/config-generators/opencode";
 import { buildAvailableModelIds, buildOhMyOpenCodeConfig } from "@/lib/config-generators/oh-my-opencode";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import type { ConfigData, OAuthAccount, ModelsDevData } from "@/lib/config-generators/shared";
@@ -95,10 +95,14 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
   const apiKeysData = await fetchManagementJson({ path: "api-keys" });
   const apiKeyStrings = extractApiKeyStrings(apiKeysData);
 
-  // 5. Fetch user's ModelPreference and AgentModelOverride from Prisma
-  const [modelPreference, agentOverride] = await Promise.all([
+  // 5. Fetch user's ModelPreference, AgentModelOverride, and UserApiKey from Prisma
+  const [modelPreference, agentOverride, userApiKey] = await Promise.all([
     prisma.modelPreference.findUnique({ where: { userId } }),
     prisma.agentModelOverride.findUnique({ where: { userId } }),
+    prisma.userApiKey.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
   const agentOverrides = agentOverride?.overrides as OhMyOpenCodeFullConfig | undefined;
 
@@ -116,8 +120,8 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
     Object.entries(allModels).filter(([modelId]) => !excludedModels.has(modelId))
   );
 
-  // 8. Get API key: prefer syncApiKey from token, then first available, then placeholder
-  const apiKey = syncApiKey || (apiKeyStrings.length > 0 ? apiKeyStrings[0] : "your-api-key");
+  // 8. Get API key: prefer syncApiKey from token, then user's key, then global fallback, then placeholder
+  const apiKey = syncApiKey || userApiKey?.key || (apiKeyStrings.length > 0 ? apiKeyStrings[0] : "your-api-key");
 
   // 9. Build opencode config object (replicate generateConfigJson but return object)
   const modelEntries: Record<string, Record<string, unknown>> = {};
@@ -139,9 +143,14 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
 
   const firstModelId = Object.keys(filteredModels)[0] ?? "gemini-2.5-flash";
 
-  const plugins = ["opencode-cliproxyapi-sync", "oh-my-opencode@latest", "opencode-anthropic-auth@latest"];
+  const mcpEntries: McpEntry[] = agentOverrides?.mcpServers ?? [];
+  const customPlugins = agentOverrides?.customPlugins ?? [];
+  
+  const defaultPlugins = ["opencode-cliproxyapi-sync", "oh-my-opencode@latest", "opencode-anthropic-auth@latest"];
+  const pluginSet = new Set([...defaultPlugins, ...customPlugins]);
+  const plugins = Array.from(pluginSet);
 
-  const opencodeConfig = {
+  const opencodeConfig: Record<string, unknown> = {
     $schema: "https://opencode.ai/config.json",
     plugin: plugins,
     provider: {
@@ -157,6 +166,25 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
     },
     model: `cliproxyapi/${firstModelId}`,
   };
+
+  if (mcpEntries.length > 0) {
+    const mcpServers: Record<string, Record<string, unknown>> = {};
+    for (const mcp of mcpEntries) {
+      if (mcp.type === "http") {
+        mcpServers[mcp.name] = {
+          type: "http",
+          url: mcp.url,
+        };
+      } else if (mcp.type === "stdio") {
+        const args = mcp.args ?? [];
+        mcpServers[mcp.name] = {
+          command: mcp.command,
+          ...(args.length > 0 && { args }),
+        };
+      }
+    }
+    opencodeConfig.mcp = mcpServers;
+  }
 
   // 10. Build oh-my-opencode config
   const availableModelIds = buildAvailableModelIds(

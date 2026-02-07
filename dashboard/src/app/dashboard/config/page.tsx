@@ -174,8 +174,9 @@ export default function ConfigPage() {
   }, [showToast]);
 
   useEffect(() => {
-    fetchConfig();
-  }, [fetchConfig]);
+    void fetchConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSave = async () => {
     if (!config) return;

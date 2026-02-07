@@ -4,26 +4,6 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { generateSyncToken } from "@/lib/auth/sync-token";
 import { prisma } from "@/lib/db";
 
-const MANAGEMENT_BASE_URL =
-  process.env.CLIPROXYAPI_MANAGEMENT_URL ||
-  "http://cliproxyapi:8317/v0/management";
-
-async function fetchFirstApiKey(): Promise<string | null> {
-  try {
-    const res = await fetch(`${MANAGEMENT_BASE_URL}/api-keys`, {
-      headers: { Authorization: `Bearer ${process.env.MANAGEMENT_API_KEY}` },
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const keys = data?.["api-keys"];
-    if (Array.isArray(keys) && typeof keys[0] === "string") return keys[0];
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 export async function POST(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
@@ -38,14 +18,25 @@ export async function POST(request: NextRequest) {
   try {
     const { token, hash } = generateSyncToken();
 
-    const firstApiKey = await fetchFirstApiKey();
+    // Fetch user's API key (most recent one)
+    const userApiKey = await prisma.userApiKey.findFirst({
+      where: { userId: session.userId },
+      orderBy: { createdAt: "asc" },
+    });
+
+    if (!userApiKey) {
+      return NextResponse.json(
+        { error: "User API key not found. Please create an API key first." },
+        { status: 400 }
+      );
+    }
 
     const syncToken = await prisma.syncToken.create({
       data: {
         userId: session.userId,
         name: "Default",
         tokenHash: hash,
-        syncApiKey: firstApiKey,
+        syncApiKey: userApiKey.key,
       },
     });
 

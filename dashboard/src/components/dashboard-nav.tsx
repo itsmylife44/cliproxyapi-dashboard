@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useMobileSidebar } from "@/components/mobile-sidebar-context";
 
@@ -90,22 +90,51 @@ function IconSettings({ className }: { className?: string }) {
   );
 }
 
+function IconUsers({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Quick Start", icon: IconPlayCircle },
-  { href: "/dashboard/monitoring", label: "Monitoring", icon: IconActivity },
-  { href: "/dashboard/containers", label: "Containers", icon: IconBox },
-  { href: "/dashboard/config", label: "Config", icon: IconFileCode },
-  { href: "/dashboard/api-keys", label: "API Keys", icon: IconKey },
-  { href: "/dashboard/providers", label: "Providers", icon: IconLayers },
-  { href: "/dashboard/usage", label: "Usage", icon: IconBarChart },
-  { href: "/dashboard/quota", label: "Quota", icon: IconGauge },
-  { href: "/dashboard/settings", label: "Settings", icon: IconSettings },
+  { href: "/dashboard", label: "Quick Start", icon: IconPlayCircle, adminOnly: false },
+  { href: "/dashboard/monitoring", label: "Monitoring", icon: IconActivity, adminOnly: false },
+  { href: "/dashboard/containers", label: "Containers", icon: IconBox, adminOnly: false },
+  { href: "/dashboard/config", label: "Config", icon: IconFileCode, adminOnly: false },
+  { href: "/dashboard/api-keys", label: "API Keys", icon: IconKey, adminOnly: false },
+  { href: "/dashboard/providers", label: "Providers", icon: IconLayers, adminOnly: false },
+  { href: "/dashboard/usage", label: "Usage", icon: IconBarChart, adminOnly: false },
+  { href: "/dashboard/quota", label: "Quota", icon: IconGauge, adminOnly: false },
+  { href: "/dashboard/admin/users", label: "Users", icon: IconUsers, adminOnly: true },
+  { href: "/dashboard/settings", label: "Settings", icon: IconSettings, adminOnly: false },
 ] as const;
 
 export function DashboardNav() {
   const router = useRouter();
   const pathname = usePathname();
   const { isOpen, close } = useMobileSidebar();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          setIsAdmin(data.isAdmin ?? false);
+        }
+      } catch {
+        setIsAdmin(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -170,6 +199,10 @@ export function DashboardNav() {
 
         <ul className="space-y-1">
           {NAV_ITEMS.map((item) => {
+            if (item.adminOnly && !isAdmin) {
+              return null;
+            }
+            
             const isActive = pathname === item.href;
             const IconComponent = item.icon;
             return (

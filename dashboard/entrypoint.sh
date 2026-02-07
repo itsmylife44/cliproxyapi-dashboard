@@ -7,16 +7,23 @@ const client = new Client({ connectionString: process.env.DATABASE_URL });
 
 client.connect()
   .then(() => client.query(`
+    -- Users table with isAdmin field
     CREATE TABLE IF NOT EXISTS "users" (
       "id" TEXT NOT NULL,
       "username" TEXT NOT NULL,
       "passwordHash" TEXT NOT NULL,
+      "isAdmin" BOOLEAN NOT NULL DEFAULT false,
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" TIMESTAMP(3) NOT NULL,
       CONSTRAINT "users_pkey" PRIMARY KEY ("id")
     );
     CREATE UNIQUE INDEX IF NOT EXISTS "users_username_key" ON "users"("username");
+    -- Add isAdmin column if missing (existing installs)
+    DO $$ BEGIN
+      ALTER TABLE "users" ADD COLUMN "isAdmin" BOOLEAN NOT NULL DEFAULT false;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
+    -- Model preferences table
     CREATE TABLE IF NOT EXISTS "model_preferences" (
       "id" TEXT NOT NULL,
       "userId" TEXT NOT NULL,
@@ -31,11 +38,13 @@ client.connect()
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+    -- Sync tokens table
     CREATE TABLE IF NOT EXISTS "sync_tokens" (
       "id" TEXT NOT NULL,
       "userId" TEXT NOT NULL,
       "name" TEXT NOT NULL DEFAULT 'Default',
       "tokenHash" TEXT NOT NULL,
+      "syncApiKey" TEXT,
       "lastUsedAt" TIMESTAMP(3),
       "revokedAt" TIMESTAMP(3),
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -46,10 +55,12 @@ client.connect()
       ALTER TABLE "sync_tokens" ADD CONSTRAINT "sync_tokens_userId_fkey"
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    -- Add syncApiKey column if missing (existing installs)
     DO $$ BEGIN
       ALTER TABLE "sync_tokens" ADD COLUMN "syncApiKey" TEXT;
     EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
+    -- Agent model overrides table (stores MCP servers & custom plugins in overrides JSONB)
     CREATE TABLE IF NOT EXISTS "agent_model_overrides" (
       "id" TEXT NOT NULL,
       "userId" TEXT NOT NULL,
@@ -62,6 +73,23 @@ client.connect()
     DO $$ BEGIN
       ALTER TABLE "agent_model_overrides" ADD CONSTRAINT "agent_model_overrides_userId_fkey"
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- User API keys table (per-user API keys with dual storage sync)
+    CREATE TABLE IF NOT EXISTS "user_api_keys" (
+      "id" TEXT NOT NULL,
+      "userId" TEXT NOT NULL,
+      "key" TEXT NOT NULL,
+      "name" TEXT NOT NULL DEFAULT 'Default',
+      "lastUsedAt" TIMESTAMP(3),
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "user_api_keys_pkey" PRIMARY KEY ("id")
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS "user_api_keys_key_key" ON "user_api_keys"("key");
+    CREATE INDEX IF NOT EXISTS "user_api_keys_userId_idx" ON "user_api_keys"("userId");
+    DO $$ BEGIN
+      ALTER TABLE "user_api_keys" ADD CONSTRAINT "user_api_keys_userId_fkey"
+        FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   `))
   .then(() => {

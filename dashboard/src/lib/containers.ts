@@ -5,12 +5,21 @@ interface ContainerPermissions {
   allowRestart: boolean;
 }
 
+const apiContainer = process.env.CLIPROXYAPI_CONTAINER_NAME || "cliproxyapi";
+const isDevMode = apiContainer.includes("-dev-");
+
+const postgresContainer = isDevMode ? "cliproxyapi-dev-postgres" : "cliproxyapi-postgres";
+const caddyContainer = "cliproxyapi-caddy";
+const dashboardContainer = isDevMode ? "cliproxyapi-dashboard" : "cliproxyapi-dashboard";
+
 export const CONTAINER_CONFIG: Record<string, ContainerPermissions> = {
-  "cliproxyapi": { displayName: "CLIProxyAPI", allowStart: true, allowStop: true, allowRestart: true },
-  "cliproxyapi-postgres": { displayName: "PostgreSQL", allowStart: false, allowStop: false, allowRestart: false },
-  "cliproxyapi-caddy": { displayName: "Caddy", allowStart: false, allowStop: false, allowRestart: true },
-  "cliproxyapi-dashboard": { displayName: "Dashboard", allowStart: false, allowStop: false, allowRestart: false },
-} as const;
+  [apiContainer]: { displayName: "CLIProxyAPI", allowStart: true, allowStop: true, allowRestart: true },
+  [postgresContainer]: { displayName: "PostgreSQL", allowStart: false, allowStop: false, allowRestart: false },
+  ...(isDevMode ? {} : {
+    [caddyContainer]: { displayName: "Caddy", allowStart: false, allowStop: false, allowRestart: true },
+    [dashboardContainer]: { displayName: "Dashboard", allowStart: false, allowStop: false, allowRestart: false },
+  }),
+};
 
 export const CONTAINER_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/;
 

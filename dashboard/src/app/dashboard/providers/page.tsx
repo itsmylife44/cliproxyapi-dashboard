@@ -806,13 +806,13 @@ export default function ProvidersPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
    return (
-     <div className="space-y-5">
+     <div className="space-y-8">
        <div>
          <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
            AI Provider Configuration
          </h1>
         <p className="mt-3 text-lg text-white/70">
-          Configure API keys and authentication for your AI providers
+          Configure API keys and OAuth authentication for your AI providers
         </p>
       </div>
 
@@ -829,253 +829,286 @@ export default function ProvidersPage() {
         </Card>
       ) : (
          <>
-           <div className="grid gap-4 lg:grid-cols-2">
-            {PROVIDERS.map((provider) => {
-              const config = configs[provider.id];
-              const isOpenAI = provider.id === PROVIDER_IDS.OPENAI;
-              const configuredCount = config.keys.length;
-              const isConfigured = configuredCount > 0;
+           {/* ── API Key Provider Management ───────────────────────────────────── */}
+           <section className="space-y-4">
+             <div className="flex items-center gap-3 border-b border-white/10 pb-3">
+               <div className="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 text-xl backdrop-blur-xl">
+                 🔑
+               </div>
+               <div>
+                 <h2 className="text-xl font-bold text-white">API Key Providers</h2>
+                 <p className="text-sm text-white/60">Manage API keys for direct provider access</p>
+               </div>
+             </div>
 
-              return (
-                <Card key={provider.id} className="relative overflow-hidden">
-                  <div className="absolute -right-8 -top-8 size-32 rounded-full bg-gradient-to-br from-purple-500/10 to-pink-500/10 blur-3xl"></div>
-                  
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex size-12 items-center justify-center rounded-xl bg-white/10 text-2xl backdrop-blur-xl">
-                          {provider.icon}
+             <div className="grid gap-4 lg:grid-cols-2">
+              {PROVIDERS.map((provider) => {
+                const config = configs[provider.id];
+                const isOpenAI = provider.id === PROVIDER_IDS.OPENAI;
+                const configuredCount = config.keys.length;
+                const isConfigured = configuredCount > 0;
+
+                return (
+                  <Card key={provider.id} className="relative overflow-hidden">
+                    <div className="absolute -right-8 -top-8 size-32 rounded-full bg-gradient-to-br from-purple-500/10 to-pink-500/10 blur-3xl"></div>
+                    
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex size-12 items-center justify-center rounded-xl bg-white/10 text-2xl backdrop-blur-xl">
+                            {provider.icon}
+                          </div>
+                          <div>
+                            <CardTitle className="text-xl">{provider.name}</CardTitle>
+                            <p className="mt-1 text-sm text-white/60">{provider.description}</p>
+                          </div>
                         </div>
-                        <div>
-                          <CardTitle className="text-xl">{provider.name}</CardTitle>
-                          <p className="mt-1 text-sm text-white/60">{provider.description}</p>
-                        </div>
-                      </div>
-                      {isConfigured ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="rounded-full bg-gradient-to-r from-green-500/30 to-emerald-500/30 border border-green-400/50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-green-300 shadow-lg shadow-green-500/10">
-                            Active
+                        {isConfigured ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="rounded-full bg-gradient-to-r from-green-500/30 to-emerald-500/30 border border-green-400/50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-green-300 shadow-lg shadow-green-500/10">
+                              Active
+                            </span>
+                            <span className="text-xs text-white/50">{configuredCount} key{configuredCount !== 1 ? "s" : ""}</span>
+                          </div>
+                        ) : (
+                          <span className="rounded-full bg-white/5 border border-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white/50">
+                            Inactive
                           </span>
-                          <span className="text-xs text-white/50">{configuredCount} key{configuredCount !== 1 ? "s" : ""}</span>
-                        </div>
-                      ) : (
-                        <span className="rounded-full bg-white/5 border border-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white/50">
-                          Inactive
-                        </span>
-                      )}
-                    </div>
-                  </CardHeader>
+                        )}
+                      </div>
+                    </CardHeader>
 
-                  <CardContent>
-                     <div className="space-y-4">
-                       {configuredCount === 0 ? (
-                         <div className="rounded-xl border-l-4 border-purple-500/50 bg-gradient-to-r from-purple-500/5 to-transparent p-3">
-                          <p className="text-sm font-medium text-white/80">No API keys configured</p>
-                          <p className="mt-1 text-xs text-white/60">Add your first API key to get started</p>
-                        </div>
-                      ) : isOpenAI ? (
-                        <div className="space-y-3">
-                          {config.openAIProviders.map((openaiProvider, idx) => (
-                            <div
-                              key={openaiProvider.name}
-                              className="group relative overflow-hidden rounded-xl border border-white/20 bg-gradient-to-br from-white/5 to-white/[0.02] p-4 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
-                              style={{ animationDelay: `${idx * 50}ms` }}
-                            >
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="text-sm font-bold text-white">{openaiProvider.name}</h4>
-                                    <span className="rounded bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-300">
-                                      {openaiProvider.apiKeys.length}
-                                    </span>
+                    <CardContent>
+                       <div className="space-y-4">
+                         {configuredCount === 0 ? (
+                           <div className="rounded-xl border-l-4 border-purple-500/50 bg-gradient-to-r from-purple-500/5 to-transparent p-3">
+                            <p className="text-sm font-medium text-white/80">No API keys configured</p>
+                            <p className="mt-1 text-xs text-white/60">Add your first API key to get started</p>
+                          </div>
+                        ) : isOpenAI ? (
+                          <div className="space-y-3">
+                            {config.openAIProviders.map((openaiProvider, idx) => (
+                              <div
+                                key={openaiProvider.name}
+                                className="group relative overflow-hidden rounded-xl border border-white/20 bg-gradient-to-br from-white/5 to-white/[0.02] p-4 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
+                                style={{ animationDelay: `${idx * 50}ms` }}
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="text-sm font-bold text-white">{openaiProvider.name}</h4>
+                                      <span className="rounded bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-300">
+                                        {openaiProvider.apiKeys.length}
+                                      </span>
+                                    </div>
+                                    {openaiProvider.baseUrl && (
+                                      <p className="mt-1.5 truncate text-xs text-white/60">
+                                        {openaiProvider.baseUrl}
+                                      </p>
+                                    )}
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                      {openaiProvider.apiKeys.map((key) => (
+                                        <div
+                                          key={key}
+                                          className="inline-flex items-center gap-2 rounded-lg bg-black/20 px-3 py-1.5 font-mono text-xs text-white/80"
+                                        >
+                                          {maskKey(key)}
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
-                                  {openaiProvider.baseUrl && (
-                                    <p className="mt-1.5 truncate text-xs text-white/60">
-                                      {openaiProvider.baseUrl}
-                                    </p>
-                                  )}
-                                  <div className="mt-3 flex flex-wrap gap-2">
-                                    {openaiProvider.apiKeys.map((key) => (
-                                      <div
-                                        key={key}
-                                        className="inline-flex items-center gap-2 rounded-lg bg-black/20 px-3 py-1.5 font-mono text-xs text-white/80"
-                                      >
-                                        {maskKey(key)}
-                                      </div>
-                                    ))}
+                                  <Button
+                                    variant="danger"
+                                    className="shrink-0 px-4 py-2 text-xs"
+                                    onClick={() => handleDeleteOpenAIProvider(openaiProvider.name)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {config.keys.map((key, idx) => (
+                              <div
+                                key={key}
+                                className="group flex items-center justify-between gap-3 rounded-xl border border-white/20 bg-gradient-to-r from-white/5 to-white/[0.02] px-4 py-3 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
+                                style={{ animationDelay: `${idx * 50}ms` }}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="flex size-8 items-center justify-center rounded-lg bg-purple-500/20 text-xs font-bold text-purple-300">
+                                    {idx + 1}
                                   </div>
+                                  <span className="font-mono text-sm text-white/90">{maskKey(key)}</span>
                                 </div>
                                 <Button
                                   variant="danger"
-                                  className="shrink-0 px-4 py-2 text-xs"
-                                  onClick={() => handleDeleteOpenAIProvider(openaiProvider.name)}
+                                  className="px-3 py-1.5 text-xs opacity-0 transition-opacity group-hover:opacity-100"
+                                  onClick={() => handleDeleteKey(provider, key)}
                                 >
                                   Remove
                                 </Button>
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {config.keys.map((key, idx) => (
-                            <div
-                              key={key}
-                              className="group flex items-center justify-between gap-3 rounded-xl border border-white/20 bg-gradient-to-r from-white/5 to-white/[0.02] px-4 py-3 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
-                              style={{ animationDelay: `${idx * 50}ms` }}
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="flex size-8 items-center justify-center rounded-lg bg-purple-500/20 text-xs font-bold text-purple-300">
-                                  {idx + 1}
-                                </div>
-                                <span className="font-mono text-sm text-white/90">{maskKey(key)}</span>
-                              </div>
-                              <Button
-                                variant="danger"
-                                className="px-3 py-1.5 text-xs opacity-0 transition-opacity group-hover:opacity-100"
-                                onClick={() => handleDeleteKey(provider, key)}
-                              >
-                                Remove
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="flex gap-2 pt-2">
-                        <Button 
-                          onClick={() => openModal(provider.id)}
-                          className="flex-1"
-                        >
-                          + Add API Key
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* ── OAuth Connected Accounts ──────────────────────────────────── */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 text-2xl backdrop-blur-xl">
-                  🔐
-                </div>
-                <div>
-                  <CardTitle>Connected OAuth Accounts</CardTitle>
-                  <p className="mt-1 text-sm text-white/60">
-                    Manage your connected OAuth provider accounts
-                  </p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {oauthAccountsLoading ? (
-                <div className="flex items-center justify-center p-8">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-purple-500"></div>
-                    <p className="text-sm text-white/70">Loading accounts...</p>
-                  </div>
-                </div>
-              ) : accounts.length === 0 ? (
-                <div className="rounded-xl border-l-4 border-white/30 bg-white/5 p-4 text-sm text-white/80 backdrop-blur-xl">
-                  No OAuth accounts connected. Use the section below to connect accounts.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {accounts.map((account) => (
-                    <div
-                      key={account.id || account.name}
-                      className="group flex items-center justify-between gap-4 rounded-xl border border-white/20 bg-gradient-to-r from-white/5 to-white/[0.02] p-4 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-white">
-                            {account.provider || account.type || "Unknown"}
-                          </span>
-                          <span
-                            className={
-                              account.disabled
-                                ? "rounded-full bg-white/10 border border-white/20 px-2.5 py-0.5 text-xs font-medium text-white/50"
-                                : account.status === "active"
-                                  ? "rounded-full bg-gradient-to-r from-green-500/30 to-emerald-500/30 border border-green-400/50 px-2.5 py-0.5 text-xs font-medium text-green-300"
-                                  : "rounded-full bg-white/10 border border-white/20 px-2.5 py-0.5 text-xs font-medium text-white/70"
-                            }
-                          >
-                            {account.disabled ? "disabled" : account.status || "unknown"}
-                          </span>
-                        </div>
-                        {(account.email || account.label) && (
-                          <p className="mt-1 truncate text-xs text-white/60">
-                            {account.email || account.label}
-                          </p>
+                            ))}
+                          </div>
                         )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant={account.disabled ? "secondary" : "ghost"}
-                          className="px-3 py-1.5 text-xs"
-                          onClick={() => handleToggleDisabled(account)}
-                        >
-                          {account.disabled ? "Enable" : "Disable"}
-                        </Button>
-                        <Button
-                          variant="danger"
-                          className="px-3 py-1.5 text-xs"
-                          onClick={() => handleOAuthDelete(account)}
-                        >
-                          Disconnect
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
-          {/* ── Connect OAuth Account ────────────────────────────────────── */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Connect OAuth Account</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4 rounded-xl border-l-4 border-blue-400/60 bg-blue-500/10 p-3 text-sm backdrop-blur-xl">
-                <strong className="text-white">Note:</strong>{" "}
-                <span className="text-white/90">
-                  OAuth flows open in a new window. Make sure pop-ups are allowed.
-                </span>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                {OAUTH_PROVIDERS.map((provider) => (
-                  <div
-                    key={provider.id}
-                    className="group flex flex-col justify-between rounded-xl border border-white/20 bg-gradient-to-br from-white/5 to-white/[0.02] p-4 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
-                  >
-                    <div>
-                      <div className="text-sm font-bold text-white">
-                        {provider.name}
+                        <div className="flex gap-2 pt-2">
+                          <Button 
+                            onClick={() => openModal(provider.id)}
+                            className="flex-1"
+                          >
+                            + Add API Key
+                          </Button>
+                        </div>
                       </div>
-                      <p className="mt-2 text-sm text-white/60">
-                        {provider.description}
-                      </p>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      onClick={() => handleOAuthConnect(provider.id)}
-                      className="mt-4 w-full"
-                    >
-                      Connect
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+           </section>
+
+           {/* ── OAuth Account Management ──────────────────────────────────────── */}
+           <section className="space-y-4">
+             <div className="flex items-center gap-3 border-b border-white/10 pb-3">
+               <div className="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 text-xl backdrop-blur-xl">
+                 🔐
+               </div>
+               <div>
+                 <h2 className="text-xl font-bold text-white">OAuth Accounts</h2>
+                 <p className="text-sm text-white/60">Connect and manage provider accounts via OAuth</p>
+               </div>
+             </div>
+
+             {/* Connected OAuth Accounts */}
+             <Card>
+               <CardHeader>
+                 <div className="flex items-center justify-between">
+                   <div>
+                     <CardTitle className="text-lg">Connected Accounts</CardTitle>
+                     <p className="mt-1 text-sm text-white/60">
+                       Active OAuth provider connections
+                     </p>
+                   </div>
+                   {accounts.length > 0 && (
+                     <span className="rounded-full bg-white/10 border border-white/20 px-3 py-1.5 text-xs font-bold text-white/80">
+                       {accounts.length} {accounts.length === 1 ? "account" : "accounts"}
+                     </span>
+                   )}
+                 </div>
+               </CardHeader>
+               <CardContent>
+                 {oauthAccountsLoading ? (
+                   <div className="flex items-center justify-center p-8">
+                     <div className="flex flex-col items-center gap-3">
+                       <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-purple-500"></div>
+                       <p className="text-sm text-white/70">Loading accounts...</p>
+                     </div>
+                   </div>
+                 ) : accounts.length === 0 ? (
+                   <div className="rounded-xl border-l-4 border-white/30 bg-white/5 p-4 text-sm text-white/80 backdrop-blur-xl">
+                     No OAuth accounts connected yet. Connect your first account below.
+                   </div>
+                 ) : (
+                   <div className="space-y-3">
+                     {accounts.map((account) => (
+                       <div
+                         key={account.id || account.name}
+                         className="group rounded-xl border border-white/20 bg-gradient-to-r from-white/5 to-white/[0.02] p-4 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
+                       >
+                         <div className="flex items-start justify-between gap-4">
+                           <div className="flex-1 min-w-0 space-y-2">
+                             <div className="flex items-center gap-3 flex-wrap">
+                               <span className="text-base font-bold text-white">
+                                 {account.provider || account.type || "Unknown"}
+                               </span>
+                               <span
+                                 className={
+                                   account.disabled
+                                     ? "rounded-full bg-white/10 border border-white/20 px-2.5 py-1 text-xs font-medium text-white/50"
+                                     : account.status === "active"
+                                       ? "rounded-full bg-gradient-to-r from-green-500/30 to-emerald-500/30 border border-green-400/50 px-2.5 py-1 text-xs font-medium text-green-300"
+                                       : "rounded-full bg-white/10 border border-white/20 px-2.5 py-1 text-xs font-medium text-white/70"
+                                 }
+                               >
+                                 {account.disabled ? "disabled" : account.status || "unknown"}
+                               </span>
+                             </div>
+                             {(account.email || account.label) && (
+                               <p className="truncate text-sm text-white/70">
+                                 {account.email || account.label}
+                               </p>
+                             )}
+                           </div>
+                           <div className="flex items-center gap-2 shrink-0">
+                             <Button
+                               variant={account.disabled ? "secondary" : "ghost"}
+                               className="px-4 py-2 text-xs"
+                               onClick={() => handleToggleDisabled(account)}
+                             >
+                               {account.disabled ? "Enable" : "Disable"}
+                             </Button>
+                             <Button
+                               variant="danger"
+                               className="px-4 py-2 text-xs"
+                               onClick={() => handleOAuthDelete(account)}
+                             >
+                               Disconnect
+                             </Button>
+                           </div>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </CardContent>
+             </Card>
+
+             {/* Connect OAuth Account */}
+             <Card>
+               <CardHeader>
+                 <CardTitle className="text-lg">Connect New Account</CardTitle>
+                 <p className="mt-1 text-sm text-white/60">
+                   Link OAuth provider accounts for subscription-based access
+                 </p>
+               </CardHeader>
+               <CardContent>
+                 <div className="mb-4 rounded-xl border-l-4 border-blue-400/60 bg-blue-500/10 p-3 text-sm backdrop-blur-xl">
+                   <strong className="text-white">Note:</strong>{" "}
+                   <span className="text-white/90">
+                     OAuth flows open in a popup window. Make sure pop-ups are allowed in your browser.
+                   </span>
+                 </div>
+
+                 <div className="grid gap-4 sm:grid-cols-2">
+                   {OAUTH_PROVIDERS.map((provider) => (
+                     <div
+                       key={provider.id}
+                       className="group flex flex-col justify-between rounded-xl border border-white/20 bg-gradient-to-br from-white/5 to-white/[0.02] p-5 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
+                     >
+                       <div className="space-y-2">
+                         <div className="text-base font-bold text-white">
+                           {provider.name}
+                         </div>
+                         <p className="text-sm text-white/60 leading-relaxed">
+                           {provider.description}
+                         </p>
+                       </div>
+                       <Button
+                         variant="secondary"
+                         onClick={() => handleOAuthConnect(provider.id)}
+                         className="mt-4 w-full"
+                       >
+                         Connect {provider.name}
+                       </Button>
+                     </div>
+                   ))}
+                 </div>
+               </CardContent>
+             </Card>
+           </section>
         </>
       )}
 

@@ -146,38 +146,43 @@ export default function QuotaPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-          Quota
-        </h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
+            Quota
+          </h1>
+          <p className="mt-1 text-sm text-white/60">
+            Monitor OAuth account quotas and usage limits
+          </p>
+        </div>
         
-        <div className="flex items-center gap-2">
-          <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex gap-1.5">
             <Button
               variant={selectedProvider === PROVIDERS.ALL ? "secondary" : "ghost"}
               onClick={() => setSelectedProvider(PROVIDERS.ALL)}
-              className="text-xs px-3 py-1"
+              className="text-xs px-3 py-1.5"
             >
               All
             </Button>
             <Button
               variant={selectedProvider === PROVIDERS.ANTIGRAVITY ? "secondary" : "ghost"}
               onClick={() => setSelectedProvider(PROVIDERS.ANTIGRAVITY)}
-              className="text-xs px-3 py-1"
+              className="text-xs px-3 py-1.5"
             >
               Antigravity
             </Button>
             <Button
               variant={selectedProvider === PROVIDERS.CLAUDE ? "secondary" : "ghost"}
               onClick={() => setSelectedProvider(PROVIDERS.CLAUDE)}
-              className="text-xs px-3 py-1"
+              className="text-xs px-3 py-1.5"
             >
               Claude
             </Button>
             <Button
               variant={selectedProvider === PROVIDERS.CODEX ? "secondary" : "ghost"}
               onClick={() => setSelectedProvider(PROVIDERS.CODEX)}
-              className="text-xs px-3 py-1"
+              className="text-xs px-3 py-1.5"
             >
               Codex
             </Button>
@@ -186,7 +191,7 @@ export default function QuotaPage() {
           <Button
             onClick={fetchQuota}
             disabled={loading}
-            className="text-xs px-3 py-1"
+            className="text-xs px-3 py-1.5"
           >
             {loading ? "Loading..." : "Refresh"}
           </Button>
@@ -194,160 +199,171 @@ export default function QuotaPage() {
       </div>
 
       {loading && !quotaData ? (
-        <div className="text-sm text-white/60">Loading quota data...</div>
+        <Card>
+          <CardContent>
+            <div className="py-12 text-center text-sm text-white/60">
+              Loading quota data...
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Active Accounts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="border-l-4 border-purple-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-3xl font-bold text-white">{activeAccounts}</div>
-                  <div className="mt-1 text-xs font-medium text-white/70">
-                    Supported OAuth accounts
-                  </div>
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="backdrop-blur-2xl glass-card rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center flex-shrink-0">
+                  <span className="text-purple-400 text-lg" aria-hidden="true">&#9679;</span>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Active Accounts</div>
+                  <div className="text-2xl font-bold text-white mt-0.5">{activeAccounts}</div>
+                  <div className="text-xs text-white/60 mt-0.5">Supported OAuth</div>
+                </div>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Average Quota</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="border-l-4 border-emerald-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-3xl font-bold text-white">
+            <div className="backdrop-blur-2xl glass-card rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0">
+                  <span className="text-emerald-400 text-lg" aria-hidden="true">&#9650;</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Average Quota</div>
+                  <div className="text-2xl font-bold text-white mt-0.5">
                     {Math.round(avgQuota * 100)}%
                   </div>
-                  <div className="mt-1 text-xs font-medium text-white/70">
-                    Average remaining quota
-                  </div>
+                  <div className="text-xs text-white/60 mt-0.5">Remaining capacity</div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Low Quota</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="border-l-4 border-red-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-3xl font-bold text-white">{lowQuotaCount}</div>
-                  <div className="mt-1 text-xs font-medium text-white/70">
-                    Groups below 20%
-                  </div>
+            <div className="backdrop-blur-2xl glass-card rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] sm:col-span-2 lg:col-span-1">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-400/30 flex items-center justify-center flex-shrink-0">
+                  <span className="text-red-400 text-lg" aria-hidden="true">&#9888;</span>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Low Quota</div>
+                  <div className="text-2xl font-bold text-white mt-0.5">{lowQuotaCount}</div>
+                  <div className="text-xs text-white/60 mt-0.5">Groups below 20%</div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
             {filteredAccounts.map((account) => {
               const statusBadge = account.supported
                 ? account.error
-                  ? { label: "ERROR", class: "bg-red-500/30 border-red-400/40" }
-                  : { label: "ACTIVE", class: "bg-emerald-500/30 border-emerald-400/40" }
-                : { label: "NOT SUPPORTED", class: "bg-amber-500/30 border-amber-400/40" };
+                  ? { label: "ERROR", class: "bg-red-500/20 border-red-400/40 text-red-300" }
+                  : { label: "ACTIVE", class: "bg-emerald-500/20 border-emerald-400/40 text-emerald-300" }
+                : { label: "NOT SUPPORTED", class: "bg-amber-500/20 border-amber-400/40 text-amber-300" };
 
               return (
                 <Card key={account.auth_index}>
-                  <CardContent className="pt-6">
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="text-lg font-bold text-white capitalize">
-                            {account.provider}
-                          </h3>
-                          <p className="text-sm text-white/60">{maskEmail(account.email)}</p>
-                        </div>
-                        <span
-                          className={cn(
-                            "backdrop-blur-xl px-3 py-1 text-xs font-medium text-white rounded-lg border",
-                            statusBadge.class
-                          )}
-                        >
-                          {statusBadge.label}
-                        </span>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold text-white capitalize">
+                          {account.provider}
+                        </h3>
+                        <p className="text-sm text-white/60 mt-0.5 truncate">{maskEmail(account.email)}</p>
                       </div>
+                      <span
+                        className={cn(
+                          "backdrop-blur-xl px-2.5 py-1 text-xs font-medium rounded-lg border flex-shrink-0",
+                          statusBadge.class
+                        )}
+                      >
+                        {statusBadge.label}
+                      </span>
+                    </div>
 
-                      {account.error && (
-                        <div className="border-l-4 border-red-400/60 backdrop-blur-xl bg-red-500/20 p-4 text-sm text-white rounded-r-xl">
-                          {account.error}
-                        </div>
-                      )}
+                    {account.error && (
+                      <div className="backdrop-blur-xl bg-red-500/10 border border-red-400/30 rounded-lg p-3">
+                        <div className="text-sm text-red-200">{account.error}</div>
+                      </div>
+                    )}
 
-                      {!account.supported && !account.error && (
-                        <div className="border-l-4 border-amber-400/60 backdrop-blur-xl bg-amber-500/20 p-4 text-sm text-white rounded-r-xl">
+                    {!account.supported && !account.error && (
+                      <div className="backdrop-blur-xl bg-amber-500/10 border border-amber-400/30 rounded-lg p-3">
+                        <div className="text-sm text-amber-200">
                           Quota monitoring not available for this provider
                         </div>
-                      )}
+                      </div>
+                    )}
 
-                      {account.groups && account.groups.length > 0 && (
-                        <div className="space-y-3">
-                          {account.groups.map((group) => {
-                            const isExpanded = expandedGroups[`${account.auth_index}-${group.id}`];
-                            
-                            return (
-                              <div key={group.id} className="space-y-2">
-                                <button
-                                  type="button"
-                                  className="w-full cursor-pointer select-none text-left"
-                                  onClick={() => toggleGroup(account.auth_index, group.id)}
-                                >
-                                  <div className="flex items-center justify-between mb-1">
-                                    <span className="text-sm font-bold text-white">{group.label}</span>
-                                    <span className="text-sm text-white/80">
-                                      {Math.round(group.remainingFraction * 100)}% remaining
-                                    </span>
-                                  </div>
-                                  
-                                  <div className="w-full h-3 rounded-full bg-white/10 overflow-hidden">
-                                    <div
-                                      className={cn("h-full transition-all duration-300", getProgressColor(group.remainingFraction))}
-                                      style={{ width: `${group.remainingFraction * 100}%` }}
-                                    />
-                                  </div>
-                                  
-                                  <div className="mt-1 text-xs text-white/60">
-                                    {formatRelativeTime(group.resetTime)}
-                                  </div>
-                                </button>
+                    {account.groups && account.groups.length > 0 && (
+                      <div className="space-y-3">
+                        {account.groups.map((group) => {
+                          const isExpanded = expandedGroups[`${account.auth_index}-${group.id}`];
+                          
+                          return (
+                            <div key={group.id} className="backdrop-blur-xl bg-white/5 rounded-lg p-3 border border-white/10">
+                              <button
+                                type="button"
+                                className="w-full text-left"
+                                onClick={() => toggleGroup(account.auth_index, group.id)}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm font-semibold text-white">{group.label}</span>
+                                  <span className="text-xs font-medium text-white/70">
+                                    {Math.round(group.remainingFraction * 100)}%
+                                  </span>
+                                </div>
+                                
+                                <div className="w-full h-2.5 rounded-full bg-white/10 overflow-hidden">
+                                  <div
+                                    className={cn(
+                                      "h-full transition-all duration-300",
+                                      getProgressColor(group.remainingFraction)
+                                    )}
+                                    style={{ width: `${group.remainingFraction * 100}%` }}
+                                  />
+                                </div>
+                                
+                                <div className="mt-1.5 text-xs text-white/50">
+                                  {formatRelativeTime(group.resetTime)}
+                                </div>
+                              </button>
 
-                                {isExpanded && group.models.length > 0 && (
-                                  <div className="ml-4 space-y-2 pt-2 border-l-2 border-white/10 pl-3">
-                                    {group.models.map((model) => (
-                                      <div key={model.id} className="space-y-1">
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-xs text-white/80">{model.displayName}</span>
-                                          <span className="text-xs text-white/60">
-                                            {Math.round(model.remainingFraction * 100)}%
-                                          </span>
-                                        </div>
-                                        
-                                        <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                                          <div
-                                            className={cn("h-full transition-all duration-300", getProgressColor(model.remainingFraction))}
-                                            style={{ width: `${model.remainingFraction * 100}%` }}
-                                          />
-                                        </div>
+                              {isExpanded && group.models.length > 0 && (
+                                <div className="mt-3 pt-3 space-y-2.5 border-t border-white/10">
+                                  {group.models.map((model) => (
+                                    <div key={model.id}>
+                                      <div className="flex items-center justify-between mb-1">
+                                        <span className="text-xs text-white/70 font-medium">{model.displayName}</span>
+                                        <span className="text-xs text-white/50">
+                                          {Math.round(model.remainingFraction * 100)}%
+                                        </span>
                                       </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                                      
+                                      <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                        <div
+                                          className={cn(
+                                            "h-full transition-all duration-300",
+                                            getProgressColor(model.remainingFraction)
+                                          )}
+                                          style={{ width: `${model.remainingFraction * 100}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
 
-                      {account.raw && account.provider === "codex" ? (
-                        <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-lg p-3 font-mono text-xs text-white/80 overflow-auto max-h-48">
-                          <pre>{JSON.stringify(account.raw, null, 2)}</pre>
-                        </div>
-                      ) : null}
-                    </div>
+                    {account.raw && account.provider === "codex" ? (
+                      <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-lg p-3 overflow-auto max-h-48">
+                        <pre className="font-mono text-xs text-white/70">
+                          {JSON.stringify(account.raw, null, 2)}
+                        </pre>
+                      </div>
+                    ) : null}
                   </CardContent>
                 </Card>
               );
@@ -356,8 +372,8 @@ export default function QuotaPage() {
 
           {filteredAccounts.length === 0 && !loading && (
             <Card>
-              <CardContent className="pt-6">
-                <div className="text-center text-white/60 py-8">
+              <CardContent>
+                <div className="text-center text-white/60 py-12 text-sm">
                   No accounts found for the selected filter
                 </div>
               </CardContent>

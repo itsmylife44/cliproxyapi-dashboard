@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMobileSidebar } from "@/components/mobile-sidebar-context";
 
 export function MobileTopBar() {
@@ -30,9 +31,18 @@ export function MobileTopBar() {
             />
           </svg>
         </button>
-        <h1 className="text-lg font-bold tracking-tight text-white">
-          CLIProxy
-        </h1>
+        <div className="flex items-center gap-2">
+          <Image 
+            src="/icon.png" 
+            alt="CLIProxy Logo" 
+            width={24} 
+            height={24}
+            className="rounded-md"
+          />
+          <h1 className="text-lg font-bold tracking-tight text-white">
+            CLIProxy
+          </h1>
+        </div>
       </div>
     </div>
   );

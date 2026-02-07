@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
+import { prisma } from "@/lib/db";
 
 const BACKEND_API_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -26,6 +27,18 @@ async function proxyRequest(
     return NextResponse.json(
       { error: "Unauthorized" },
       { status: 401 }
+    );
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { isAdmin: true },
+  });
+
+  if (!user?.isAdmin) {
+    return NextResponse.json(
+      { error: "Forbidden: Admin access required" },
+      { status: 403 }
     );
   }
 

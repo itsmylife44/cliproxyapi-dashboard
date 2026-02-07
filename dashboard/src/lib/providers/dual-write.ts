@@ -138,18 +138,31 @@ export async function contributeKey(
 
     if (provider === PROVIDER.OPENAI_COMPAT) {
       const responseKey = "openai-compatibility";
-      if (!isRecord(getData) || !isOpenAICompatArray(getData[responseKey])) {
+      const rawData = getData[responseKey];
+      if (!isRecord(getData)) {
         return { ok: false, error: "Invalid Management API response for OpenAI compatibility" };
       }
-      updatedPayload = getData[responseKey];
+      if (rawData === null || (Array.isArray(rawData) && rawData.length === 0)) {
+        updatedPayload = [];
+      } else if (!isOpenAICompatArray(rawData)) {
+        return { ok: false, error: "Invalid Management API response for OpenAI compatibility" };
+      } else {
+        updatedPayload = rawData;
+      }
     } else {
       const responseKey = `${provider}-api-key`;
-      if (!isRecord(getData) || !isApiKeyArray(getData[responseKey])) {
+      const rawData = getData[responseKey];
+      if (!isRecord(getData)) {
         return { ok: false, error: `Invalid Management API response for ${provider}` };
       }
 
-      const existingKeys = getData[responseKey];
-      updatedPayload = [...existingKeys, { "api-key": trimmedKey }];
+      if (rawData === null || (Array.isArray(rawData) && rawData.length === 0)) {
+        updatedPayload = [{ "api-key": trimmedKey }];
+      } else if (!isApiKeyArray(rawData)) {
+        return { ok: false, error: `Invalid Management API response for ${provider}` };
+      } else {
+        updatedPayload = [...rawData, { "api-key": trimmedKey }];
+      }
     }
 
     const putRes = await fetch(endpoint, {
@@ -305,6 +318,94 @@ export async function removeKey(
   }
 }
 
+export async function removeKeyByAdmin(
+  keyHash: string,
+  provider: Provider
+): Promise<RemoveKeyResult> {
+  if (!MANAGEMENT_API_KEY) {
+    return { ok: false, error: "Management API key not configured" };
+  }
+
+  try {
+    const endpoint = `${MANAGEMENT_BASE_URL}${PROVIDER_ENDPOINT[provider]}`;
+
+    const getRes = await fetch(endpoint, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+    });
+
+    if (!getRes.ok) {
+      return { ok: false, error: `Failed to fetch existing keys: HTTP ${getRes.status}` };
+    }
+
+    const getData = await getRes.json();
+    const responseKey =
+      provider === PROVIDER.OPENAI_COMPAT
+        ? "openai-compatibility"
+        : `${provider}-api-key`;
+
+    if (!isRecord(getData)) {
+      return { ok: false, error: "Invalid Management API response" };
+    }
+
+    const rawKeys = getData[responseKey];
+    let matchingKey: string | null = null;
+
+    if (provider === PROVIDER.OPENAI_COMPAT) {
+      if (!isOpenAICompatArray(rawKeys)) {
+        return { ok: false, error: "Invalid OpenAI compatibility response" };
+      }
+
+      for (const providerEntry of rawKeys) {
+        for (const keyEntry of providerEntry["api-key-entries"]) {
+          const candidateHash = hashProviderKey(keyEntry["api-key"]);
+          if (candidateHash === keyHash) {
+            matchingKey = keyEntry["api-key"];
+            break;
+          }
+        }
+        if (matchingKey) break;
+      }
+    } else {
+      if (!isApiKeyArray(rawKeys)) {
+        return { ok: false, error: `Invalid ${provider} response` };
+      }
+
+      for (const keyEntry of rawKeys) {
+        const candidateHash = hashProviderKey(keyEntry["api-key"]);
+        if (candidateHash === keyHash) {
+          matchingKey = keyEntry["api-key"];
+          break;
+        }
+      }
+    }
+
+    if (!matchingKey) {
+      return { ok: false, error: "Key not found in Management API" };
+    }
+
+    const deleteRes = await fetch(
+      `${endpoint}?api-key=${encodeURIComponent(matchingKey)}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+      }
+    );
+
+    if (!deleteRes.ok) {
+      return { ok: false, error: `Failed to delete key from Management API: HTTP ${deleteRes.status}` };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    console.error("removeKeyByAdmin error:", error);
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Unknown error during key removal",
+    };
+  }
+}
+
 export async function listKeysWithOwnership(
   userId: string,
   provider: Provider
@@ -337,22 +438,26 @@ export async function listKeysWithOwnership(
     const apiKeys: string[] = [];
 
     if (provider === PROVIDER.OPENAI_COMPAT) {
-      if (!isOpenAICompatArray(rawKeys)) {
+      if (rawKeys === null || (Array.isArray(rawKeys) && rawKeys.length === 0)) {
+        // No keys configured yet
+      } else if (!isOpenAICompatArray(rawKeys)) {
         return { ok: false, error: "Invalid OpenAI compatibility response" };
-      }
-
-      for (const providerEntry of rawKeys) {
-        for (const keyEntry of providerEntry["api-key-entries"]) {
-          apiKeys.push(keyEntry["api-key"]);
+      } else {
+        for (const providerEntry of rawKeys) {
+          for (const keyEntry of providerEntry["api-key-entries"]) {
+            apiKeys.push(keyEntry["api-key"]);
+          }
         }
       }
     } else {
-      if (!isApiKeyArray(rawKeys)) {
+      if (rawKeys === null || (Array.isArray(rawKeys) && rawKeys.length === 0)) {
+        // No keys configured yet
+      } else if (!isApiKeyArray(rawKeys)) {
         return { ok: false, error: `Invalid ${provider} response` };
-      }
-
-      for (const keyEntry of rawKeys) {
-        apiKeys.push(keyEntry["api-key"]);
+      } else {
+        for (const keyEntry of rawKeys) {
+          apiKeys.push(keyEntry["api-key"]);
+        }
       }
     }
 

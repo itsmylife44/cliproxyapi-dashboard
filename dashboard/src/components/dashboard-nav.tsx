@@ -103,12 +103,12 @@ function IconUsers({ className }: { className?: string }) {
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Quick Start", icon: IconPlayCircle, adminOnly: false },
-  { href: "/dashboard/monitoring", label: "Monitoring", icon: IconActivity, adminOnly: false },
-  { href: "/dashboard/containers", label: "Containers", icon: IconBox, adminOnly: false },
-  { href: "/dashboard/config", label: "Config", icon: IconFileCode, adminOnly: false },
+  { href: "/dashboard/monitoring", label: "Monitoring", icon: IconActivity, adminOnly: true },
+  { href: "/dashboard/containers", label: "Containers", icon: IconBox, adminOnly: true },
+  { href: "/dashboard/config", label: "Config", icon: IconFileCode, adminOnly: true },
   { href: "/dashboard/api-keys", label: "API Keys", icon: IconKey, adminOnly: false },
   { href: "/dashboard/providers", label: "Providers", icon: IconLayers, adminOnly: false },
-  { href: "/dashboard/usage", label: "Usage", icon: IconBarChart, adminOnly: false },
+  { href: "/dashboard/usage", label: "Usage", icon: IconBarChart, adminOnly: true },
   { href: "/dashboard/quota", label: "Quota", icon: IconGauge, adminOnly: false },
   { href: "/dashboard/admin/users", label: "Users", icon: IconUsers, adminOnly: true },
   { href: "/dashboard/settings", label: "Settings", icon: IconSettings, adminOnly: false },

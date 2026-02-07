@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
-import { removeKey } from "@/lib/providers/dual-write";
+import { removeKey, removeKeyByAdmin } from "@/lib/providers/dual-write";
 import { prisma } from "@/lib/db";
+import { PROVIDER, type Provider } from "@/lib/providers/constants";
+
+function isValidProvider(provider: string): provider is Provider {
+  return Object.values(PROVIDER).includes(provider as Provider);
+}
 
 export async function DELETE(
   request: NextRequest,
@@ -20,6 +25,8 @@ export async function DELETE(
 
   try {
     const { keyHash } = await params;
+    const { searchParams } = new URL(request.url);
+    const provider = searchParams.get("provider");
 
     if (!keyHash || typeof keyHash !== "string") {
       return NextResponse.json(
@@ -35,7 +42,17 @@ export async function DELETE(
 
     const isAdmin = user?.isAdmin ?? false;
 
-    const result = await removeKey(session.userId, keyHash, isAdmin);
+    const ownership = await prisma.providerKeyOwnership.findUnique({
+      where: { keyHash },
+    });
+
+    let result: { ok: boolean; error?: string };
+
+    if (!ownership && isAdmin && provider && isValidProvider(provider)) {
+      result = await removeKeyByAdmin(keyHash, provider);
+    } else {
+      result = await removeKey(session.userId, keyHash, isAdmin);
+    }
 
     if (!result.ok) {
       if (result.error?.includes("Access denied")) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
+import { prisma } from "@/lib/db";
 import { execFile } from "child_process";
 import { promisify } from "util";
 
@@ -84,6 +85,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Unauthorized" },
       { status: 401 }
+    );
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { isAdmin: true },
+  });
+
+  if (!user?.isAdmin) {
+    return NextResponse.json(
+      { error: "Forbidden: Admin access required" },
+      { status: 403 }
     );
   }
 

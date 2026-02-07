@@ -153,15 +153,6 @@ interface OAuthCallbackResponse {
 // ── UI Components ──────────────────────────────────────────────────────────────
 
 function OwnerBadge({ ownerUsername, isOwn }: OwnerBadgeProps) {
-  if (!ownerUsername) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/20 px-2.5 py-1 text-xs font-medium text-white/50">
-        <span className="size-1.5 rounded-full bg-white/30"></span>
-        Unassigned
-      </span>
-    );
-  }
-
   if (isOwn) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-500/30 to-cyan-500/30 border border-blue-400/50 px-2.5 py-1 text-xs font-bold text-blue-300 shadow-sm">
@@ -171,10 +162,19 @@ function OwnerBadge({ ownerUsername, isOwn }: OwnerBadgeProps) {
     );
   }
 
+  if (ownerUsername) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-2.5 py-1 text-xs font-medium text-white/70">
+        <span className="size-1.5 rounded-full bg-purple-400"></span>
+        {ownerUsername}
+      </span>
+    );
+  }
+
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-2.5 py-1 text-xs font-medium text-white/70">
-      <span className="size-1.5 rounded-full bg-purple-400"></span>
-      {ownerUsername}
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-2.5 py-1 text-xs font-medium text-white/40">
+      <span className="size-1.5 rounded-full bg-white/20"></span>
+      Team
     </span>
   );
 }
@@ -397,10 +397,10 @@ export default function ProvidersPage() {
     }
   };
 
-  const handleDeleteKey = async (keyHash: string) => {
+  const handleDeleteKey = async (keyHash: string, provider: string) => {
     if (!confirm("Are you sure you want to remove this key?")) return;
     try {
-      const res = await fetch(`/api/providers/keys/${keyHash}`, {
+      const res = await fetch(`/api/providers/keys/${keyHash}?provider=${provider}`, {
         method: "DELETE",
       });
       if (!res.ok) {
@@ -766,7 +766,7 @@ export default function ProvidersPage() {
                                   <Button
                                     variant="danger"
                                     className="px-3 py-1.5 text-xs shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-                                    onClick={() => handleDeleteKey(keyInfo.keyHash)}
+                                    onClick={() => handleDeleteKey(keyInfo.keyHash, provider.id)}
                                   >
                                     Remove
                                   </Button>

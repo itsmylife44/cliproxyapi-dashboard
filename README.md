@@ -93,6 +93,16 @@ Before installing, ensure you have:
 - **Server**: VPS or dedicated server with public IP address
 - **Ports Available**: 80, 443, 8085, 1455, 54545, 51121, 11451
 
+### Preflight Checklist
+
+Complete **before** running the installer:
+
+- [ ] **DNS Records Configured**: Set A records for `dashboard.yourdomain.com` and `api.yourdomain.com` pointing to your server IP
+- [ ] **DNS Propagated**: Verify records with `dig dashboard.yourdomain.com` (allow 5-15 minutes)
+- [ ] **Ports Available**: Confirm no services using ports 80, 443, 8085, 1455, 54545, 51121, 11451
+- [ ] **Root Access**: SSH access with `sudo` or root privileges
+- [ ] **First Admin Window**: Plan to create your admin account immediately after installation completes
+
 ### DNS Configuration
 
 Configure DNS A records for your domain **before installation**:
@@ -104,7 +114,9 @@ api.example.com        →  YOUR_SERVER_IP
 
 Replace `example.com` with your actual domain and `YOUR_SERVER_IP` with your server's public IP address.
 
-> **Note**: For OAuth callbacks to work correctly, your domain must be accessible from the internet.
+> **Critical**: DNS records must be live before first start. Caddy requests Let's Encrypt certificates immediately, which requires valid DNS.
+
+> **Security Note**: Until you create the first admin account, the dashboard setup page is accessible to anyone who can reach your domain. Restrict access using firewall rules if needed, or complete setup immediately after installation.
 
 ## Quick Start (Docker Compose)
 
@@ -124,8 +136,11 @@ The installer will:
 2. Install Docker and Docker Compose (if not already installed)
 3. Configure UFW firewall with required ports
 4. Generate secure secrets (JWT_SECRET, MANAGEMENT_API_KEY, POSTGRES_PASSWORD)
-5. Create a systemd service for automatic startup on boot
-6. Optionally set up automated daily or weekly backups
+5. Create `infrastructure/.env` with all required configuration
+6. Create a systemd service for automatic startup on boot
+7. Optionally set up automated daily or weekly backups
+
+> **Note**: The installer generates `infrastructure/.env` automatically. This file must not be empty or missing for the stack to start.
 
 ### Post-Installation
 
@@ -147,11 +162,23 @@ Access the dashboard at:
 - **Dashboard**: `https://dashboard.yourdomain.com`
 - **API**: `https://api.yourdomain.com`
 
-**First Login**: On first access you'll be redirected to a setup wizard where you create your administrator account (username + password). There are no default credentials.
+### Initial Setup Flow
 
-After logging in, use the **Configuration** page in the dashboard to set up your API keys and AI providers — no manual file editing required.
+1. **First Visit**: Navigate to `https://dashboard.yourdomain.com`
+2. **Automatic Redirect**: You'll be redirected to `/setup` (the setup wizard)
+3. **Create Admin Account**: Enter your desired username and password
+4. **Setup Disabled**: After creating the first user, the setup page becomes inaccessible
+5. **Login**: Use your new credentials to access the dashboard
 
-> **Important**: Caddy will automatically request Let's Encrypt TLS certificates on first startup. Ensure your DNS records are correctly configured.
+**Important Notes**:
+- There are no default credentials
+- The setup page is publicly accessible until the first admin account is created
+- After first user creation, setup is permanently disabled
+- Use the **Configuration** page to set up API keys and AI providers — no manual file editing required
+
+> **Security**: Complete the setup wizard immediately after installation to secure your dashboard. Consider restricting access to port 443 via firewall until setup is complete.
+
+> **TLS Certificates**: Caddy automatically requests Let's Encrypt certificates on first startup. DNS records must be correctly configured and propagated before starting the stack.
 
 ## Installation
 
@@ -177,6 +204,7 @@ If you prefer manual setup or need customization:
 
 #### 1. Install Docker
 
+**Ubuntu:**
 ```bash
 # Update packages
 sudo apt-get update
@@ -204,6 +232,37 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io \
 sudo systemctl enable docker
 sudo systemctl start docker
 ```
+
+**Debian:**
+```bash
+# Update packages
+sudo apt-get update
+
+# Install prerequisites
+sudo apt-get install -y ca-certificates curl gnupg lsb-release
+
+# Add Docker GPG key
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/debian/gpg | \
+  sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+# Add Docker repository (note: debian instead of ubuntu)
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://download.docker.com/linux/debian $(lsb_release -cs) stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Install Docker
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io \
+  docker-buildx-plugin docker-compose-plugin
+
+# Enable and start Docker
+sudo systemctl enable docker
+sudo systemctl start docker
+```
+
+> **Note**: The automated installer (`install.sh`) detects your OS via `/etc/os-release` and uses the correct repository path automatically.
 
 #### 2. Configure Firewall
 
@@ -266,6 +325,8 @@ chmod 600 infrastructure/.env
 ```
 
 Replace `example.com` with your actual domain.
+
+> **Critical**: The `infrastructure/.env` file is generated by `install.sh` and must contain all variables shown above. An empty or missing `.env` file will cause the stack to fail on startup. Do not commit this file to version control.
 
 #### 5. Configure CLIProxyAPI
 
@@ -644,14 +705,21 @@ docker compose logs dashboard
 
 ### Can't Login to Dashboard
 
-There are no default credentials. On first access, navigate to `https://dashboard.yourdomain.com/setup` to create your admin account.
+There are no default credentials. The setup flow is:
 
-If you forgot your password, you can reset it via the database:
+1. **First Visit**: Navigate to `https://dashboard.yourdomain.com`
+2. **Auto-Redirect**: You'll be redirected to `/setup` automatically
+3. **Create Account**: Enter username and password to create the first admin user
+4. **Setup Locked**: After first user is created, `/setup` becomes inaccessible
+
+**If you forgot your password**, reset via the database:
 ```bash
 cd infrastructure
 docker compose exec postgres psql -U cliproxyapi -d cliproxyapi -c "DELETE FROM users;"
 ```
 Then visit `/setup` again to create a new admin account.
+
+**If setup page is not accessible**, it means an admin account already exists. Use your credentials to log in at the main login page.
 
 ## Security
 

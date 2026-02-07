@@ -48,6 +48,39 @@ if ! command -v apt-get &> /dev/null; then
     exit 1
 fi
 
+# Detect Linux distribution and codename for Docker repo setup
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    DISTRO_ID="${ID:-}"
+    DISTRO_CODENAME="${VERSION_CODENAME:-}"
+else
+    log_error "Cannot detect Linux distribution (/etc/os-release not found)"
+    exit 1
+fi
+
+# Validate distro and set Docker repo URL
+case "$DISTRO_ID" in
+    ubuntu)
+        DOCKER_REPO_URL="https://download.docker.com/linux/ubuntu"
+        ;;
+    debian)
+        DOCKER_REPO_URL="https://download.docker.com/linux/debian"
+        ;;
+    *)
+        log_error "Unsupported distribution: $DISTRO_ID (only Ubuntu and Debian supported)"
+        exit 1
+        ;;
+esac
+
+# Validate codename
+if [ -z "$DISTRO_CODENAME" ]; then
+    log_error "Cannot determine distribution codename (required for Docker repo)"
+    exit 1
+fi
+
+log_info "Detected distribution: $DISTRO_ID ($DISTRO_CODENAME)"
+log_info "Docker repository: $DOCKER_REPO_URL"
+
 log_info "Starting CLIProxyAPI Stack installation..."
 echo ""
 
@@ -80,6 +113,15 @@ DASHBOARD_SUBDOMAIN="${DASHBOARD_SUBDOMAIN:-dashboard}"
 # API subdomain
 read -p "Enter API subdomain [default: api]: " API_SUBDOMAIN
 API_SUBDOMAIN="${API_SUBDOMAIN:-api}"
+
+# OAuth provider support
+echo ""
+read -p "Enable OAuth provider callbacks? [y/N]: " OAUTH_ENABLED
+if [[ "$OAUTH_ENABLED" =~ ^[Yy]$ ]]; then
+    OAUTH_ENABLED=1
+else
+    OAUTH_ENABLED=0
+fi
 
 # Backup interval
 echo ""
@@ -116,6 +158,7 @@ log_info "Configuration summary:"
 log_info "  Domain: $DOMAIN"
 log_info "  Dashboard: ${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
 log_info "  API: ${API_SUBDOMAIN}.${DOMAIN}"
+log_info "  OAuth callbacks: $([ $OAUTH_ENABLED -eq 1 ] && echo 'enabled' || echo 'disabled')"
 log_info "  Backup interval: $BACKUP_INTERVAL"
 echo ""
 
@@ -163,13 +206,13 @@ else
     
     # Add Docker GPG key
     install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    curl -fsSL "$DOCKER_REPO_URL/gpg" | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg
     
     # Add Docker repository
     echo \
-        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-        $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] $DOCKER_REPO_URL \
+        $DISTRO_CODENAME stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
     
     # Install Docker Engine
     apt-get update
@@ -212,13 +255,15 @@ if [[ "$UFW_STATUS" == *"inactive"* ]]; then
     ufw allow 443/tcp comment 'HTTPS'
     ufw allow 443/udp comment 'HTTP/3 (QUIC)'
     
-    # OAuth callback ports
-    log_info "Allowing OAuth callback ports..."
-    ufw allow 8085/tcp comment 'CLIProxyAPI OAuth callback 1'
-    ufw allow 1455/tcp comment 'CLIProxyAPI OAuth callback 2'
-    ufw allow 54545/tcp comment 'CLIProxyAPI OAuth callback 3'
-    ufw allow 51121/tcp comment 'CLIProxyAPI OAuth callback 4'
-    ufw allow 11451/tcp comment 'CLIProxyAPI OAuth callback 5'
+    # OAuth callback ports (conditional)
+    if [ $OAUTH_ENABLED -eq 1 ]; then
+        log_info "Allowing OAuth callback ports..."
+        ufw allow 8085/tcp comment 'CLIProxyAPI OAuth callback 1'
+        ufw allow 1455/tcp comment 'CLIProxyAPI OAuth callback 2'
+        ufw allow 54545/tcp comment 'CLIProxyAPI OAuth callback 3'
+        ufw allow 51121/tcp comment 'CLIProxyAPI OAuth callback 4'
+        ufw allow 11451/tcp comment 'CLIProxyAPI OAuth callback 5'
+    fi
     
     # Enable UFW
     log_warning "Enabling UFW firewall..."
@@ -248,11 +293,15 @@ else
     add_rule_if_missing 80 tcp "HTTP"
     add_rule_if_missing 443 tcp "HTTPS"
     add_rule_if_missing 443 udp "HTTP/3 (QUIC)"
-    add_rule_if_missing 8085 tcp "CLIProxyAPI OAuth callback 1"
-    add_rule_if_missing 1455 tcp "CLIProxyAPI OAuth callback 2"
-    add_rule_if_missing 54545 tcp "CLIProxyAPI OAuth callback 3"
-    add_rule_if_missing 51121 tcp "CLIProxyAPI OAuth callback 4"
-    add_rule_if_missing 11451 tcp "CLIProxyAPI OAuth callback 5"
+    
+    # OAuth callback ports (conditional)
+    if [ $OAUTH_ENABLED -eq 1 ]; then
+        add_rule_if_missing 8085 tcp "CLIProxyAPI OAuth callback 1"
+        add_rule_if_missing 1455 tcp "CLIProxyAPI OAuth callback 2"
+        add_rule_if_missing 54545 tcp "CLIProxyAPI OAuth callback 3"
+        add_rule_if_missing 51121 tcp "CLIProxyAPI OAuth callback 4"
+        add_rule_if_missing 11451 tcp "CLIProxyAPI OAuth callback 5"
+    fi
     
     if [ $RULES_ADDED -eq 0 ]; then
         log_success "All required UFW rules already configured"

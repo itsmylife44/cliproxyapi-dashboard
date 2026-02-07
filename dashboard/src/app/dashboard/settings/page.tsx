@@ -605,6 +605,13 @@ export default function SettingsPage() {
                 <div className="text-xs text-white/60 mt-2">
                   The plugin will be auto-installed from npm when opencode starts.
                 </div>
+                
+                <div className="mt-3 pt-3 border-t border-white/10">
+                  <div className="flex items-center gap-2 text-xs text-emerald-400">
+                    <span>✓</span>
+                    <span>OCX profiles supported — works with <code className="px-1 py-0.5 rounded bg-white/10 font-mono">ocx oc -p myprofile</code></span>
+                  </div>
+                </div>
               </div>
             )}
           </div>

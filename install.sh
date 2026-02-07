@@ -32,6 +32,58 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Preflight conflict detection functions
+check_port_conflict() {
+    local port=$1
+    local service_name=$2
+    
+    # Try ss (preferred, available on most Linux systems)
+    if command -v ss &> /dev/null; then
+        if ss -tlnp 2>/dev/null | grep -q ":$port "; then
+            echo "$port"
+            return 0
+        fi
+    # Fallback to lsof
+    elif command -v lsof &> /dev/null; then
+        if lsof -i ":$port" 2>/dev/null | grep -q LISTEN; then
+            echo "$port"
+            return 0
+        fi
+    # Final fallback: try netstat
+    elif command -v netstat &> /dev/null; then
+        if netstat -tln 2>/dev/null | grep -q ":$port "; then
+            echo "$port"
+            return 0
+        fi
+    fi
+    
+    return 1
+}
+
+check_container_conflicts() {
+    local container_names=("cliproxyapi-caddy" "cliproxyapi" "cliproxyapi-dashboard" "cliproxyapi-postgres")
+    local conflicts=()
+    
+    # Only check if Docker is running
+    if ! command -v docker &> /dev/null; then
+        return 0
+    fi
+    
+    if ! docker ps &> /dev/null 2>&1; then
+        return 0
+    fi
+    
+    for container in "${container_names[@]}"; do
+        if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q "^${container}$"; then
+            conflicts+=("$container")
+        fi
+    done
+    
+    if [ ${#conflicts[@]} -gt 0 ]; then
+        printf '%s\n' "${conflicts[@]}"
+    fi
+}
+
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
     log_error "This script must be run as root (use sudo)"
@@ -114,6 +166,15 @@ DASHBOARD_SUBDOMAIN="${DASHBOARD_SUBDOMAIN:-dashboard}"
 read -p "Enter API subdomain [default: api]: " API_SUBDOMAIN
 API_SUBDOMAIN="${API_SUBDOMAIN:-api}"
 
+# External reverse proxy support
+echo ""
+read -p "Use existing reverse proxy/Caddy? [y/N]: " EXTERNAL_PROXY_INPUT
+if [[ "$EXTERNAL_PROXY_INPUT" =~ ^[Yy]$ ]]; then
+    EXTERNAL_PROXY=1
+else
+    EXTERNAL_PROXY=0
+fi
+
 # OAuth provider support
 echo ""
 read -p "Enable OAuth provider callbacks? [y/N]: " OAUTH_ENABLED
@@ -158,6 +219,7 @@ log_info "Configuration summary:"
 log_info "  Domain: $DOMAIN"
 log_info "  Dashboard: ${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
 log_info "  API: ${API_SUBDOMAIN}.${DOMAIN}"
+log_info "  External reverse proxy: $([ $EXTERNAL_PROXY -eq 1 ] && echo 'enabled' || echo 'disabled')"
 log_info "  OAuth callbacks: $([ $OAUTH_ENABLED -eq 1 ] && echo 'enabled' || echo 'disabled')"
 log_info "  Backup interval: $BACKUP_INTERVAL"
 echo ""
@@ -169,6 +231,91 @@ if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
 fi
 
 echo ""
+
+# ============================================================================
+# PREFLIGHT CONFLICT CHECKS
+# ============================================================================
+
+log_info "=== Preflight Conflict Detection ==="
+echo ""
+
+# Define required ports (80/443 excluded if using external proxy)
+REQUIRED_PORTS=()
+if [ $EXTERNAL_PROXY -eq 0 ]; then
+    REQUIRED_PORTS+=(80 443)
+fi
+if [ $OAUTH_ENABLED -eq 1 ]; then
+    REQUIRED_PORTS+=(8085 1455 54545 51121 11451)
+fi
+
+# Check for port conflicts
+if [ $EXTERNAL_PROXY -eq 1 ]; then
+    log_info "External proxy mode: skipping ports 80/443 check"
+    if [ $OAUTH_ENABLED -eq 1 ]; then
+        log_info "Checking for OAuth callback port conflicts..."
+    fi
+else
+    log_info "Checking for port conflicts..."
+fi
+PORT_CONFLICTS=()
+for port in "${REQUIRED_PORTS[@]}"; do
+    if conflict_port=$(check_port_conflict "$port"); then
+        PORT_CONFLICTS+=("$conflict_port")
+        log_warning "Port $port is already in use"
+    fi
+done
+
+# Check for container conflicts
+log_info "Checking for existing container names..."
+CONTAINER_CONFLICTS=($(check_container_conflicts))
+if [ ${#CONTAINER_CONFLICTS[@]} -gt 0 ]; then
+    log_warning "Found existing containers with names that may conflict:"
+    for container in "${CONTAINER_CONFLICTS[@]}"; do
+        log_warning "  - $container"
+    done
+fi
+
+# If conflicts found, ask for confirmation
+if [ ${#PORT_CONFLICTS[@]} -gt 0 ] || [ ${#CONTAINER_CONFLICTS[@]} -gt 0 ]; then
+    echo ""
+    log_warning "=== CONFLICTS DETECTED ==="
+    
+    if [ ${#PORT_CONFLICTS[@]} -gt 0 ]; then
+        echo "The following ports are already in use (required for this stack):"
+        for port in "${PORT_CONFLICTS[@]}"; do
+            echo "  - Port $port"
+        done
+        echo ""
+    fi
+    
+    if [ ${#CONTAINER_CONFLICTS[@]} -gt 0 ]; then
+        echo "The following Docker containers already exist:"
+        for container in "${CONTAINER_CONFLICTS[@]}"; do
+            echo "  - $container"
+        done
+        echo ""
+    fi
+    
+    log_warning "These conflicts may cause installation to fail or disrupt existing services."
+    read -p "Continue anyway? [y/N]: " OVERRIDE_CONFLICTS
+    if [[ ! "$OVERRIDE_CONFLICTS" =~ ^[Yy]$ ]]; then
+        log_error "Installation cancelled due to conflicts"
+        echo ""
+        log_info "To resolve conflicts, you may need to:"
+        if [ ${#PORT_CONFLICTS[@]} -gt 0 ]; then
+            echo "  - Stop other services using the conflicting ports"
+            echo "  - Reconfigure this installation to use different ports"
+        fi
+        if [ ${#CONTAINER_CONFLICTS[@]} -gt 0 ]; then
+            echo "  - Remove or rename existing containers (docker rename, docker rm)"
+            echo "  - Use a different installation location/prefix"
+        fi
+        exit 1
+    fi
+    
+    log_warning "Proceeding despite conflicts - installation may fail"
+    echo ""
+fi
 
 # ============================================================================
 # DOCKER INSTALLATION
@@ -249,11 +396,15 @@ if [[ "$UFW_STATUS" == *"inactive"* ]]; then
     log_info "Allowing SSH (port 22) to prevent lockout..."
     ufw limit 22/tcp comment 'SSH with rate limiting'
     
-    # HTTP/HTTPS (Caddy)
-    log_info "Allowing HTTP/HTTPS (ports 80, 443)..."
-    ufw allow 80/tcp comment 'HTTP'
-    ufw allow 443/tcp comment 'HTTPS'
-    ufw allow 443/udp comment 'HTTP/3 (QUIC)'
+    # HTTP/HTTPS (skip if using external reverse proxy)
+    if [ $EXTERNAL_PROXY -eq 0 ]; then
+        log_info "Allowing HTTP/HTTPS (ports 80, 443)..."
+        ufw allow 80/tcp comment 'HTTP'
+        ufw allow 443/tcp comment 'HTTPS'
+        ufw allow 443/udp comment 'HTTP/3 (QUIC)'
+    else
+        log_info "Skipping HTTP/HTTPS rules (external proxy mode)"
+    fi
     
     # OAuth callback ports (conditional)
     if [ $OAUTH_ENABLED -eq 1 ]; then
@@ -290,9 +441,11 @@ else
     }
     
     add_rule_if_missing 22 tcp "SSH with rate limiting"
-    add_rule_if_missing 80 tcp "HTTP"
-    add_rule_if_missing 443 tcp "HTTPS"
-    add_rule_if_missing 443 udp "HTTP/3 (QUIC)"
+    if [ $EXTERNAL_PROXY -eq 0 ]; then
+        add_rule_if_missing 80 tcp "HTTP"
+        add_rule_if_missing 443 tcp "HTTPS"
+        add_rule_if_missing 443 udp "HTTP/3 (QUIC)"
+    fi
     
     # OAuth callback ports (conditional)
     if [ $OAUTH_ENABLED -eq 1 ]; then
@@ -415,6 +568,14 @@ fi
 if [ $SKIP_SERVICE -eq 0 ]; then
     log_info "Creating systemd service..."
     
+    if [ $EXTERNAL_PROXY -eq 1 ]; then
+        COMPOSE_SERVICES="postgres cliproxyapi dashboard"
+        COMPOSE_DESC="(without Caddy - using external reverse proxy)"
+    else
+        COMPOSE_SERVICES=""
+        COMPOSE_DESC="(full stack)"
+    fi
+    
     cat > "$SERVICE_FILE" << EOF
 [Unit]
 Description=CLIProxyAPI Stack (Docker Compose)
@@ -426,7 +587,7 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=true
 WorkingDirectory=$INSTALL_DIR/infrastructure
-ExecStart=/usr/bin/docker compose up -d --wait
+ExecStart=/usr/bin/docker compose up -d --wait $COMPOSE_SERVICES
 ExecStop=/usr/bin/docker compose down
 TimeoutStartSec=300
 TimeoutStopSec=120
@@ -508,6 +669,126 @@ if [ "$BACKUP_INTERVAL" != "none" ]; then
 fi
 
 # ============================================================================
+# CADDY INTEGRATION (if external proxy mode)
+# ============================================================================
+
+if [ $EXTERNAL_PROXY -eq 1 ]; then
+    echo ""
+    log_info "=== Caddy Integration Setup ==="
+    echo ""
+    
+    # Generate Caddy configuration snippet
+    CADDY_SNIPPET=$(cat << 'CADDY_CONFIG'
+# BEGIN CLIPROXYAPI-AUTO
+${DASHBOARD_SUBDOMAIN}.${DOMAIN} {
+    reverse_proxy localhost:3000
+}
+
+${API_SUBDOMAIN}.${DOMAIN} {
+    reverse_proxy localhost:8317
+}
+# END CLIPROXYAPI-AUTO
+CADDY_CONFIG
+)
+    
+    # Replace template variables
+    CADDY_SNIPPET="${CADDY_SNIPPET//\$\{DASHBOARD_SUBDOMAIN\}/$DASHBOARD_SUBDOMAIN}"
+    CADDY_SNIPPET="${CADDY_SNIPPET//\$\{API_SUBDOMAIN\}/$API_SUBDOMAIN}"
+    CADDY_SNIPPET="${CADDY_SNIPPET//\$\{DOMAIN\}/$DOMAIN}"
+    
+    log_info "Generated Caddy configuration:"
+    echo ""
+    echo "$CADDY_SNIPPET"
+    echo ""
+    
+    read -p "Apply configuration to Caddy? [y/N]: " APPLY_CADDY
+    if [[ "$APPLY_CADDY" =~ ^[Yy]$ ]]; then
+        echo ""
+        read -p "Enter Caddyfile path [default: /etc/caddy/Caddyfile]: " CADDYFILE_PATH
+        CADDYFILE_PATH="${CADDYFILE_PATH:-/etc/caddy/Caddyfile}"
+        
+        if [ ! -f "$CADDYFILE_PATH" ]; then
+            log_error "Caddyfile not found at $CADDYFILE_PATH"
+            log_warning "Skipping auto-apply. Please manually add the snippet above to your Caddyfile."
+        else
+            BACKUP_FILE="${CADDYFILE_PATH}.bak.$(date +%Y%m%d_%H%M%S)"
+            log_info "Creating backup at $BACKUP_FILE"
+            cp "$CADDYFILE_PATH" "$BACKUP_FILE"
+            
+            if grep -q "BEGIN CLIPROXYAPI-AUTO" "$CADDYFILE_PATH"; then
+                log_warning "CLIProxyAPI configuration already exists in Caddyfile"
+                log_info "Updating existing configuration..."
+                
+                awk '
+                    BEGIN { in_section = 0; section_printed = 0 }
+                    /# BEGIN CLIPROXYAPI-AUTO/ { in_section = 1; if (!section_printed) { print new_config; section_printed = 1 } next }
+                    /# END CLIPROXYAPI-AUTO/ { in_section = 0; next }
+                    !in_section { print }
+                ' new_config="$CADDY_SNIPPET" "$CADDYFILE_PATH" > "${CADDYFILE_PATH}.tmp"
+            else
+                {
+                    cat "$CADDYFILE_PATH"
+                    echo ""
+                    echo "$CADDY_SNIPPET"
+                } > "${CADDYFILE_PATH}.tmp"
+            fi
+            
+            if command -v caddy &> /dev/null; then
+                log_info "Validating Caddy configuration..."
+                if caddy validate --config "${CADDYFILE_PATH}.tmp" &> /dev/null; then
+                    log_success "Configuration valid"
+                    mv "${CADDYFILE_PATH}.tmp" "$CADDYFILE_PATH"
+                    
+                    read -p "Reload Caddy now? [y/N]: " RELOAD_CADDY
+                    if [[ "$RELOAD_CADDY" =~ ^[Yy]$ ]]; then
+                        if command -v systemctl &> /dev/null && systemctl is-active --quiet caddy; then
+                            log_info "Reloading Caddy service..."
+                            if systemctl reload caddy; then
+                                log_success "Caddy reloaded successfully"
+                            else
+                                log_error "Failed to reload Caddy"
+                                log_warning "Restoring backup from $BACKUP_FILE"
+                                cp "$BACKUP_FILE" "$CADDYFILE_PATH"
+                            fi
+                        elif command -v docker &> /dev/null && docker ps --format '{{.Names}}' 2>/dev/null | grep -q caddy; then
+                            log_info "Reloading Caddy container..."
+                            read -p "Enter Caddy container name [default: caddy]: " CADDY_CONTAINER
+                            CADDY_CONTAINER="${CADDY_CONTAINER:-caddy}"
+                            
+                            if docker exec "$CADDY_CONTAINER" caddy reload -c /etc/caddy/Caddyfile; then
+                                log_success "Caddy container reloaded successfully"
+                            else
+                                log_error "Failed to reload Caddy container"
+                                log_warning "Restoring backup from $BACKUP_FILE"
+                                cp "$BACKUP_FILE" "$CADDYFILE_PATH"
+                            fi
+                        else
+                            log_warning "Caddy not running. Please reload manually with: caddy reload -c $CADDYFILE_PATH"
+                        fi
+                    fi
+                    
+                    log_success "Caddy configuration updated"
+                else
+                    log_error "Caddy configuration validation failed"
+                    log_warning "Restoring backup from $BACKUP_FILE"
+                    cp "$BACKUP_FILE" "$CADDYFILE_PATH"
+                    rm -f "${CADDYFILE_PATH}.tmp"
+                fi
+            else
+                log_info "caddy command not found; skipping validation"
+                log_warning "Please validate manually before reloading"
+                mv "${CADDYFILE_PATH}.tmp" "$CADDYFILE_PATH"
+            fi
+        fi
+    else
+        log_info "Skipping auto-apply. Please manually add this configuration to your Caddyfile:"
+        echo "$CADDY_SNIPPET"
+    fi
+    
+    echo ""
+fi
+
+# ============================================================================
 # FINAL STEPS
 # ============================================================================
 
@@ -527,11 +808,23 @@ echo "  3. View logs:"
 echo "     cd $INSTALL_DIR/infrastructure"
 echo "     docker compose logs -f"
 echo ""
-echo "  4. Access services:"
-echo "     Dashboard: https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
-echo "     API: https://${API_SUBDOMAIN}.${DOMAIN}"
-echo ""
-echo "  5. Create your admin account at the dashboard, then configure"
+if [ $EXTERNAL_PROXY -eq 1 ]; then
+    echo "  4. Configure your reverse proxy:"
+    echo "     - Dashboard routes to: localhost:3000"
+    echo "     - API routes to: localhost:8317"
+    echo "     - Ports 80/443 not bound by this stack"
+    echo ""
+    echo "  5. Access services (via your reverse proxy):"
+    echo "     Dashboard: https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
+    echo "     API: https://${API_SUBDOMAIN}.${DOMAIN}"
+    echo ""
+else
+    echo "  4. Access services (via integrated Caddy):"
+    echo "     Dashboard: https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
+    echo "     API: https://${API_SUBDOMAIN}.${DOMAIN}"
+    echo ""
+fi
+echo "  $([ $EXTERNAL_PROXY -eq 1 ] && echo 5 || echo 4). Create your admin account at the dashboard, then configure"
 echo "     API keys and providers through the Configuration page."
 echo ""
 log_info "Backup commands:"

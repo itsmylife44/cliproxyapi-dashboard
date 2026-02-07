@@ -16,9 +16,9 @@ export const metadata: Metadata = {
   title: "CLIProxyAPI Dashboard",
   description: "Management dashboard for CLIProxyAPI",
   icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
-    apple: "/icon.png",
+    icon: "/icon.png?v=2",
+    shortcut: "/icon.png?v=2",
+    apple: "/apple-icon.png?v=2",
   },
 };
 

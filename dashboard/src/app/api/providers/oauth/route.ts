@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { contributeOAuthAccount, listOAuthWithOwnership } from "@/lib/providers/dual-write";
 import { OAUTH_PROVIDER, type OAuthProvider } from "@/lib/providers/constants";
+import { prisma } from "@/lib/db";
 
 interface ContributeOAuthRequest {
   provider: string;
@@ -33,7 +34,14 @@ export async function GET(_request: NextRequest) {
   }
 
   try {
-    const result = await listOAuthWithOwnership(session.userId);
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { isAdmin: true },
+    });
+
+    const isAdmin = user?.isAdmin ?? false;
+
+    const result = await listOAuthWithOwnership(session.userId, isAdmin);
 
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 500 });

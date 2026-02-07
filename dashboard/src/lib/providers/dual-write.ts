@@ -530,7 +530,8 @@ export async function contributeOAuthAccount(
 }
 
 export async function listOAuthWithOwnership(
-  userId: string
+  userId: string,
+  isAdmin: boolean = false
 ): Promise<ListOAuthResult> {
   if (!MANAGEMENT_API_KEY) {
     return { ok: false, error: "Management API key not configured" };
@@ -580,8 +581,8 @@ export async function listOAuthWithOwnership(
         accountName: isOwn ? file.name : `Account ${index + 1}`,
         accountEmail: isOwn ? file.email || null : null,
         provider: file.provider || file.type || "unknown",
-        ownerUsername: isOwn ? ownership?.user.username || null : null,
-        ownerUserId: isOwn ? ownership?.user.id || null : null,
+        ownerUsername: isAdmin || isOwn ? ownership?.user.username || null : null,
+        ownerUserId: isAdmin || isOwn ? ownership?.user.id || null : null,
         isOwn,
       };
     });
@@ -594,6 +595,34 @@ export async function listOAuthWithOwnership(
       error: error instanceof Error ? error.message : "Unknown error during OAuth listing",
     };
   }
+}
+
+interface ResolveOAuthResult {
+  accountName: string | null;
+  ownership: { id: string; userId: string } | null;
+}
+
+async function resolveOAuthAccountByIdOrName(
+  idOrName: string
+): Promise<ResolveOAuthResult> {
+  // First try to find by DB ID (CUID)
+  const byId = await prisma.providerOAuthOwnership.findUnique({
+    where: { id: idOrName },
+    select: { id: true, userId: true, accountName: true },
+  });
+
+  if (byId) {
+    return {
+      accountName: byId.accountName,
+      ownership: { id: byId.id, userId: byId.userId },
+    };
+  }
+
+  // Fallback: treat as management file name/id directly
+  return {
+    accountName: idOrName,
+    ownership: null,
+  };
 }
 
 export async function removeOAuthAccount(
@@ -632,6 +661,67 @@ export async function removeOAuthAccount(
     return { ok: true };
   } catch (error) {
     console.error("removeOAuthAccount error:", error);
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Unknown error during OAuth removal",
+    };
+  }
+}
+
+export async function removeOAuthAccountByIdOrName(
+  userId: string,
+  idOrName: string,
+  isAdmin: boolean
+): Promise<RemoveOAuthResult> {
+  if (!MANAGEMENT_API_KEY) {
+    return { ok: false, error: "Management API key not configured" };
+  }
+
+  try {
+    const resolved = await resolveOAuthAccountByIdOrName(idOrName);
+
+    if (!resolved.accountName) {
+      return { ok: false, error: "OAuth account not found" };
+    }
+
+    // Check ownership - if we have DB ownership, validate auth
+    if (resolved.ownership) {
+      if (!isAdmin && resolved.ownership.userId !== userId) {
+        return { ok: false, error: "Access denied" };
+      }
+    } else {
+      // No DB ownership - only admin can delete
+      if (!isAdmin) {
+        return { ok: false, error: "Access denied" };
+      }
+    }
+
+    const endpoint = `${MANAGEMENT_BASE_URL}/auth-files?name=${encodeURIComponent(resolved.accountName)}`;
+
+    const deleteRes = await fetch(endpoint, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+    });
+
+    if (!deleteRes.ok) {
+      return { ok: false, error: `Failed to remove OAuth account: HTTP ${deleteRes.status}` };
+    }
+
+    // Clean up DB record if it exists
+    if (resolved.ownership) {
+      try {
+        await prisma.providerOAuthOwnership.delete({
+          where: { id: resolved.ownership.id },
+        });
+      } catch (e) {
+        console.error("Failed to delete ownership record:", e);
+        // Don't fail the deletion if DB cleanup fails
+      }
+    }
+
+    return { ok: true };
+  } catch (error) {
+    console.error("removeOAuthAccountByIdOrName error:", error);
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during OAuth removal",

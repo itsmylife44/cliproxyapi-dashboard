@@ -74,6 +74,8 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
             p === "opencode-cliproxyapi-sync" ? "opencode-cliproxyapi-sync@latest" : p
           );
           setPlugins(normalizedPlugins);
+        } else {
+          setPlugins(DEFAULT_PLUGINS);
         }
       } catch (error) {
         console.error("Failed to load config:", error);

@@ -146,7 +146,7 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
   const mcpEntries: McpEntry[] = agentOverrides?.mcpServers ?? [];
   const customPlugins = agentOverrides?.customPlugins ?? [];
   
-  const defaultPlugins = ["opencode-cliproxyapi-sync", "oh-my-opencode@latest", "opencode-anthropic-auth@latest"];
+  const defaultPlugins = ["opencode-cliproxyapi-sync@latest", "oh-my-opencode@latest", "opencode-anthropic-auth@latest"];
   const pluginSet = new Set([...defaultPlugins, ...customPlugins]);
   const plugins = Array.from(pluginSet);
 

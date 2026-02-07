@@ -33,7 +33,7 @@ function downloadFile(content: string, filename: string) {
 }
 
 const DEFAULT_PLUGINS = [
-  "opencode-cliproxyapi-sync",
+  "opencode-cliproxyapi-sync@latest",
   "oh-my-opencode@latest",
   "opencode-anthropic-auth@latest",
 ];

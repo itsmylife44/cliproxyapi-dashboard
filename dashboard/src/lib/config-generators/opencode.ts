@@ -409,7 +409,7 @@ export function generateConfigJson(
   const firstModelId = Object.keys(models)[0] ?? "gemini-2.5-flash";
 
   const plugins = options?.plugins ?? [
-    "opencode-cliproxyapi-sync",
+    "opencode-cliproxyapi-sync@latest",
     "oh-my-opencode@latest",
     "opencode-anthropic-auth@latest",
   ];

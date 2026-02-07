@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
            id: user.id,
            username: user.username,
          },
-         apiKeyProvisioned: true,
+         apiKey,
        },
        { status: 201 }
      );

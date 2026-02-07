@@ -10,11 +10,9 @@
 # Default is empty ("") to bind all interfaces (IPv4 + IPv6).
 # In Docker, this should remain empty to allow container networking.
 host: ""
-
 # Server port - CLIProxyAPI main API endpoint
 # This port is exposed to the frontend network for Caddy reverse proxy.
 port: 8317
-
 # TLS settings for HTTPS
 # When enabled, the server listens with the provided certificate and key.
 # NOTE: TLS is handled by Caddy in this deployment, so keep this disabled.
@@ -22,43 +20,36 @@ tls:
   enable: false
   cert: ""
   key: ""
-
 # ============================================================================
 # MANAGEMENT API CONFIGURATION
 # ============================================================================
-
 remote-management:
-  # Whether to allow remote (non-localhost) management access.
-  # Set to true since management API is accessed via internal Docker network
-  # from the dashboard service (not from external clients).
+# Whether to allow remote (non-localhost) management access.
+# Set to true since management API is accessed via internal Docker network
+# from the dashboard service (not from external clients).
   allow-remote: true
-
-  # Management key - CRITICAL SECURITY SETTING
-  # This key is required for ALL management API requests.
-  # Leave empty when using MANAGEMENT_PASSWORD environment variable.
+# Management key - CRITICAL SECURITY SETTING
+# This key is required for ALL management API requests.
+# Leave empty when using MANAGEMENT_PASSWORD environment variable.
   secret-key: ""
-
-  # Disable the bundled management control panel asset download and HTTP route.
-  # Set to true since we're using our custom Next.js dashboard.
+# Disable the bundled management control panel asset download and HTTP route.
+# Set to true since we're using our custom Next.js dashboard.
   disable-control-panel: true
-
-  # GitHub repository for the management control panel (not used with custom dashboard)
+# GitHub repository for the management control panel (not used with custom dashboard)
   panel-github-repository: "https://github.com/router-for-me/Cli-Proxy-API-Management-Center"
-
 # ============================================================================
 # AUTHENTICATION
 # ============================================================================
 
 # Authentication directory - stores OAuth tokens and authentication state
 # Supports ~ for home directory. In Docker, this is mounted as a volume.
-auth-dir: "~/.cli-proxy-api"
-
+auth-dir: "/root/.cli-proxy-api"
 # API keys for authentication
 # These keys authenticate client requests to the API proxy endpoints.
 # Replace with strong, randomly generated keys (e.g., use `openssl rand -hex 32`).
 # WARNING: Keep these secret! Never commit real keys to version control.
-api-keys: []
-
+api-keys:
+  - ***REMOVED***
 # ============================================================================
 # LOGGING & DEBUGGING
 # ============================================================================
@@ -66,26 +57,21 @@ api-keys: []
 # Enable debug logging (verbose output for troubleshooting)
 # Set to true during initial setup, false for production.
 debug: false
-
 # Enable pprof HTTP debug server (host:port) for Go profiling.
 # Keep it bound to localhost for safety. Only enable for performance debugging.
 pprof:
   enable: false
   addr: "127.0.0.1:8316"
-
 # Write application logs to rotating files instead of stdout
 # Set to false - Docker best practice is to log to stdout for container orchestration.
 logging-to-file: false
-
 # Maximum total size (MB) of log files under the logs directory.
 # When exceeded, oldest log files are deleted. Set to 0 to disable.
 # If logging-to-file is false, this setting has no effect.
 logs-max-total-size-mb: 0
-
 # Maximum number of error log files retained when request logging is disabled.
 # When exceeded, oldest error log files are deleted. Default is 10. Set to 0 to disable cleanup.
 error-logs-max-files: 10
-
 # ============================================================================
 # PERFORMANCE & OPTIMIZATION
 # ============================================================================
@@ -93,11 +79,9 @@ error-logs-max-files: 10
 # Disable high-overhead HTTP middleware features to reduce per-request memory
 # usage under high concurrency. Enable for production with high traffic.
 commercial-mode: false
-
 # Enable in-memory usage statistics aggregation
 # Set to true for production monitoring, false to reduce memory overhead.
 usage-statistics-enabled: true
-
 # ============================================================================
 # PROXY & NETWORKING
 # ============================================================================
@@ -106,7 +90,6 @@ usage-statistics-enabled: true
 # Supports socks5/http/https protocols. Example: socks5://user:pass@192.168.1.1:1080/
 # Leave empty if no upstream proxy is needed.
 proxy-url: ""
-
 # ============================================================================
 # REQUEST HANDLING
 # ============================================================================
@@ -114,37 +97,29 @@ proxy-url: ""
 # Unprefixed model requests only use credentials without a prefix
 # (except when prefix == model name).
 force-model-prefix: false
-
 # Number of times to retry a request.
 # Retries occur if HTTP response code is 403, 408, 500, 502, 503, or 504.
 request-retry: 3
-
 # Maximum wait time in seconds for a cooled-down credential before triggering a retry.
 max-retry-interval: 30
-
 # Quota exceeded behavior
 quota-exceeded:
-  switch-project: true        # Auto-switch to another project when quota exceeded
-  switch-preview-model: true  # Auto-switch to preview model when quota exceeded
-
+  switch-project: true # Auto-switch to another project when quota exceeded
+  switch-preview-model: true # Auto-switch to preview model when quota exceeded
 # Routing strategy for selecting credentials when multiple match.
 # Options: "round-robin" (default), "fill-first"
 routing:
   strategy: "round-robin"
-
 # Enable authentication for the WebSocket API (/v1/ws).
 # Set to true to require API key authentication for WebSocket connections.
 ws-auth: true
-
 # Emit blank lines every N seconds for non-streaming responses to prevent idle timeouts.
 # Set to 0 to disable. Useful for long-running requests behind proxies with timeouts.
 nonstream-keepalive-interval: 0
-
 # Streaming behavior (SSE keep-alives + safe bootstrap retries)
 streaming:
-  keepalive-seconds: 15   # Send keep-alive every 15 seconds. <= 0 disables keep-alives.
-  bootstrap-retries: 1    # Retries before first byte is sent. 0 disables retries.
-
+  keepalive-seconds: 15 # Send keep-alive every 15 seconds. <= 0 disables keep-alives.
+  bootstrap-retries: 1 # Retries before first byte is sent. 0 disables retries.
 # ============================================================================
 # AI PROVIDER CONFIGURATIONS
 # ============================================================================

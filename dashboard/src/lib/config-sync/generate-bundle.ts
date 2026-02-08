@@ -10,6 +10,21 @@ interface ManagementFetchParams {
   path: string;
 }
 
+function stableStringify(obj: unknown): string {
+  if (obj === null || typeof obj !== "object") {
+    return JSON.stringify(obj);
+  }
+  if (Array.isArray(obj)) {
+    return "[" + obj.map(stableStringify).join(",") + "]";
+  }
+  const sortedKeys = Object.keys(obj as Record<string, unknown>).sort();
+  const pairs = sortedKeys.map(
+    (key) =>
+      JSON.stringify(key) + ":" + stableStringify((obj as Record<string, unknown>)[key])
+  );
+  return "{" + pairs.join(",") + "}";
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -285,35 +300,37 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
      ...buildCustomProviderModels(customProviders),
    };
 
-  const filteredModels = Object.fromEntries(
-    Object.entries(allModels).filter(([modelId]) => !excludedModels.has(modelId))
-  );
+   const filteredModels = Object.fromEntries(
+     Object.entries(allModels).filter(([modelId]) => !excludedModels.has(modelId))
+   );
 
-  const modelEntries: Record<string, Record<string, unknown>> = {};
-  for (const [id, def] of Object.entries(filteredModels)) {
-    const entry: Record<string, unknown> = {
-      name: def.name,
-      attachment: def.attachment,
-      modalities: def.modalities,
-      limit: { context: def.context, output: def.output },
-    };
-    if (def.reasoning) {
-      entry.reasoning = true;
-    }
-    if (def.options) {
-      entry.options = def.options;
-    }
-    modelEntries[id] = entry;
-  }
+   const modelEntries: Record<string, Record<string, unknown>> = {};
+   const sortedFilteredIds = Object.keys(filteredModels).sort();
+   for (const id of sortedFilteredIds) {
+     const def = filteredModels[id];
+     const entry: Record<string, unknown> = {
+       name: def.name,
+       attachment: def.attachment,
+       modalities: def.modalities,
+       limit: { context: def.context, output: def.output },
+     };
+     if (def.reasoning) {
+       entry.reasoning = true;
+     }
+     if (def.options) {
+       entry.options = def.options;
+     }
+     modelEntries[id] = entry;
+   }
 
-  const firstModelId = Object.keys(filteredModels)[0] ?? "gemini-2.5-flash";
+   const firstModelId = sortedFilteredIds[0] ?? "gemini-2.5-flash";
 
-  const mcpEntries: McpEntry[] = agentOverrides?.mcpServers ?? [];
-  const customPlugins = agentOverrides?.customPlugins ?? [];
-  
-  const defaultPlugins = ["opencode-cliproxyapi-sync@latest", "oh-my-opencode@latest", "opencode-anthropic-auth@latest"];
-  const pluginSet = new Set([...defaultPlugins, ...customPlugins]);
-  const plugins = Array.from(pluginSet);
+   const mcpEntries: McpEntry[] = agentOverrides?.mcpServers ?? [];
+   const customPlugins = agentOverrides?.customPlugins ?? [];
+   
+   const defaultPlugins = ["opencode-cliproxyapi-sync@latest", "oh-my-opencode@latest", "opencode-anthropic-auth@latest"];
+   const pluginSet = new Set([...defaultPlugins, ...customPlugins]);
+   const plugins = Array.from(pluginSet).sort();
 
    const providers: Record<string, Record<string, unknown>> = {
      cliproxyapi: {
@@ -376,21 +393,20 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
     opencodeConfig.mcp = mcpServers;
   }
 
-  const filteredModelIds = Object.keys(filteredModels);
-  const ohMyOpencodeConfig = buildOhMyOpenCodeConfig(
-    filteredModelIds,
-    agentOverrides
-  );
+   const ohMyOpencodeConfig = buildOhMyOpenCodeConfig(
+     sortedFilteredIds,
+     agentOverrides
+   );
 
-  // 11. Compute version hash
-  const bundleForHash = {
-    opencode: opencodeConfig,
-    ohMyOpencode: ohMyOpencodeConfig,
-  };
-  const version = crypto
-    .createHash("sha256")
-    .update(JSON.stringify(bundleForHash))
-    .digest("hex");
+   // 11. Compute version hash
+   const bundleForHash = {
+     opencode: opencodeConfig,
+     ohMyOpencode: ohMyOpencodeConfig,
+   };
+   const version = crypto
+     .createHash("sha256")
+     .update(stableStringify(bundleForHash))
+     .digest("hex");
 
   // 12. Return bundle
   return {

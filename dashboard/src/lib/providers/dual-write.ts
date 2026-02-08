@@ -12,7 +12,6 @@ interface ContributeKeyResult {
   ok: boolean;
   keyHash?: string;
   keyIdentifier?: string;
-  name?: string;
   error?: string;
 }
 
@@ -28,7 +27,6 @@ interface KeyWithOwnership {
   ownerUsername: string | null;
   ownerUserId: string | null;
   isOwn: boolean;
-  name: string;
 }
 
 interface ListKeysResult {
@@ -91,8 +89,7 @@ function isOpenAICompatArray(
 export async function contributeKey(
   userId: string,
   provider: Provider,
-  apiKey: string,
-  name?: string
+  apiKey: string
 ): Promise<ContributeKeyResult> {
   if (!MANAGEMENT_API_KEY) {
     return { ok: false, error: "Management API key not configured" };
@@ -181,24 +178,22 @@ export async function contributeKey(
       return { ok: false, error: `Failed to add key to Management API: HTTP ${putRes.status}` };
     }
 
-    const keyIdentifier = maskProviderKey(trimmedKey);
+     const keyIdentifier = maskProviderKey(trimmedKey);
 
-     const ownership = await prisma.providerKeyOwnership.create({
-       data: {
-         userId,
-         provider,
-         keyIdentifier,
-         keyHash,
-         name: name || "Unnamed Key",
-       },
-     });
+      const ownership = await prisma.providerKeyOwnership.create({
+        data: {
+          userId,
+          provider,
+          keyIdentifier,
+          keyHash,
+        },
+      });
 
-     return {
-       ok: true,
-       keyHash: ownership.keyHash,
-       keyIdentifier: ownership.keyIdentifier,
-       name: ownership.name,
-     };
+      return {
+        ok: true,
+        keyHash: ownership.keyHash,
+        keyIdentifier: ownership.keyIdentifier,
+      };
   } catch (error) {
     console.error("contributeKey error:", error);
 
@@ -469,32 +464,30 @@ export async function listKeysWithOwnership(
     const keyHashes = apiKeys.map((key) => hashProviderKey(key));
 
      const ownerships = await prisma.providerKeyOwnership.findMany({
-       where: { keyHash: { in: keyHashes }, provider },
-       select: { 
-         keyHash: true,
-         name: true,
-         userId: true,
-         user: { select: { id: true, username: true } }
-       },
-     });
+        where: { keyHash: { in: keyHashes }, provider },
+        select: { 
+          keyHash: true,
+          userId: true,
+          user: { select: { id: true, username: true } }
+        },
+      });
 
     const ownershipMap = new Map(ownerships.map((o) => [o.keyHash, o]));
 
-     const keysWithOwnership: KeyWithOwnership[] = apiKeys.map((key, index) => {
-       const hash = hashProviderKey(key);
-       const ownership = ownershipMap.get(hash);
-       const isOwn = ownership?.userId === userId;
+      const keysWithOwnership: KeyWithOwnership[] = apiKeys.map((key, index) => {
+        const hash = hashProviderKey(key);
+        const ownership = ownershipMap.get(hash);
+        const isOwn = ownership?.userId === userId;
 
-       return {
-         keyHash: hash,
-         maskedKey: isOwn ? maskProviderKey(key) : `Key ${index + 1}`,
-         provider,
-         ownerUsername: isOwn ? ownership?.user.username || null : null,
-         ownerUserId: isOwn ? ownership?.user.id || null : null,
-         isOwn,
-         name: ownership?.name || "Unnamed Key",
-       };
-     });
+        return {
+          keyHash: hash,
+          maskedKey: isOwn ? maskProviderKey(key) : `Key ${index + 1}`,
+          provider,
+          ownerUsername: isOwn ? ownership?.user.username || null : null,
+          ownerUserId: isOwn ? ownership?.user.id || null : null,
+          isOwn,
+        };
+      });
 
     return { ok: true, keys: keysWithOwnership };
   } catch (error) {

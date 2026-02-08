@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
+import { Input } from "@/components/ui/input";
 
 interface ApiKey {
   id: string;
@@ -59,6 +60,8 @@ const EMPTY_KEYS: ApiKey[] = [];
 export default function ApiKeysPage() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>(EMPTY_KEYS);
   const [loading, setLoading] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [keyNameInput, setKeyNameInput] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newKeyValue, setNewKeyValue] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -97,7 +100,7 @@ export default function ApiKeysPage() {
       const res = await fetch("/api/user/api-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "Default" }),
+        body: JSON.stringify({ name: keyNameInput.trim() || "Default" }),
       });
 
       if (!res.ok) {
@@ -109,6 +112,7 @@ export default function ApiKeysPage() {
       const newKey = await res.json();
       showToast("API key created successfully", "success");
       setNewKeyValue(newKey.key);
+      setIsCreateModalOpen(false);
       setIsModalOpen(true);
       setCreating(false);
       await fetchApiKeys();
@@ -152,9 +156,9 @@ export default function ApiKeysPage() {
          <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
            API Keys
          </h1>
-        <Button onClick={handleCreateKey} disabled={creating}>
-          Create New Key
-        </Button>
+         <Button onClick={() => { setKeyNameInput(""); setIsCreateModalOpen(true); }} disabled={creating}>
+           Create New Key
+         </Button>
       </div>
 
       <Card>
@@ -197,6 +201,39 @@ export default function ApiKeysPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── Create Key Modal ── */}
+      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)}>
+        <ModalHeader>
+          <ModalTitle>Create API Key</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="key-name-input" className="mb-2 block text-sm font-semibold text-white">
+                Key Name
+              </label>
+              <Input
+                type="text"
+                name="key-name-input"
+                value={keyNameInput}
+                onChange={setKeyNameInput}
+                placeholder="e.g. Development, Production, CLI"
+                disabled={creating}
+              />
+              <p className="mt-1.5 text-xs text-white/50">Give your key a descriptive name for easy identification</p>
+            </div>
+          </div>
+        </ModalContent>
+        <ModalFooter>
+          <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleCreateKey} disabled={creating}>
+            {creating ? "Creating..." : "Create Key"}
+          </Button>
+        </ModalFooter>
+      </Modal>
 
       <Modal isOpen={isModalOpen && newKeyValue !== null} onClose={handleCloseModal}>
         <ModalHeader>

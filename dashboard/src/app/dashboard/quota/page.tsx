@@ -357,13 +357,7 @@ export default function QuotaPage() {
                       </div>
                     )}
 
-                    {account.raw && account.provider === "codex" ? (
-                      <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-lg p-3 overflow-auto max-h-48">
-                        <pre className="font-mono text-xs text-white/70">
-                          {JSON.stringify(account.raw, null, 2)}
-                        </pre>
-                      </div>
-                    ) : null}
+
                   </CardContent>
                 </Card>
               );

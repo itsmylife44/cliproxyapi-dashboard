@@ -37,6 +37,11 @@ const envSchema = z.object({
   CLIPROXYAPI_CONTAINER_NAME: z
     .string()
     .default("cliproxyapi"),
+  
+  LOG_LEVEL: z
+    .enum(["fatal", "error", "warn", "info", "debug", "trace"])
+    .default("info")
+    .describe("Pino log level"),
 });
 
 function parseEnv() {

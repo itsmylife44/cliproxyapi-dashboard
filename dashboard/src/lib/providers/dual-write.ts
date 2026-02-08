@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 import { Prisma } from "@/generated/prisma/client";
 import { hashProviderKey, maskProviderKey } from "./hash";
 import { PROVIDER, PROVIDER_ENDPOINT, type Provider, type OAuthProvider } from "./constants";
@@ -185,11 +186,12 @@ export async function contributeKey(
       });
     } catch (fetchError) {
       if (fetchError instanceof Error && fetchError.name === "AbortError") {
-        console.error("Fetch timeout - contributeKey GET", {
+        logger.error({
+          err: fetchError,
           endpoint,
           provider,
           timeoutMs: FETCH_TIMEOUT_MS,
-        });
+        }, "Fetch timeout - contributeKey GET");
         await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
         return { ok: false, error: "Request timeout fetching existing keys" };
       }
@@ -250,11 +252,12 @@ export async function contributeKey(
       });
     } catch (fetchError) {
       if (fetchError instanceof Error && fetchError.name === "AbortError") {
-        console.error("Fetch timeout - contributeKey PUT", {
+        logger.error({
+          err: fetchError,
           endpoint,
           provider,
           timeoutMs: FETCH_TIMEOUT_MS,
-        });
+        }, "Fetch timeout - contributeKey PUT");
         await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
         return { ok: false, error: "Request timeout adding key to Management API" };
       }
@@ -275,14 +278,14 @@ export async function contributeKey(
       keyIdentifier,
     };
   } catch (error) {
-    console.error("contributeKey error:", error);
+    logger.error({ err: error, provider }, "contributeKey error");
 
     try {
       await prisma.providerKeyOwnership.deleteMany({
         where: { keyHash },
       });
     } catch (rollbackError) {
-      console.error("Failed to rollback ownership record:", rollbackError);
+      logger.error({ err: rollbackError, keyHash }, "Failed to rollback ownership record");
     }
 
     return {
@@ -328,14 +331,15 @@ export async function removeKey(
          method: "GET",
          headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
        });
-     } catch (fetchError) {
-       if (fetchError instanceof Error && fetchError.name === "AbortError") {
-         console.error("Fetch timeout - removeKey GET", {
-           endpoint,
-           provider: ownership.provider,
-           keyHash,
-           timeoutMs: FETCH_TIMEOUT_MS,
-         });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            provider: ownership.provider,
+            keyHash,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - removeKey GET");
          return { ok: false, error: "Request timeout fetching existing keys" };
        }
        throw fetchError;
@@ -402,14 +406,15 @@ export async function removeKey(
            headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
          }
        );
-     } catch (fetchError) {
-       if (fetchError instanceof Error && fetchError.name === "AbortError") {
-         console.error("Fetch timeout - removeKey DELETE", {
-           endpoint,
-           provider: ownership.provider,
-           keyHash,
-           timeoutMs: FETCH_TIMEOUT_MS,
-         });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            provider: ownership.provider,
+            keyHash,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - removeKey DELETE");
          return { ok: false, error: "Request timeout deleting key from Management API" };
        }
        throw fetchError;
@@ -426,7 +431,7 @@ export async function removeKey(
 
     return { ok: true };
   } catch (error) {
-    console.error("removeKey error:", error);
+    logger.error({ err: error, keyHash }, "removeKey error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during key removal",
@@ -456,14 +461,15 @@ export async function removeKeyByAdmin(
          method: "GET",
          headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
        });
-     } catch (fetchError) {
-       if (fetchError instanceof Error && fetchError.name === "AbortError") {
-         console.error("Fetch timeout - removeKeyByAdmin GET", {
-           endpoint,
-           provider,
-           keyHash,
-           timeoutMs: FETCH_TIMEOUT_MS,
-         });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            provider,
+            keyHash,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - removeKeyByAdmin GET");
          return { ok: false, error: "Request timeout fetching existing keys" };
        }
        throw fetchError;
@@ -528,14 +534,15 @@ export async function removeKeyByAdmin(
            headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
          }
        );
-     } catch (fetchError) {
-       if (fetchError instanceof Error && fetchError.name === "AbortError") {
-         console.error("Fetch timeout - removeKeyByAdmin DELETE", {
-           endpoint,
-           provider,
-           keyHash,
-           timeoutMs: FETCH_TIMEOUT_MS,
-         });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            provider,
+            keyHash,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - removeKeyByAdmin DELETE");
          return { ok: false, error: "Request timeout deleting key from Management API" };
        }
        throw fetchError;
@@ -549,8 +556,8 @@ export async function removeKeyByAdmin(
      invalidateProxyModelsCache();
 
      return { ok: true };
-   } catch (error) {
-     console.error("removeKeyByAdmin error:", error);
+} catch (error) {
+      logger.error({ err: error, keyHash, provider }, "removeKeyByAdmin error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during key removal",
@@ -577,13 +584,14 @@ export async function listKeysWithOwnership(
          method: "GET",
          headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
        });
-     } catch (fetchError) {
-       if (fetchError instanceof Error && fetchError.name === "AbortError") {
-         console.error("Fetch timeout - listKeysWithOwnership GET", {
-           endpoint,
-           provider,
-           timeoutMs: FETCH_TIMEOUT_MS,
-         });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            provider,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - listKeysWithOwnership GET");
          return { ok: false, error: "Request timeout fetching keys" };
        }
        throw fetchError;
@@ -658,7 +666,7 @@ export async function listKeysWithOwnership(
 
     return { ok: true, keys: keysWithOwnership };
   } catch (error) {
-    console.error("listKeysWithOwnership error:", error);
+    logger.error({ err: error, provider }, "listKeysWithOwnership error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during key listing",
@@ -692,7 +700,7 @@ export async function contributeOAuthAccount(
 
     return { ok: true, id: ownership.id };
   } catch (error) {
-    console.error("contributeOAuthAccount error:", error);
+    logger.error({ err: error, provider }, "contributeOAuthAccount error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during OAuth registration",
@@ -717,12 +725,13 @@ export async function listOAuthWithOwnership(
          method: "GET",
          headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
        });
-     } catch (fetchError) {
-       if (fetchError instanceof Error && fetchError.name === "AbortError") {
-         console.error("Fetch timeout - listOAuthWithOwnership GET", {
-           endpoint,
-           timeoutMs: FETCH_TIMEOUT_MS,
-         });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - listOAuthWithOwnership GET");
          return { ok: false, error: "Request timeout fetching OAuth accounts" };
        }
        throw fetchError;
@@ -773,7 +782,7 @@ export async function listOAuthWithOwnership(
 
     return { ok: true, accounts: accountsWithOwnership };
   } catch (error) {
-    console.error("listOAuthWithOwnership error:", error);
+    logger.error({ err: error }, "listOAuthWithOwnership error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during OAuth listing",
@@ -835,13 +844,14 @@ export async function removeOAuthAccount(
          method: "DELETE",
          headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
        });
-     } catch (fetchError) {
-       if (fetchError instanceof Error && fetchError.name === "AbortError") {
-         console.error("Fetch timeout - removeOAuthAccount DELETE", {
-           endpoint,
-           accountName,
-           timeoutMs: FETCH_TIMEOUT_MS,
-         });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            accountName,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - removeOAuthAccount DELETE");
          return { ok: false, error: "Request timeout removing OAuth account" };
        }
        throw fetchError;
@@ -857,7 +867,7 @@ export async function removeOAuthAccount(
 
     return { ok: true };
   } catch (error) {
-    console.error("removeOAuthAccount error:", error);
+    logger.error({ err: error, accountName }, "removeOAuthAccount error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during OAuth removal",
@@ -901,13 +911,14 @@ export async function removeOAuthAccountByIdOrName(
          method: "DELETE",
          headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
        });
-     } catch (fetchError) {
-       if (fetchError instanceof Error && fetchError.name === "AbortError") {
-         console.error("Fetch timeout - removeOAuthAccountByIdOrName DELETE", {
-           endpoint,
-           accountName: resolved.accountName,
-           timeoutMs: FETCH_TIMEOUT_MS,
-         });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            accountName: resolved.accountName,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - removeOAuthAccountByIdOrName DELETE");
          return { ok: false, error: "Request timeout removing OAuth account" };
        }
        throw fetchError;
@@ -924,14 +935,13 @@ export async function removeOAuthAccountByIdOrName(
           where: { id: resolved.ownership.id },
         });
       } catch (e) {
-        console.error("Failed to delete ownership record:", e);
-        // Don't fail the deletion if DB cleanup fails
+        logger.error({ err: e, ownershipId: resolved.ownership.id }, "Failed to delete ownership record");
       }
     }
 
     return { ok: true };
   } catch (error) {
-    console.error("removeOAuthAccountByIdOrName error:", error);
+    logger.error({ err: error, idOrName }, "removeOAuthAccountByIdOrName error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during OAuth removal",

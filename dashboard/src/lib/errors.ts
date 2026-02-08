@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { ZodIssue } from "zod";
+import { logger } from "@/lib/logger";
 
 /**
  * Standard Error Codes
@@ -309,7 +310,7 @@ export function handleUnexpectedError(
   error: unknown,
   context: string
 ): NextResponse<APIErrorResponse> {
-  console.error(`${context}:`, error);
+  logger.error({ err: error, context }, context);
   return apiError(
     ERROR_CODE.INTERNAL_SERVER_ERROR,
     "Internal server error",
@@ -381,7 +382,7 @@ export const Errors = {
   /** 500 - Internal server error */
   internal: (context: string, error?: unknown) => {
     if (error) {
-      console.error(`${context}:`, error);
+      logger.error({ err: error, context }, context);
     }
     return apiError(
       ERROR_CODE.INTERNAL_SERVER_ERROR,
@@ -393,7 +394,7 @@ export const Errors = {
   /** 500 - Database error */
   database: (context: string, error?: unknown) => {
     if (error) {
-      console.error(`Database error in ${context}:`, error);
+      logger.error({ err: error, context }, `Database error in ${context}`);
     }
     return apiError(ERROR_CODE.DATABASE_ERROR, "Database operation failed", 500);
   },

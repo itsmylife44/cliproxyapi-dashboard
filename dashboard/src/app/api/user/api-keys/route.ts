@@ -175,6 +175,7 @@ export async function DELETE(request: NextRequest) {
         id,
         userId: session.userId,
       },
+      select: { id: true },
     });
 
     if (!existingKey) {

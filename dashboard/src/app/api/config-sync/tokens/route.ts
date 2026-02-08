@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     const userApiKey = await prisma.userApiKey.findFirst({
       where: { userId: session.userId },
       orderBy: { createdAt: "asc" },
+      select: { id: true },
     });
 
     if (!userApiKey) {

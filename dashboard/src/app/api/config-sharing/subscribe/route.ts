@@ -152,6 +152,7 @@ export async function POST(request: NextRequest) {
 
     const userApiKeys = await prisma.userApiKey.findMany({
       where: { userId: session.userId },
+      select: { id: true },
       take: 1,
     });
 

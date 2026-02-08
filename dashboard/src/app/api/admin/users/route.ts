@@ -153,6 +153,7 @@ export async function POST(request: NextRequest) {
 
     const existingUser = await prisma.user.findUnique({
       where: { username },
+      select: { id: true },
     });
 
     if (existingUser) {

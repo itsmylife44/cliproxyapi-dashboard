@@ -198,6 +198,7 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
      prisma.userApiKey.findFirst({
        where: { userId },
        orderBy: { createdAt: "asc" },
+       select: { key: true },
      }),
      prisma.configSubscription.findUnique({
        where: { userId },

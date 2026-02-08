@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
+import { usageCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -163,6 +164,12 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10) || 50));
     const skip = (page - 1) * limit;
 
+    const cacheKey = `${CACHE_KEYS.usage(authResult.userId)}:${page}:${limit}`;
+    const cached = usageCache.get(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
     const [usageResponse, allKeys, totalKeys] = await Promise.all([
       fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/usage`, {
         method: "GET",
@@ -218,7 +225,7 @@ export async function GET(request: NextRequest) {
       apis: sanitizedApis,
     };
 
-    return NextResponse.json({
+    const responseData = {
       data: sanitizedResponse,
       pagination: {
         page,
@@ -226,7 +233,11 @@ export async function GET(request: NextRequest) {
         total: totalKeys,
         hasMore: skip + allKeys.length < totalKeys,
       },
-    });
+    };
+
+    usageCache.set(cacheKey, responseData, CACHE_TTL.USAGE);
+
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error("Failed to fetch usage data:", error);
     return NextResponse.json(

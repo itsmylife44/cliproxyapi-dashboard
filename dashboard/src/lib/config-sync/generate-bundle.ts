@@ -2,9 +2,20 @@ import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { buildAvailableModelsFromProxy, extractOAuthModelAliases, getProxyUrl, type McpEntry, type ModelDefinition } from "@/lib/config-generators/opencode";
 import { buildOhMyOpenCodeConfig } from "@/lib/config-generators/oh-my-opencode";
-import { fetchProxyModels } from "@/lib/config-generators/shared";
+import { fetchProxyModels, type ProxyModel } from "@/lib/config-generators/shared";
 import { validateFullConfig, type OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import type { ConfigData, OAuthAccount } from "@/lib/config-generators/shared";
+import { proxyModelsCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";
+
+async function fetchProxyModelsCached(proxyUrl: string, apiKey: string): Promise<ProxyModel[]> {
+  const cacheKey = CACHE_KEYS.proxyModels(proxyUrl, apiKey);
+  const cached = proxyModelsCache.get(cacheKey) as ProxyModel[] | null;
+  if (cached) return cached;
+
+  const models = await fetchProxyModels(proxyUrl, apiKey);
+  proxyModelsCache.set(cacheKey, models, CACHE_TTL.PROXY_MODELS);
+  return models;
+}
 
 interface ManagementFetchParams {
   path: string;
@@ -293,7 +304,7 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
 
    const proxyUrl = getProxyUrl();
    const proxyModels = apiKey !== "no-api-key-create-one-in-dashboard"
-     ? await fetchProxyModels(proxyUrl, apiKey)
+     ? await fetchProxyModelsCached(proxyUrl, apiKey)
      : [];
    const allModels: Record<string, ModelDefinition> = {
      ...buildAvailableModelsFromProxy(proxyModels),

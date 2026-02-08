@@ -5,6 +5,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { hashProviderKey, maskProviderKey } from "./hash";
 import { PROVIDER, PROVIDER_ENDPOINT, type Provider, type OAuthProvider } from "./constants";
 import { getMaxProviderKeysPerUser } from "./settings";
+import { invalidateUsageCaches, invalidateProxyModelsCache } from "@/lib/cache";
 
 // Per-provider async mutex to serialize GET-modify-PUT sequences.
 // Prevents race conditions where concurrent requests read the same state,
@@ -265,6 +266,9 @@ export async function contributeKey(
       return { ok: false, error: `Failed to add key to Management API: HTTP ${putRes.status}` };
     }
 
+    invalidateUsageCaches();
+    invalidateProxyModelsCache();
+
     return {
       ok: true,
       keyHash,
@@ -417,6 +421,9 @@ export async function removeKey(
 
     await prisma.providerKeyOwnership.delete({ where: { keyHash } });
 
+    invalidateUsageCaches();
+    invalidateProxyModelsCache();
+
     return { ok: true };
   } catch (error) {
     console.error("removeKey error:", error);
@@ -537,6 +544,9 @@ export async function removeKeyByAdmin(
      if (!deleteRes.ok) {
        return { ok: false, error: `Failed to delete key from Management API: HTTP ${deleteRes.status}` };
      }
+
+     invalidateUsageCaches();
+     invalidateProxyModelsCache();
 
      return { ok: true };
    } catch (error) {

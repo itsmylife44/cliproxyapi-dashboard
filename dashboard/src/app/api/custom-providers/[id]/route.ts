@@ -4,6 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { hashProviderKey } from "@/lib/providers/hash";
 import { z } from "zod";
+import { invalidateProxyModelsCache } from "@/lib/cache";
 
 const UpdateCustomProviderSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -175,6 +176,8 @@ export async function PATCH(
               syncStatus = "failed";
               syncMessage = "Backend sync failed - provider updated but changes may not apply immediately";
               console.error("Failed to sync updated custom provider to Management API: HTTP", putRes.status);
+            } else {
+              invalidateProxyModelsCache();
             }
           } else {
             syncStatus = "failed";
@@ -271,6 +274,8 @@ export async function DELETE(
             syncStatus = "failed";
             syncMessage = "Backend sync failed - provider deleted but may still work temporarily";
             console.error("Failed to sync deleted custom provider to Management API: HTTP", putRes.status);
+          } else {
+            invalidateProxyModelsCache();
           }
         } else {
           syncStatus = "failed";

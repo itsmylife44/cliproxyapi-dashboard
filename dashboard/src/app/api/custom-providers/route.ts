@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { hashProviderKey } from "@/lib/providers/hash";
 import { z } from "zod";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
+import { invalidateProxyModelsCache } from "@/lib/cache";
 
 const CreateCustomProviderSchema = z.object({
   name: z.string().min(1).max(100),
@@ -171,6 +172,8 @@ export async function POST(request: NextRequest) {
             syncStatus = "failed";
             syncMessage = "Backend sync failed - provider created but may not work immediately";
             console.error("Failed to sync custom provider to Management API: HTTP", putRes.status);
+          } else {
+            invalidateProxyModelsCache();
           }
         } else {
           syncStatus = "failed";

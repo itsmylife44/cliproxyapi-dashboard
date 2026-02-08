@@ -581,32 +581,50 @@ export default function SettingsPage() {
               Setup Instructions
             </button>
             {showInstructions && (
-              <div className="mt-3 space-y-2 rounded-lg bg-white/5 p-4 text-sm text-white/80">
-                <div className="font-medium text-white">1. Add to opencode.jsonc plugin array:</div>
-                <div className="rounded bg-black/30 p-2 font-mono text-xs">
-                  {`"plugin": ["opencode-cliproxyapi-sync@latest", ...]`}
-                </div>
-                
-                <div className="font-medium text-white">2. Create config file:</div>
-                <div className="text-xs text-white/70 mb-1">
-                  ~/.config/opencode-cliproxyapi-sync/config.json
-                </div>
-                <div className="rounded bg-black/30 p-2 font-mono text-xs">
-                  {`{
-  "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
-  "syncToken": "paste-token-here"
-}`}
-                </div>
-                
-                <div className="text-xs text-white/60 mt-2">
-                  The plugin will be auto-installed from npm when opencode starts.
-                </div>
-                
-                <div className="mt-3 pt-3 border-t border-white/10">
-                  <div className="flex items-center gap-2 text-xs text-emerald-400">
-                    <span>✓</span>
-                    <span>OCX profiles supported — works with <code className="px-1 py-0.5 rounded bg-white/10 font-mono">ocx oc -p myprofile</code></span>
+              <div className="mt-3 space-y-4 rounded-lg bg-white/5 p-4 text-sm text-white/80">
+                <div>
+                  <div className="font-medium text-white">1. Add to opencode.jsonc plugin array:</div>
+                  <div className="mt-2 rounded bg-black/30 p-2 font-mono text-xs">
+                    {`"plugin": ["opencode-cliproxyapi-sync@latest", ...]`}
                   </div>
+                </div>
+                
+                <div>
+                  <div className="font-medium text-white mb-3">2. Create config file:</div>
+                  
+                  <div className="space-y-4">
+                    <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                      <div className="text-xs font-medium text-white/90 mb-2">Standard:</div>
+                      <div className="text-xs text-white/70 font-mono mb-2">
+                        ~/.config/opencode-cliproxyapi-sync/config.json
+                      </div>
+                      <div className="rounded bg-black/30 p-2 font-mono text-xs">
+                        {`{
+  "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
+  "syncToken": "paste-token-here",
+  "lastKnownVersion": null
+}`}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+                      <div className="text-xs font-medium text-emerald-400 mb-2">With OCX Profile:</div>
+                      <div className="text-xs text-emerald-300/70 font-mono mb-2">
+                        ~/.config/opencode/profiles/&lt;profilename&gt;/opencode-cliproxyapi-sync/config.json
+                      </div>
+                      <div className="rounded bg-black/30 p-2 font-mono text-xs">
+                        {`{
+  "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
+  "syncToken": "paste-token-here",
+  "lastKnownVersion": null
+}`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-xs text-white/60 pt-2 border-t border-white/10">
+                  The plugin will be auto-installed from npm when opencode starts.
                 </div>
               </div>
             )}

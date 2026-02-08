@@ -293,7 +293,7 @@ export default async function QuickStartPage() {
         }),
         prisma.userApiKey.findMany({
           where: { userId: session.userId },
-          select: { id: true, key: true },
+          select: { id: true, key: true, name: true },
         }),
       ])
     : [null, null, [], null, null, []];
@@ -325,7 +325,7 @@ export default async function QuickStartPage() {
     ? { ...publisherOverrides, mcpServers: subscriberOverrides.mcpServers, customPlugins: subscriberOverrides.customPlugins }
     : subscriberOverrides;
 
-  const apiKeys = userApiKeys.map((k) => k.key);
+  const apiKeys = userApiKeys.map((k) => ({ key: k.key, name: k.name }));
   const oauthAccounts = extractOAuthAccounts(oauthData);
 
   const providerKeys = [

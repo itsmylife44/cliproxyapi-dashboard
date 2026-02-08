@@ -12,8 +12,13 @@ import {
   generateConfigJson,
 } from "@/lib/config-generators/opencode";
 
+interface ApiKeyEntry {
+  key: string;
+  name: string | null;
+}
+
 interface OpenCodeConfigGeneratorProps {
-   apiKeys: string[];
+   apiKeys: ApiKeyEntry[];
    config: ConfigData | null;
    oauthAccounts: OAuthAccount[];
    modelsDevData: ModelsDevData | null;
@@ -132,9 +137,10 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
   const hasKeys = apiKeys.length > 0;
   const hasActiveOAuth = oauthAccounts.some((a) => !a.disabled);
 
-  const activeKey = hasKeys
+  const selectedEntry = hasKeys
     ? apiKeys[selectedKeyIndex] ?? apiKeys[0]
-    : "your-api-key-from-dashboard";
+    : null;
+  const activeKey = selectedEntry?.key ?? "your-api-key-from-dashboard";
 
    const configJson = generateConfigJson(activeKey, availableModels, proxyUrl, {
      plugins,
@@ -241,9 +247,9 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
               onChange={(e) => setSelectedKeyIndex(Number(e.target.value))}
               className="w-full backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-4 py-2.5 text-sm text-white/90 font-mono focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
             >
-              {apiKeys.map((key, index) => (
-                <option key={key} value={index} className="bg-[#1a1a2e] text-white">
-                  {key.length > 20 ? `${key.slice(0, 8)}...${key.slice(-4)}` : key}
+              {apiKeys.map((apiKey, index) => (
+                <option key={apiKey.key} value={index} className="bg-[#1a1a2e] text-white">
+                  {apiKey.name || "Unnamed Key"}
                 </option>
               ))}
             </select>
@@ -252,7 +258,7 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
           <div className="flex items-center gap-2 text-xs text-white/50">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             <span>
-              Using API key: <code className="px-1.5 py-0.5 rounded bg-white/10 text-orange-300 font-mono">{apiKeys[0].slice(0, 8)}...{apiKeys[0].slice(-4)}</code>
+              Using API key: <strong className="text-white/70">{apiKeys[0].name || "Unnamed Key"}</strong>
             </span>
           </div>
         )

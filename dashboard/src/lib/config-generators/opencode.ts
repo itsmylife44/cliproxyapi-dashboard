@@ -8,11 +8,7 @@ import {
 export type { OAuthAccount, ConfigData, ModelsDevData } from "./shared";
 
 export function getProxyUrl(): string {
-  const url = process.env.API_URL;
-  if (!url) {
-    throw new Error("API_URL environment variable is not set. Please configure it in your .env file.");
-  }
-  return url;
+  return process.env.API_URL || "";
 }
 
 export interface ModelDefinition {

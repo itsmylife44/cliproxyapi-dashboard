@@ -7,7 +7,7 @@ import {
 
 export type { OAuthAccount, ConfigData, ModelsDevData } from "./shared";
 
-export const PROXY_URL = process.env.CLIPROXYAPI_PROXY_URL || "https://proxy.loen-api.xyz";
+export const PROXY_URL = process.env.API_URL || "https://cpapi.loen-api.xyz";
 
 export interface ModelDefinition {
   name: string;

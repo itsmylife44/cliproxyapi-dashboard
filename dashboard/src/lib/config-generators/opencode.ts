@@ -7,10 +7,13 @@ import {
 
 export type { OAuthAccount, ConfigData, ModelsDevData } from "./shared";
 
-if (!process.env.API_URL) {
-  throw new Error("API_URL environment variable is not set. Please configure it in your .env file.");
+export function getProxyUrl(): string {
+  const url = process.env.API_URL;
+  if (!url) {
+    throw new Error("API_URL environment variable is not set. Please configure it in your .env file.");
+  }
+  return url;
 }
-export const PROXY_URL = process.env.API_URL;
 
 export interface ModelDefinition {
   name: string;
@@ -424,7 +427,7 @@ export function generateConfigJson(
         npm: "@ai-sdk/openai-compatible",
         name: "CLIProxyAPI",
         options: {
-          baseURL: `${PROXY_URL}/v1`,
+          baseURL: `${getProxyUrl()}/v1`,
           apiKey,
         },
         models: modelEntries,

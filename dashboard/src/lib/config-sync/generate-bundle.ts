@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
-import { buildAvailableModels, PROXY_URL, type McpEntry } from "@/lib/config-generators/opencode";
+import { buildAvailableModels, getProxyUrl, type McpEntry } from "@/lib/config-generators/opencode";
 import { buildAvailableModelIds, buildOhMyOpenCodeConfig } from "@/lib/config-generators/oh-my-opencode";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import type { ConfigData, OAuthAccount, ModelsDevData } from "@/lib/config-generators/shared";
@@ -277,7 +277,7 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
         npm: "@ai-sdk/openai-compatible",
         name: "CLIProxyAPI",
         options: {
-          baseURL: `${PROXY_URL}/v1`,
+          baseURL: `${getProxyUrl()}/v1`,
           apiKey,
         },
         models: modelEntries,

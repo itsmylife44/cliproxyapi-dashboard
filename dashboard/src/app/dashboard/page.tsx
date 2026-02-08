@@ -8,10 +8,13 @@ import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 
-if (!process.env.API_URL) {
-  throw new Error("API_URL environment variable is not set. Please configure it in your .env file.");
+function getProxyUrl(): string {
+  const url = process.env.API_URL;
+  if (!url) {
+    throw new Error("API_URL environment variable is not set. Please configure it in your .env file.");
+  }
+  return url;
 }
-const PROXY_URL = process.env.API_URL;
 
 interface ManagementFetchParams {
   path: string;
@@ -67,9 +70,11 @@ async function fetchModelsDevData() {
   }
 }
 
-const CLAUDE_CODE_ENV = `export ANTHROPIC_BASE_URL=${PROXY_URL}
+function getClaudeCodeEnv(): string {
+  return `export ANTHROPIC_BASE_URL=${getProxyUrl()}
 export ANTHROPIC_AUTH_TOKEN=your-api-key
 export ANTHROPIC_DEFAULT_SONNET_MODEL=gemini-2.5-flash`;
+}
 
 
 
@@ -411,7 +416,7 @@ export default async function QuickStartPage() {
             </div>
             <div>
               <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Proxy URL</div>
-              <div className="text-sm font-semibold text-white truncate">{PROXY_URL}</div>
+              <div className="text-sm font-semibold text-white truncate">{getProxyUrl()}</div>
             </div>
           </div>
         </div>
@@ -452,7 +457,7 @@ export default async function QuickStartPage() {
             </Link>{" "}
             page.
           </p>
-          <CopyBlock code={CLAUDE_CODE_ENV} />
+          <CopyBlock code={getClaudeCodeEnv()} />
         </CardContent>
       </Card>
     </div>

@@ -539,13 +539,32 @@ To run the dashboard locally for development:
 ### Prerequisites
 
 - Node.js 20+
-- PostgreSQL 16
-- Docker (for running CLIProxyAPI locally)
+- Docker & Docker Compose
 
-### Setup
+### Quick Start (Recommended)
+
+The easiest way to develop locally using Docker containers for PostgreSQL and CLIProxyAPI:
 
 ```bash
-# Navigate to dashboard directory
+cd dashboard
+
+# Start dev environment (PostgreSQL + CLIProxyAPI containers + Next.js dev server)
+./dev-local.sh
+
+# Reset database if needed
+./dev-local.sh --reset
+
+# Stop containers
+./dev-local.sh --down
+```
+
+The dashboard will be available at `http://localhost:3000`.
+
+### Manual Setup
+
+If you prefer manual setup or need to connect to external services:
+
+```bash
 cd dashboard
 
 # Install dependencies
@@ -553,7 +572,7 @@ npm install
 
 # Set up environment variables
 cp .env.example .env.local
-# Edit .env.local with local database credentials
+# Edit .env.local with your database credentials
 
 # Run database migrations
 npx prisma migrate dev
@@ -561,8 +580,6 @@ npx prisma migrate dev
 # Start development server
 npm run dev
 ```
-
-The dashboard will be available at `http://localhost:3000`.
 
 ### Tech Stack
 

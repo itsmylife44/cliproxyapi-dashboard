@@ -37,7 +37,7 @@ import {
 } from "@/lib/config-generators/oh-my-opencode-types";
 
 interface OhMyOpenCodeConfigGeneratorProps {
-  apiKeys: string[];
+  apiKeys: { key: string; name: string | null }[];
   config: ConfigData | null;
   oauthAccounts: OAuthAccount[];
   modelsDevData: ModelsDevData | null;

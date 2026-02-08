@@ -42,7 +42,7 @@ interface ConfigData {
 }
 
 interface QuickStartConfigSectionProps {
-   apiKeys: string[];
+   apiKeys: { key: string; name: string | null }[];
    config: unknown;
    oauthAccounts: OAuthAccountEntry[];
    modelsDevData: unknown;

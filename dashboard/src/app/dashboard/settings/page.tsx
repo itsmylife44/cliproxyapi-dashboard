@@ -19,10 +19,16 @@ interface UpdateInfo {
 interface SyncToken {
   id: string;
   name: string;
-  syncApiKey: string | null;
+  syncApiKeyId: string | null;
+  syncApiKeyName: string | null;
   createdAt: string;
   lastUsedAt: string | null;
   isRevoked: boolean;
+}
+
+interface AvailableApiKey {
+  id: string;
+  name: string;
 }
 
 export default function SettingsPage() {
@@ -42,7 +48,7 @@ export default function SettingsPage() {
   const [generatingToken, setGeneratingToken] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
-  const [availableApiKeys, setAvailableApiKeys] = useState<string[]>([]);
+  const [availableApiKeys, setAvailableApiKeys] = useState<AvailableApiKey[]>([]);
   
   const { showToast } = useToast();
   const router = useRouter();
@@ -69,6 +75,9 @@ export default function SettingsPage() {
       if (res.ok) {
         const data = await res.json();
         setSyncTokens(data.tokens || []);
+        if (Array.isArray(data.apiKeys)) {
+          setAvailableApiKeys(data.apiKeys);
+        }
       }
     } catch {
       console.error("Failed to fetch sync tokens");
@@ -101,19 +110,6 @@ export default function SettingsPage() {
     fetchVersion();
     fetchUpdateInfo();
     fetchSyncTokens();
-
-    const fetchApiKeys = async () => {
-      try {
-        const res = await fetch("/api/user/api-keys");
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data.keys)) {
-            setAvailableApiKeys(data.keys.map((k: { key: string }) => k.key));
-          }
-        }
-      } catch {}
-    };
-    fetchApiKeys();
   }, [fetchUpdateInfo, fetchSyncTokens]);
 
   const handlePasswordChange = async (e: { preventDefault: () => void }) => {
@@ -238,18 +234,19 @@ export default function SettingsPage() {
     }
   };
 
-  const handleUpdateTokenApiKey = async (tokenId: string, syncApiKey: string) => {
+  const handleUpdateTokenApiKey = async (tokenId: string, apiKeyId: string) => {
     try {
       const res = await fetch(`/api/config-sync/tokens/${tokenId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ syncApiKey: syncApiKey || null }),
+        body: JSON.stringify({ syncApiKey: apiKeyId || null }),
       });
 
       if (res.ok) {
         showToast("API key updated for sync token", "success");
+        const selectedKey = availableApiKeys.find((k) => k.id === apiKeyId);
         setSyncTokens((prev) =>
-          prev.map((t) => (t.id === tokenId ? { ...t, syncApiKey: syncApiKey || null } : t))
+          prev.map((t) => (t.id === tokenId ? { ...t, syncApiKeyId: apiKeyId || null, syncApiKeyName: selectedKey?.name || null } : t))
         );
       } else {
         const data = await res.json();
@@ -545,7 +542,7 @@ export default function SettingsPage() {
                         </label>
                         <select
                           id={`sync-api-key-${token.id}`}
-                          value={token.syncApiKey || ""}
+                          value={token.syncApiKeyId || ""}
                           onChange={(e) => handleUpdateTokenApiKey(token.id, e.target.value)}
                           className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white/90 font-mono focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
                         >
@@ -554,15 +551,15 @@ export default function SettingsPage() {
                               <option value="" className="bg-[#1a1a2e] text-white">
                                 Auto (first available)
                               </option>
-                              {availableApiKeys.map((key) => (
-                                <option key={key} value={key} className="bg-[#1a1a2e] text-white">
-                                  {key.length > 24 ? `${key.slice(0, 10)}...${key.slice(-6)}` : key}
+                              {availableApiKeys.map((apiKey) => (
+                                <option key={apiKey.id} value={apiKey.id} className="bg-[#1a1a2e] text-white">
+                                  {apiKey.name}
                                 </option>
                               ))}
                             </>
                           ) : (
                             <option value="" className="bg-[#1a1a2e] text-white">
-                              No API keys — uses placeholder
+                              No API keys — create one first
                             </option>
                           )}
                         </select>

@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
         userId: session.userId,
         name: "Default",
         tokenHash: hash,
-        syncApiKey: userApiKey.key,
+        syncApiKey: userApiKey.id,
       },
     });
 
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       id: syncToken.id,
       token,
       name: syncToken.name,
-      syncApiKey: syncToken.syncApiKey,
+      syncApiKeyId: syncToken.syncApiKey,
       createdAt: syncToken.createdAt.toISOString(),
     });
   } catch (error) {
@@ -76,16 +76,36 @@ export async function GET(_request: NextRequest) {
       },
     });
 
+    // Resolve syncApiKey IDs to key names
+    const keyIds = syncTokens
+      .map((t) => t.syncApiKey)
+      .filter((id): id is string => id !== null);
+
+    const userKeys = keyIds.length > 0 ? await prisma.userApiKey.findMany({
+      where: { id: { in: keyIds }, userId: session.userId },
+      select: { id: true, name: true },
+    }) : [];
+
+    const keyNameMap = new Map(userKeys.map((k) => [k.id, k.name]));
+
     const tokens = syncTokens.map((token) => ({
       id: token.id,
       name: token.name,
-      syncApiKey: token.syncApiKey,
+      syncApiKeyId: token.syncApiKey,
+      syncApiKeyName: token.syncApiKey ? keyNameMap.get(token.syncApiKey) || null : null,
       createdAt: token.createdAt.toISOString(),
       lastUsedAt: token.lastUsedAt?.toISOString() || null,
       isRevoked: token.revokedAt !== null,
     }));
 
-    return NextResponse.json({ tokens });
+    // Fetch all user API keys for the dropdown
+    const allUserKeys = await prisma.userApiKey.findMany({
+      where: { userId: session.userId },
+      select: { id: true, name: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return NextResponse.json({ tokens, apiKeys: allUserKeys });
   } catch (error) {
     console.error("Failed to fetch sync tokens:", error);
     return NextResponse.json(

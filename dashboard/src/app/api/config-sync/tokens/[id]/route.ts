@@ -21,7 +21,7 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const syncApiKey = typeof body.syncApiKey === "string" ? body.syncApiKey : null;
+    const syncApiKeyId = typeof body.syncApiKey === "string" && body.syncApiKey.length > 0 ? body.syncApiKey : null;
 
     const existingToken = await prisma.syncToken.findUnique({
       where: { id },
@@ -36,9 +36,20 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    if (syncApiKeyId) {
+      const ownedKey = await prisma.userApiKey.findFirst({
+        where: { id: syncApiKeyId, userId: session.userId },
+        select: { id: true },
+      });
+
+      if (!ownedKey) {
+        return NextResponse.json({ error: "API key not found or not owned by you" }, { status: 403 });
+      }
+    }
+
     await prisma.syncToken.update({
       where: { id },
-      data: { syncApiKey: syncApiKey || null },
+      data: { syncApiKey: syncApiKeyId },
     });
 
     return NextResponse.json({ success: true });

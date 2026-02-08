@@ -231,8 +231,16 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
     Object.entries(allModels).filter(([modelId]) => !excludedModels.has(modelId))
   );
 
-  // 8. Get API key: prefer syncApiKey from token, then user's key, then global fallback, then placeholder
-  const apiKey = syncApiKey || userApiKey?.key || (apiKeyStrings.length > 0 ? apiKeyStrings[0] : "your-api-key");
+  let resolvedSyncApiKey: string | null = null;
+  if (syncApiKey) {
+    const syncKeyRecord = await prisma.userApiKey.findUnique({
+      where: { id: syncApiKey },
+      select: { key: true },
+    });
+    resolvedSyncApiKey = syncKeyRecord?.key || null;
+  }
+
+  const apiKey = resolvedSyncApiKey || userApiKey?.key || (apiKeyStrings.length > 0 ? apiKeyStrings[0] : "your-api-key");
 
   // 9. Build opencode config object (replicate generateConfigJson but return object)
   const modelEntries: Record<string, Record<string, unknown>> = {};

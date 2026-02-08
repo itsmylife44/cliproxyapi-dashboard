@@ -13,12 +13,13 @@ import {
 } from "@/lib/config-generators/opencode";
 
 interface OpenCodeConfigGeneratorProps {
-  apiKeys: string[];
-  config: ConfigData | null;
-  oauthAccounts: OAuthAccount[];
-  modelsDevData: ModelsDevData | null;
-  excludedModels?: string[];
-}
+   apiKeys: string[];
+   config: ConfigData | null;
+   oauthAccounts: OAuthAccount[];
+   modelsDevData: ModelsDevData | null;
+   excludedModels?: string[];
+   proxyUrl: string;
+ }
 
 function downloadFile(content: string, filename: string) {
   const blob = new Blob([content], { type: "application/json" });
@@ -38,7 +39,7 @@ const DEFAULT_PLUGINS = [
   "opencode-anthropic-auth@latest",
 ];
 
-export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, modelsDevData, excludedModels }: OpenCodeConfigGeneratorProps) {
+export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, modelsDevData, excludedModels, proxyUrl }: OpenCodeConfigGeneratorProps) {
    const [selectedKeyIndex, setSelectedKeyIndex] = useState(0);
    const [isExpanded, setIsExpanded] = useState(false);
    const [isModelsExpanded, setIsModelsExpanded] = useState(false);
@@ -135,10 +136,10 @@ export function OpenCodeConfigGenerator({ apiKeys, config, oauthAccounts, models
     ? apiKeys[selectedKeyIndex] ?? apiKeys[0]
     : "your-api-key-from-dashboard";
 
-  const configJson = generateConfigJson(activeKey, availableModels, {
-    plugins,
-    mcps,
-  });
+   const configJson = generateConfigJson(activeKey, availableModels, proxyUrl, {
+     plugins,
+     mcps,
+   });
 
   const handleAddPlugin = () => {
     const trimmed = pluginInput.trim();

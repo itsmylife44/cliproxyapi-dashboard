@@ -386,51 +386,52 @@ export interface GenerateConfigOptions {
 }
 
 export function generateConfigJson(
-  apiKey: string,
-  models: Record<string, ModelDefinition>,
-  options?: GenerateConfigOptions
-): string {
-  const modelEntries: Record<string, Record<string, unknown>> = {};
-  for (const [id, def] of Object.entries(models)) {
-    const entry: Record<string, unknown> = {
-      name: def.name,
-      attachment: def.attachment,
-      modalities: def.modalities,
-      limit: { context: def.context, output: def.output },
-    };
-    if (def.reasoning) {
-      entry.reasoning = true;
-    }
-    if (def.options) {
-      entry.options = def.options;
-    }
-    modelEntries[id] = entry;
-  }
-
-  const firstModelId = Object.keys(models)[0] ?? "gemini-2.5-flash";
-
-  const plugins = options?.plugins ?? [
-    "opencode-cliproxyapi-sync@latest",
-    "oh-my-opencode@latest",
-    "opencode-anthropic-auth@latest",
-  ];
-
-  const configObj: Record<string, unknown> = {
-    $schema: "https://opencode.ai/config.json",
-    plugin: plugins,
-    provider: {
-      cliproxyapi: {
-        npm: "@ai-sdk/openai-compatible",
-        name: "CLIProxyAPI",
-        options: {
-          baseURL: `${getProxyUrl()}/v1`,
-          apiKey,
-        },
-        models: modelEntries,
-      },
-    },
-    model: `cliproxyapi/${firstModelId}`,
-  };
+   apiKey: string,
+   models: Record<string, ModelDefinition>,
+   proxyUrl: string,
+   options?: GenerateConfigOptions
+ ): string {
+   const modelEntries: Record<string, Record<string, unknown>> = {};
+   for (const [id, def] of Object.entries(models)) {
+     const entry: Record<string, unknown> = {
+       name: def.name,
+       attachment: def.attachment,
+       modalities: def.modalities,
+       limit: { context: def.context, output: def.output },
+     };
+     if (def.reasoning) {
+       entry.reasoning = true;
+     }
+     if (def.options) {
+       entry.options = def.options;
+     }
+     modelEntries[id] = entry;
+   }
+ 
+   const firstModelId = Object.keys(models)[0] ?? "gemini-2.5-flash";
+ 
+   const plugins = options?.plugins ?? [
+     "opencode-cliproxyapi-sync@latest",
+     "oh-my-opencode@latest",
+     "opencode-anthropic-auth@latest",
+   ];
+ 
+   const configObj: Record<string, unknown> = {
+     $schema: "https://opencode.ai/config.json",
+     plugin: plugins,
+     provider: {
+       cliproxyapi: {
+         npm: "@ai-sdk/openai-compatible",
+         name: "CLIProxyAPI",
+         options: {
+           baseURL: `${proxyUrl}/v1`,
+           apiKey,
+         },
+         models: modelEntries,
+       },
+     },
+     model: `cliproxyapi/${firstModelId}`,
+   };
 
   if (options?.mcps && options.mcps.length > 0) {
     const mcpServers: Record<string, Record<string, unknown>> = {};

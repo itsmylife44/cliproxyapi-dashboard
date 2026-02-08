@@ -42,30 +42,32 @@ interface ConfigData {
 }
 
 interface QuickStartConfigSectionProps {
-  apiKeys: string[];
-  config: unknown;
-  oauthAccounts: OAuthAccountEntry[];
-  modelsDevData: unknown;
-  availableModels: string[];
-  modelSourceMap: Map<string, string>;
-  initialExcludedModels: string[];
-  agentOverrides?: OhMyOpenCodeFullConfig;
-  hasSyncActive: boolean;
-  isSubscribed?: boolean;
-}
+   apiKeys: string[];
+   config: unknown;
+   oauthAccounts: OAuthAccountEntry[];
+   modelsDevData: unknown;
+   availableModels: string[];
+   modelSourceMap: Map<string, string>;
+   initialExcludedModels: string[];
+   agentOverrides?: OhMyOpenCodeFullConfig;
+   hasSyncActive: boolean;
+   isSubscribed?: boolean;
+   proxyUrl: string;
+ }
 
 export function QuickStartConfigSection({
-  apiKeys,
-  config,
-  oauthAccounts,
-  modelsDevData,
-  availableModels,
-  modelSourceMap,
-  initialExcludedModels,
-  agentOverrides,
-  hasSyncActive,
-  isSubscribed = false,
-}: QuickStartConfigSectionProps) {
+   apiKeys,
+   config,
+   oauthAccounts,
+   modelsDevData,
+   availableModels,
+   modelSourceMap,
+   initialExcludedModels,
+   agentOverrides,
+   hasSyncActive,
+   isSubscribed = false,
+   proxyUrl,
+ }: QuickStartConfigSectionProps) {
   const [excludedModels, setExcludedModels] = useState<string[]>(initialExcludedModels);
 
   return (
@@ -100,12 +102,13 @@ export function QuickStartConfigSection({
             </p>
 
             <OpenCodeConfigGenerator
-              apiKeys={apiKeys}
-              config={config as ConfigData | null}
-              oauthAccounts={oauthAccounts}
-              modelsDevData={modelsDevData as ModelsDevData | null}
-              excludedModels={excludedModels}
-            />
+               apiKeys={apiKeys}
+               config={config as ConfigData | null}
+               oauthAccounts={oauthAccounts}
+               modelsDevData={modelsDevData as ModelsDevData | null}
+               excludedModels={excludedModels}
+               proxyUrl={proxyUrl}
+             />
 
             <div className="space-y-1.5 text-sm text-white/70">
               <p className="flex items-start gap-2">

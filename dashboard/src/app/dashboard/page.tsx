@@ -418,18 +418,19 @@ export default async function QuickStartPage() {
         </div>
       </div>
 
-      <QuickStartConfigSection
-        apiKeys={apiKeys}
-        config={config}
-        oauthAccounts={oauthAccounts}
-        modelsDevData={modelsDevData}
-        availableModels={availableModelIds}
-        modelSourceMap={modelSourceMap}
-        initialExcludedModels={initialExcludedModels}
-        agentOverrides={agentOverrides}
-        hasSyncActive={hasSyncActive}
-        isSubscribed={isSubscriber}
-      />
+       <QuickStartConfigSection
+         apiKeys={apiKeys}
+         config={config}
+         oauthAccounts={oauthAccounts}
+         modelsDevData={modelsDevData}
+         availableModels={availableModelIds}
+         modelSourceMap={modelSourceMap}
+         initialExcludedModels={initialExcludedModels}
+         agentOverrides={agentOverrides}
+         hasSyncActive={hasSyncActive}
+         isSubscribed={isSubscriber}
+         proxyUrl={getProxyUrl()}
+       />
 
       {!isSubscriber && <ConfigPublisher />}
       {!isPublisher && <ConfigSubscriber hasApiKey={hasApiKey} />}

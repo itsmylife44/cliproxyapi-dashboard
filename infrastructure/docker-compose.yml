@@ -82,6 +82,8 @@ services:
       MANAGEMENT_API_KEY: ${MANAGEMENT_API_KEY}
       JWT_SECRET: ${JWT_SECRET}
       NODE_ENV: production
+      API_URL: ${API_URL}
+      DASHBOARD_URL: ${DASHBOARD_URL}
     env_file:
       - ./.env
     volumes:

@@ -30,6 +30,7 @@ Built with **Next.js 16**, **React 19**, **Tailwind CSS v4**, **Prisma**, and **
 - **Structured Configuration Editor**: Form-based configuration management with validation
 - **API Key Management**: Full lifecycle management for API keys
 - **Multi-Provider Support**: Claude Code, Gemini, OpenAI/Codex, and OpenAI-compatible endpoints
+- **Custom Providers**: Add your own OpenAI-compatible providers (OpenRouter, Ollama, custom endpoints) with model mappings
 - **OAuth Account Management**: Connect and manage OAuth sessions for Claude, Gemini, and Codex
 - **Per-User Provider Ownership**: Users contribute their own API keys to the shared pool with ownership tracking
 - **Usage Statistics**: Comprehensive usage tracking and analytics
@@ -440,6 +441,11 @@ Manage dashboard API keys (not CLIProxyAPI API keys):
 Manage AI provider connections:
 - **OAuth Accounts**: Connect Claude, Gemini, and Codex OAuth accounts
 - **API Key Contribution**: Add your own API keys to the shared provider pool
+- **Custom Providers**: Define your own OpenAI-compatible providers:
+  - Configure base URL and API key
+  - Map upstream model names to friendly aliases
+  - Set excluded models with wildcard patterns (e.g., `gpt-4*`)
+  - Optional: prefix, proxy URL, custom headers
 - **Ownership Tracking**: See which keys/accounts you own vs. others (anonymized)
 - **Provider Status**: View connection status and account details
 - **Account Management**: Add/remove/reconnect OAuth accounts (only your own)

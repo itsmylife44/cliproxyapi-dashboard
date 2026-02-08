@@ -142,40 +142,72 @@ export async function POST(request: NextRequest) {
      console.log("[OAuth DEBUG] fetch response.status:", response.status, "response.ok:", response.ok);
 
      if (response.ok) {
-       const afterAuthFiles = await fetchAuthFiles();
-       if (afterAuthFiles) {
-         console.log("[OAuth DEBUG] afterAuthFiles names:", afterAuthFiles.map(f => ({ name: f.name, provider: f.provider, type: f.type })));
+       // Poll for new auth files (CLIProxyAPI creates them asynchronously after callback)
+       let candidateFiles: AuthFileEntry[] = [];
+       const MAX_RETRIES = 10;
+       const RETRY_DELAY_MS = 1500;
+
+       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+
+         const afterAuthFiles = await fetchAuthFiles();
+         console.log(
+           "[OAuth DEBUG] attempt",
+           attempt,
+           "afterAuthFiles:",
+           afterAuthFiles?.map((f) => ({ name: f.name, provider: f.provider, type: f.type }))
+         );
+
+         if (afterAuthFiles) {
+           candidateFiles = afterAuthFiles.filter((file) => {
+             const fileProvider = file.provider || file.type;
+             const providerMatches = !fileProvider || fileProvider === provider;
+             const isNew = !beforeNames.has(file.name);
+             console.log(
+               "[OAuth DEBUG] attempt",
+               attempt,
+               "filter check - file.name:",
+               file.name,
+               "isNew:",
+               isNew,
+               "fileProvider:",
+               fileProvider,
+               "providerMatches:",
+               providerMatches
+             );
+             return isNew && providerMatches;
+           });
+         }
+
+         if (candidateFiles.length > 0) {
+           console.log("[OAuth DEBUG] found new auth files on attempt", attempt);
+           break;
+         }
        }
 
-       if (afterAuthFiles) {
-         const candidateFiles = afterAuthFiles.filter((file) => {
-           const fileProvider = file.provider || file.type;
-           const providerMatches = !fileProvider || fileProvider === provider;
-           const isNew = !beforeNames.has(file.name);
-           console.log("[OAuth DEBUG] filter check - file.name:", file.name, "isNew:", isNew, "fileProvider:", fileProvider, "providerMatches:", providerMatches);
-           return isNew && providerMatches;
+       if (candidateFiles.length === 0) {
+         console.warn("[OAuth DEBUG] no new auth files found after", MAX_RETRIES, "retries");
+       }
+
+       console.log("[OAuth DEBUG] candidateFiles count:", candidateFiles.length);
+
+       for (const file of candidateFiles) {
+         const existingOwnership = await prisma.providerOAuthOwnership.findUnique({
+           where: { accountName: file.name },
+           select: { id: true },
          });
+         console.log("[OAuth DEBUG] file.name:", file.name, "existingOwnership found:", !!existingOwnership);
 
-         console.log("[OAuth DEBUG] candidateFiles count:", candidateFiles.length);
-
-         for (const file of candidateFiles) {
-           const existingOwnership = await prisma.providerOAuthOwnership.findUnique({
-             where: { accountName: file.name },
-             select: { id: true },
+         if (!existingOwnership) {
+           await prisma.providerOAuthOwnership.create({
+             data: {
+               userId: session.userId,
+               provider,
+               accountName: file.name,
+               accountEmail: file.email || null,
+             },
            });
-           console.log("[OAuth DEBUG] file.name:", file.name, "existingOwnership found:", !!existingOwnership);
-
-           if (!existingOwnership) {
-             await prisma.providerOAuthOwnership.create({
-               data: {
-                 userId: session.userId,
-                 provider,
-                 accountName: file.name,
-                 accountEmail: file.email || null,
-               },
-             });
-             console.log("[OAuth DEBUG] created ownership for file:", file.name);
-           }
+           console.log("[OAuth DEBUG] created ownership for file:", file.name);
          }
        }
      } else {

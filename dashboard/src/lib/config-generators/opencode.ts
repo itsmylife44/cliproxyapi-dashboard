@@ -7,7 +7,10 @@ import {
 
 export type { OAuthAccount, ConfigData, ModelsDevData } from "./shared";
 
-export const PROXY_URL = process.env.API_URL || "https://cpapi.loen-api.xyz";
+if (!process.env.API_URL) {
+  throw new Error("API_URL environment variable is not set. Please configure it in your .env file.");
+}
+export const PROXY_URL = process.env.API_URL;
 
 export interface ModelDefinition {
   name: string;

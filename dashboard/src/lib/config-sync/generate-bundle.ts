@@ -81,23 +81,77 @@ function extractApiKeyStrings(data: unknown): string[] {
 }
 
 function extractOAuthAccounts(data: unknown): OAuthAccount[] {
+   if (typeof data !== "object" || data === null) return [];
+   const record = data as Record<string, unknown>;
+   const files = record["files"];
+   if (!Array.isArray(files)) return [];
+   return files
+     .filter(
+       (entry): entry is Record<string, unknown> =>
+         typeof entry === "object" && entry !== null && "name" in entry
+     )
+     .map((entry) => ({
+       id: typeof entry.id === "string" ? entry.id : String(entry.name),
+       name: String(entry.name),
+       type: typeof entry.type === "string" ? entry.type : undefined,
+       provider: typeof entry.provider === "string" ? entry.provider : undefined,
+       disabled:
+         typeof entry.disabled === "boolean" ? entry.disabled : undefined,
+     }));
+}
+
+interface CustomProviderEntry {
+  name: string;
+  prefix?: string;
+  "base-url": string;
+  "api-key-entries": Array<{
+    "api-key": string;
+    "proxy-url"?: string;
+  }>;
+  models: Array<{
+    name: string;
+    alias: string;
+  }>;
+  "excluded-models"?: string[];
+  headers?: Record<string, unknown>;
+}
+
+function extractCustomProviders(data: unknown): CustomProviderEntry[] {
   if (typeof data !== "object" || data === null) return [];
   const record = data as Record<string, unknown>;
-  const files = record["files"];
-  if (!Array.isArray(files)) return [];
-  return files
-    .filter(
-      (entry): entry is Record<string, unknown> =>
-        typeof entry === "object" && entry !== null && "name" in entry
-    )
-    .map((entry) => ({
-      id: typeof entry.id === "string" ? entry.id : String(entry.name),
-      name: String(entry.name),
-      type: typeof entry.type === "string" ? entry.type : undefined,
-      provider: typeof entry.provider === "string" ? entry.provider : undefined,
-      disabled:
-        typeof entry.disabled === "boolean" ? entry.disabled : undefined,
-    }));
+  const providers = record["openai-compatibility"];
+  if (!Array.isArray(providers)) return [];
+  return providers.filter(
+    (entry): entry is CustomProviderEntry =>
+      typeof entry === "object" &&
+      entry !== null &&
+      "name" in entry &&
+      "base-url" in entry &&
+      "api-key-entries" in entry &&
+      "models" in entry
+  );
+}
+
+function buildCustomProviderModels(
+  customProviders: CustomProviderEntry[]
+): Record<string, ModelDefinition> {
+  const models: Record<string, ModelDefinition> = {};
+  
+  for (const provider of customProviders) {
+    for (const model of provider.models) {
+      const modelId = `${provider.name}/${model.alias}`;
+      models[modelId] = {
+        name: model.alias,
+        context: 200000,
+        output: 64000,
+        attachment: true,
+        reasoning: false,
+        modalities: { input: ["text", "image"], output: ["text"] },
+      };
+    }
+  }
+  
+  return models;
 }
 
 interface ConfigBundle {
@@ -114,23 +168,27 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
   const authFilesData = await fetchManagementJson({ path: "auth-files" });
   const oauthAccounts = extractOAuthAccounts(authFilesData);
 
-  // 3. Fetch api-keys from management API
-  const apiKeysData = await fetchManagementJson({ path: "api-keys" });
-  const apiKeyStrings = extractApiKeyStrings(apiKeysData);
+   // 3. Fetch api-keys from management API
+   const apiKeysData = await fetchManagementJson({ path: "api-keys" });
+   const apiKeyStrings = extractApiKeyStrings(apiKeysData);
 
-  // 5. Fetch user's ModelPreference, AgentModelOverride, UserApiKey, and ConfigSubscription from Prisma
-  const [modelPreference, agentOverride, userApiKey, subscription] = await Promise.all([
-    prisma.modelPreference.findUnique({ where: { userId } }),
-    prisma.agentModelOverride.findUnique({ where: { userId } }),
-    prisma.userApiKey.findFirst({
-      where: { userId },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.configSubscription.findUnique({
-      where: { userId },
-      include: { template: true },
-    }),
-  ]);
+   // 4. Fetch custom providers from management API (contains API keys)
+   const customProvidersData = await fetchManagementJson({ path: "config" });
+   const customProviders = extractCustomProviders(customProvidersData);
+
+   // 5. Fetch user's ModelPreference, AgentModelOverride, UserApiKey, and ConfigSubscription from Prisma
+   const [modelPreference, agentOverride, userApiKey, subscription] = await Promise.all([
+     prisma.modelPreference.findUnique({ where: { userId } }),
+     prisma.agentModelOverride.findUnique({ where: { userId } }),
+     prisma.userApiKey.findFirst({
+       where: { userId },
+       orderBy: { createdAt: "asc" },
+     }),
+     prisma.configSubscription.findUnique({
+       where: { userId },
+       include: { template: true },
+     }),
+   ]);
 
   // 6. Parse frozen config if subscription exists
   const frozenExcludedModels = subscription?.frozenConfig 
@@ -196,27 +254,36 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
     agentOverrides = subscriberOverrides;
   }
 
-  const excludedModels = new Set(effectiveExcludedModels);
+   const excludedModels = new Set(effectiveExcludedModels);
+   
+   for (const provider of customProviders) {
+     if (Array.isArray(provider["excluded-models"])) {
+       for (const pattern of provider["excluded-models"]) {
+         excludedModels.add(pattern);
+       }
+     }
+   }
 
-  let resolvedSyncApiKey: string | null = null;
-  if (syncApiKey) {
-    const syncKeyRecord = await prisma.userApiKey.findUnique({
-      where: { id: syncApiKey },
-      select: { key: true },
-    });
-    resolvedSyncApiKey = syncKeyRecord?.key || null;
-  }
+   let resolvedSyncApiKey: string | null = null;
+   if (syncApiKey) {
+     const syncKeyRecord = await prisma.userApiKey.findUnique({
+       where: { id: syncApiKey },
+       select: { key: true },
+     });
+     resolvedSyncApiKey = syncKeyRecord?.key || null;
+   }
 
-  const apiKey = resolvedSyncApiKey || userApiKey?.key || (apiKeyStrings.length > 0 ? apiKeyStrings[0] : "no-api-key-create-one-in-dashboard");
+   const apiKey = resolvedSyncApiKey || userApiKey?.key || (apiKeyStrings.length > 0 ? apiKeyStrings[0] : "no-api-key-create-one-in-dashboard");
 
-  const proxyUrl = getProxyUrl();
-  const proxyModels = apiKey !== "no-api-key-create-one-in-dashboard"
-    ? await fetchProxyModels(proxyUrl, apiKey)
-    : [];
-  const allModels: Record<string, ModelDefinition> = {
-    ...buildAvailableModelsFromProxy(proxyModels),
-    ...extractOAuthModelAliases(managementConfig as ConfigData | null, oauthAccounts),
-  };
+   const proxyUrl = getProxyUrl();
+   const proxyModels = apiKey !== "no-api-key-create-one-in-dashboard"
+     ? await fetchProxyModels(proxyUrl, apiKey)
+     : [];
+   const allModels: Record<string, ModelDefinition> = {
+     ...buildAvailableModelsFromProxy(proxyModels),
+     ...extractOAuthModelAliases(managementConfig as ConfigData | null, oauthAccounts),
+     ...buildCustomProviderModels(customProviders),
+   };
 
   const filteredModels = Object.fromEntries(
     Object.entries(allModels).filter(([modelId]) => !excludedModels.has(modelId))
@@ -248,24 +315,50 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
   const pluginSet = new Set([...defaultPlugins, ...customPlugins]);
   const plugins = Array.from(pluginSet);
 
-  const opencodeConfig: Record<string, unknown> = {
-    $schema: "https://opencode.ai/config.json",
-    plugin: plugins,
-    provider: {
-      cliproxyapi: {
-        npm: "@ai-sdk/openai-compatible",
-        name: "CLIProxyAPI",
-        options: {
-          baseURL: `${proxyUrl}/v1`,
-          apiKey,
-        },
-        models: modelEntries,
-      },
-    },
-    model: `cliproxyapi/${firstModelId}`,
-  };
+   const providers: Record<string, Record<string, unknown>> = {
+     cliproxyapi: {
+       npm: "@ai-sdk/openai-compatible",
+       name: "CLIProxyAPI",
+       options: {
+         baseURL: `${proxyUrl}/v1`,
+         apiKey,
+       },
+       models: modelEntries,
+     },
+   };
 
-  if (mcpEntries.length > 0) {
+   if (customProviders.length > 0) {
+     const openaiCompatibilityProviders: CustomProviderEntry[] = [];
+     for (const provider of customProviders) {
+       if (provider["api-key-entries"] && provider["api-key-entries"].length > 0) {
+         openaiCompatibilityProviders.push(provider);
+       }
+     }
+
+     if (openaiCompatibilityProviders.length > 0) {
+       providers.cliproxyapi = {
+         ...providers.cliproxyapi,
+         "openai-compatibility": openaiCompatibilityProviders.map((cp) => ({
+           name: cp.name,
+           prefix: cp.prefix,
+           "base-url": cp["base-url"],
+           "api-key-entries": cp["api-key-entries"],
+           models: cp.models,
+           ...(cp["excluded-models"] ? { "excluded-models": cp["excluded-models"] } : {}),
+           ...(cp.headers ? { headers: cp.headers } : {}),
+         })),
+       };
+     }
+   }
+
+   const opencodeConfig: Record<string, unknown> = {
+     $schema: "https://opencode.ai/config.json",
+     plugin: plugins,
+     provider: providers,
+     model: `cliproxyapi/${firstModelId}`,
+   };
+
+   if (mcpEntries.length > 0) {
     const mcpServers: Record<string, Record<string, unknown>> = {};
     for (const mcp of mcpEntries) {
       if (mcp.type === "remote") {

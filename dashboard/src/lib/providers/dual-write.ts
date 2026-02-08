@@ -1,8 +1,34 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import { hashProviderKey, maskProviderKey } from "./hash";
 import { PROVIDER, PROVIDER_ENDPOINT, type Provider, type OAuthProvider } from "./constants";
 import { getMaxProviderKeysPerUser } from "./settings";
+
+// Per-provider async mutex to serialize GET-modify-PUT sequences.
+// Prevents race conditions where concurrent requests read the same state,
+// modify independently, and the last write overwrites the first.
+// In-process only — sufficient because dashboard runs as a single Node.js process.
+class AsyncMutex {
+  private locks = new Map<string, Promise<void>>();
+
+  async acquire(key: string): Promise<() => void> {
+    while (this.locks.has(key)) {
+      await this.locks.get(key);
+    }
+    let release!: () => void;
+    const promise = new Promise<void>((resolve) => {
+      release = () => {
+        this.locks.delete(key);
+        resolve();
+      };
+    });
+    this.locks.set(key, promise);
+    return release;
+  }
+}
+
+const providerMutex = new AsyncMutex();
 
 const MANAGEMENT_BASE_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
@@ -101,24 +127,34 @@ export async function contributeKey(
 
   const trimmedKey = apiKey.trim();
   const keyHash = hashProviderKey(trimmedKey);
+  const keyIdentifier = maskProviderKey(trimmedKey);
+
+  const userKeyCount = await prisma.providerKeyOwnership.count({
+    where: { userId },
+  });
+
+  const maxKeys = await getMaxProviderKeysPerUser();
+
+  if (userKeyCount >= maxKeys) {
+    return { ok: false, error: `Key limit reached (${maxKeys} keys per user)` };
+  }
+
+  const lockKey = PROVIDER_ENDPOINT[provider];
+  const release = await providerMutex.acquire(lockKey);
 
   try {
-    const existingOwnership = await prisma.providerKeyOwnership.findUnique({
-      where: { keyHash },
-    });
-
-    if (existingOwnership) {
-      return { ok: false, error: "API key already contributed" };
-    }
-
-    const userKeyCount = await prisma.providerKeyOwnership.count({
-      where: { userId },
-    });
-
-    const maxKeys = await getMaxProviderKeysPerUser();
-
-    if (userKeyCount >= maxKeys) {
-      return { ok: false, error: `Key limit reached (${maxKeys} keys per user)` };
+    try {
+      await prisma.providerKeyOwnership.create({
+        data: { userId, provider, keyIdentifier, keyHash },
+      });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === "P2002"
+      ) {
+        return { ok: false, error: "API key already contributed" };
+      }
+      throw e;
     }
 
     const endpoint = `${MANAGEMENT_BASE_URL}${PROVIDER_ENDPOINT[provider]}`;
@@ -129,6 +165,7 @@ export async function contributeKey(
     });
 
     if (!getRes.ok) {
+      await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
       return { ok: false, error: `Failed to fetch existing keys: HTTP ${getRes.status}` };
     }
 
@@ -140,11 +177,13 @@ export async function contributeKey(
       const responseKey = "openai-compatibility";
       const rawData = getData[responseKey];
       if (!isRecord(getData)) {
+        await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
         return { ok: false, error: "Invalid Management API response for OpenAI compatibility" };
       }
       if (rawData === null || (Array.isArray(rawData) && rawData.length === 0)) {
         updatedPayload = [];
       } else if (!isOpenAICompatArray(rawData)) {
+        await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
         return { ok: false, error: "Invalid Management API response for OpenAI compatibility" };
       } else {
         updatedPayload = rawData;
@@ -153,12 +192,14 @@ export async function contributeKey(
       const responseKey = `${provider}-api-key`;
       const rawData = getData[responseKey];
       if (!isRecord(getData)) {
+        await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
         return { ok: false, error: `Invalid Management API response for ${provider}` };
       }
 
       if (rawData === null || (Array.isArray(rawData) && rawData.length === 0)) {
         updatedPayload = [{ "api-key": trimmedKey }];
       } else if (!isApiKeyArray(rawData)) {
+        await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
         return { ok: false, error: `Invalid Management API response for ${provider}` };
       } else {
         updatedPayload = [...rawData, { "api-key": trimmedKey }];
@@ -175,25 +216,15 @@ export async function contributeKey(
     });
 
     if (!putRes.ok) {
+      await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
       return { ok: false, error: `Failed to add key to Management API: HTTP ${putRes.status}` };
     }
 
-     const keyIdentifier = maskProviderKey(trimmedKey);
-
-      const ownership = await prisma.providerKeyOwnership.create({
-        data: {
-          userId,
-          provider,
-          keyIdentifier,
-          keyHash,
-        },
-      });
-
-      return {
-        ok: true,
-        keyHash: ownership.keyHash,
-        keyIdentifier: ownership.keyIdentifier,
-      };
+    return {
+      ok: true,
+      keyHash,
+      keyIdentifier,
+    };
   } catch (error) {
     console.error("contributeKey error:", error);
 
@@ -209,6 +240,8 @@ export async function contributeKey(
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during key contribution",
     };
+  } finally {
+    release();
   }
 }
 
@@ -221,20 +254,23 @@ export async function removeKey(
     return { ok: false, error: "Management API key not configured" };
   }
 
+  const ownership = await prisma.providerKeyOwnership.findUnique({
+    where: { keyHash },
+    include: { user: { select: { username: true } } },
+  });
+
+  if (!ownership) {
+    return { ok: false, error: "Key not found" };
+  }
+
+  if (!isAdmin && ownership.userId !== userId) {
+    return { ok: false, error: "Access denied" };
+  }
+
+  const lockKey = PROVIDER_ENDPOINT[ownership.provider as Provider];
+  const release = await providerMutex.acquire(lockKey);
+
   try {
-    const ownership = await prisma.providerKeyOwnership.findUnique({
-      where: { keyHash },
-      include: { user: { select: { username: true } } },
-    });
-
-    if (!ownership) {
-      return { ok: false, error: "Key not found" };
-    }
-
-    if (!isAdmin && ownership.userId !== userId) {
-      return { ok: false, error: "Access denied" };
-    }
-
     const endpoint = `${MANAGEMENT_BASE_URL}${PROVIDER_ENDPOINT[ownership.provider as Provider]}`;
 
     const getRes = await fetch(endpoint, {
@@ -315,6 +351,8 @@ export async function removeKey(
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during key removal",
     };
+  } finally {
+    release();
   }
 }
 
@@ -325,6 +363,9 @@ export async function removeKeyByAdmin(
   if (!MANAGEMENT_API_KEY) {
     return { ok: false, error: "Management API key not configured" };
   }
+
+  const lockKey = PROVIDER_ENDPOINT[provider];
+  const release = await providerMutex.acquire(lockKey);
 
   try {
     const endpoint = `${MANAGEMENT_BASE_URL}${PROVIDER_ENDPOINT[provider]}`;
@@ -403,6 +444,8 @@ export async function removeKeyByAdmin(
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during key removal",
     };
+  } finally {
+    release();
   }
 }
 

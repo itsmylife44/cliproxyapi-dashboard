@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 
 const PROVIDERS = {
   CLAUDE: "claude",
@@ -133,13 +134,9 @@ export async function POST(request: NextRequest) {
 
    const beforeAuthFiles = await fetchAuthFiles();
    const beforeNames = new Set((beforeAuthFiles || []).map((file) => file.name));
-   console.log("[OAuth DEBUG] beforeNames:", Array.from(beforeNames));
 
    try {
-     console.log("[OAuth DEBUG] provider:", provider, "userId:", session.userId);
-     
      const response = await fetch(callbackTarget.toString(), { method: "GET" });
-     console.log("[OAuth DEBUG] fetch response.status:", response.status, "response.ok:", response.ok);
 
      if (response.ok) {
        // Poll for new auth files (CLIProxyAPI creates them asynchronously after callback)
@@ -150,69 +147,53 @@ export async function POST(request: NextRequest) {
        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
 
-         const afterAuthFiles = await fetchAuthFiles();
-         console.log(
-           "[OAuth DEBUG] attempt",
-           attempt,
-           "afterAuthFiles:",
-           afterAuthFiles?.map((f) => ({ name: f.name, provider: f.provider, type: f.type }))
-         );
+          const afterAuthFiles = await fetchAuthFiles();
 
-         if (afterAuthFiles) {
+          if (afterAuthFiles) {
            candidateFiles = afterAuthFiles.filter((file) => {
              const fileProvider = file.provider || file.type;
              const providerMatches = !fileProvider || fileProvider === provider;
-             const isNew = !beforeNames.has(file.name);
-             console.log(
-               "[OAuth DEBUG] attempt",
-               attempt,
-               "filter check - file.name:",
-               file.name,
-               "isNew:",
-               isNew,
-               "fileProvider:",
-               fileProvider,
-               "providerMatches:",
-               providerMatches
-             );
-             return isNew && providerMatches;
+              const isNew = !beforeNames.has(file.name);
+              return isNew && providerMatches;
            });
          }
 
-         if (candidateFiles.length > 0) {
-           console.log("[OAuth DEBUG] found new auth files on attempt", attempt);
-           break;
+          if (candidateFiles.length > 0) {
+            break;
          }
        }
 
-       if (candidateFiles.length === 0) {
-         console.warn("[OAuth DEBUG] no new auth files found after", MAX_RETRIES, "retries");
-       }
+        if (candidateFiles.length === 0) {
+          console.warn("OAuth callback: no new auth files detected after polling");
+        }
 
-       console.log("[OAuth DEBUG] candidateFiles count:", candidateFiles.length);
-
-       for (const file of candidateFiles) {
-         const existingOwnership = await prisma.providerOAuthOwnership.findUnique({
-           where: { accountName: file.name },
-           select: { id: true },
-         });
-         console.log("[OAuth DEBUG] file.name:", file.name, "existingOwnership found:", !!existingOwnership);
-
-         if (!existingOwnership) {
-           await prisma.providerOAuthOwnership.create({
-             data: {
-               userId: session.userId,
-               provider,
-               accountName: file.name,
-               accountEmail: file.email || null,
-             },
-           });
-           console.log("[OAuth DEBUG] created ownership for file:", file.name);
-         }
-       }
-     } else {
-       console.log("[OAuth DEBUG] response.ok is false, skipping ownership creation block");
-     }
+        // Try to atomically claim exactly ONE new file
+        // Uses Prisma unique constraint on accountName as the race guard
+        let claimed = false;
+        for (const file of candidateFiles) {
+          if (claimed) break;
+          try {
+            await prisma.providerOAuthOwnership.create({
+              data: {
+                userId: session.userId,
+                provider,
+                accountName: file.name,
+                accountEmail: file.email || null,
+              },
+            });
+            claimed = true;
+          } catch (e) {
+            // P2002 = another user already claimed this account - try next
+            if (
+              e instanceof Prisma.PrismaClientKnownRequestError &&
+              e.code === "P2002"
+            ) {
+              continue;
+            }
+            throw e; // Re-throw unexpected errors
+          }
+        }
+      }
 
     const payload: OAuthCallbackResponse = { status: response.status };
 

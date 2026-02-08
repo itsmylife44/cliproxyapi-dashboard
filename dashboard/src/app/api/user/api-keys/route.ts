@@ -23,6 +23,8 @@ interface CreateApiKeyResponse {
   key: string;
   name: string;
   createdAt: string;
+  syncStatus: "ok" | "failed";
+  syncMessage?: string;
 }
 
 function maskApiKey(key: string): string {
@@ -122,15 +124,18 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    syncKeysToCliProxyApi().catch((error) => {
-      console.error("Background sync failed after API key creation:", error);
-    });
+    const syncResult = await syncKeysToCliProxyApi();
+    if (!syncResult.ok) {
+      console.error("Sync failed after API key creation:", syncResult.error);
+    }
 
     const response: CreateApiKeyResponse = {
       id: apiKey.id,
       key: apiKey.key,
       name: apiKey.name,
       createdAt: apiKey.createdAt.toISOString(),
+      syncStatus: syncResult.ok ? "ok" : "failed",
+      syncMessage: syncResult.ok ? undefined : "Backend sync pending - key created but may not work immediately",
     };
 
     return NextResponse.json(response, { status: 201 });
@@ -183,11 +188,16 @@ export async function DELETE(request: NextRequest) {
       where: { id },
     });
 
-    syncKeysToCliProxyApi().catch((error) => {
-      console.error("Background sync failed after API key deletion:", error);
-    });
+    const syncResult = await syncKeysToCliProxyApi();
+    if (!syncResult.ok) {
+      console.error("Sync failed after API key deletion:", syncResult.error);
+    }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      syncStatus: syncResult.ok ? "ok" : "failed",
+      syncMessage: syncResult.ok ? undefined : "Backend sync pending - key deleted but may still work temporarily",
+    });
   } catch (error) {
     console.error("Failed to delete API key:", error);
     return NextResponse.json(

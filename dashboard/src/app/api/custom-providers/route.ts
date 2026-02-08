@@ -130,6 +130,9 @@ export async function POST(request: NextRequest) {
     const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
     const secretKey = process.env.MANAGEMENT_API_KEY;
 
+    let syncStatus: "ok" | "failed" = "ok";
+    let syncMessage: string | undefined;
+
     if (secretKey) {
       try {
         const getRes = await fetch(`${managementUrl}/openai-compatibility`, {
@@ -155,7 +158,7 @@ export async function POST(request: NextRequest) {
 
           const newList = [...currentList, newEntry];
 
-          await fetch(`${managementUrl}/openai-compatibility`, {
+          const putRes = await fetch(`${managementUrl}/openai-compatibility`, {
             method: "PUT",
             headers: { 
               "Content-Type": "application/json",
@@ -163,13 +166,28 @@ export async function POST(request: NextRequest) {
             },
             body: JSON.stringify(newList)
           });
+
+          if (!putRes.ok) {
+            syncStatus = "failed";
+            syncMessage = "Backend sync failed - provider created but may not work immediately";
+            console.error("Failed to sync custom provider to Management API: HTTP", putRes.status);
+          }
+        } else {
+          syncStatus = "failed";
+          syncMessage = "Backend sync failed - provider created but may not work immediately";
+          console.error("Failed to fetch current config from Management API: HTTP", getRes.status);
         }
       } catch (syncError) {
+        syncStatus = "failed";
+        syncMessage = "Backend sync failed - provider created but may not work immediately";
         console.error("Failed to sync custom provider to Management API:", syncError);
       }
+    } else {
+      syncStatus = "failed";
+      syncMessage = "Backend sync unavailable - management API key not configured";
     }
 
-    return NextResponse.json({ provider }, { status: 201 });
+    return NextResponse.json({ provider, syncStatus, syncMessage }, { status: 201 });
 
   } catch (error) {
     if (error instanceof z.ZodError) {

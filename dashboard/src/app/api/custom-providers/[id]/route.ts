@@ -119,6 +119,9 @@ export async function PATCH(
     const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
     const secretKey = process.env.MANAGEMENT_API_KEY;
 
+    let syncStatus: "ok" | "failed" = "ok";
+    let syncMessage: string | undefined;
+
     if (secretKey) {
       try {
         const getRes = await fetch(`${managementUrl}/openai-compatibility`, {
@@ -159,7 +162,7 @@ export async function PATCH(
               entry.name === provider.providerId ? updatedEntry : entry
             );
 
-            await fetch(`${managementUrl}/openai-compatibility`, {
+            const putRes = await fetch(`${managementUrl}/openai-compatibility`, {
               method: "PUT",
               headers: { 
                 "Content-Type": "application/json",
@@ -167,14 +170,33 @@ export async function PATCH(
               },
               body: JSON.stringify(newList)
             });
+
+            if (!putRes.ok) {
+              syncStatus = "failed";
+              syncMessage = "Backend sync failed - provider updated but changes may not apply immediately";
+              console.error("Failed to sync updated custom provider to Management API: HTTP", putRes.status);
+            }
+          } else {
+            syncStatus = "failed";
+            syncMessage = "Backend sync failed - could not retrieve API key for update";
+            console.error("Failed to sync updated custom provider: no API key available");
           }
+        } else {
+          syncStatus = "failed";
+          syncMessage = "Backend sync failed - provider updated but changes may not apply immediately";
+          console.error("Failed to fetch current config from Management API: HTTP", getRes.status);
         }
       } catch (syncError) {
+        syncStatus = "failed";
+        syncMessage = "Backend sync failed - provider updated but changes may not apply immediately";
         console.error("Failed to sync updated custom provider to Management API:", syncError);
       }
+    } else {
+      syncStatus = "failed";
+      syncMessage = "Backend sync unavailable - management API key not configured";
     }
 
-    return NextResponse.json({ provider });
+    return NextResponse.json({ provider, syncStatus, syncMessage });
 
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -218,6 +240,9 @@ export async function DELETE(
     const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
     const secretKey = process.env.MANAGEMENT_API_KEY;
 
+    let syncStatus: "ok" | "failed" = "ok";
+    let syncMessage: string | undefined;
+
     if (secretKey) {
       try {
         const getRes = await fetch(`${managementUrl}/openai-compatibility`, {
@@ -233,7 +258,7 @@ export async function DELETE(
 
           const newList = currentList.filter((entry) => entry.name !== existingProvider.providerId);
 
-          await fetch(`${managementUrl}/openai-compatibility`, {
+          const putRes = await fetch(`${managementUrl}/openai-compatibility`, {
             method: "PUT",
             headers: { 
               "Content-Type": "application/json",
@@ -241,13 +266,28 @@ export async function DELETE(
             },
             body: JSON.stringify(newList)
           });
+
+          if (!putRes.ok) {
+            syncStatus = "failed";
+            syncMessage = "Backend sync failed - provider deleted but may still work temporarily";
+            console.error("Failed to sync deleted custom provider to Management API: HTTP", putRes.status);
+          }
+        } else {
+          syncStatus = "failed";
+          syncMessage = "Backend sync failed - provider deleted but may still work temporarily";
+          console.error("Failed to fetch current config from Management API: HTTP", getRes.status);
         }
       } catch (syncError) {
+        syncStatus = "failed";
+        syncMessage = "Backend sync failed - provider deleted but may still work temporarily";
         console.error("Failed to sync deleted custom provider to Management API:", syncError);
       }
+    } else {
+      syncStatus = "failed";
+      syncMessage = "Backend sync unavailable - management API key not configured";
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, syncStatus, syncMessage });
 
   } catch (error) {
     console.error("DELETE /api/custom-providers/[id] error:", error);

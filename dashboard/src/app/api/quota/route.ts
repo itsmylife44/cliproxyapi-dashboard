@@ -228,9 +228,67 @@ async function fetchAntigravityQuota(
   }
 }
 
+interface CodexRateWindow {
+  limit_window_seconds?: number;
+  used_percent?: number;
+  reset_at?: number;
+}
+
+interface CodexWhamUsageResponse {
+  rate_limit?: {
+    primary_window?: CodexRateWindow;
+    secondary_window?: CodexRateWindow;
+  };
+  plan_type?: string;
+}
+
+function formatWindowLabel(seconds: number): string {
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m Window`;
+  return `${Math.round(minutes / 60)}h Window`;
+}
+
+function parseCodexQuota(data: CodexWhamUsageResponse): QuotaGroup[] {
+  const groups: QuotaGroup[] = [];
+
+  const windows: Array<{ key: string; label: string; window: CodexRateWindow | undefined }> = [
+    { key: "primary", label: "Primary", window: data.rate_limit?.primary_window },
+    { key: "secondary", label: "Secondary", window: data.rate_limit?.secondary_window },
+  ];
+
+  for (const { key, window } of windows) {
+    if (!window || window.used_percent === undefined) continue;
+
+    const remainingFraction = Math.max(0, Math.min(1, 1 - window.used_percent / 100));
+    const resetTime = window.reset_at
+      ? new Date(window.reset_at * 1000).toISOString()
+      : null;
+    const label = window.limit_window_seconds
+      ? formatWindowLabel(window.limit_window_seconds)
+      : `${key.charAt(0).toUpperCase() + key.slice(1)} Window`;
+
+    groups.push({
+      id: `${key}-window`,
+      label,
+      remainingFraction,
+      resetTime,
+      models: [
+        {
+          id: `${key}-window`,
+          displayName: label,
+          remainingFraction,
+          resetTime,
+        },
+      ],
+    });
+  }
+
+  return groups;
+}
+
 async function fetchCodexQuota(
   authIndex: string
-): Promise<unknown | { error: string }> {
+): Promise<QuotaGroup[] | { error: string }> {
   try {
     const response = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/api-call`, {
       method: "POST",
@@ -253,7 +311,9 @@ async function fetchCodexQuota(
       return { error: `API call failed: ${response.status}` };
     }
 
-    const apiCallResult = (await response.json()) as ApiCallResponse | unknown;
+    const apiCallResult = (await response.json()) as ApiCallResponse | CodexWhamUsageResponse;
+
+    let parsedBody: unknown;
 
     if (
       typeof apiCallResult === "object" &&
@@ -268,16 +328,25 @@ async function fetchCodexQuota(
 
       if (typeof typedResult.body === "string") {
         try {
-          return JSON.parse(typedResult.body);
+          parsedBody = JSON.parse(typedResult.body);
         } catch {
-          return typedResult.body;
+          return { error: "Invalid provider response body" };
         }
+      } else {
+        parsedBody = typedResult.body;
       }
-
-      return typedResult.body;
+    } else {
+      parsedBody = apiCallResult;
     }
 
-    return apiCallResult;
+    const data = parsedBody as CodexWhamUsageResponse;
+    const groups = parseCodexQuota(data);
+
+    if (groups.length === 0) {
+      return { error: "No Codex quota windows found" };
+    }
+
+    return groups;
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unknown error",
@@ -665,13 +734,13 @@ export async function GET(_request: NextRequest) {
       if (account.provider === "codex") {
         const result = await fetchCodexQuota(account.auth_index);
         
-        if (result && typeof result === "object" && "error" in result) {
+        if ("error" in result) {
           return {
             auth_index: account.auth_index,
             provider: account.provider,
             email: account.email,
             supported: true,
-            error: String(result.error),
+            error: result.error,
           };
         }
 
@@ -680,7 +749,7 @@ export async function GET(_request: NextRequest) {
           provider: account.provider,
           email: account.email,
           supported: true,
-          raw: result,
+          groups: result,
         };
       }
 

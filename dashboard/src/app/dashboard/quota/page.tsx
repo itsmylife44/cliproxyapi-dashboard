@@ -195,6 +195,7 @@ export default function QuotaPage() {
   const [loading, setLoading] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState<ProviderType>(PROVIDERS.ALL);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchQuota = async () => {
@@ -246,6 +247,10 @@ export default function QuotaPage() {
   const toggleGroup = (accountId: string, groupId: string) => {
     const key = `${accountId}-${groupId}`;
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleCard = (accountId: string) => {
+    setExpandedCards((prev) => ({ ...prev, [accountId]: !prev[accountId] }));
   };
 
   const fetchQuota = async () => {
@@ -442,7 +447,7 @@ export default function QuotaPage() {
             </div>
           )}
 
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             {filteredAccounts.map((account) => {
               const statusBadge = account.supported
                 ? account.error
@@ -450,105 +455,145 @@ export default function QuotaPage() {
                   : { label: "ACTIVE", class: "bg-emerald-500/20 border-emerald-400/40 text-emerald-300" }
                 : { label: "NOT SUPPORTED", class: "bg-amber-500/20 border-amber-400/40 text-amber-300" };
 
+              const accountScore = account.groups ? calcAccountScore(account.groups) : 0;
+              const isCardExpanded = expandedCards[account.auth_index];
+
               return (
                 <Card key={account.auth_index}>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-semibold text-white capitalize">
+                  <CardContent className="p-0">
+                    <button
+                      type="button"
+                      onClick={() => toggleCard(account.auth_index)}
+                      className="w-full text-left p-3 flex items-center justify-between gap-3 hover:bg-white/5 transition-colors duration-150"
+                    >
+                      <div className="flex-1 min-w-0 flex items-center gap-3">
+                        <h3 className="text-sm font-semibold text-white capitalize flex-shrink-0">
                           {account.provider}
                         </h3>
-                        <p className="text-sm text-white/60 mt-0.5 truncate">{maskEmail(account.email)}</p>
-                      </div>
-                      <span
-                        className={cn(
-                          "backdrop-blur-xl px-2.5 py-1 text-xs font-medium rounded-lg border flex-shrink-0",
-                          statusBadge.class
-                        )}
-                      >
-                        {statusBadge.label}
-                      </span>
-                    </div>
-
-                    {account.error && (
-                      <div className="backdrop-blur-xl bg-red-500/10 border border-red-400/30 rounded-lg p-3">
-                        <div className="text-sm text-red-200">{account.error}</div>
-                      </div>
-                    )}
-
-                    {!account.supported && !account.error && (
-                      <div className="backdrop-blur-xl bg-amber-500/10 border border-amber-400/30 rounded-lg p-3">
-                        <div className="text-sm text-amber-200">
-                          Quota monitoring not available for this provider
-                        </div>
-                      </div>
-                    )}
-
-                    {account.groups && account.groups.length > 0 && (
-                      <div className="space-y-3">
-                        {account.groups.map((group) => {
-                          const isExpanded = expandedGroups[`${account.auth_index}-${group.id}`];
-                          
-                          return (
-                            <div key={group.id} className="backdrop-blur-xl bg-white/5 rounded-lg p-3 border border-white/10">
-                              <button
-                                type="button"
-                                className="w-full text-left"
-                                onClick={() => toggleGroup(account.auth_index, group.id)}
-                              >
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-sm font-semibold text-white">{group.label}</span>
-                                  <span className="text-xs font-medium text-white/70">
-                                    {Math.round(group.remainingFraction * 100)}%
-                                  </span>
-                                </div>
-                                
-                                <div className="w-full h-2.5 rounded-full bg-white/10 overflow-hidden">
-                                  <div
-                                    className={cn(
-                                      "h-full transition-all duration-300",
-                                      getProgressColor(group.remainingFraction)
-                                    )}
-                                    style={{ width: `${group.remainingFraction * 100}%` }}
-                                  />
-                                </div>
-                                
-                                <div className="mt-1.5 text-xs text-white/50">
-                                  {formatRelativeTime(group.resetTime)}
-                                </div>
-                              </button>
-
-                              {isExpanded && group.models.length > 0 && (
-                                <div className="mt-3 pt-3 space-y-2.5 border-t border-white/10">
-                                  {group.models.map((model) => (
-                                    <div key={model.id}>
-                                      <div className="flex items-center justify-between mb-1">
-                                        <span className="text-xs text-white/70 font-medium">{model.displayName}</span>
-                                        <span className="text-xs text-white/50">
-                                          {Math.round(model.remainingFraction * 100)}%
-                                        </span>
-                                      </div>
-                                      
-                                      <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                        <div
-                                          className={cn(
-                                            "h-full transition-all duration-300",
-                                            getProgressColor(model.remainingFraction)
-                                          )}
-                                          style={{ width: `${model.remainingFraction * 100}%` }}
-                                        />
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                        <p className="text-xs text-white/60 truncate flex-shrink">{maskEmail(account.email)}</p>
+                        
+                        {account.supported && !account.error && account.groups && account.groups.length > 0 && (
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <div className="w-20 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                              <div
+                                className={cn(
+                                  "h-full transition-all duration-300",
+                                  getProgressColor(accountScore)
+                                )}
+                                style={{ width: `${accountScore * 100}%` }}
+                              />
                             </div>
-                          );
-                        })}
+                            <span className="text-xs font-medium text-white/70">
+                              {Math.round(accountScore * 100)}%
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span
+                          className={cn(
+                            "backdrop-blur-xl px-2 py-0.5 text-xs font-medium rounded-md border",
+                            statusBadge.class
+                          )}
+                        >
+                          {statusBadge.label}
+                        </span>
+                        <svg
+                          className={cn(
+                            "w-4 h-4 text-white/40 transition-transform duration-200",
+                            isCardExpanded && "rotate-180"
+                          )}
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    </button>
+
+                    {isCardExpanded && (
+                      <div className="border-t border-white/10 p-3 space-y-2">
+                        {account.error && (
+                          <div className="backdrop-blur-xl bg-red-500/10 border border-red-400/30 rounded-lg p-2">
+                            <div className="text-xs text-red-200">{account.error}</div>
+                          </div>
+                        )}
+
+                        {!account.supported && !account.error && (
+                          <div className="backdrop-blur-xl bg-amber-500/10 border border-amber-400/30 rounded-lg p-2">
+                            <div className="text-xs text-amber-200">
+                              Quota monitoring not available for this provider
+                            </div>
+                          </div>
+                        )}
+
+                        {account.groups && account.groups.length > 0 && (
+                          <div className="space-y-2">
+                            {account.groups.map((group) => {
+                              const isExpanded = expandedGroups[`${account.auth_index}-${group.id}`];
+                              
+                              return (
+                                <div key={group.id} className="backdrop-blur-xl bg-white/5 rounded-lg p-2 border border-white/10">
+                                  <button
+                                    type="button"
+                                    className="w-full text-left"
+                                    onClick={() => toggleGroup(account.auth_index, group.id)}
+                                  >
+                                    <div className="flex items-center justify-between mb-1.5">
+                                      <span className="text-xs font-semibold text-white">{group.label}</span>
+                                      <span className="text-xs font-medium text-white/70">
+                                        {Math.round(group.remainingFraction * 100)}%
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                                      <div
+                                        className={cn(
+                                          "h-full transition-all duration-300",
+                                          getProgressColor(group.remainingFraction)
+                                        )}
+                                        style={{ width: `${group.remainingFraction * 100}%` }}
+                                      />
+                                    </div>
+                                    
+                                    <div className="mt-1 text-xs text-white/50">
+                                      {formatRelativeTime(group.resetTime)}
+                                    </div>
+                                  </button>
+
+                                  {isExpanded && group.models.length > 0 && (
+                                    <div className="mt-2 pt-2 space-y-2 border-t border-white/10">
+                                      {group.models.map((model) => (
+                                        <div key={model.id}>
+                                          <div className="flex items-center justify-between mb-0.5">
+                                            <span className="text-xs text-white/70 font-medium">{model.displayName}</span>
+                                            <span className="text-xs text-white/50">
+                                              {Math.round(model.remainingFraction * 100)}%
+                                            </span>
+                                          </div>
+                                          
+                                          <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                            <div
+                                              className={cn(
+                                                "h-full transition-all duration-300",
+                                                getProgressColor(model.remainingFraction)
+                                              )}
+                                              style={{ width: `${model.remainingFraction * 100}%` }}
+                                            />
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
-
-
                   </CardContent>
                 </Card>
               );

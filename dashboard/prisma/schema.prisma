@@ -68,6 +68,7 @@ model SyncToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([tokenHash])
   @@map("sync_tokens")
 }
 

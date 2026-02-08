@@ -39,18 +39,19 @@ client.connect()
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
     -- Sync tokens table
-    CREATE TABLE IF NOT EXISTS "sync_tokens" (
-      "id" TEXT NOT NULL,
-      "userId" TEXT NOT NULL,
-      "name" TEXT NOT NULL DEFAULT 'Default',
-      "tokenHash" TEXT NOT NULL,
-      "syncApiKey" TEXT,
-      "lastUsedAt" TIMESTAMP(3),
-      "revokedAt" TIMESTAMP(3),
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "sync_tokens_pkey" PRIMARY KEY ("id")
-    );
-    CREATE INDEX IF NOT EXISTS "sync_tokens_userId_idx" ON "sync_tokens"("userId");
+     CREATE TABLE IF NOT EXISTS "sync_tokens" (
+       "id" TEXT NOT NULL,
+       "userId" TEXT NOT NULL,
+       "name" TEXT NOT NULL DEFAULT 'Default',
+       "tokenHash" TEXT NOT NULL,
+       "syncApiKey" TEXT,
+       "lastUsedAt" TIMESTAMP(3),
+       "revokedAt" TIMESTAMP(3),
+       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       CONSTRAINT "sync_tokens_pkey" PRIMARY KEY ("id")
+     );
+     CREATE INDEX IF NOT EXISTS "sync_tokens_userId_idx" ON "sync_tokens"("userId");
+     CREATE INDEX IF NOT EXISTS "sync_tokens_tokenHash_idx" ON "sync_tokens"("tokenHash");
     DO $$ BEGIN
       ALTER TABLE "sync_tokens" ADD CONSTRAINT "sync_tokens_userId_fkey"
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;

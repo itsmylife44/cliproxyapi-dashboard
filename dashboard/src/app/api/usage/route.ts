@@ -20,9 +20,9 @@ interface ApiKeyLabel {
 
 interface ApiUsageEntry {
   total_requests: number;
-  success_count: number;
-  failure_count: number;
   total_tokens: number;
+  models?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 interface RawUsageResponse {
@@ -42,12 +42,8 @@ function isApiUsageEntry(value: unknown): value is ApiUsageEntry {
     typeof value === "object" &&
     value !== null &&
     "total_requests" in value &&
-    "success_count" in value &&
-    "failure_count" in value &&
     "total_tokens" in value &&
     typeof (value as ApiUsageEntry).total_requests === "number" &&
-    typeof (value as ApiUsageEntry).success_count === "number" &&
-    typeof (value as ApiUsageEntry).failure_count === "number" &&
     typeof (value as ApiUsageEntry).total_tokens === "number"
   );
 }
@@ -77,14 +73,14 @@ function isRawUsageResponse(value: unknown): value is RawUsageResponse {
     return false;
   }
 
-  const apis = obj.apis as Record<string, unknown>;
-  for (const apiValue of Object.values(apis)) {
-    if (!isApiUsageEntry(apiValue)) {
-      return false;
-    }
-  }
+   const apis = obj.apis as Record<string, unknown>;
+   for (const apiValue of Object.values(apis)) {
+     if (!isApiUsageEntry(apiValue)) {
+       return false;
+     }
+   }
 
-  return true;
+   return true;
 }
 
 function buildKeyLookup(
@@ -119,7 +115,7 @@ function sanitizeApiKeys(
       sanitizedLabel = `Unknown Key ${unknownCounter}`;
     }
 
-    sanitized[sanitizedLabel] = entry;
+    sanitized[sanitizedLabel] = { ...entry };
   }
 
   return sanitized;
@@ -211,23 +207,8 @@ export async function GET(request: NextRequest) {
     const sanitizedApis = sanitizeApiKeys(rawData.apis, keyLookup);
 
     const sanitizedResponse = {
-      total_requests: rawData.total_requests,
-      success_count: rawData.success_count,
-      failure_count: rawData.failure_count,
-      total_tokens: rawData.total_tokens,
+      ...rawData,
       apis: sanitizedApis,
-      ...(rawData.requests_by_day && {
-        requests_by_day: rawData.requests_by_day,
-      }),
-      ...(rawData.requests_by_hour && {
-        requests_by_hour: rawData.requests_by_hour,
-      }),
-      ...(rawData.tokens_by_day && {
-        tokens_by_day: rawData.tokens_by_day,
-      }),
-      ...(rawData.tokens_by_hour && {
-        tokens_by_hour: rawData.tokens_by_hour,
-      }),
     };
 
     return NextResponse.json(sanitizedResponse);

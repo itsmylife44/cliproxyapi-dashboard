@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateSyncTokenFromHeader } from "@/lib/auth/sync-token";
 import { generateConfigBundle } from "@/lib/config-sync/generate-bundle";
+import { prisma } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   const authResult = await validateSyncTokenFromHeader(request);
@@ -12,6 +13,15 @@ export async function GET(request: NextRequest) {
 
   try {
     const bundle = await generateConfigBundle(authResult.userId, authResult.syncApiKey);
+
+    // Fire-and-forget: update lastSyncedAt for active subscribers
+    void prisma.configSubscription.updateMany({
+      where: {
+        userId: authResult.userId,
+        isActive: true,
+      },
+      data: { lastSyncedAt: new Date() },
+    });
 
     return NextResponse.json({
       version: bundle.version,

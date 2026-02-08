@@ -1,27 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
-
-function CopyIcon({ className }: { className?: string }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-    </svg>
-  );
-}
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
-}
 
 export default function SetupPage() {
   const [username, setUsername] = useState("");
@@ -29,26 +11,7 @@ export default function SetupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const router = useRouter();
-
-  const copyToClipboard = useCallback(async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,8 +44,9 @@ export default function SetupPage() {
         return;
       }
 
-      setApiKey(data.apiKey);
-      setLoading(false);
+      // Account created successfully, redirect to dashboard
+      router.push("/dashboard");
+      router.refresh();
     } catch {
       setError("Network error. Please try again.");
       setLoading(false);
@@ -172,40 +136,6 @@ export default function SetupPage() {
           CLIProxyAPI Management Dashboard
         </p>
       </div>
-
-      <Modal isOpen={apiKey !== null} onClose={() => {}}>
-        <ModalHeader>
-          <ModalTitle>Your API Key</ModalTitle>
-        </ModalHeader>
-        <ModalContent>
-          <div className="space-y-4">
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 p-4 text-sm rounded-xl">
-              <div className="mb-2 font-medium text-white">Copy this key now</div>
-              <div className="relative group">
-                <div className="break-all backdrop-blur-xl bg-white/5 border border-white/20 p-3 pr-12 text-xs text-white font-mono rounded-lg">
-                  {apiKey}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => apiKey && copyToClipboard(apiKey)}
-                  className="absolute top-2.5 right-2.5 p-1.5 rounded-md border border-white/15 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/90 transition-all duration-200 active:scale-95"
-                  title="Copy API key"
-                >
-                  {copied ? <CheckIcon /> : <CopyIcon />}
-                </button>
-              </div>
-            </div>
-            <div className="border-l-4 border-yellow-400/60 bg-yellow-500/20 backdrop-blur-xl p-3 text-sm rounded-r-xl">
-              <span className="text-white/90">This key will only be shown once. Store it securely.</span>
-            </div>
-          </div>
-        </ModalContent>
-        <ModalFooter>
-          <Button onClick={() => { router.push("/dashboard"); router.refresh(); }}>
-            I have saved it
-          </Button>
-        </ModalFooter>
-      </Modal>
     </div>
   );
 }

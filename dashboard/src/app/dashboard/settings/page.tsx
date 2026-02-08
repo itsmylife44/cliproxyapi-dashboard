@@ -136,7 +136,7 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        showToast(data.error || "Failed to change password", "error");
+        showToast(data.error?.message ?? data.error ?? "Failed to change password", "error");
         setLoading(false);
         return;
       }

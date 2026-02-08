@@ -12,6 +12,7 @@ import {
   isValidUsernameFormat,
 } from "@/lib/auth/validation";
 import { prisma } from "@/lib/db";
+import { ERROR_CODE, Errors, apiError } from "@/lib/errors";
 
 const MAX_SETUP_RETRIES = 5;
 
@@ -41,17 +42,11 @@ export async function POST(request: NextRequest) {
     const { username, password } = body;
 
     if (!username || !password) {
-      return NextResponse.json(
-        { error: "Username and password are required" },
-        { status: 400 }
-      );
+      return Errors.missingFields(["username", "password"]);
     }
 
     if (typeof username !== "string" || typeof password !== "string") {
-      return NextResponse.json(
-        { error: "Invalid input types" },
-        { status: 400 }
-      );
+      return Errors.validation("Invalid input types");
     }
 
     if (
@@ -59,11 +54,10 @@ export async function POST(request: NextRequest) {
       username.length > USERNAME_MAX_LENGTH ||
       !isValidUsernameFormat(username)
     ) {
-      return NextResponse.json(
-        {
-          error: `Username must be ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} chars and contain only letters, numbers, _ or -`,
-        },
-        { status: 400 }
+      return apiError(
+        ERROR_CODE.VALIDATION_INVALID_FORMAT,
+        `Username must be ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} chars and contain only letters, numbers, _ or -`,
+        400
       );
     }
 
@@ -71,11 +65,10 @@ export async function POST(request: NextRequest) {
       password.length < PASSWORD_MIN_LENGTH ||
       password.length > PASSWORD_MAX_LENGTH
     ) {
-      return NextResponse.json(
-        {
-          error: `Password must be between ${PASSWORD_MIN_LENGTH} and ${PASSWORD_MAX_LENGTH} characters`,
-        },
-        { status: 400 }
+      return apiError(
+        ERROR_CODE.VALIDATION_INVALID_FORMAT,
+        `Password must be between ${PASSWORD_MIN_LENGTH} and ${PASSWORD_MAX_LENGTH} characters`,
+        400
       );
     }
 
@@ -113,9 +106,10 @@ export async function POST(request: NextRequest) {
         break;
       } catch (error) {
         if (error instanceof SetupAlreadyCompletedError) {
-          return NextResponse.json(
-            { error: "Setup already completed" },
-            { status: 400 }
+          return apiError(
+            ERROR_CODE.SETUP_ALREADY_COMPLETED,
+            "Setup already completed",
+            400
           );
         }
 
@@ -154,26 +148,18 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Setup error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return Errors.internal("Setup error", error);
   }
 }
 
 export async function GET() {
   try {
     const userCount = await getUserCount();
-    
+
     return NextResponse.json({
-      setupRequired: userCount === 0,
+      data: { setupRequired: userCount === 0 },
     });
   } catch (error) {
-    console.error("Setup check error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return Errors.internal("Setup check error", error);
   }
 }

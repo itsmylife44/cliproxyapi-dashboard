@@ -11,8 +11,6 @@ import {
   isValidUsernameFormat,
 } from "@/lib/auth/validation";
 import { prisma } from "@/lib/db";
-import { generateApiKey } from "@/lib/api-keys/generate";
-import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,33 +67,12 @@ export async function POST(request: NextRequest) {
 
      const passwordHash = await hashPassword(password);
      
-     // Create user and API key in single transaction
-     const { user, apiKey } = await prisma.$transaction(async (tx) => {
-       // Create first user as admin
-       const newUser = await tx.user.create({
-         data: {
-           username,
-           passwordHash,
-           isAdmin: true, // First user is admin
-         },
-       });
-
-       // Generate and create API key
-       const generatedKey = generateApiKey();
-       await tx.userApiKey.create({
-         data: {
-           userId: newUser.id,
-           key: generatedKey,
-           name: "Initial Setup Key",
-         },
-       });
-
-       return { user: newUser, apiKey: generatedKey };
-     });
-
-     // Sync keys to CLIProxyAPI (fire and forget, don't block response)
-     syncKeysToCliProxyApi().catch((err) => {
-       console.error("Failed to sync keys after setup:", err);
+     const user = await prisma.user.create({
+       data: {
+         username,
+         passwordHash,
+         isAdmin: true,
+       },
      });
 
      const token = await signToken({
@@ -115,9 +92,8 @@ export async function POST(request: NextRequest) {
            id: user.id,
            username: user.username,
          },
-         apiKey,
-       },
-       { status: 201 }
+        },
+        { status: 201 }
      );
   } catch (error) {
     console.error("Setup error:", error);

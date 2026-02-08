@@ -269,6 +269,7 @@ function ModelBadge({
 }
 
 export function OhMyOpenCodeConfigGenerator({
+   apiKeys,
    config,
    oauthAccounts,
    modelsDevData,
@@ -648,6 +649,25 @@ export function OhMyOpenCodeConfigGenerator({
      }
      setExpandedHookGroups(newExpanded);
    };
+
+  if (apiKeys.length === 0) {
+    return (
+      <div className="space-y-3">
+        <div className="border-l-4 border-amber-400/60 backdrop-blur-xl bg-amber-500/10 p-4 rounded-r-xl">
+          <div className="text-sm font-medium text-white mb-1">API Key Required</div>
+          <p className="text-sm text-white/70">
+            Create an API key to generate your configuration.
+          </p>
+          <a
+            href="/dashboard/api-keys"
+            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-500/20 border border-violet-400/30 text-violet-300 text-sm font-medium hover:bg-violet-500/30 transition-colors"
+          >
+            Create API Key →
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   if (!hasModels || !ohMyConfig) {
     return (

@@ -10,8 +10,6 @@ import {
   isValidUsernameFormat,
 } from "@/lib/auth/validation";
 import { prisma } from "@/lib/db";
-import { generateApiKey } from "@/lib/api-keys/generate";
-import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
 import { cascadeDeleteUserProviders } from "@/lib/providers/cascade";
 
 async function requireAdmin(
@@ -149,29 +147,12 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await hashPassword(password);
 
-    const { user, apiKey } = await prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          username,
-          passwordHash,
-          isAdmin: isAdmin ?? false,
-        },
-      });
-
-      const generatedKey = generateApiKey();
-      await tx.userApiKey.create({
-        data: {
-          userId: newUser.id,
-          key: generatedKey,
-          name: "Auto-provisioned Key",
-        },
-      });
-
-      return { user: newUser, apiKey: generatedKey };
-    });
-
-    syncKeysToCliProxyApi().catch((err) => {
-      console.error("Failed to sync keys after user creation:", err);
+    const user = await prisma.user.create({
+      data: {
+        username,
+        passwordHash,
+        isAdmin: isAdmin ?? false,
+      },
     });
 
     return NextResponse.json(
@@ -183,7 +164,6 @@ export async function POST(request: NextRequest) {
           isAdmin: user.isAdmin,
           createdAt: user.createdAt.toISOString(),
         },
-        apiKeyProvisioned: true,
       },
       { status: 201 }
     );

@@ -240,7 +240,7 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
     resolvedSyncApiKey = syncKeyRecord?.key || null;
   }
 
-  const apiKey = resolvedSyncApiKey || userApiKey?.key || (apiKeyStrings.length > 0 ? apiKeyStrings[0] : "your-api-key");
+  const apiKey = resolvedSyncApiKey || userApiKey?.key || (apiKeyStrings.length > 0 ? apiKeyStrings[0] : "no-api-key-create-one-in-dashboard");
 
   // 9. Build opencode config object (replicate generateConfigJson but return object)
   const modelEntries: Record<string, Record<string, unknown>> = {};

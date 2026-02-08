@@ -87,6 +87,40 @@ a:focus-visible {
   border-radius: 8px;
 }
 
+/* Native select dropdown options should stay readable across browsers */
+select option,
+select optgroup {
+  color: #111827;
+  background-color: #ffffff;
+}
+
+select option[class*="text-white"],
+select optgroup[class*="text-white"] {
+  color: #111827;
+}
+
+select option:disabled {
+  color: #6b7280;
+}
+
+/* Native date/time controls in dark UI */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"] {
+  color-scheme: dark;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="week"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0.85);
+  opacity: 0.9;
+}
+
 /* Glassmorphic utility classes */
 .glass-card {
   background: rgba(255, 255, 255, 0.07);

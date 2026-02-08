@@ -315,6 +315,10 @@ export const CATEGORY_ROLES = {
 
 interface ModelAssignment {
   model: string;
+  variant?: string;
+  temperature?: number;
+  prompt_append?: string;
+  description?: string;
 }
 
 export function enrichTierForRole(tier: readonly string[], modelsDevData: import("./shared").ModelsDevData | null): string[] {
@@ -335,30 +339,40 @@ export function buildOhMyOpenCodeConfig(
 ): Record<string, unknown> | null {
   const agents: Record<string, ModelAssignment> = {};
   for (const [agent, role] of Object.entries(AGENT_ROLES)) {
-    const overrideModel = overrides?.agents?.[agent];
+    const agentOverride = overrides?.agents?.[agent];
+    const overrideModel = agentOverride?.model;
+    let entry: ModelAssignment;
     if (overrideModel && availableModels.includes(overrideModel)) {
-      agents[agent] = { model: `cliproxyapi/${overrideModel}` };
+      entry = { model: `cliproxyapi/${overrideModel}` };
     } else {
       const enrichedTier = enrichTierForRole(role.tier, modelsDevData);
       const model = pickBestModel(availableModels, enrichedTier);
-      if (model) {
-        agents[agent] = { model: `cliproxyapi/${model}` };
-      }
+      if (!model) continue;
+      entry = { model: `cliproxyapi/${model}` };
     }
+    if (agentOverride?.variant) entry.variant = agentOverride.variant;
+    if (agentOverride?.temperature !== undefined) entry.temperature = agentOverride.temperature;
+    if (agentOverride?.prompt_append) entry.prompt_append = agentOverride.prompt_append;
+    agents[agent] = entry;
   }
 
   const categories: Record<string, ModelAssignment> = {};
   for (const [category, role] of Object.entries(CATEGORY_ROLES)) {
-    const overrideModel = overrides?.categories?.[category];
+    const categoryOverride = overrides?.categories?.[category];
+    const overrideModel = categoryOverride?.model;
+    let entry: ModelAssignment;
     if (overrideModel && availableModels.includes(overrideModel)) {
-      categories[category] = { model: `cliproxyapi/${overrideModel}` };
+      entry = { model: `cliproxyapi/${overrideModel}` };
     } else {
       const enrichedTier = enrichTierForRole(role.tier, modelsDevData);
       const model = pickBestModel(availableModels, enrichedTier);
-      if (model) {
-        categories[category] = { model: `cliproxyapi/${model}` };
-      }
+      if (!model) continue;
+      entry = { model: `cliproxyapi/${model}` };
     }
+    if (categoryOverride?.variant) entry.variant = categoryOverride.variant;
+    if (categoryOverride?.temperature !== undefined) entry.temperature = categoryOverride.temperature;
+    if (categoryOverride?.description) entry.description = categoryOverride.description;
+    categories[category] = entry;
   }
 
   if (Object.keys(agents).length === 0 && Object.keys(categories).length === 0) {

@@ -122,7 +122,7 @@ export async function GET() {
     const availableModels = allModelIds.filter((id) => !excludedModels.has(id));
 
     const defaults = computeDefaults(availableModels, modelsDevData);
-    const overrides = (agentOverride?.overrides ?? {}) as OhMyOpenCodeFullConfig;
+    const overrides = agentOverride?.overrides ? validateFullConfig(agentOverride.overrides) : {} as OhMyOpenCodeFullConfig;
 
     return NextResponse.json({
       overrides,

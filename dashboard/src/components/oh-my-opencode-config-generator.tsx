@@ -20,6 +20,8 @@ import {
 } from "@/lib/config-generators/oh-my-opencode";
 import {
   type OhMyOpenCodeFullConfig,
+  type AgentConfigEntry,
+  type CategoryConfigEntry,
   type TmuxConfig,
   type BackgroundTaskConfig,
   type SisyphusAgentConfig,
@@ -55,6 +57,14 @@ function downloadFile(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+interface ExtraFieldConfig {
+  variant?: string;
+  temperature?: number;
+  thirdField?: string;
+  thirdFieldKey: string;
+  thirdFieldPlaceholder: string;
+}
+
 function ModelBadge({
   name,
   model,
@@ -63,6 +73,8 @@ function ModelBadge({
   availableModels,
   modelsDevData,
   onSelect,
+  extraFields,
+  onFieldChange,
 }: {
   name: string;
   model: string;
@@ -71,13 +83,20 @@ function ModelBadge({
   availableModels: string[];
   modelsDevData: ModelsDevData | null;
   onSelect: (value: string | undefined) => void;
+  extraFields?: ExtraFieldConfig;
+  onFieldChange?: (field: string, value: string | number | undefined) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [openUp, setOpenUp] = useState(false);
+  const [showExtra, setShowExtra] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const hasExtraValues = extraFields && (
+    extraFields.variant || extraFields.temperature !== undefined || extraFields.thirdField
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -111,31 +130,82 @@ function ModelBadge({
     : availableModels;
 
   return (
-    <div className="relative inline-block" ref={ref}>
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={handleOpen}
-        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-mono cursor-pointer transition-all hover:bg-white/10 ${
-          isOverride
-            ? "bg-violet-500/10 border border-violet-400/20 text-white/80"
-            : "bg-white/5 border border-white/10 text-white/70"
-        }`}
-      >
-        <span className="text-pink-300">{name}</span>
-        <span className="text-white/30">&rarr;</span>
-        <span>{model}</span>
-        {meta?.reasoning && (
-          <span className="px-1 py-0.5 rounded bg-violet-500/15 text-violet-300/80 text-[10px] leading-none font-sans font-medium">
-            reasoning
-          </span>
+    <div className="relative" ref={ref}>
+      <div className="inline-flex items-center gap-0">
+        <button
+          ref={btnRef}
+          type="button"
+          onClick={handleOpen}
+          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-l-lg text-xs font-mono cursor-pointer transition-all hover:bg-white/10 ${
+            isOverride
+              ? "bg-violet-500/10 border border-violet-400/20 text-white/80"
+              : "bg-white/5 border border-white/10 text-white/70"
+          }`}
+        >
+          <span className="text-pink-300">{name}</span>
+          <span className="text-white/30">&rarr;</span>
+          <span>{model}</span>
+          {meta?.reasoning && (
+            <span className="px-1 py-0.5 rounded bg-violet-500/15 text-violet-300/80 text-[10px] leading-none font-sans font-medium">
+              reasoning
+            </span>
+          )}
+          {meta?.context && (
+            <span className="text-white/30 text-[10px] font-sans">
+              {formatContextWindow(meta.context)}
+            </span>
+          )}
+          {hasExtraValues && (
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400/80" />
+          )}
+        </button>
+        {onFieldChange && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setShowExtra(!showExtra); }}
+            className={`px-1.5 py-1 border border-l-0 rounded-r-lg text-[10px] transition-all cursor-pointer ${
+              showExtra || hasExtraValues
+                ? "bg-amber-500/10 border-amber-400/20 text-amber-300/80 hover:bg-amber-500/20"
+                : "bg-white/5 border-white/10 text-white/30 hover:text-white/60 hover:bg-white/10"
+            }`}
+            title="Configure variant, temperature, and more"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+            </svg>
+          </button>
         )}
-        {meta?.context && (
-          <span className="text-white/30 text-[10px] font-sans">
-            {formatContextWindow(meta.context)}
-          </span>
-        )}
-      </button>
+      </div>
+
+      {showExtra && onFieldChange && (
+        <div className="flex items-center gap-1.5 mt-1 ml-0.5">
+          <input
+            type="text"
+            placeholder="variant"
+            value={extraFields?.variant ?? ""}
+            onChange={(e) => onFieldChange("variant", e.target.value || undefined)}
+            className="w-16 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
+          />
+          <input
+            type="number"
+            placeholder="temp"
+            step={0.1}
+            min={0}
+            max={2}
+            value={extraFields?.temperature ?? ""}
+            onChange={(e) => onFieldChange("temperature", e.target.value ? Number(e.target.value) : undefined)}
+            className="w-14 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
+          />
+          <input
+            type="text"
+            placeholder={extraFields?.thirdFieldPlaceholder ?? ""}
+            value={extraFields?.thirdField ?? ""}
+            onChange={(e) => onFieldChange(extraFields?.thirdFieldKey ?? "", e.target.value || undefined)}
+            className="flex-1 min-w-0 w-24 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
+          />
+        </div>
+      )}
 
       {open && (
         <div
@@ -269,24 +339,74 @@ export function OhMyOpenCodeConfigGenerator({
      }
    }, [showToast]);
 
-  const handleAgentChange = (agent: string, value: string | undefined) => {
+  const handleAgentModelChange = (agent: string, model: string | undefined) => {
+    const existing = overrides.agents?.[agent] ?? {};
     const newAgents = { ...overrides.agents };
-    if (value === undefined) {
-      delete newAgents[agent];
+    if (model === undefined) {
+      const { model: _, ...rest } = existing;
+      if (Object.keys(rest).length === 0) {
+        delete newAgents[agent];
+      } else {
+        newAgents[agent] = rest;
+      }
     } else {
-      newAgents[agent] = value;
+      newAgents[agent] = { ...existing, model };
     }
     const newOverrides = { ...overrides, agents: newAgents };
     setOverrides(newOverrides);
     saveOverrides(newOverrides);
   };
 
-  const handleCategoryChange = (category: string, value: string | undefined) => {
-    const newCategories = { ...overrides.categories };
-    if (value === undefined) {
-      delete newCategories[category];
+  const handleAgentFieldChange = (agent: string, field: string, value: string | number | undefined) => {
+    const existing = overrides.agents?.[agent] ?? {};
+    const newAgents = { ...overrides.agents };
+    if (value === undefined || value === "") {
+      const updated = { ...existing } as Record<string, unknown>;
+      delete updated[field];
+      if (Object.keys(updated).length === 0) {
+        delete newAgents[agent];
+      } else {
+        newAgents[agent] = updated as AgentConfigEntry;
+      }
     } else {
-      newCategories[category] = value;
+      newAgents[agent] = { ...existing, [field]: value } as AgentConfigEntry;
+    }
+    const newOverrides = { ...overrides, agents: newAgents };
+    setOverrides(newOverrides);
+    saveOverrides(newOverrides);
+  };
+
+  const handleCategoryModelChange = (category: string, model: string | undefined) => {
+    const existing = overrides.categories?.[category] ?? {};
+    const newCategories = { ...overrides.categories };
+    if (model === undefined) {
+      const { model: _, ...rest } = existing;
+      if (Object.keys(rest).length === 0) {
+        delete newCategories[category];
+      } else {
+        newCategories[category] = rest;
+      }
+    } else {
+      newCategories[category] = { ...existing, model };
+    }
+    const newOverrides = { ...overrides, categories: newCategories };
+    setOverrides(newOverrides);
+    saveOverrides(newOverrides);
+  };
+
+  const handleCategoryFieldChange = (category: string, field: string, value: string | number | undefined) => {
+    const existing = overrides.categories?.[category] ?? {};
+    const newCategories = { ...overrides.categories };
+    if (value === undefined || value === "") {
+      const updated = { ...existing } as Record<string, unknown>;
+      delete updated[field];
+      if (Object.keys(updated).length === 0) {
+        delete newCategories[category];
+      } else {
+        newCategories[category] = updated as CategoryConfigEntry;
+      }
+    } else {
+      newCategories[category] = { ...existing, [field]: value } as CategoryConfigEntry;
     }
     const newOverrides = { ...overrides, categories: newCategories };
     setOverrides(newOverrides);
@@ -550,30 +670,32 @@ export function OhMyOpenCodeConfigGenerator({
     );
   }
 
-  const agentAssignments: { name: string; model: string; meta: ModelMeta | null; isOverride: boolean }[] = [];
+  const agentAssignments: { name: string; model: string; meta: ModelMeta | null; isOverride: boolean; config: AgentConfigEntry }[] = [];
   for (const [agent, role] of Object.entries(AGENT_ROLES)) {
-    const overrideModel = overrides?.agents?.[agent];
+    const agentConfig = overrides?.agents?.[agent] ?? {};
+    const overrideModel = agentConfig.model;
     if (overrideModel && availableModelIds.includes(overrideModel)) {
-      agentAssignments.push({ name: agent, model: overrideModel, meta: getModelMeta(overrideModel, modelsDevData), isOverride: true });
+      agentAssignments.push({ name: agent, model: overrideModel, meta: getModelMeta(overrideModel, modelsDevData), isOverride: true, config: agentConfig });
     } else {
       const enrichedTier = enrichTierForRole(role.tier, modelsDevData);
       const model = pickBestModel(availableModelIds, enrichedTier);
       if (model) {
-        agentAssignments.push({ name: agent, model, meta: getModelMeta(model, modelsDevData), isOverride: false });
+        agentAssignments.push({ name: agent, model, meta: getModelMeta(model, modelsDevData), isOverride: !!overrideModel, config: agentConfig });
       }
     }
   }
 
-  const categoryAssignments: { name: string; model: string; meta: ModelMeta | null; isOverride: boolean }[] = [];
+  const categoryAssignments: { name: string; model: string; meta: ModelMeta | null; isOverride: boolean; config: CategoryConfigEntry }[] = [];
   for (const [category, role] of Object.entries(CATEGORY_ROLES)) {
-    const overrideModel = overrides?.categories?.[category];
+    const categoryConfig = overrides?.categories?.[category] ?? {};
+    const overrideModel = categoryConfig.model;
     if (overrideModel && availableModelIds.includes(overrideModel)) {
-      categoryAssignments.push({ name: category, model: overrideModel, meta: getModelMeta(overrideModel, modelsDevData), isOverride: true });
+      categoryAssignments.push({ name: category, model: overrideModel, meta: getModelMeta(overrideModel, modelsDevData), isOverride: true, config: categoryConfig });
     } else {
       const enrichedTier = enrichTierForRole(role.tier, modelsDevData);
       const model = pickBestModel(availableModelIds, enrichedTier);
       if (model) {
-        categoryAssignments.push({ name: category, model, meta: getModelMeta(model, modelsDevData), isOverride: false });
+        categoryAssignments.push({ name: category, model, meta: getModelMeta(model, modelsDevData), isOverride: !!overrideModel, config: categoryConfig });
       }
     }
   }
@@ -591,7 +713,7 @@ export function OhMyOpenCodeConfigGenerator({
              Agent Assignments
            </p>
            <div className="flex flex-wrap gap-1.5">
-             {agentAssignments.map(({ name, model, meta, isOverride }) => (
+             {agentAssignments.map(({ name, model, meta, isOverride, config }) => (
                <ModelBadge
                  key={name}
                  name={name}
@@ -600,7 +722,15 @@ export function OhMyOpenCodeConfigGenerator({
                  isOverride={isOverride}
                  availableModels={availableModelIds}
                  modelsDevData={modelsDevData}
-                 onSelect={(value) => handleAgentChange(name, value)}
+                 onSelect={(value) => handleAgentModelChange(name, value)}
+                 extraFields={{
+                   variant: config.variant,
+                   temperature: config.temperature,
+                   thirdField: config.prompt_append,
+                   thirdFieldKey: "prompt_append",
+                   thirdFieldPlaceholder: "prompt append",
+                 }}
+                 onFieldChange={(field, value) => handleAgentFieldChange(name, field, value)}
                />
              ))}
            </div>
@@ -613,7 +743,7 @@ export function OhMyOpenCodeConfigGenerator({
               Category Assignments
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {categoryAssignments.map(({ name, model, meta, isOverride }) => (
+              {categoryAssignments.map(({ name, model, meta, isOverride, config }) => (
                 <ModelBadge
                   key={name}
                   name={name}
@@ -622,7 +752,15 @@ export function OhMyOpenCodeConfigGenerator({
                   isOverride={isOverride}
                   availableModels={availableModelIds}
                   modelsDevData={modelsDevData}
-                  onSelect={(value) => handleCategoryChange(name, value)}
+                  onSelect={(value) => handleCategoryModelChange(name, value)}
+                  extraFields={{
+                    variant: config.variant,
+                    temperature: config.temperature,
+                    thirdField: config.description,
+                    thirdFieldKey: "description",
+                    thirdFieldPlaceholder: "description",
+                  }}
+                  onFieldChange={(field, value) => handleCategoryFieldChange(name, field, value)}
                 />
               ))}
             </div>

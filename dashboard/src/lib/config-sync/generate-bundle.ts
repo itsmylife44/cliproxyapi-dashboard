@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { buildAvailableModels, getProxyUrl, type McpEntry } from "@/lib/config-generators/opencode";
 import { buildAvailableModelIds, buildOhMyOpenCodeConfig } from "@/lib/config-generators/oh-my-opencode";
-import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
+import { validateFullConfig, type OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import type { ConfigData, OAuthAccount, ModelsDevData } from "@/lib/config-generators/shared";
 
 interface ManagementFetchParams {
@@ -40,13 +40,13 @@ function getFrozenOverrides(frozenConfig: unknown): OhMyOpenCodeFullConfig | und
   if (!isRecord(frozenConfig)) return undefined;
   
   if (isRecord(frozenConfig.overrides)) {
-    return frozenConfig.overrides as OhMyOpenCodeFullConfig;
+    return validateFullConfig(frozenConfig.overrides);
   }
   
   if (isRecord(frozenConfig.agentModelOverride)) {
     const agentOverride = frozenConfig.agentModelOverride;
     if (isRecord(agentOverride.overrides)) {
-      return agentOverride.overrides as OhMyOpenCodeFullConfig;
+      return validateFullConfig(agentOverride.overrides);
     }
   }
   
@@ -186,8 +186,8 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
     effectiveExcludedModels = modelPreference?.excludedModels || [];
   }
   
-  const subscriberOverrides = agentOverride?.overrides as OhMyOpenCodeFullConfig | undefined;
-  const publisherOverrides = publisherAgentOverride?.overrides as OhMyOpenCodeFullConfig | undefined;
+  const subscriberOverrides = agentOverride?.overrides ? validateFullConfig(agentOverride.overrides) : undefined;
+  const publisherOverrides = publisherAgentOverride?.overrides ? validateFullConfig(publisherAgentOverride.overrides) : undefined;
   
   // 10. Determine base overrides (frozen, live publisher, or subscriber)
   let baseOverrides: OhMyOpenCodeFullConfig | undefined;

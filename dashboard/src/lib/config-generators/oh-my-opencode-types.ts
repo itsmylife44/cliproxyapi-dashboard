@@ -47,9 +47,23 @@ export interface LspEntry {
   extensions?: string[];
 }
 
+export interface AgentConfigEntry {
+  model?: string;
+  variant?: string;
+  temperature?: number;
+  prompt_append?: string;
+}
+
+export interface CategoryConfigEntry {
+  model?: string;
+  variant?: string;
+  temperature?: number;
+  description?: string;
+}
+
 export interface OhMyOpenCodeFullConfig {
-  agents?: Record<string, string>;
-  categories?: Record<string, string>;
+  agents?: Record<string, AgentConfigEntry>;
+  categories?: Record<string, CategoryConfigEntry>;
   disabled_agents?: string[];
   disabled_skills?: string[];
   disabled_hooks?: string[];
@@ -182,7 +196,27 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
 
   // Validate agents override mapping
   if (obj.agents && typeof obj.agents === "object" && !Array.isArray(obj.agents)) {
-    result.agents = obj.agents as Record<string, string>;
+    const agentsObj = obj.agents as Record<string, unknown>;
+    const validatedAgents: Record<string, AgentConfigEntry> = {};
+    for (const [key, value] of Object.entries(agentsObj)) {
+      if (typeof value === "string") {
+        // Backward compatibility: string value → { model: value }
+        validatedAgents[key] = { model: value };
+      } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+        const entryObj = value as Record<string, unknown>;
+        const entry: AgentConfigEntry = {};
+        if (typeof entryObj.model === "string") entry.model = entryObj.model;
+        if (typeof entryObj.variant === "string") entry.variant = entryObj.variant;
+        if (typeof entryObj.temperature === "number" && entryObj.temperature >= 0 && entryObj.temperature <= 2) {
+          entry.temperature = entryObj.temperature;
+        }
+        if (typeof entryObj.prompt_append === "string") entry.prompt_append = entryObj.prompt_append;
+        validatedAgents[key] = entry;
+      }
+    }
+    if (Object.keys(validatedAgents).length > 0) {
+      result.agents = validatedAgents;
+    }
   }
 
   // Validate categories override mapping
@@ -191,7 +225,27 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
     typeof obj.categories === "object" &&
     !Array.isArray(obj.categories)
   ) {
-    result.categories = obj.categories as Record<string, string>;
+    const categoriesObj = obj.categories as Record<string, unknown>;
+    const validatedCategories: Record<string, CategoryConfigEntry> = {};
+    for (const [key, value] of Object.entries(categoriesObj)) {
+      if (typeof value === "string") {
+        // Backward compatibility: string value → { model: value }
+        validatedCategories[key] = { model: value };
+      } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+        const entryObj = value as Record<string, unknown>;
+        const entry: CategoryConfigEntry = {};
+        if (typeof entryObj.model === "string") entry.model = entryObj.model;
+        if (typeof entryObj.variant === "string") entry.variant = entryObj.variant;
+        if (typeof entryObj.temperature === "number" && entryObj.temperature >= 0 && entryObj.temperature <= 2) {
+          entry.temperature = entryObj.temperature;
+        }
+        if (typeof entryObj.description === "string") entry.description = entryObj.description;
+        validatedCategories[key] = entry;
+      }
+    }
+    if (Object.keys(validatedCategories).length > 0) {
+      result.categories = validatedCategories;
+    }
   }
 
   // Validate disabled_agents array

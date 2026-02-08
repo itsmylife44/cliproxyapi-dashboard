@@ -3,6 +3,7 @@ import { getUserCount } from "@/lib/auth/dal";
 import { hashPassword } from "@/lib/auth/password";
 import { signToken } from "@/lib/auth/jwt";
 import { createSession } from "@/lib/auth/session";
+import { Prisma } from "@/generated/prisma/client";
 import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
@@ -12,17 +13,30 @@ import {
 } from "@/lib/auth/validation";
 import { prisma } from "@/lib/db";
 
+const MAX_SETUP_RETRIES = 5;
+
+class SetupAlreadyCompletedError extends Error {
+  constructor() {
+    super("Setup already completed");
+    this.name = "SetupAlreadyCompletedError";
+  }
+}
+
+function isSerializationConflict(error: unknown): error is Prisma.PrismaClientKnownRequestError {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2034"
+  );
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const userCount = await getUserCount();
-    
-    if (userCount > 0) {
-      return NextResponse.json(
-        { error: "Setup already completed" },
-        { status: 400 }
-      );
-    }
-
     const body = await request.json();
     const { username, password } = body;
 
@@ -65,36 +79,80 @@ export async function POST(request: NextRequest) {
       );
     }
 
-     const passwordHash = await hashPassword(password);
-     
-     const user = await prisma.user.create({
-       data: {
-         username,
-         passwordHash,
-         isAdmin: true,
-       },
-     });
+    const passwordHash = await hashPassword(password);
 
-     const token = await signToken({
-       userId: user.id,
-       username: user.username,
-     });
+    let user: { id: string; username: string } | null = null;
 
-     await createSession(
-       { userId: user.id, username: user.username },
-       token
-     );
+    for (let attempt = 0; attempt < MAX_SETUP_RETRIES; attempt++) {
+      try {
+        user = await prisma.$transaction(
+          async (tx) => {
+            const userCount = await tx.user.count();
 
-     return NextResponse.json(
-       {
-         success: true,
-         user: {
-           id: user.id,
-           username: user.username,
-         },
+            if (userCount > 0) {
+              throw new SetupAlreadyCompletedError();
+            }
+
+            return tx.user.create({
+              data: {
+                username,
+                passwordHash,
+                isAdmin: true,
+              },
+              select: {
+                id: true,
+                username: true,
+              },
+            });
+          },
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          }
+        );
+
+        break;
+      } catch (error) {
+        if (error instanceof SetupAlreadyCompletedError) {
+          return NextResponse.json(
+            { error: "Setup already completed" },
+            { status: 400 }
+          );
+        }
+
+        if (isSerializationConflict(error) && attempt < MAX_SETUP_RETRIES - 1) {
+          const backoffMs = Math.pow(2, attempt) * 100;
+          await wait(backoffMs);
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    if (!user) {
+      throw new Error("Setup failed after maximum retries");
+    }
+
+    const token = await signToken({
+      userId: user.id,
+      username: user.username,
+    });
+
+    await createSession(
+      { userId: user.id, username: user.username },
+      token
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        user: {
+          id: user.id,
+          username: user.username,
         },
-        { status: 201 }
-     );
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Setup error:", error);
     return NextResponse.json(

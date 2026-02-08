@@ -26,6 +26,7 @@ model User {
   configSubscription  ConfigSubscription?
   providerKeys        ProviderKeyOwnership[]
   providerOAuth       ProviderOAuthOwnership[]
+  customProviders     CustomProvider[]
 
   @@map("users")
 }
@@ -153,4 +154,49 @@ model SystemSetting {
   value String
 
   @@map("system_settings")
+}
+
+model CustomProvider {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String                    // Display name (e.g., "OpenRouter")
+  providerId  String   @unique          // URL-safe ID (e.g., "openrouter-custom")
+  baseUrl     String                    // https://openrouter.ai/api/v1
+  apiKeyHash  String                    // Hashed for identification
+  prefix      String?                   // Optional routing prefix
+  proxyUrl    String?                   // Optional SOCKS5/HTTP proxy
+  headers     Json?     @default("{}")  // Custom headers JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  models CustomProviderModel[]
+  excludedModels CustomProviderExcludedModel[]
+  
+  @@index([userId])
+  @@index([providerId])
+  @@map("custom_providers")
+}
+
+model CustomProviderModel {
+  id               String @id @default(cuid())
+  customProviderId String
+  upstreamName     String // e.g., "moonshotai/kimi-k2:free"
+  alias            String // e.g., "kimi-k2"
+  
+  customProvider CustomProvider @relation(fields: [customProviderId], references: [id], onDelete: Cascade)
+  
+  @@index([customProviderId])
+  @@map("custom_provider_models")
+}
+
+model CustomProviderExcludedModel {
+  id               String @id @default(cuid())
+  customProviderId String
+  pattern          String // e.g., "gpt-4", "claude-*"
+  
+  customProvider CustomProvider @relation(fields: [customProviderId], references: [id], onDelete: Cascade)
+  
+  @@index([customProviderId])
+  @@map("custom_provider_excluded_models")
 }

@@ -9,11 +9,7 @@ import { prisma } from "@/lib/db";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 
 function getProxyUrl(): string {
-  const url = process.env.API_URL;
-  if (!url) {
-    throw new Error("API_URL environment variable is not set. Please configure it in your .env file.");
-  }
-  return url;
+  return process.env.API_URL || "";
 }
 
 interface ManagementFetchParams {

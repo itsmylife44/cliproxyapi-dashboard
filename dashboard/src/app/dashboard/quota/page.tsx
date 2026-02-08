@@ -83,6 +83,113 @@ function getProgressColor(fraction: number): string {
   return "bg-red-500";
 }
 
+// Classify a group as short-term (≤6h) or long-term based on its id/label
+function isShortTermGroup(group: QuotaGroup): boolean {
+  const id = group.id.toLowerCase();
+  const label = group.label.toLowerCase();
+  // Short-term: 5h session, primary window, 5m window, requests, tokens
+  return (
+    id.includes("five-hour") ||
+    id.includes("primary") ||
+    id.includes("request") ||
+    id.includes("token") ||
+    label.includes("5h") ||
+    label.includes("5m") ||
+    label.includes("request") ||
+    label.includes("token")
+  );
+}
+
+// Calculate a single account's effective availability score
+// Short-term windows weighted 0.7, long-term 0.3
+// Takes the MIN within each category (bottleneck model)
+function calcAccountScore(groups: QuotaGroup[]): number {
+  if (groups.length === 0) return 0;
+
+  const shortTerm = groups.filter(isShortTermGroup);
+  const longTerm = groups.filter((g) => !isShortTermGroup(g));
+
+  const shortMin =
+    shortTerm.length > 0
+      ? Math.min(...shortTerm.map((g) => g.remainingFraction))
+      : null;
+  const longMin =
+    longTerm.length > 0
+      ? Math.min(...longTerm.map((g) => g.remainingFraction))
+      : null;
+
+  // If only one category exists, use it fully
+  if (shortMin !== null && longMin !== null) {
+    return shortMin * 0.7 + longMin * 0.3;
+  }
+  return shortMin ?? longMin ?? 0;
+}
+
+interface ProviderSummary {
+  provider: string;
+  totalAccounts: number;
+  healthyAccounts: number;
+  errorAccounts: number;
+  effectiveCapacity: number; // 0-1
+  accountScores: number[]; // individual account scores for display
+}
+
+// Calculate provider-level effective capacity
+// Uses: 1 - product(1 - score_i) = probability at least one account is available
+// Error accounts contribute score=0
+function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
+  const totalAccounts = accounts.length;
+  const healthy = accounts.filter(
+    (a) => a.supported && !a.error && a.groups && a.groups.length > 0
+  );
+  const errorAccounts = totalAccounts - healthy.length;
+
+  const accountScores = accounts.map((a) => {
+    if (!a.supported || a.error || !a.groups || a.groups.length === 0) return 0;
+    return calcAccountScore(a.groups);
+  });
+
+  let effectiveCapacity: number;
+  if (accountScores.length === 0) {
+    effectiveCapacity = 0;
+  } else if (accountScores.length === 1) {
+    effectiveCapacity = accountScores[0];
+  } else {
+    // 1 - product(1 - score_i): probability at least one is available
+    const exhaustedProduct = accountScores.reduce(
+      (prod, score) => prod * (1 - score),
+      1
+    );
+    effectiveCapacity = 1 - exhaustedProduct;
+  }
+
+  return {
+    provider: accounts[0]?.provider ?? "unknown",
+    totalAccounts,
+    healthyAccounts: healthy.length,
+    errorAccounts,
+    effectiveCapacity: Math.max(0, Math.min(1, effectiveCapacity)),
+    accountScores,
+  };
+}
+
+function calcOverallCapacity(summaries: ProviderSummary[]): number {
+  const withAccounts = summaries.filter((s) => s.totalAccounts > 0);
+  if (withAccounts.length === 0) return 0;
+
+  // Weight each provider by number of healthy accounts
+  const totalHealthy = withAccounts.reduce(
+    (sum, s) => sum + s.healthyAccounts,
+    0
+  );
+  if (totalHealthy === 0) return 0;
+
+  return withAccounts.reduce(
+    (sum, s) => sum + s.effectiveCapacity * (s.healthyAccounts / totalHealthy),
+    0
+  );
+}
+
 export default function QuotaPage() {
   const [quotaData, setQuotaData] = useState<QuotaResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -118,13 +225,23 @@ export default function QuotaPage() {
   }) || [];
 
   const activeAccounts = quotaData?.accounts.filter((account) => account.supported && !account.error).length || 0;
-  
-  const allGroups = quotaData?.accounts.flatMap((account) => account.groups || []) || [];
-  const avgQuota = allGroups.length > 0
-    ? allGroups.reduce((sum, group) => sum + group.remainingFraction, 0) / allGroups.length
-    : 0;
-  
-  const lowQuotaCount = allGroups.filter((group) => group.remainingFraction < 0.2).length;
+
+  const providerGroups = new Map<string, QuotaAccount[]>();
+  for (const account of quotaData?.accounts ?? []) {
+    const existing = providerGroups.get(account.provider) ?? [];
+    existing.push(account);
+    providerGroups.set(account.provider, existing);
+  }
+
+  const providerSummaries = Array.from(providerGroups.entries())
+    .map(([, accounts]) => calcProviderSummary(accounts))
+    .sort((a, b) => b.healthyAccounts - a.healthyAccounts);
+
+  const overallCapacity = calcOverallCapacity(providerSummaries);
+
+  const lowCapacityCount = providerSummaries.filter(
+    (s) => s.effectiveCapacity < 0.2 && s.totalAccounts > 0
+  ).length;
 
   const toggleGroup = (accountId: string, groupId: string) => {
     const key = `${accountId}-${groupId}`;
@@ -228,15 +345,29 @@ export default function QuotaPage() {
 
             <div className="backdrop-blur-2xl glass-card rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0">
-                  <span className="text-emerald-400 text-lg" aria-hidden="true">&#9650;</span>
+                <div className={cn(
+                  "w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0",
+                  overallCapacity > 0.6
+                    ? "bg-emerald-500/20 border-emerald-400/30"
+                    : overallCapacity > 0.2
+                      ? "bg-amber-500/20 border-amber-400/30"
+                      : "bg-red-500/20 border-red-400/30"
+                )}>
+                  <span className={cn(
+                    "text-lg",
+                    overallCapacity > 0.6
+                      ? "text-emerald-400"
+                      : overallCapacity > 0.2
+                        ? "text-amber-400"
+                        : "text-red-400"
+                  )} aria-hidden="true">&#9650;</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Average Quota</div>
+                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Overall Capacity</div>
                   <div className="text-2xl font-bold text-white mt-0.5">
-                    {Math.round(avgQuota * 100)}%
+                    {Math.round(overallCapacity * 100)}%
                   </div>
-                  <div className="text-xs text-white/60 mt-0.5">Remaining capacity</div>
+                  <div className="text-xs text-white/60 mt-0.5">Weighted effective capacity</div>
                 </div>
               </div>
             </div>
@@ -247,13 +378,69 @@ export default function QuotaPage() {
                   <span className="text-red-400 text-lg" aria-hidden="true">&#9888;</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Low Quota</div>
-                  <div className="text-2xl font-bold text-white mt-0.5">{lowQuotaCount}</div>
-                  <div className="text-xs text-white/60 mt-0.5">Groups below 20%</div>
+                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Low Capacity</div>
+                  <div className="text-2xl font-bold text-white mt-0.5">{lowCapacityCount}</div>
+                  <div className="text-xs text-white/60 mt-0.5">Providers below 20%</div>
                 </div>
               </div>
             </div>
           </div>
+
+          {providerSummaries.length > 0 && (
+            <div className="space-y-2">
+              <h2 className="text-sm font-semibold text-white/70 uppercase tracking-wider">
+                Provider Capacity
+              </h2>
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {providerSummaries.map((summary) => {
+                  const pct = Math.round(summary.effectiveCapacity * 100);
+                  return (
+                    <div
+                      key={summary.provider}
+                      className="backdrop-blur-2xl glass-card rounded-xl p-3 shadow-[0_4px_16px_rgba(0,0,0,0.3)]"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-white capitalize">
+                          {summary.provider}
+                        </span>
+                        <span className={cn(
+                          "text-sm font-bold",
+                          summary.effectiveCapacity > 0.6
+                            ? "text-emerald-400"
+                            : summary.effectiveCapacity > 0.2
+                              ? "text-amber-400"
+                              : "text-red-400"
+                        )}>
+                          {pct}%
+                        </span>
+                      </div>
+
+                      <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden mb-2">
+                        <div
+                          className={cn(
+                            "h-full transition-all duration-500",
+                            getProgressColor(summary.effectiveCapacity)
+                          )}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-white/50">
+                          {summary.healthyAccounts}/{summary.totalAccounts} accounts healthy
+                        </span>
+                        {summary.errorAccounts > 0 && (
+                          <span className="text-xs text-amber-400/80 flex items-center gap-0.5">
+                            &#9888; {summary.errorAccounts} error{summary.errorAccounts > 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
             {filteredAccounts.map((account) => {

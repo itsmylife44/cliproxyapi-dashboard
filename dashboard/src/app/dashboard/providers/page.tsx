@@ -31,6 +31,7 @@ interface KeyWithOwnership {
   ownerUsername: string | null;
   ownerUserId: string | null;
   isOwn: boolean;
+  name: string;
 }
 
 interface OAuthAccountWithOwnership {
@@ -256,6 +257,7 @@ export default function ProvidersPage() {
   const [maxKeysPerUser, setMaxKeysPerUser] = useState<number>(10);
   const [modalProvider, setModalProvider] = useState<ProviderId | null>(null);
   const [apiKey, setApiKey] = useState("");
+  const [keyName, setKeyName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { showToast } = useToast();
@@ -341,6 +343,7 @@ export default function ProvidersPage() {
 
   const resetForm = () => {
     setApiKey("");
+    setKeyName("");
   };
 
   const openModal = (providerId: ProviderId) => {
@@ -369,6 +372,7 @@ export default function ProvidersPage() {
         body: JSON.stringify({
           provider: modalProvider,
           apiKey: apiKey.trim(),
+          name: keyName.trim() || undefined,
         }),
       });
 
@@ -754,7 +758,10 @@ export default function ProvidersPage() {
                                   <div className="flex size-8 items-center justify-center rounded-lg bg-purple-500/20 text-xs font-bold text-purple-300 shrink-0">
                                     {idx + 1}
                                   </div>
-                                  <span className="font-mono text-sm text-white/90 shrink-0">{keyInfo.maskedKey}</span>
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="text-sm font-medium text-white/90 truncate">{keyInfo.name}</span>
+                                    <span className="font-mono text-xs text-white/50">{keyInfo.maskedKey}</span>
+                                  </div>
                                   {currentUser && (
                                     <OwnerBadge
                                       ownerUsername={keyInfo.ownerUsername}
@@ -1018,6 +1025,20 @@ export default function ProvidersPage() {
         </ModalHeader>
         <ModalContent>
           <div className="space-y-5">
+            <div>
+              <label htmlFor="key-name" className="mb-2 block text-sm font-semibold text-white">
+                Key Name
+              </label>
+              <Input
+                type="text"
+                name="key-name"
+                value={keyName}
+                onChange={setKeyName}
+                placeholder="e.g. My Claude Pro Key"
+                disabled={saving}
+              />
+              <p className="mt-1.5 text-xs text-white/50">Give your key a descriptive name for easy identification</p>
+            </div>
             <div>
               <label htmlFor="api-key" className="mb-2 block text-sm font-semibold text-white">
                 API Key <span className="text-red-400">*</span>

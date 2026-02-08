@@ -12,6 +12,7 @@ interface ContributeKeyResult {
   ok: boolean;
   keyHash?: string;
   keyIdentifier?: string;
+  name?: string;
   error?: string;
 }
 
@@ -27,6 +28,7 @@ interface KeyWithOwnership {
   ownerUsername: string | null;
   ownerUserId: string | null;
   isOwn: boolean;
+  name: string;
 }
 
 interface ListKeysResult {
@@ -89,7 +91,8 @@ function isOpenAICompatArray(
 export async function contributeKey(
   userId: string,
   provider: Provider,
-  apiKey: string
+  apiKey: string,
+  name?: string
 ): Promise<ContributeKeyResult> {
   if (!MANAGEMENT_API_KEY) {
     return { ok: false, error: "Management API key not configured" };
@@ -180,20 +183,22 @@ export async function contributeKey(
 
     const keyIdentifier = maskProviderKey(trimmedKey);
 
-    const ownership = await prisma.providerKeyOwnership.create({
-      data: {
-        userId,
-        provider,
-        keyIdentifier,
-        keyHash,
-      },
-    });
+     const ownership = await prisma.providerKeyOwnership.create({
+       data: {
+         userId,
+         provider,
+         keyIdentifier,
+         keyHash,
+         name: name || "Unnamed Key",
+       },
+     });
 
-    return {
-      ok: true,
-      keyHash: ownership.keyHash,
-      keyIdentifier: ownership.keyIdentifier,
-    };
+     return {
+       ok: true,
+       keyHash: ownership.keyHash,
+       keyIdentifier: ownership.keyIdentifier,
+       name: ownership.name,
+     };
   } catch (error) {
     console.error("contributeKey error:", error);
 
@@ -463,27 +468,33 @@ export async function listKeysWithOwnership(
 
     const keyHashes = apiKeys.map((key) => hashProviderKey(key));
 
-    const ownerships = await prisma.providerKeyOwnership.findMany({
-      where: { keyHash: { in: keyHashes }, provider },
-      include: { user: { select: { id: true, username: true } } },
-    });
+     const ownerships = await prisma.providerKeyOwnership.findMany({
+       where: { keyHash: { in: keyHashes }, provider },
+       select: { 
+         keyHash: true,
+         name: true,
+         userId: true,
+         user: { select: { id: true, username: true } }
+       },
+     });
 
     const ownershipMap = new Map(ownerships.map((o) => [o.keyHash, o]));
 
-    const keysWithOwnership: KeyWithOwnership[] = apiKeys.map((key, index) => {
-      const hash = hashProviderKey(key);
-      const ownership = ownershipMap.get(hash);
-      const isOwn = ownership?.userId === userId;
+     const keysWithOwnership: KeyWithOwnership[] = apiKeys.map((key, index) => {
+       const hash = hashProviderKey(key);
+       const ownership = ownershipMap.get(hash);
+       const isOwn = ownership?.userId === userId;
 
-      return {
-        keyHash: hash,
-        maskedKey: isOwn ? maskProviderKey(key) : `Key ${index + 1}`,
-        provider,
-        ownerUsername: isOwn ? ownership?.user.username || null : null,
-        ownerUserId: isOwn ? ownership?.user.id || null : null,
-        isOwn,
-      };
-    });
+       return {
+         keyHash: hash,
+         maskedKey: isOwn ? maskProviderKey(key) : `Key ${index + 1}`,
+         provider,
+         ownerUsername: isOwn ? ownership?.user.username || null : null,
+         ownerUserId: isOwn ? ownership?.user.id || null : null,
+         isOwn,
+         name: ownership?.name || "Unnamed Key",
+       };
+     });
 
     return { ok: true, keys: keysWithOwnership };
   } catch (error) {
@@ -572,20 +583,21 @@ export async function listOAuthWithOwnership(
 
     const ownershipMap = new Map(ownerships.map((o) => [o.accountName, o]));
 
-    const accountsWithOwnership: OAuthAccountWithOwnership[] = authFiles.map((file, index) => {
-      const ownership = ownershipMap.get(file.name);
-      const isOwn = ownership?.userId === userId;
+     const accountsWithOwnership: OAuthAccountWithOwnership[] = authFiles.map((file, index) => {
+       const ownership = ownershipMap.get(file.name);
+       const isOwn = ownership?.userId === userId;
+       const canSeeDetails = isOwn || isAdmin;
 
-      return {
-        id: file.id,
-        accountName: isOwn ? file.name : `Account ${index + 1}`,
-        accountEmail: isOwn ? file.email || null : null,
-        provider: file.provider || file.type || "unknown",
-        ownerUsername: isAdmin || isOwn ? ownership?.user.username || null : null,
-        ownerUserId: isAdmin || isOwn ? ownership?.user.id || null : null,
-        isOwn,
-      };
-    });
+       return {
+         id: canSeeDetails ? file.id : `account-${index + 1}`,
+         accountName: canSeeDetails ? file.name : `Account ${index + 1}`,
+         accountEmail: canSeeDetails ? file.email || null : null,
+         provider: file.provider || file.type || "unknown",
+         ownerUsername: canSeeDetails ? ownership?.user.username || null : null,
+         ownerUserId: canSeeDetails ? ownership?.user.id || null : null,
+         isOwn,
+       };
+     });
 
     return { ok: true, accounts: accountsWithOwnership };
   } catch (error) {

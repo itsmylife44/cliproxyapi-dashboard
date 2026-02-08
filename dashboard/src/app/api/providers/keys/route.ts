@@ -7,6 +7,7 @@ import { PROVIDER, type Provider } from "@/lib/providers/constants";
 interface ContributeKeyRequest {
   provider: string;
   apiKey: string;
+  name?: string;
 }
 
 function isContributeKeyRequest(body: unknown): body is ContributeKeyRequest {
@@ -16,6 +17,7 @@ function isContributeKeyRequest(body: unknown): body is ContributeKeyRequest {
 
   if (typeof obj.provider !== "string") return false;
   if (typeof obj.apiKey !== "string") return false;
+  if (obj.name !== undefined && typeof obj.name !== "string") return false;
 
   return true;
 }
@@ -85,25 +87,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await contributeKey(session.userId, body.provider, body.apiKey);
+     const result = await contributeKey(session.userId, body.provider, body.apiKey, body.name);
 
-    if (!result.ok) {
-      if (result.error?.includes("already contributed")) {
-        return NextResponse.json({ error: result.error }, { status: 409 });
-      }
-      if (result.error?.includes("limit reached")) {
-        return NextResponse.json({ error: result.error }, { status: 403 });
-      }
-      return NextResponse.json({ error: result.error }, { status: 500 });
-    }
+     if (!result.ok) {
+       if (result.error?.includes("already contributed")) {
+         return NextResponse.json({ error: result.error }, { status: 409 });
+       }
+       if (result.error?.includes("limit reached")) {
+         return NextResponse.json({ error: result.error }, { status: 403 });
+       }
+       return NextResponse.json({ error: result.error }, { status: 500 });
+     }
 
-    return NextResponse.json(
-      {
-        keyHash: result.keyHash,
-        keyIdentifier: result.keyIdentifier,
-      },
-      { status: 201 }
-    );
+     return NextResponse.json(
+       {
+         keyHash: result.keyHash,
+         keyIdentifier: result.keyIdentifier,
+         name: result.name,
+       },
+       { status: 201 }
+     );
   } catch (error) {
     console.error("POST /api/providers/keys error:", error);
     return NextResponse.json(

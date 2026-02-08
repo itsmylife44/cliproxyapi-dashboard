@@ -122,6 +122,7 @@ model ProviderKeyOwnership {
   userId        String
   provider      String
   keyIdentifier String
+  name          String   @default("Unnamed Key")
   keyHash       String   @unique
   createdAt     DateTime @default(now())
 

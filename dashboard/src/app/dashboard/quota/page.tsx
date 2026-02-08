@@ -61,9 +61,13 @@ function formatRelativeTime(isoDate: string | null): string {
     
     if (diffMs <= 0) return "Resetting...";
     
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     
+    if (days > 0) {
+      return `Resets in ${days}d ${hours}h`;
+    }
     if (hours > 0) {
       return `Resets in ${hours}h ${minutes}m`;
     }

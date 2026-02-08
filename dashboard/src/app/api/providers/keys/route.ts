@@ -4,6 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { contributeKey, listKeysWithOwnership } from "@/lib/providers/dual-write";
 import { PROVIDER, type Provider } from "@/lib/providers/constants";
 import { ERROR_CODE, Errors, apiError } from "@/lib/errors";
+import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 
 interface ContributeKeyRequest {
   provider: string;
@@ -88,6 +89,14 @@ export async function POST(request: NextRequest) {
       }
       return apiError(ERROR_CODE.PROVIDER_ERROR, result.error ?? "Provider error", 500);
     }
+
+    logAuditAsync({
+      userId: session.userId,
+      action: AUDIT_ACTION.PROVIDER_KEY_ADDED,
+      target: body.provider,
+      metadata: { keyIdentifier: result.keyIdentifier },
+      ipAddress: extractIpAddress(request),
+    });
 
     return NextResponse.json(
       {

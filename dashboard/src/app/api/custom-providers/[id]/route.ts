@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { hashProviderKey } from "@/lib/providers/hash";
 import { z } from "zod";
 import { invalidateProxyModelsCache } from "@/lib/cache";
+import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 
 const UpdateCustomProviderSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -238,6 +239,17 @@ export async function DELETE(
 
     await prisma.customProvider.delete({
       where: { id }
+    });
+
+    logAuditAsync({
+      userId: session.userId,
+      action: AUDIT_ACTION.CUSTOM_PROVIDER_DELETED,
+      target: existingProvider.providerId,
+      metadata: {
+        deletedProviderId: id,
+        name: existingProvider.name,
+      },
+      ipAddress: extractIpAddress(request),
     });
 
     const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";

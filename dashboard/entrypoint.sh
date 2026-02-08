@@ -233,6 +233,25 @@ client.connect()
       ALTER TABLE "custom_provider_excluded_models" ADD CONSTRAINT "custom_provider_excluded_models_customProviderId_fkey"
         FOREIGN KEY ("customProviderId") REFERENCES "custom_providers"("id") ON DELETE CASCADE;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- Audit logs table (track admin actions for compliance and security)
+    CREATE TABLE IF NOT EXISTS "audit_logs" (
+      "id" TEXT NOT NULL,
+      "userId" TEXT NOT NULL,
+      "action" TEXT NOT NULL,
+      "target" TEXT,
+      "metadata" JSONB,
+      "ipAddress" TEXT,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
+    );
+    CREATE INDEX IF NOT EXISTS "audit_logs_userId_idx" ON "audit_logs"("userId");
+    CREATE INDEX IF NOT EXISTS "audit_logs_createdAt_idx" ON "audit_logs"("createdAt");
+    CREATE INDEX IF NOT EXISTS "audit_logs_action_idx" ON "audit_logs"("action");
+    DO $$ BEGIN
+      ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_userId_fkey"
+        FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   `))
   .then(() => {
     console.log('[dashboard] Tables ready');

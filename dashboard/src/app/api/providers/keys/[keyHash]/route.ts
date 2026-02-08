@@ -4,6 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { removeKey, removeKeyByAdmin } from "@/lib/providers/dual-write";
 import { prisma } from "@/lib/db";
 import { PROVIDER, type Provider } from "@/lib/providers/constants";
+import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 
 function isValidProvider(provider: string): provider is Provider {
   return Object.values(PROVIDER).includes(provider as Provider);
@@ -63,6 +64,17 @@ export async function DELETE(
       }
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
+
+    logAuditAsync({
+      userId: session.userId,
+      action: AUDIT_ACTION.PROVIDER_KEY_REMOVED,
+      target: ownership?.provider || provider || "unknown",
+      metadata: {
+        keyHash,
+        removedByAdmin: isAdmin && ownership?.userId !== session.userId,
+      },
+      ipAddress: extractIpAddress(request),
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

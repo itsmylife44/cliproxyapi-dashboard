@@ -6,6 +6,7 @@ import { hashProviderKey } from "@/lib/providers/hash";
 import { z } from "zod";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { invalidateProxyModelsCache } from "@/lib/cache";
+import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 
 const CreateCustomProviderSchema = z.object({
   name: z.string().min(1).max(100),
@@ -130,6 +131,19 @@ export async function POST(request: NextRequest) {
 
     const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
     const secretKey = process.env.MANAGEMENT_API_KEY;
+
+    logAuditAsync({
+      userId: session.userId,
+      action: AUDIT_ACTION.CUSTOM_PROVIDER_CREATED,
+      target: validated.providerId,
+      metadata: {
+        providerId: provider.id,
+        name: validated.name,
+        baseUrl: validated.baseUrl,
+        modelCount: validated.models.length,
+      },
+      ipAddress: extractIpAddress(request),
+    });
 
     let syncStatus: "ok" | "failed" = "ok";
     let syncMessage: string | undefined;

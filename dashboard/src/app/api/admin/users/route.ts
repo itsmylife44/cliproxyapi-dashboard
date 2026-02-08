@@ -11,6 +11,7 @@ import {
 } from "@/lib/auth/validation";
 import { prisma } from "@/lib/db";
 import { cascadeDeleteUserProviders } from "@/lib/providers/cascade";
+import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 
 async function requireAdmin(): Promise<{ userId: string; username: string } | NextResponse> {
   const session = await verifySession();
@@ -173,6 +174,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    logAuditAsync({
+      userId: authResult.userId,
+      action: AUDIT_ACTION.USER_CREATED,
+      target: user.username,
+      metadata: { newUserId: user.id, isAdmin: user.isAdmin },
+      ipAddress: extractIpAddress(request),
+    });
+
     return NextResponse.json(
       {
         success: true,
@@ -236,6 +245,21 @@ export async function DELETE(request: NextRequest) {
 
     await prisma.user.delete({
       where: { id: userIdToDelete },
+    });
+
+    logAuditAsync({
+      userId: authResult.userId,
+      action: AUDIT_ACTION.USER_DELETED,
+      target: targetUser.username,
+      metadata: {
+        deletedUserId: userIdToDelete,
+        wasAdmin: targetUser.isAdmin,
+        cascade: {
+          keysRemoved: cascadeResult.keysRemoved,
+          oauthRemoved: cascadeResult.oauthRemoved,
+        },
+      },
+      ipAddress: extractIpAddress(request),
     });
 
     console.log(

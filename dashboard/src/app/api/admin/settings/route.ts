@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
+import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 
 async function requireAdmin(): Promise<{ userId: string; username: string } | NextResponse> {
   const session = await verifySession();
@@ -96,6 +97,14 @@ export async function PUT(request: NextRequest) {
       where: { key },
       create: { key, value },
       update: { value },
+    });
+
+    logAuditAsync({
+      userId: authResult.userId,
+      action: AUDIT_ACTION.SETTINGS_CHANGED,
+      target: key,
+      metadata: { settingId: setting.id },
+      ipAddress: extractIpAddress(request),
     });
 
     return NextResponse.json(

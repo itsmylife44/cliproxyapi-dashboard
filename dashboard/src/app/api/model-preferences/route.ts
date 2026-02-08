@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
+import { z } from "zod";
+import { ModelPreferencesSchema, formatZodError } from "@/lib/validation/schemas";
 
 export async function GET() {
   try {
@@ -40,29 +42,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-
-    if (!Array.isArray(body.excludedModels)) {
-      return NextResponse.json(
-        { error: "excludedModels must be an array" },
-        { status: 400 }
-      );
-    }
-
-    if (body.excludedModels.length > 500) {
-      return NextResponse.json(
-        { error: "excludedModels array cannot exceed 500 items" },
-        { status: 400 }
-      );
-    }
-
-    for (const model of body.excludedModels) {
-      if (typeof model !== "string" || model.length === 0 || model.length > 200) {
-        return NextResponse.json(
-          { error: "Each model must be a non-empty string with max 200 characters" },
-          { status: 400 }
-        );
-      }
-    }
+    const validated = ModelPreferencesSchema.parse(body);
 
     const userExists = await prisma.user.findUnique({
       where: { id: session.userId },
@@ -77,10 +57,10 @@ export async function PUT(request: NextRequest) {
       where: { userId: session.userId },
       create: {
         userId: session.userId,
-        excludedModels: body.excludedModels,
+        excludedModels: validated.excludedModels,
       },
       update: {
-        excludedModels: body.excludedModels,
+        excludedModels: validated.excludedModels,
       },
     });
 
@@ -89,6 +69,9 @@ export async function PUT(request: NextRequest) {
       excludedModels: modelPreference.excludedModels,
     });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(formatZodError(error), { status: 400 });
+    }
     console.error("Update model preferences error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

@@ -12,6 +12,8 @@ import { fetchProxyModels } from "@/lib/config-generators/shared";
 import type { ConfigData } from "@/lib/config-generators/shared";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { validateFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
+import { z } from "zod";
+import { AgentConfigSchema, formatZodError } from "@/lib/validation/schemas";
 
 async function fetchManagementJson(path: string) {
   try {
@@ -132,15 +134,9 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
+    const parsed = AgentConfigSchema.parse(body);
 
-    if (typeof body.overrides !== "object" || body.overrides === null) {
-      return NextResponse.json(
-        { error: "overrides must be an object" },
-        { status: 400 }
-      );
-    }
-
-    const validated = validateFullConfig(body.overrides);
+    const validated = validateFullConfig(parsed.overrides);
 
     const agentOverride = await prisma.agentModelOverride.upsert({
       where: { userId: session.userId },
@@ -158,6 +154,9 @@ export async function PUT(request: NextRequest) {
       overrides: agentOverride.overrides,
     });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(formatZodError(error), { status: 400 });
+    }
     console.error("Update agent config error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

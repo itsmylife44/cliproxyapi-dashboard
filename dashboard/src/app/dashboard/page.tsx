@@ -8,7 +8,10 @@ import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 
-const PROXY_URL = process.env.API_URL || "https://cpapi.loen-api.xyz";
+if (!process.env.API_URL) {
+  throw new Error("API_URL environment variable is not set. Please configure it in your .env file.");
+}
+const PROXY_URL = process.env.API_URL;
 
 interface ManagementFetchParams {
   path: string;

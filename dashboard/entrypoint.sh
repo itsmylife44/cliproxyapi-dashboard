@@ -140,6 +140,7 @@ client.connect()
       "userId" TEXT NOT NULL,
       "provider" TEXT NOT NULL,
       "keyIdentifier" TEXT NOT NULL,
+      "name" TEXT NOT NULL DEFAULT 'Unnamed Key',
       "keyHash" TEXT NOT NULL,
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "provider_key_ownerships_pkey" PRIMARY KEY ("id")
@@ -151,6 +152,10 @@ client.connect()
       ALTER TABLE "provider_key_ownerships" ADD CONSTRAINT "provider_key_ownerships_userId_fkey"
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    -- Add name column to provider_key_ownerships if missing (existing installs)
+    DO $$ BEGIN
+      ALTER TABLE "provider_key_ownerships" ADD COLUMN "name" TEXT NOT NULL DEFAULT 'Unnamed Key';
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
     -- Provider OAuth ownerships table (track who connected which OAuth accounts)
     CREATE TABLE IF NOT EXISTS "provider_oauth_ownerships" (

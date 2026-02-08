@@ -132,7 +132,8 @@ run_migrations() {
         npx prisma migrate resolve --applied 20260207_add_user_api_keys_and_admin >/dev/null 2>&1 || true
         npx prisma migrate resolve --applied 20260207_add_config_sharing >/dev/null 2>&1 || true
         npx prisma migrate resolve --applied 20260207_add_provider_ownership_models >/dev/null 2>&1 || true
-    fi
+        npx prisma migrate resolve --applied 20260208_add_name_to_provider_key_ownership >/dev/null 2>&1 || true
+     fi
     
     if npx prisma migrate deploy; then
         log_success "Migrations applied"

@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
 import { Prisma } from "@/generated/prisma/client";
 import { hashProviderKey, maskProviderKey } from "./hash";
 import { PROVIDER, PROVIDER_ENDPOINT, type Provider, type OAuthProvider } from "./constants";
@@ -30,9 +31,8 @@ class AsyncMutex {
 
 const providerMutex = new AsyncMutex();
 
-const MANAGEMENT_BASE_URL =
-  process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
-const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
+const MANAGEMENT_BASE_URL = env.CLIPROXYAPI_MANAGEMENT_URL;
+const MANAGEMENT_API_KEY = env.MANAGEMENT_API_KEY;
 
 interface ContributeKeyResult {
   ok: boolean;

@@ -1,21 +1,12 @@
 import "server-only";
 import { SignJWT, jwtVerify } from "jose";
+import { env } from "@/lib/env";
 
 function getJwtSecret(): Uint8Array {
-  const rawSecret = process.env.JWT_SECRET;
-
-  if (!rawSecret) {
-    throw new Error("JWT_SECRET environment variable is required");
-  }
-
-  if (rawSecret.length < 32) {
-    throw new Error("JWT_SECRET must be at least 32 characters long");
-  }
-
-  return new TextEncoder().encode(rawSecret);
+  return new TextEncoder().encode(env.JWT_SECRET);
 }
 
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+const JWT_EXPIRES_IN = env.JWT_EXPIRES_IN;
 
 export interface SessionPayload extends Record<string, unknown> {
   userId: string;

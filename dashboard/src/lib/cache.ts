@@ -1,6 +1,12 @@
+import { createHash } from "crypto";
+
 interface CacheEntry<T> {
   value: T;
   expiresAt: number;
+}
+
+function hashKey(key: string): string {
+  return createHash("sha256").update(key).digest("hex").slice(0, 16);
 }
 
 export class LRUCache<T> {
@@ -72,6 +78,12 @@ export class LRUCache<T> {
 export const usageCache = new LRUCache<unknown>(50);
 export const proxyModelsCache = new LRUCache<unknown>(10);
 
+const CLEANUP_INTERVAL_MS = 60_000;
+setInterval(() => {
+  usageCache.cleanup();
+  proxyModelsCache.cleanup();
+}, CLEANUP_INTERVAL_MS);
+
 export const CACHE_TTL = {
   USAGE: 30_000,
   PROXY_MODELS: 60_000,
@@ -79,7 +91,7 @@ export const CACHE_TTL = {
 
 export const CACHE_KEYS = {
   usage: (userId: string) => `usage:${userId}`,
-  proxyModels: (proxyUrl: string, apiKey: string) => `proxy-models:${proxyUrl}:${apiKey.slice(-8)}`,
+  proxyModels: (proxyUrl: string, apiKey: string) => `proxy-models:${proxyUrl}:${hashKey(apiKey)}`,
 } as const;
 
 export function invalidateUsageCaches(): void {

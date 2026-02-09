@@ -14,9 +14,12 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
+    let isMounted = true;
+    
     fetch("/api/setup")
       .then((res) => res.json())
       .then((data) => {
+        if (!isMounted) return;
         const setupRequired = data.data?.setupRequired ?? data.setupRequired;
         if (setupRequired) {
           router.replace("/setup");
@@ -24,7 +27,13 @@ export default function LoginPage() {
           setReady(true);
         }
       })
-      .catch(() => setReady(true));
+      .catch(() => {
+        if (isMounted) setReady(true);
+      });
+    
+    return () => {
+      isMounted = false;
+    };
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {

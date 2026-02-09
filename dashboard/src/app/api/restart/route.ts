@@ -4,6 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { logger } from "@/lib/logger";
 
 const execFileAsync = promisify(execFile);
 
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
       message: "Restart completed",
     });
   } catch (error) {
-    console.error("Restart endpoint error:", error);
+    logger.error({ err: error }, "Restart endpoint error");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

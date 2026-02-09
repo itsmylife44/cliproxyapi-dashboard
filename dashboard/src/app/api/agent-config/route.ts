@@ -13,6 +13,7 @@ import type { ConfigData } from "@/lib/config-generators/shared";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { validateFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 import { AgentConfigSchema, formatZodError } from "@/lib/validation/schemas";
 
 async function fetchManagementJson(path: string) {
@@ -116,7 +117,7 @@ export async function GET() {
       defaults,
     });
   } catch (error) {
-    console.error("Get agent config error:", error);
+    logger.error({ err: error }, "Get agent config error");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -157,7 +158,7 @@ export async function PUT(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(formatZodError(error), { status: 400 });
     }
-    console.error("Update agent config error:", error);
+    logger.error({ err: error }, "Update agent config error");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

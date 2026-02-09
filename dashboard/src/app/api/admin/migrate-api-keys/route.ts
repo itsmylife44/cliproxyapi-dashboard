@@ -3,6 +3,8 @@ import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
+import { logger } from "@/lib/logger";
+import { env } from "@/lib/env";
 
 /**
  * POST /api/admin/migrate-api-keys
@@ -67,13 +69,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // 5. Fetch existing API keys from CLIProxyAPI
-    const managementUrl =
-      process.env.CLIPROXYAPI_MANAGEMENT_URL ||
-      "http://cliproxyapi:8317/v0/management";
-    const managementApiKey = process.env.MANAGEMENT_API_KEY;
+    const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
+    const managementApiKey = env.MANAGEMENT_API_KEY;
 
     if (!managementApiKey) {
-      console.error("MANAGEMENT_API_KEY not set");
+      logger.error("MANAGEMENT_API_KEY not set");
       return NextResponse.json(
         { error: "Management API not configured" },
         { status: 500 }
@@ -86,9 +86,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     if (!response.ok) {
-      console.error(
-        `Failed to fetch existing API keys: HTTP ${response.status}`
-      );
+      logger.error({ status: response.status }, "Failed to fetch existing API keys");
       return NextResponse.json(
         { error: "Failed to fetch existing API keys from CLIProxyAPI" },
         { status: 500 }
@@ -149,11 +147,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // 9. Sync keys to CLIProxyAPI (verify consistency, should be no-op)
     const syncResult = await syncKeysToCliProxyApi();
     if (!syncResult.ok) {
-      console.warn(
-        "Sync after migration failed (keys are still in DB):",
-        syncResult.error
-      );
-      // Don't fail the migration response - keys are in DB (source of truth)
+      logger.warn({ error: syncResult.error }, "Sync after migration failed (keys are still in DB)");
     }
 
     return NextResponse.json({
@@ -162,9 +156,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       userId: firstAdmin.id,
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown error during migration";
-    console.error("Migration error:", message, error);
+    logger.error({ err: error }, "Migration error");
     return NextResponse.json(
       { error: "Internal server error during migration" },
       { status: 500 }

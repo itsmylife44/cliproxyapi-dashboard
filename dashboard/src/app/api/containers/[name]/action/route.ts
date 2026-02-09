@@ -7,6 +7,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { z } from "zod";
 import { ContainerActionSchema, formatZodError } from "@/lib/validation/schemas";
+import { logger } from "@/lib/logger";
 
 const execFileAsync = promisify(execFile);
 
@@ -80,7 +81,7 @@ export async function POST(
     if (error instanceof z.ZodError) {
       return NextResponse.json(formatZodError(error), { status: 400 });
     }
-    console.error(`Container action error for ${name}:`, error);
+    logger.error({ err: error, container: name }, "Container action error");
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { error: `Failed to perform action: ${message}` },

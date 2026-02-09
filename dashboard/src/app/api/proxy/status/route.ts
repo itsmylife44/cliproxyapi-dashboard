@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { logger } from "@/lib/logger";
 
 const execFileAsync = promisify(execFile);
 const CONTAINER_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/;
@@ -63,7 +64,7 @@ export async function GET() {
       uptime,
     });
   } catch (error) {
-    console.error("Status check error:", error);
+    logger.error({ err: error }, "Status check error");
     return NextResponse.json(
       { 
         running: false,

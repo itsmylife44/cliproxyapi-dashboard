@@ -4,6 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { ModelPreferencesSchema, formatZodError } from "@/lib/validation/schemas";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -23,7 +24,7 @@ export async function GET() {
 
     return NextResponse.json({ excludedModels: modelPreference.excludedModels });
   } catch (error) {
-    console.error("Get model preferences error:", error);
+    logger.error({ err: error }, "Get model preferences error");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -72,7 +73,7 @@ export async function PUT(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(formatZodError(error), { status: 400 });
     }
-    console.error("Update model preferences error:", error);
+    logger.error({ err: error }, "Update model preferences error");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
+import { logger } from "@/lib/logger";
+import { env } from "@/lib/env";
 
-const CLIPROXYAPI_MANAGEMENT_URL =
-  process.env.CLIPROXYAPI_MANAGEMENT_URL ||
-  "http://cliproxyapi:8317/v0/management";
-const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
+const CLIPROXYAPI_MANAGEMENT_URL = env.CLIPROXYAPI_MANAGEMENT_URL;
+const MANAGEMENT_API_KEY = env.MANAGEMENT_API_KEY;
 
 interface AuthFile {
   auth_index: string;
@@ -636,7 +636,7 @@ export async function GET() {
   }
 
   if (!MANAGEMENT_API_KEY) {
-    console.error("MANAGEMENT_API_KEY is not configured");
+    logger.error("MANAGEMENT_API_KEY is not configured");
     return NextResponse.json(
       { error: "Server configuration error" },
       { status: 500 }
@@ -654,9 +654,7 @@ export async function GET() {
     );
 
     if (!authFilesResponse.ok) {
-      console.error(
-        `Failed to fetch auth files: ${authFilesResponse.status}`
-      );
+      logger.error({ status: authFilesResponse.status }, "Failed to fetch auth files");
       return NextResponse.json(
         { error: "Failed to fetch auth files" },
         { status: 502 }
@@ -783,7 +781,7 @@ export async function GET() {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Quota fetch error:", error);
+    logger.error({ err: error }, "Quota fetch error");
     return NextResponse.json(
       { error: "Failed to fetch quota data" },
       { status: 502 }

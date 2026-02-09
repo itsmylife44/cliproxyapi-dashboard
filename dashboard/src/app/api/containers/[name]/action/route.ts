@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
@@ -80,7 +81,7 @@ export async function POST(
     if (error instanceof z.ZodError) {
       return NextResponse.json(formatZodError(error), { status: 400 });
     }
-    console.error(`Container action error for ${name}:`, error);
+    logger.error({ err: error }, `Container action error for ${name}:`);
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { error: `Failed to perform action: ${message}` },

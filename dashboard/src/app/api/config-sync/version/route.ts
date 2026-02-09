@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { validateSyncTokenFromHeader } from "@/lib/auth/sync-token";
 import { generateConfigBundle } from "@/lib/config-sync/generate-bundle";
 
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ version: bundle.version });
   } catch (error) {
-    console.error("Config sync version error:", error);
+    logger.error({ err: error }, "Config sync version error:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 
@@ -31,7 +32,7 @@ export async function GET() {
       createdAt: user.createdAt.toISOString(),
     });
   } catch (error) {
-    console.error("Failed to fetch current user:", error);
+    logger.error({ err: error }, "Failed to fetch current user:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

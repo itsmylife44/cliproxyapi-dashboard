@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
@@ -132,68 +133,64 @@ export async function POST(request: NextRequest) {
   callbackTarget.searchParams.set("code", callbackParams.code);
   callbackTarget.searchParams.set("state", callbackParams.state);
 
-   const beforeAuthFiles = await fetchAuthFiles();
-   const beforeNames = new Set((beforeAuthFiles || []).map((file) => file.name));
+  const beforeAuthFiles = await fetchAuthFiles();
+  const beforeNames = new Set((beforeAuthFiles || []).map((file) => file.name));
 
-   try {
-     const response = await fetch(callbackTarget.toString(), { method: "GET" });
+  try {
+    const response = await fetch(callbackTarget.toString(), { method: "GET" });
 
-     if (response.ok) {
-       // Poll for new auth files (CLIProxyAPI creates them asynchronously after callback)
-       let candidateFiles: AuthFileEntry[] = [];
-       const MAX_RETRIES = 10;
-       const RETRY_DELAY_MS = 1500;
+    if (response.ok) {
+      let candidateFiles: AuthFileEntry[] = [];
+      const MAX_RETRIES = 10;
+      const RETRY_DELAY_MS = 1500;
 
-       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
 
-          const afterAuthFiles = await fetchAuthFiles();
+        const afterAuthFiles = await fetchAuthFiles();
 
-          if (afterAuthFiles) {
-           candidateFiles = afterAuthFiles.filter((file) => {
-             const fileProvider = file.provider || file.type;
-             const providerMatches = !fileProvider || fileProvider === provider;
-              const isNew = !beforeNames.has(file.name);
-              return isNew && providerMatches;
-           });
-         }
-
-          if (candidateFiles.length > 0) {
-            break;
-         }
-       }
-
-        if (candidateFiles.length === 0) {
-          console.warn("OAuth callback: no new auth files detected after polling");
+        if (afterAuthFiles) {
+          candidateFiles = afterAuthFiles.filter((file) => {
+            const fileProvider = file.provider || file.type;
+            const providerMatches = !fileProvider || fileProvider === provider;
+            const isNew = !beforeNames.has(file.name);
+            return isNew && providerMatches;
+          });
         }
 
-        // Try to atomically claim exactly ONE new file
-        // Uses Prisma unique constraint on accountName as the race guard
-        let claimed = false;
-        for (const file of candidateFiles) {
-          if (claimed) break;
-          try {
-            await prisma.providerOAuthOwnership.create({
-              data: {
-                userId: session.userId,
-                provider,
-                accountName: file.name,
-                accountEmail: file.email || null,
-              },
-            });
-            claimed = true;
-          } catch (e) {
-            // P2002 = another user already claimed this account - try next
-            if (
-              e instanceof Prisma.PrismaClientKnownRequestError &&
-              e.code === "P2002"
-            ) {
-              continue;
-            }
-            throw e; // Re-throw unexpected errors
-          }
+        if (candidateFiles.length > 0) {
+          break;
         }
       }
+
+      if (candidateFiles.length === 0) {
+        logger.warn("OAuth callback: no new auth files detected after polling");
+      }
+
+      let claimed = false;
+      for (const file of candidateFiles) {
+        if (claimed) break;
+        try {
+          await prisma.providerOAuthOwnership.create({
+            data: {
+              userId: session.userId,
+              provider,
+              accountName: file.name,
+              accountEmail: file.email || null,
+            },
+          });
+          claimed = true;
+        } catch (e) {
+          if (
+            e instanceof Prisma.PrismaClientKnownRequestError &&
+            e.code === "P2002"
+          ) {
+            continue;
+          }
+          throw e;
+        }
+      }
+    }
 
     const payload: OAuthCallbackResponse = { status: response.status };
 

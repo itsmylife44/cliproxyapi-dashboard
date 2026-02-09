@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
@@ -23,7 +24,7 @@ export async function GET() {
 
     return NextResponse.json({ excludedModels: modelPreference.excludedModels });
   } catch (error) {
-    console.error("Get model preferences error:", error);
+    logger.error({ err: error }, "Get model preferences error:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -72,7 +73,7 @@ export async function PUT(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(formatZodError(error), { status: 400 });
     }
-    console.error("Update model preferences error:", error);
+    logger.error({ err: error }, "Update model preferences error:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

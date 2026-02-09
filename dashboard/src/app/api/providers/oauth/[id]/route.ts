@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { removeOAuthAccountByIdOrName } from "@/lib/providers/dual-write";
@@ -49,7 +50,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("DELETE /api/providers/oauth/[id] error:", error);
+    logger.error({ err: error }, "DELETE /api/providers/oauth/[id] error:");
     return NextResponse.json(
       { error: "Failed to remove OAuth account" },
       { status: 500 }

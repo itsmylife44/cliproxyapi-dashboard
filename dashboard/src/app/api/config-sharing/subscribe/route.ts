@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { normalizeShareCode } from "@/lib/share-code";
@@ -79,7 +80,7 @@ export async function GET() {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Failed to fetch subscription:", error);
+    logger.error({ err: error }, "Failed to fetch subscription:");
     return NextResponse.json(
       { error: "Failed to fetch subscription" },
       { status: 500 }
@@ -217,7 +218,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    console.error("Failed to create subscription:", error);
+    logger.error({ err: error }, "Failed to create subscription:");
     return NextResponse.json(
       { error: "Failed to create subscription" },
       { status: 500 }
@@ -287,7 +288,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Failed to update subscription:", error);
+    logger.error({ err: error }, "Failed to update subscription:");
     return NextResponse.json(
       { error: "Failed to update subscription" },
       { status: 500 }
@@ -324,7 +325,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to delete subscription:", error);
+    logger.error({ err: error }, "Failed to delete subscription:");
     return NextResponse.json(
       { error: "Failed to delete subscription" },
       { status: 500 }

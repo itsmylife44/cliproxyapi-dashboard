@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
@@ -55,7 +56,7 @@ export async function GET() {
       }))
     });
   } catch (error) {
-    console.error("GET /api/custom-providers error:", error);
+    logger.error({ err: error }, "GET /api/custom-providers error:");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
@@ -185,19 +186,19 @@ export async function POST(request: NextRequest) {
           if (!putRes.ok) {
             syncStatus = "failed";
             syncMessage = "Backend sync failed - provider created but may not work immediately";
-            console.error("Failed to sync custom provider to Management API: HTTP", putRes.status);
+            logger.error({ err: putRes.status }, "Failed to sync custom provider to Management API: HTTP");
           } else {
             invalidateProxyModelsCache();
           }
         } else {
           syncStatus = "failed";
           syncMessage = "Backend sync failed - provider created but may not work immediately";
-          console.error("Failed to fetch current config from Management API: HTTP", getRes.status);
+          logger.error({ err: getRes.status }, "Failed to fetch current config from Management API: HTTP");
         }
       } catch (syncError) {
         syncStatus = "failed";
         syncMessage = "Backend sync failed - provider created but may not work immediately";
-        console.error("Failed to sync custom provider to Management API:", syncError);
+        logger.error({ err: syncError }, "Failed to sync custom provider to Management API:");
       }
     } else {
       syncStatus = "failed";
@@ -210,7 +211,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
-    console.error("POST /api/custom-providers error:", error);
+    logger.error({ err: error }, "POST /api/custom-providers error:");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

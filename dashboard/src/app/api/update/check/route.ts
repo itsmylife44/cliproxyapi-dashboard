@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { execFile } from "child_process";
@@ -115,7 +116,7 @@ export async function GET() {
 
     return NextResponse.json(versionInfo);
   } catch (error) {
-    console.error("Update check error:", error);
+    logger.error({ err: error }, "Update check error:");
     return NextResponse.json(
       { error: "Failed to check for updates" },
       { status: 500 }

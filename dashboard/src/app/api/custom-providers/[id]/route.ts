@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
@@ -176,24 +177,24 @@ export async function PATCH(
             if (!putRes.ok) {
               syncStatus = "failed";
               syncMessage = "Backend sync failed - provider updated but changes may not apply immediately";
-              console.error("Failed to sync updated custom provider to Management API: HTTP", putRes.status);
+              logger.error({ err: putRes.status }, "Failed to sync updated custom provider to Management API: HTTP");
             } else {
               invalidateProxyModelsCache();
             }
           } else {
             syncStatus = "failed";
             syncMessage = "Backend sync failed - could not retrieve API key for update";
-            console.error("Failed to sync updated custom provider: no API key available");
+            logger.error({ err: getRes.status }, "Failed to sync updated custom provider: no API key available");
           }
         } else {
           syncStatus = "failed";
           syncMessage = "Backend sync failed - provider updated but changes may not apply immediately";
-          console.error("Failed to fetch current config from Management API: HTTP", getRes.status);
+          logger.error("Failed to fetch current config from Management API: HTTP");
         }
       } catch (syncError) {
         syncStatus = "failed";
         syncMessage = "Backend sync failed - provider updated but changes may not apply immediately";
-        console.error("Failed to sync updated custom provider to Management API:", syncError);
+        logger.error({ err: syncError }, "Failed to sync updated custom provider to Management API:");
       }
     } else {
       syncStatus = "failed";
@@ -206,7 +207,7 @@ export async function PATCH(
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
-    console.error("PATCH /api/custom-providers/[id] error:", error);
+    logger.error({ err: error }, "PATCH /api/custom-providers/[id] error:");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
@@ -285,19 +286,19 @@ export async function DELETE(
           if (!putRes.ok) {
             syncStatus = "failed";
             syncMessage = "Backend sync failed - provider deleted but may still work temporarily";
-            console.error("Failed to sync deleted custom provider to Management API: HTTP", putRes.status);
+            logger.error({ err: putRes.status }, "Failed to sync deleted custom provider to Management API: HTTP");
           } else {
             invalidateProxyModelsCache();
           }
         } else {
           syncStatus = "failed";
           syncMessage = "Backend sync failed - provider deleted but may still work temporarily";
-          console.error("Failed to fetch current config from Management API: HTTP", getRes.status);
+          logger.error({ err: getRes.status }, "Failed to fetch current config from Management API: HTTP");
         }
       } catch (syncError) {
         syncStatus = "failed";
         syncMessage = "Backend sync failed - provider deleted but may still work temporarily";
-        console.error("Failed to sync deleted custom provider to Management API:", syncError);
+        logger.error({ err: syncError }, "Failed to sync deleted custom provider to Management API:");
       }
     } else {
       syncStatus = "failed";
@@ -307,7 +308,7 @@ export async function DELETE(
     return NextResponse.json({ success: true, syncStatus, syncMessage });
 
   } catch (error) {
-    console.error("DELETE /api/custom-providers/[id] error:", error);
+    logger.error({ err: error }, "DELETE /api/custom-providers/[id] error:");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

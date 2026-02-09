@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
@@ -54,7 +55,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to update sync token:", error);
+    logger.error({ err: error }, "Failed to update sync token:");
     return NextResponse.json(
       { error: "Failed to update token" },
       { status: 500 }
@@ -99,7 +100,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to revoke sync token:", error);
+    logger.error({ err: error }, "Failed to revoke sync token:");
     return NextResponse.json(
       { error: "Failed to revoke token" },
       { status: 500 }

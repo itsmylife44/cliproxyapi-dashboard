@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
@@ -636,11 +637,9 @@ export async function GET() {
   }
 
   if (!MANAGEMENT_API_KEY) {
-    console.error("MANAGEMENT_API_KEY is not configured");
+    logger.error({ err: { status: 500 } }, "MANAGEMENT_API_KEY is not configured");
     return NextResponse.json(
-      { error: "Server configuration error" },
-      { status: 500 }
-    );
+      { error: "Server configuration error" });
   }
 
   try {
@@ -654,13 +653,10 @@ export async function GET() {
     );
 
     if (!authFilesResponse.ok) {
-      console.error(
-        `Failed to fetch auth files: ${authFilesResponse.status}`
+      logger.error({ err: { status: 502 } }, `Failed to fetch auth files: ${authFilesResponse.status}`
       );
       return NextResponse.json(
-        { error: "Failed to fetch auth files" },
-        { status: 502 }
-      );
+        { error: "Failed to fetch auth files" });
     }
 
     const authFilesData =
@@ -783,7 +779,7 @@ export async function GET() {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Quota fetch error:", error);
+    logger.error({ err: error }, "Quota fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch quota data" },
       { status: 502 }

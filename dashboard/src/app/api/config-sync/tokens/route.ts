@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { generateSyncToken } from "@/lib/auth/sync-token";
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
       createdAt: syncToken.createdAt.toISOString(),
     });
   } catch (error) {
-    console.error("Failed to create sync token:", error);
+    logger.error({ err: error }, "Failed to create sync token:");
     return NextResponse.json(
       { error: "Failed to create token" },
       { status: 500 }
@@ -120,7 +121,7 @@ export async function GET() {
 
     return NextResponse.json({ tokens, apiKeys: allUserKeys });
   } catch (error) {
-    console.error("Failed to fetch sync tokens:", error);
+    logger.error({ err: error }, "Failed to fetch sync tokens:");
     return NextResponse.json(
       { error: "Failed to fetch tokens" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { deleteSession } from "@/lib/auth/session";
 
 export async function POST() {
@@ -7,7 +8,7 @@ export async function POST() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Logout error:", error);
+    logger.error({ err: error }, "Logout error:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

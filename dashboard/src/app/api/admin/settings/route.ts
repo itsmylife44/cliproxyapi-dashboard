@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
@@ -42,7 +43,7 @@ export async function GET() {
 
     return NextResponse.json({ settings: settingsResponse });
   } catch (error) {
-    console.error("Failed to fetch system settings:", error);
+    logger.error({ err: error }, "Failed to fetch system settings:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -119,7 +120,7 @@ export async function PUT(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Failed to update system setting:", error);
+    logger.error({ err: error }, "Failed to update system setting:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

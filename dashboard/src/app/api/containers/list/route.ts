@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { CONTAINER_CONFIG, getAllowedActions, type ContainerAction } from "@/lib/containers";
@@ -86,7 +87,7 @@ export async function GET() {
             const startTime = new Date(startedAt.trim());
             uptime = Math.floor((Date.now() - startTime.getTime()) / 1000);
           } catch (err) {
-            console.error(`Failed to get uptime for ${name}:`, err);
+            logger.error({ err: err }, `Failed to get uptime for ${name}:`);
           }
 
           try {
@@ -100,7 +101,7 @@ export async function GET() {
             memory = memVal ?? null;
             memoryPercent = memPercVal ?? null;
           } catch (err) {
-            console.error(`Failed to get stats for ${name}:`, err);
+            logger.error({ err: err }, `Failed to get stats for ${name}:`);
           }
         }
 
@@ -128,7 +129,7 @@ export async function GET() {
 
     return NextResponse.json(containers);
   } catch (error) {
-    console.error("Container list error:", error);
+    logger.error({ err: error }, "Container list error:");
     return NextResponse.json(
       { error: "Failed to list containers" },
       { status: 500 }

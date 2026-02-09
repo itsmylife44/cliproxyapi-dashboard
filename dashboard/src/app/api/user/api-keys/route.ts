@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { generateApiKey } from "@/lib/api-keys/generate";
@@ -73,7 +74,7 @@ export async function GET() {
 
     return NextResponse.json({ apiKeys: response });
   } catch (error) {
-    console.error("Failed to fetch API keys:", error);
+    logger.error({ err: error }, "Failed to fetch API keys:");
     return NextResponse.json(
       { error: "Failed to fetch API keys" },
       { status: 500 }
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
 
     const syncResult = await syncKeysToCliProxyApi();
     if (!syncResult.ok) {
-      console.error("Sync failed after API key creation:", syncResult.error);
+      logger.error({ err: syncResult.error }, "Sync failed after API key creation:");
     }
 
     const response: CreateApiKeyResponse = {
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    console.error("Failed to create API key:", error);
+    logger.error({ err: error }, "Failed to create API key:");
     return NextResponse.json(
       { error: "Failed to create API key" },
       { status: 500 }
@@ -191,7 +192,7 @@ export async function DELETE(request: NextRequest) {
 
     const syncResult = await syncKeysToCliProxyApi();
     if (!syncResult.ok) {
-      console.error("Sync failed after API key deletion:", syncResult.error);
+      logger.error({ err: syncResult.error }, "Sync failed after API key deletion:");
     }
 
     return NextResponse.json({
@@ -200,7 +201,7 @@ export async function DELETE(request: NextRequest) {
       syncMessage: syncResult.ok ? undefined : "Backend sync pending - key deleted but may still work temporarily",
     });
   } catch (error) {
-    console.error("Failed to delete API key:", error);
+    logger.error({ err: error }, "Failed to delete API key:");
     return NextResponse.json(
       { error: "Failed to delete API key" },
       { status: 500 }

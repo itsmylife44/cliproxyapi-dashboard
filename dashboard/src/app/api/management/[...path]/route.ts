@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { posix as pathPosix } from "path";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
@@ -12,7 +13,7 @@ const ALLOWED_HOST = (() => {
   try {
     return new URL(BACKEND_API_URL).host;
   } catch (error) {
-    console.error("Invalid BACKEND_API_URL:", error);
+    logger.error({ err: error }, "Invalid BACKEND_API_URL:");
     return "cliproxyapi:8317";
   }
 })();
@@ -123,12 +124,12 @@ async function proxyRequest(
 
   const normalizedPath = normalizeAndValidateManagementPath(rawPath);
   if (!normalizedPath) {
-    console.warn("Blocked invalid management proxy path", {
+    logger.warn({ context: {
       method,
       rawPath,
       userId: session.userId,
       source: "api/management/[...path]",
-    });
+    } }, "Blocked invalid management proxy path");
     return NextResponse.json(
       { error: "Invalid request path" },
       { status: 400 }
@@ -143,7 +144,7 @@ async function proxyRequest(
   }
 
   if (!MANAGEMENT_API_KEY) {
-    console.error("MANAGEMENT_API_KEY is not configured");
+    logger.error("MANAGEMENT_API_KEY is not configured");
     return NextResponse.json(
       { error: "Server configuration error" },
       { status: 500 }
@@ -160,7 +161,7 @@ async function proxyRequest(
   try {
     parsedUrl = new URL(targetUrl.toString());
   } catch {
-    console.error("Invalid target URL:", targetUrl.toString());
+    logger.error({ url: targetUrl.toString() }, "Invalid target URL");
     return NextResponse.json(
       { error: "Invalid request path" },
       { status: 400 }
@@ -168,7 +169,7 @@ async function proxyRequest(
   }
 
   if (parsedUrl.host !== ALLOWED_HOST) {
-    console.error(`SSRF attempt blocked: ${parsedUrl.host} !== ${ALLOWED_HOST}`);
+    logger.error({ attemptedHost: parsedUrl.host, allowedHost: ALLOWED_HOST }, "SSRF attempt blocked");
     return NextResponse.json(
       { error: "Forbidden" },
       { status: 403 }
@@ -209,7 +210,7 @@ async function proxyRequest(
       },
     });
   } catch (error) {
-    console.error("Proxy request error:", error);
+    logger.error({ err: error }, "Proxy request error:");
     return NextResponse.json(
       { error: "Failed to proxy request" },
       { status: 502 }

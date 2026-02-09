@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { generateShareCode } from "@/lib/share-code";
@@ -81,7 +82,7 @@ export async function GET() {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Failed to fetch config template:", error);
+    logger.error({ err: error }, "Failed to fetch config template:");
     return NextResponse.json(
       { error: "Failed to fetch config template" },
       { status: 500 }
@@ -149,7 +150,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    console.error("Failed to create config template:", error);
+    logger.error({ err: error }, "Failed to create config template:");
     return NextResponse.json(
       { error: "Failed to create config template" },
       { status: 500 }
@@ -221,7 +222,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Failed to update config template:", error);
+    logger.error({ err: error }, "Failed to update config template:");
     return NextResponse.json(
       { error: "Failed to update config template" },
       { status: 500 }
@@ -258,7 +259,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to delete config template:", error);
+    logger.error({ err: error }, "Failed to delete config template:");
     return NextResponse.json(
       { error: "Failed to delete config template" },
       { status: 500 }

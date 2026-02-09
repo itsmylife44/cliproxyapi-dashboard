@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifySession } from "@/lib/auth/session";
 import { execFile } from "child_process";
 import { promisify } from "util";
@@ -63,7 +64,7 @@ export async function GET() {
       uptime,
     });
   } catch (error) {
-    console.error("Status check error:", error);
+    logger.error({ err: error }, "Status check error:");
     return NextResponse.json(
       { 
         running: false,

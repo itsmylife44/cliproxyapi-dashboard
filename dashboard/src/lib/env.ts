@@ -66,6 +66,17 @@ function parseEnv() {
   return result.data;
 }
 
-export const env = parseEnv();
+// Lazy initialization to avoid build-time validation errors
+// The env object is only created on first access at runtime
+let _env: z.infer<typeof envSchema> | null = null;
+
+export const env = new Proxy({} as z.infer<typeof envSchema>, {
+  get(_, prop: string) {
+    if (_env === null) {
+      _env = parseEnv();
+    }
+    return _env[prop as keyof typeof _env];
+  },
+});
 
 export type Env = z.infer<typeof envSchema>;

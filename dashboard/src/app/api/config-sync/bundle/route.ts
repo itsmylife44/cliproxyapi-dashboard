@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
       data: { lastSyncedAt: new Date() },
     });
 
+    logger.info({ userId: authResult.userId, version: bundle.version }, "Config bundle synced");
+
     return NextResponse.json({
       version: bundle.version,
       opencode: bundle.opencode,

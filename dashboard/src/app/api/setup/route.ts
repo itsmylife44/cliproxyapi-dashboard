@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth/validation";
 import { prisma } from "@/lib/db";
 import { ERROR_CODE, Errors, apiError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 
 const MAX_SETUP_RETRIES = 5;
 
@@ -136,6 +137,8 @@ export async function POST(request: NextRequest) {
       { userId: user.id, username: user.username },
       token
     );
+
+    logger.info({ userId: user.id, username: user.username }, "Admin account created via setup");
 
     return NextResponse.json(
       {

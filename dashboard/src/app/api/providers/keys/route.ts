@@ -5,6 +5,7 @@ import { contributeKey, listKeysWithOwnership } from "@/lib/providers/dual-write
 import { PROVIDER, type Provider } from "@/lib/providers/constants";
 import { ERROR_CODE, Errors, apiError } from "@/lib/errors";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 interface ContributeKeyRequest {
   provider: string;
@@ -97,6 +98,11 @@ export async function POST(request: NextRequest) {
       metadata: { keyIdentifier: result.keyIdentifier },
       ipAddress: extractIpAddress(request),
     });
+
+    logger.info(
+      { userId: session.userId, provider: body.provider, keyIdentifier: result.keyIdentifier },
+      "Provider key added"
+    );
 
     return NextResponse.json(
       {

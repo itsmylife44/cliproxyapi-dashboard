@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { deleteSession } from "@/lib/auth/session";
+import { deleteSession, verifySession } from "@/lib/auth/session";
 
 export async function POST() {
   try {
+    const session = await verifySession();
     await deleteSession();
+
+    if (session) {
+      logger.info({ userId: session.userId, username: session.username }, "User logged out");
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

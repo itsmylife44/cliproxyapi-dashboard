@@ -183,6 +183,11 @@ export async function POST(request: NextRequest) {
       ipAddress: extractIpAddress(request),
     });
 
+    logger.info(
+      { adminId: authResult.userId, newUserId: user.id, username: user.username, isAdmin: user.isAdmin },
+      "User created by admin"
+    );
+
     return NextResponse.json(
       {
         success: true,

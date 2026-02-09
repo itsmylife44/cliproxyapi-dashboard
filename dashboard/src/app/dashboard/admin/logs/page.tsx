@@ -15,6 +15,14 @@ interface LogEntry {
   [key: string]: unknown;
 }
 
+interface LogStats {
+  memoryCount: number;
+  fileCount: number;
+  fileSizeKB: number;
+  rotatedFiles: number;
+  persistent: boolean;
+}
+
 const LEVEL_COLORS: Record<string, string> = {
   error: "text-red-400 bg-red-500/10 border-red-500/30",
   fatal: "text-red-400 bg-red-500/10 border-red-500/30",
@@ -59,6 +67,7 @@ function formatTimestamp(timestamp: number): string {
 export default function AdminLogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>(EMPTY_LOGS);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<LogStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("all");
@@ -99,6 +108,9 @@ export default function AdminLogsPage() {
       const data = await res.json();
       setLogs(Array.isArray(data.logs) ? data.logs : []);
       setTotal(typeof data.total === "number" ? data.total : 0);
+      if (data.stats) {
+        setStats(data.stats);
+      }
       setLoading(false);
     } catch {
       showToast("Network error", "error");
@@ -147,6 +159,7 @@ export default function AdminLogsPage() {
       showToast("Logs cleared", "success");
       setLogs([]);
       setTotal(0);
+      setStats(null);
       setClearing(false);
     } catch {
       showToast("Network error", "error");
@@ -218,6 +231,18 @@ export default function AdminLogsPage() {
           </Button>
         </div>
       </div>
+
+      {stats && (
+        <div className="flex flex-wrap gap-4 text-xs text-white/60">
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-green-500" />
+            Persistent storage enabled
+          </span>
+          <span>Memory: {stats.memoryCount} logs</span>
+          <span>File: {stats.fileCount} logs ({stats.fileSizeKB} KB)</span>
+          {stats.rotatedFiles > 0 && <span>Rotated files: {stats.rotatedFiles}</span>}
+        </div>
+      )}
 
       <Card>
         <CardHeader>

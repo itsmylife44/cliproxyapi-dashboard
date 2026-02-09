@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
-import { getLogs, getLogCount, clearLogs, type LogEntry } from "@/lib/log-storage";
+import { getLogs, getLogCount, clearLogs, getLogStats, type LogEntry } from "@/lib/log-storage";
+import { logger } from "@/lib/logger";
 
 async function requireAdmin(): Promise<{ userId: string } | NextResponse> {
   const session = await verifySession();
@@ -41,8 +42,19 @@ export async function GET(request: NextRequest) {
 
   const logs: LogEntry[] = getLogs({ level, limit, since });
   const total = getLogCount();
+  const stats = getLogStats();
 
-  return NextResponse.json({ logs, total });
+  return NextResponse.json({
+    logs,
+    total,
+    stats: {
+      memoryCount: stats.memoryCount,
+      fileCount: stats.fileCount,
+      fileSizeKB: Math.round(stats.fileSizeBytes / 1024),
+      rotatedFiles: stats.rotatedFiles,
+      persistent: true,
+    },
+  });
 }
 
 export async function DELETE(request: NextRequest) {
@@ -57,6 +69,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   clearLogs();
+  logger.info({ adminId: authResult.userId }, "Logs cleared by admin");
 
   return NextResponse.json({ success: true });
 }

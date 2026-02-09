@@ -12,6 +12,7 @@ import {
   isValidUsernameFormat,
 } from "@/lib/auth/validation";
 import { ERROR_CODE, Errors, apiErrorWithHeaders } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 
 const LOGIN_ATTEMPTS_LIMIT = 10;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -85,6 +86,8 @@ export async function POST(request: NextRequest) {
       { userId: user.id, username: user.username },
       token
     );
+
+    logger.info({ userId: user.id, username: user.username, ip: ipAddress }, "User logged in");
 
     return NextResponse.json({
       success: true,

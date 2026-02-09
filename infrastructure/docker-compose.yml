@@ -89,6 +89,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${INSTALL_DIR:-.}/infrastructure:/opt/cliproxyapi/infrastructure:ro
+      - dashboard_logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
@@ -130,22 +131,18 @@ services:
       retries: 3
       start_period: 30s
 
-# Named Volumes
 volumes:
-  # Database persistence
   postgres_data:
     driver: local
-  
-  # CLIProxyAPI persistence
   cliproxyapi_auths:
     driver: local
   cliproxyapi_logs:
     driver: local
-  
-  # Caddy TLS certificate persistence
   caddy_data:
     driver: local
   caddy_config:
+    driver: local
+  dashboard_logs:
     driver: local
 
 # Network Definitions

@@ -8,13 +8,11 @@ const envSchema = z.object({
   
   JWT_SECRET: z
     .string()
-    .min(32, "JWT_SECRET must be at least 32 characters long")
-    .describe("Secret key for JWT signing"),
+    .min(32, "JWT_SECRET must be at least 32 characters long"),
   
   MANAGEMENT_API_KEY: z
     .string()
-    .min(16, "MANAGEMENT_API_KEY must be at least 16 characters long")
-    .describe("API key for CLIProxyAPI management API authentication"),
+    .min(16, "MANAGEMENT_API_KEY must be at least 16 characters long"),
   
   CLIPROXYAPI_MANAGEMENT_URL: z
     .string()
@@ -31,8 +29,7 @@ const envSchema = z.object({
   
   JWT_EXPIRES_IN: z
     .string()
-    .default("7d")
-    .describe("JWT token expiration time"),
+    .default("7d"),
   
   CLIPROXYAPI_CONTAINER_NAME: z
     .string()
@@ -40,20 +37,40 @@ const envSchema = z.object({
   
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
-    .default("info")
-    .describe("Pino log level"),
+    .default("info"),
 });
 
-function parseEnv() {
+export type Env = z.infer<typeof envSchema>;
+
+let _validated = false;
+let _env: Env | null = null;
+
+function getEnv(): Env {
+  if (_env !== null) return _env;
+  
+  const isBuildTime = process.env.npm_lifecycle_event === "build" ||
+    process.env.DATABASE_URL?.startsWith("postgresql://build:");
+  
+  if (isBuildTime) {
+    _env = {
+      DATABASE_URL: "postgresql://build:build@localhost:5432/build",
+      JWT_SECRET: "build-time-placeholder-secret-32chars!",
+      MANAGEMENT_API_KEY: "build-time-placeholder",
+      CLIPROXYAPI_MANAGEMENT_URL: "http://localhost:8317/v0/management",
+      NODE_ENV: "production",
+      TZ: "UTC",
+      JWT_EXPIRES_IN: "7d",
+      CLIPROXYAPI_CONTAINER_NAME: "cliproxyapi",
+      LOG_LEVEL: "info",
+    };
+    return _env;
+  }
+  
   const result = envSchema.safeParse(process.env);
   
   if (!result.success) {
     const errors = result.error.issues
-      .map((issue) => {
-        const path = issue.path.join(".");
-        const message = issue.message;
-        return `  ${path}: ${message}`;
-      })
+      .map((issue) => `  ${issue.path.join(".")}: ${issue.message}`)
       .join("\n");
     
     console.error("❌ Environment validation failed:\n" + errors);
@@ -63,20 +80,13 @@ function parseEnv() {
     );
   }
   
-  return result.data;
+  _env = result.data;
+  _validated = true;
+  return _env;
 }
 
-// Lazy initialization to avoid build-time validation errors
-// The env object is only created on first access at runtime
-let _env: z.infer<typeof envSchema> | null = null;
-
-export const env = new Proxy({} as z.infer<typeof envSchema>, {
+export const env = new Proxy({} as Env, {
   get(_, prop: string) {
-    if (_env === null) {
-      _env = parseEnv();
-    }
-    return _env[prop as keyof typeof _env];
+    return getEnv()[prop as keyof Env];
   },
 });
-
-export type Env = z.infer<typeof envSchema>;

@@ -92,6 +92,7 @@ caddy_config/
 
 # Logs
 logs/
+!**/src/**/logs/
 *.log
 
 # Temporary files

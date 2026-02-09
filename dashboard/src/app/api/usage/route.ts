@@ -176,6 +176,7 @@ export async function GET(request: NextRequest) {
         headers: {
           Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
         },
+        cache: "no-store",
       }),
       prisma.userApiKey.findMany({
         select: {

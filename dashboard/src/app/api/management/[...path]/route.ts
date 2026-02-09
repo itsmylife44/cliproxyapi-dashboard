@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
 const FETCH_TIMEOUT_MS = 30_000;
+const MAX_BODY_SIZE_BYTES = 10 * 1024 * 1024;
 
 function fetchWithTimeout(
   url: string,
@@ -196,6 +197,13 @@ async function proxyRequest(
 
     let body: BodyInit | undefined = undefined;
     if (method !== "GET" && method !== "HEAD") {
+      const contentLength = request.headers.get("content-length");
+      if (contentLength && parseInt(contentLength, 10) > MAX_BODY_SIZE_BYTES) {
+        return NextResponse.json(
+          { error: "Request body too large" },
+          { status: 413 }
+        );
+      }
       const rawBody = await request.text();
       if (rawBody) {
         body = rawBody;

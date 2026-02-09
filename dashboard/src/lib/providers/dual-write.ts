@@ -208,8 +208,6 @@ export async function contributeKey(
     let updatedPayload: unknown;
 
     if (provider === PROVIDER.OPENAI_COMPAT) {
-      const responseKey = "openai-compatibility";
-      const rawData = getData[responseKey];
       if (!isRecord(getData)) {
         await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
         return { ok: false, error: "Invalid Management API response for OpenAI compatibility" };
@@ -644,20 +642,23 @@ export async function listKeysWithOwnership(
 
     const ownershipMap = new Map(ownerships.map((o) => [o.keyHash, o]));
 
-      const keysWithOwnership: KeyWithOwnership[] = apiKeys.map((key, index) => {
-        const hash = keyHashMap.get(key)!;
+      const keysWithOwnership: KeyWithOwnership[] = [];
+      for (let index = 0; index < apiKeys.length; index++) {
+        const key = apiKeys[index];
+        const hash = keyHashMap.get(key);
+        if (!hash) continue;
         const ownership = ownershipMap.get(hash);
         const isOwn = ownership?.userId === userId;
 
-        return {
+        keysWithOwnership.push({
           keyHash: hash,
           maskedKey: isOwn ? maskProviderKey(key) : `Key ${index + 1}`,
           provider,
           ownerUsername: isOwn ? ownership?.user.username || null : null,
           ownerUserId: isOwn ? ownership?.userId || null : null,
           isOwn,
-        };
-      });
+        });
+      }
 
     return { ok: true, keys: keysWithOwnership };
   } catch (error) {

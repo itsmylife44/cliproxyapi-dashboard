@@ -217,6 +217,18 @@ export async function PATCH(
       syncMessage = "Backend sync unavailable - management API key not configured";
     }
 
+    logAuditAsync({
+      userId: session.userId,
+      action: AUDIT_ACTION.CUSTOM_PROVIDER_UPDATED,
+      target: existingProvider.providerId,
+      metadata: {
+        providerId: id,
+        name: validated.name || existingProvider.name,
+        fieldsUpdated: Object.keys(validated).filter(k => validated[k as keyof typeof validated] !== undefined),
+      },
+      ipAddress: extractIpAddress(request),
+    });
+
     return NextResponse.json({ provider, syncStatus, syncMessage });
 
   } catch (error) {

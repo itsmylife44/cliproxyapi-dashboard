@@ -21,9 +21,13 @@ export async function createSession(_payload: SessionPayload, token: string): Pr
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   const cookieStore = await cookies();
 
+  const dashboardUrl = process.env.DASHBOARD_URL || "";
+  const isHttps = dashboardUrl.startsWith("https://");
+  const useSecureCookie = process.env.NODE_ENV === "production" && isHttps;
+
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecureCookie,
     expires: expiresAt,
     sameSite: "lax",
     path: "/",

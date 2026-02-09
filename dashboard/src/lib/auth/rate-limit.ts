@@ -8,6 +8,16 @@ type Entry = {
 
 const entries = new Map<string, Entry>();
 
+const CLEANUP_INTERVAL_MS = 60_000;
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of entries.entries()) {
+    if (now >= entry.resetAt) {
+      entries.delete(key);
+    }
+  }
+}, CLEANUP_INTERVAL_MS);
+
 export type RateLimitResult = {
   allowed: boolean;
   retryAfterSeconds: number;
@@ -52,7 +62,6 @@ export function checkRateLimit(
   }
 
   if (existing.count >= limit) {
-    console.log(`[rate-limit] Blocked: key=${key}, count=${existing.count}, limit=${limit}`);
     return {
       allowed: false,
       retryAfterSeconds: Math.max(1, Math.ceil((existing.resetAt - now) / 1000)),

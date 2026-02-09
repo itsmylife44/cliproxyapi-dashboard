@@ -214,14 +214,8 @@ export async function contributeKey(
         await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
         return { ok: false, error: "Invalid Management API response for OpenAI compatibility" };
       }
-      if (rawData === null || (Array.isArray(rawData) && rawData.length === 0)) {
-        updatedPayload = [];
-      } else if (!isOpenAICompatArray(rawData)) {
-        await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
-        return { ok: false, error: "Invalid Management API response for OpenAI compatibility" };
-      } else {
-        updatedPayload = rawData;
-      }
+      await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
+      return { ok: false, error: "Direct key contribution to OpenAI compatibility is not supported. Use custom providers instead." };
     } else {
       const responseKey = `${provider}-api-key`;
       const rawData = getData[responseKey];
@@ -636,21 +630,22 @@ export async function listKeysWithOwnership(
       }
     }
 
-    const keyHashes = apiKeys.map((key) => hashProviderKey(key));
+    const keyHashMap = new Map(apiKeys.map((key) => [key, hashProviderKey(key)]));
+    const keyHashes = [...keyHashMap.values()];
 
      const ownerships = await prisma.providerKeyOwnership.findMany({
         where: { keyHash: { in: keyHashes }, provider },
         select: { 
           keyHash: true,
           userId: true,
-          user: { select: { id: true, username: true } }
+          user: { select: { username: true } }
         },
       });
 
     const ownershipMap = new Map(ownerships.map((o) => [o.keyHash, o]));
 
       const keysWithOwnership: KeyWithOwnership[] = apiKeys.map((key, index) => {
-        const hash = hashProviderKey(key);
+        const hash = keyHashMap.get(key)!;
         const ownership = ownershipMap.get(hash);
         const isOwn = ownership?.userId === userId;
 
@@ -659,7 +654,7 @@ export async function listKeysWithOwnership(
           maskedKey: isOwn ? maskProviderKey(key) : `Key ${index + 1}`,
           provider,
           ownerUsername: isOwn ? ownership?.user.username || null : null,
-          ownerUserId: isOwn ? ownership?.user.id || null : null,
+          ownerUserId: isOwn ? ownership?.userId || null : null,
           isOwn,
         };
       });

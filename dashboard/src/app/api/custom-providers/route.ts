@@ -7,6 +7,21 @@ import { z } from "zod";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { invalidateProxyModelsCache } from "@/lib/cache";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
+import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
+
+const FETCH_TIMEOUT_MS = 10_000;
+
+function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => {
+    clearTimeout(timeout);
+  });
+}
 
 const CreateCustomProviderSchema = z.object({
   name: z.string().min(1).max(100),
@@ -55,7 +70,7 @@ export async function GET() {
       }))
     });
   } catch (error) {
-    console.error("GET /api/custom-providers error:", error);
+    logger.error({ err: error }, "GET /api/custom-providers error");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
@@ -129,8 +144,8 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
-    const secretKey = process.env.MANAGEMENT_API_KEY;
+    const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
+    const secretKey = env.MANAGEMENT_API_KEY;
 
     logAuditAsync({
       userId: session.userId,
@@ -150,7 +165,7 @@ export async function POST(request: NextRequest) {
 
     if (secretKey) {
       try {
-        const getRes = await fetch(`${managementUrl}/openai-compatibility`, {
+        const getRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
           headers: { "Authorization": `Bearer ${secretKey}` }
         });
         
@@ -173,7 +188,7 @@ export async function POST(request: NextRequest) {
 
           const newList = [...currentList, newEntry];
 
-          const putRes = await fetch(`${managementUrl}/openai-compatibility`, {
+          const putRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
             method: "PUT",
             headers: { 
               "Content-Type": "application/json",
@@ -185,19 +200,21 @@ export async function POST(request: NextRequest) {
           if (!putRes.ok) {
             syncStatus = "failed";
             syncMessage = "Backend sync failed - provider created but may not work immediately";
-            console.error("Failed to sync custom provider to Management API: HTTP", putRes.status);
+            logger.error({ status: putRes.status, providerId: validated.providerId }, "Failed to sync custom provider");
           } else {
             invalidateProxyModelsCache();
           }
         } else {
           syncStatus = "failed";
           syncMessage = "Backend sync failed - provider created but may not work immediately";
-          console.error("Failed to fetch current config from Management API: HTTP", getRes.status);
+          logger.error({ status: getRes.status }, "Failed to fetch config from Management API");
         }
       } catch (syncError) {
         syncStatus = "failed";
-        syncMessage = "Backend sync failed - provider created but may not work immediately";
-        console.error("Failed to sync custom provider to Management API:", syncError);
+        syncMessage = syncError instanceof Error && syncError.name === "AbortError"
+          ? "Backend sync timeout"
+          : "Backend sync failed - provider created but may not work immediately";
+        logger.error({ err: syncError, providerId: validated.providerId }, "Custom provider sync error");
       }
     } else {
       syncStatus = "failed";
@@ -210,7 +227,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
-    console.error("POST /api/custom-providers error:", error);
+    logger.error({ err: error }, "POST /api/custom-providers error");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

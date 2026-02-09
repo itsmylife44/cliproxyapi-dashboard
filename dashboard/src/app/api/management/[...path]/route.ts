@@ -3,6 +3,19 @@ import { posix as pathPosix } from "path";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 
+const FETCH_TIMEOUT_MS = 30_000;
+
+function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => {
+    clearTimeout(timeout);
+  });
+}
+
 const BACKEND_API_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
   "http://cliproxyapi:8317/v0/management";
@@ -193,11 +206,22 @@ async function proxyRequest(
       }
     }
 
-    const response = await fetch(targetUrl.toString(), {
-      method,
-      headers,
-      body,
-    });
+    let response: Response;
+    try {
+      response = await fetchWithTimeout(targetUrl.toString(), {
+        method,
+        headers,
+        body,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        return NextResponse.json(
+          { error: "Request timeout" },
+          { status: 504 }
+        );
+      }
+      throw error;
+    }
 
     const responseContentType = response.headers.get("content-type");
     const responseData = await response.text();

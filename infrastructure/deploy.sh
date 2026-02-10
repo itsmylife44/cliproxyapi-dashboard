@@ -48,20 +48,22 @@ if [ -f "$LOCK_FILE" ]; then
     fi
 fi
 
-# Check if running in foreground mode (set by the fork below)
+# Check if running in foreground mode (passed as last argument by the fork below)
 FOREGROUND=false
 for arg in "$@"; do
     if [ "$arg" = "--foreground" ]; then
         FOREGROUND=true
-        break
     fi
 done
 
-# Fork to background and return immediately
-if [ "$FOREGROUND" = "false" ]; then
+# Fork to background and return immediately (only parent forks)
+if [ "$FOREGROUND" = false ]; then
+    # Create lock file BEFORE forking
+    echo "pending" > "$LOCK_FILE"
     nohup "$0" "$@" --foreground >> "$LOG_FILE" 2>&1 &
-    echo $! > "$LOCK_FILE"
-    echo "Deployment started in background (PID: $!)"
+    CHILD_PID=$!
+    echo "$CHILD_PID" > "$LOCK_FILE"
+    echo "Deployment started in background (PID: $CHILD_PID)"
     exit 0
 fi
 

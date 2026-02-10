@@ -4,6 +4,8 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { generateApiKey } from "@/lib/api-keys/generate";
 import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
 import { prisma } from "@/lib/db";
+import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
+import { logger } from "@/lib/logger";
 
 interface ApiKeyResponse {
   id: string;
@@ -22,6 +24,8 @@ interface CreateApiKeyResponse {
   key: string;
   name: string;
   createdAt: string;
+  syncStatus: "ok" | "failed" | "pending";
+  syncMessage?: string;
 }
 
 function maskApiKey(key: string): string {
@@ -70,7 +74,7 @@ export async function GET() {
 
     return NextResponse.json({ apiKeys: response });
   } catch (error) {
-    console.error("Failed to fetch API keys:", error);
+    logger.error({ err: error }, "Failed to fetch API keys");
     return NextResponse.json(
       { error: "Failed to fetch API keys" },
       { status: 500 }
@@ -79,6 +83,17 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimit = checkRateLimitWithPreset(request, "api-keys", "API_KEYS");
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many API key creation requests. Try again later." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+      }
+    );
+  }
+
   const session = await verifySession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -110,8 +125,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    syncKeysToCliProxyApi().catch((error) => {
-      console.error("Background sync failed after API key creation:", error);
+    syncKeysToCliProxyApi().then((result) => {
+      if (!result.ok) {
+        logger.error({ error: result.error }, "Background sync failed after API key creation");
+      }
+    }).catch((err) => {
+      logger.error({ err }, "Background sync threw unexpected error after API key creation");
     });
 
     const response: CreateApiKeyResponse = {
@@ -119,11 +138,13 @@ export async function POST(request: NextRequest) {
       key: apiKey.key,
       name: apiKey.name,
       createdAt: apiKey.createdAt.toISOString(),
+      syncStatus: "pending",
+      syncMessage: "Key created - backend sync in progress",
     };
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    console.error("Failed to create API key:", error);
+    logger.error({ err: error }, "Failed to create API key");
     return NextResponse.json(
       { error: "Failed to create API key" },
       { status: 500 }
@@ -158,6 +179,7 @@ export async function DELETE(request: NextRequest) {
         id,
         userId: session.userId,
       },
+      select: { id: true },
     });
 
     if (!existingKey) {
@@ -171,13 +193,18 @@ export async function DELETE(request: NextRequest) {
       where: { id },
     });
 
-    syncKeysToCliProxyApi().catch((error) => {
-      console.error("Background sync failed after API key deletion:", error);
-    });
+    const syncResult = await syncKeysToCliProxyApi();
+    if (!syncResult.ok) {
+      logger.error({ error: syncResult.error }, "Sync failed after API key deletion");
+    }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      syncStatus: syncResult.ok ? "ok" : "failed",
+      syncMessage: syncResult.ok ? undefined : "Backend sync pending - key deleted but may still work temporarily",
+    });
   } catch (error) {
-    console.error("Failed to delete API key:", error);
+    logger.error({ err: error }, "Failed to delete API key");
     return NextResponse.json(
       { error: "Failed to delete API key" },
       { status: 500 }

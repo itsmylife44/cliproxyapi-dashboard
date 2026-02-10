@@ -4,6 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { logger } from "@/lib/logger";
 
 const execFileAsync = promisify(execFile);
 
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
     configSnapshot = await getContainerConfig();
 
     const pullResult = await execFileAsync("docker", ["pull", imageTag]);
-    console.log("Pull result:", pullResult.stdout);
+    logger.info({ stdout: pullResult.stdout }, "Pull result");
 
     await execFileAsync("docker", ["stop", CONTAINER_NAME]);
     await execFileAsync("docker", ["rm", CONTAINER_NAME]);
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
       version,
     });
   } catch (error) {
-    console.error("Update error:", error);
+    logger.error({ err: error }, "Update error");
 
     if (configSnapshot) {
       try {
@@ -158,13 +159,13 @@ export async function POST(request: NextRequest) {
             "docker",
             buildRunArgs(configSnapshot, `${IMAGE_NAME}:latest`),
           );
-          console.log("Recovery: container recreated with previous image");
+          logger.info("Recovery: container recreated with previous image");
         } else if (stdout.includes("Exited")) {
           await execFileAsync("docker", ["start", CONTAINER_NAME]);
-          console.log("Recovery: started stopped container");
+          logger.info("Recovery: started stopped container");
         }
       } catch (restartError) {
-        console.error("Recovery failed:", restartError);
+        logger.error({ err: restartError }, "Recovery failed");
       }
     }
 

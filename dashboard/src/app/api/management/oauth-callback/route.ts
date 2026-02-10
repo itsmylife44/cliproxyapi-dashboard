@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
+import { logger } from "@/lib/logger";
 
 const PROVIDERS = {
   CLAUDE: "claude",
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
        }
 
         if (candidateFiles.length === 0) {
-          console.warn("OAuth callback: no new auth files detected after polling");
+          logger.warn("OAuth callback: no new auth files detected after polling");
         }
 
         // Try to atomically claim exactly ONE new file

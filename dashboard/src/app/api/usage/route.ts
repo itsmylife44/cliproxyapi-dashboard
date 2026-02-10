@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
+import { usageCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";
+import { logger } from "@/lib/logger";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -10,17 +12,16 @@ const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
 interface ApiKeyDbRecord {
   key: string;
   name: string;
-  user: { username: string };
-}
-
-interface ApiKeyLabel {
-  name: string;
-  username: string;
+  userId: string;
 }
 
 interface ApiUsageEntry {
   total_requests: number;
   total_tokens: number;
+  success_count?: number;
+  failure_count?: number;
+  input_tokens?: number;
+  output_tokens?: number;
   models?: Record<string, unknown>;
   [key: string]: unknown;
 }
@@ -73,83 +74,76 @@ function isRawUsageResponse(value: unknown): value is RawUsageResponse {
     return false;
   }
 
-   const apis = obj.apis as Record<string, unknown>;
-   for (const apiValue of Object.values(apis)) {
-     if (!isApiUsageEntry(apiValue)) {
-       return false;
-     }
-   }
-
-   return true;
-}
-
-function buildKeyLookup(
-  dbKeys: ApiKeyDbRecord[]
-): Map<string, ApiKeyLabel> {
-  const lookup = new Map<string, ApiKeyLabel>();
-  for (const record of dbKeys) {
-    lookup.set(record.key, {
-      name: record.name,
-      username: record.user.username,
-    });
+  const apis = obj.apis as Record<string, unknown>;
+  for (const apiValue of Object.values(apis)) {
+    if (!isApiUsageEntry(apiValue)) {
+      return false;
+    }
   }
-  return lookup;
+
+  return true;
 }
 
-function sanitizeApiKeys(
+function filterAndLabelApis(
   apis: Record<string, ApiUsageEntry>,
-  keyLookup: Map<string, ApiKeyLabel>
-): Record<string, ApiUsageEntry> {
-  const sanitized: Record<string, ApiUsageEntry> = {};
-  let unknownCounter = 0;
+  userKeys: ApiKeyDbRecord[],
+  isAdmin: boolean
+): { apis: Record<string, ApiUsageEntry>; totals: { requests: number; tokens: number; success: number; failure: number } } {
+  const result: Record<string, ApiUsageEntry> = {};
+  const keySet = new Set(userKeys.map((k) => k.key));
+  const keyNameMap = new Map(userKeys.map((k) => [k.key, k.name]));
+  const usedLabels = new Set<string>();
+  
+  let totalRequests = 0;
+  let totalTokens = 0;
+  let totalSuccess = 0;
+  let totalFailure = 0;
 
   for (const [rawKey, entry] of Object.entries(apis)) {
-    const label = keyLookup.get(rawKey);
-    let sanitizedLabel: string;
-
-    if (label) {
-      const keyName = label.name.trim() || "Unnamed Key";
-      sanitizedLabel = `${keyName} (${label.username})`;
-    } else {
-      unknownCounter++;
-      sanitizedLabel = `Unknown Key ${unknownCounter}`;
+    const isUserKey = keySet.has(rawKey);
+    
+    if (!isAdmin && !isUserKey) {
+      continue;
     }
 
-    sanitized[sanitizedLabel] = { ...entry };
+    const keyName = keyNameMap.get(rawKey);
+    let baseLabel = keyName ? keyName : (isAdmin ? `Unknown Key` : "My Key");
+    
+    // Ensure unique labels by appending suffix if collision detected
+    let label = baseLabel;
+    let suffix = 1;
+    while (usedLabels.has(label)) {
+      suffix++;
+      label = `${baseLabel} (${suffix})`;
+    }
+    usedLabels.add(label);
+
+    result[label] = { ...entry };
+    totalRequests += entry.total_requests || 0;
+    totalTokens += entry.total_tokens || 0;
+    totalSuccess += entry.success_count || 0;
+    totalFailure += entry.failure_count || 0;
   }
 
-  return sanitized;
+  return {
+    apis: result,
+    totals: {
+      requests: totalRequests,
+      tokens: totalTokens,
+      success: totalSuccess,
+      failure: totalFailure,
+    },
+  };
 }
 
-async function requireAdmin(): Promise<{ userId: string; username: string } | NextResponse> {
+export async function GET(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { isAdmin: true },
-  });
-
-  if (!user?.isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden - Admin access required" },
-      { status: 403 }
-    );
-  }
-
-  return { userId: session.userId, username: session.username };
-}
-
-export async function GET() {
-  const authResult = await requireAdmin();
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
   if (!MANAGEMENT_API_KEY) {
-    console.error("MANAGEMENT_API_KEY is not configured");
+    logger.error("MANAGEMENT_API_KEY is not configured");
     return NextResponse.json(
       { error: "Server configuration error: management API key not set" },
       { status: 500 }
@@ -157,7 +151,19 @@ export async function GET() {
   }
 
   try {
-    const [usageResponse, allKeys] = await Promise.all([
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { isAdmin: true },
+    });
+    const isAdmin = user?.isAdmin ?? false;
+
+    const cacheKey = `${CACHE_KEYS.usage(session.userId)}:${isAdmin}`;
+    const cached = usageCache.get(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
+    const [usageResponse, userKeys] = await Promise.all([
       fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/usage`, {
         method: "GET",
         headers: {
@@ -165,17 +171,19 @@ export async function GET() {
         },
       }),
       prisma.userApiKey.findMany({
+        where: isAdmin ? undefined : { userId: session.userId },
         select: {
           key: true,
           name: true,
-          user: { select: { username: true } },
+          userId: true,
         },
       }),
     ]);
 
     if (!usageResponse.ok) {
-      console.error(
-        `CLIProxyAPI usage endpoint returned ${usageResponse.status}: ${usageResponse.statusText}`
+      logger.error(
+        { status: usageResponse.status, statusText: usageResponse.statusText },
+        "CLIProxyAPI usage endpoint returned error"
       );
       return NextResponse.json(
         { error: "Failed to fetch usage data from CLIProxyAPI" },
@@ -185,7 +193,6 @@ export async function GET() {
 
     const responseJson: unknown = await usageResponse.json();
 
-    // CLIProxyAPI wraps data in { usage: { ... } } — unwrap it
     const rawData: unknown =
       typeof responseJson === "object" &&
       responseJson !== null &&
@@ -194,24 +201,35 @@ export async function GET() {
         : responseJson;
 
     if (!isRawUsageResponse(rawData)) {
-      console.error("Unexpected usage response format from CLIProxyAPI:", JSON.stringify(responseJson).slice(0, 200));
+      logger.error({ response: JSON.stringify(responseJson).slice(0, 200) }, "Unexpected usage response format from CLIProxyAPI");
       return NextResponse.json(
         { error: "Invalid usage data format from CLIProxyAPI" },
         { status: 502 }
       );
     }
 
-    const keyLookup = buildKeyLookup(allKeys);
-    const sanitizedApis = sanitizeApiKeys(rawData.apis, keyLookup);
+    const { apis: filteredApis, totals } = filterAndLabelApis(rawData.apis, userKeys, isAdmin);
 
-    const sanitizedResponse = {
-      ...rawData,
-      apis: sanitizedApis,
+    const responseData = {
+      data: {
+        total_requests: isAdmin ? rawData.total_requests : totals.requests,
+        success_count: isAdmin ? rawData.success_count : totals.success,
+        failure_count: isAdmin ? rawData.failure_count : totals.failure,
+        total_tokens: isAdmin ? rawData.total_tokens : totals.tokens,
+        apis: filteredApis,
+        requests_by_day: isAdmin ? rawData.requests_by_day : undefined,
+        requests_by_hour: isAdmin ? rawData.requests_by_hour : undefined,
+        tokens_by_day: isAdmin ? rawData.tokens_by_day : undefined,
+        tokens_by_hour: isAdmin ? rawData.tokens_by_hour : undefined,
+      },
+      isAdmin,
     };
 
-    return NextResponse.json(sanitizedResponse);
+    usageCache.set(cacheKey, responseData, CACHE_TTL.USAGE);
+
+    return NextResponse.json(responseData);
   } catch (error) {
-    console.error("Failed to fetch usage data:", error);
+    logger.error({ err: error }, "Failed to fetch usage data");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

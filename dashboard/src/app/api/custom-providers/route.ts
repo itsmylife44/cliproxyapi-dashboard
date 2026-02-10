@@ -4,6 +4,10 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { hashProviderKey } from "@/lib/providers/hash";
 import { z } from "zod";
+import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
+import { invalidateProxyModelsCache } from "@/lib/cache";
+import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 const CreateCustomProviderSchema = z.object({
   name: z.string().min(1).max(100),
@@ -52,12 +56,23 @@ export async function GET() {
       }))
     });
   } catch (error) {
-    console.error("GET /api/custom-providers error:", error);
+    logger.error({ err: error }, "GET /api/custom-providers error");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimit = checkRateLimitWithPreset(request, "custom-providers", "CUSTOM_PROVIDERS");
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many custom provider creation requests. Try again later." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+      }
+    );
+  }
+
   const session = await verifySession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -118,6 +133,22 @@ export async function POST(request: NextRequest) {
     const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
     const secretKey = process.env.MANAGEMENT_API_KEY;
 
+    logAuditAsync({
+      userId: session.userId,
+      action: AUDIT_ACTION.CUSTOM_PROVIDER_CREATED,
+      target: validated.providerId,
+      metadata: {
+        providerId: provider.id,
+        name: validated.name,
+        baseUrl: validated.baseUrl,
+        modelCount: validated.models.length,
+      },
+      ipAddress: extractIpAddress(request),
+    });
+
+    let syncStatus: "ok" | "failed" = "ok";
+    let syncMessage: string | undefined;
+
     if (secretKey) {
       try {
         const getRes = await fetch(`${managementUrl}/openai-compatibility`, {
@@ -143,7 +174,7 @@ export async function POST(request: NextRequest) {
 
           const newList = [...currentList, newEntry];
 
-          await fetch(`${managementUrl}/openai-compatibility`, {
+          const putRes = await fetch(`${managementUrl}/openai-compatibility`, {
             method: "PUT",
             headers: { 
               "Content-Type": "application/json",
@@ -151,19 +182,36 @@ export async function POST(request: NextRequest) {
             },
             body: JSON.stringify(newList)
           });
+
+          if (!putRes.ok) {
+            syncStatus = "failed";
+            syncMessage = "Backend sync failed - provider created but may not work immediately";
+            logger.error({ status: putRes.status }, "Failed to sync custom provider to Management API");
+          } else {
+            invalidateProxyModelsCache();
+          }
+        } else {
+          syncStatus = "failed";
+          syncMessage = "Backend sync failed - provider created but may not work immediately";
+          logger.error({ status: getRes.status }, "Failed to fetch current config from Management API");
         }
       } catch (syncError) {
-        console.error("Failed to sync custom provider to Management API:", syncError);
+        syncStatus = "failed";
+        syncMessage = "Backend sync failed - provider created but may not work immediately";
+        logger.error({ err: syncError }, "Failed to sync custom provider to Management API");
       }
+    } else {
+      syncStatus = "failed";
+      syncMessage = "Backend sync unavailable - management API key not configured";
     }
 
-    return NextResponse.json({ provider }, { status: 201 });
+    return NextResponse.json({ provider, syncStatus, syncMessage }, { status: 201 });
 
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
-    console.error("POST /api/custom-providers error:", error);
+    logger.error({ err: error }, "POST /api/custom-providers error");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

@@ -31,17 +31,21 @@ update_status() {
 
 # Check if already running (with stale lock detection)
 if [ -f "$LOCK_FILE" ]; then
-    PID=$(cat "$LOCK_FILE" 2>/dev/null)
-    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
-        # Check if the process is actually deploy.sh (not a random process with same PID)
-        if ps -p "$PID" -o comm= 2>/dev/null | grep -q "deploy.sh\|bash"; then
+    # Check if lock file is older than 10 minutes (stale)
+    LOCK_AGE=$(($(date +%s) - $(stat -c %Y "$LOCK_FILE" 2>/dev/null || echo 0)))
+    if [ "$LOCK_AGE" -gt 600 ]; then
+        echo "Removing stale lock file (age: ${LOCK_AGE}s)" >> "$LOG_FILE"
+        rm -f "$LOCK_FILE"
+    else
+        PID=$(cat "$LOCK_FILE" 2>/dev/null)
+        if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
             echo "Deployment already in progress (PID: $PID)" >> "$LOG_FILE"
             echo "Deployment already in progress (PID: $PID)"
             exit 0
         fi
+        # Process not running but lock exists - remove stale lock
+        rm -f "$LOCK_FILE"
     fi
-    # Stale lock file - remove it
-    rm -f "$LOCK_FILE"
 fi
 
 # Fork to background and return immediately

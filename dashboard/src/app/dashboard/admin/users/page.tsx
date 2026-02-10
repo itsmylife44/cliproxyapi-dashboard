@@ -55,7 +55,7 @@ export default function AdminUsersPage() {
       }
 
       const data = await res.json();
-      const userList = Array.isArray(data.users) ? data.users : [];
+      const userList = Array.isArray(data.data) ? data.data : [];
       setUsers(userList);
       setLoading(false);
     } catch {

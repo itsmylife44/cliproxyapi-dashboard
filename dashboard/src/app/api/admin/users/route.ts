@@ -11,6 +11,8 @@ import {
 } from "@/lib/auth/validation";
 import { prisma } from "@/lib/db";
 import { cascadeDeleteUserProviders } from "@/lib/providers/cascade";
+import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 async function requireAdmin(): Promise<{ userId: string; username: string } | NextResponse> {
   const session = await verifySession();
@@ -33,25 +35,36 @@ async function requireAdmin(): Promise<{ userId: string; username: string } | Ne
   return { userId: session.userId, username: session.username };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const authResult = await requireAdmin();
   if (authResult instanceof NextResponse) {
     return authResult;
   }
 
   try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        username: true,
-        isAdmin: true,
-        createdAt: true,
-        _count: {
-          select: { apiKeys: true },
+    const { searchParams } = new URL(request.url);
+    
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10) || 50));
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        select: {
+          id: true,
+          username: true,
+          isAdmin: true,
+          createdAt: true,
+          _count: {
+            select: { apiKeys: true },
+          },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.user.count(),
+    ]);
 
     const usersResponse = users.map((user) => ({
       id: user.id,
@@ -61,9 +74,17 @@ export async function GET() {
       apiKeyCount: user._count.apiKeys,
     }));
 
-    return NextResponse.json({ users: usersResponse });
+    return NextResponse.json({
+      data: usersResponse,
+      pagination: {
+        page,
+        limit,
+        total,
+        hasMore: skip + users.length < total,
+      },
+    });
   } catch (error) {
-    console.error("Failed to fetch users:", error);
+    logger.error({ err: error }, "Failed to fetch users");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -134,6 +155,7 @@ export async function POST(request: NextRequest) {
 
     const existingUser = await prisma.user.findUnique({
       where: { username },
+      select: { id: true },
     });
 
     if (existingUser) {
@@ -153,6 +175,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    logAuditAsync({
+      userId: authResult.userId,
+      action: AUDIT_ACTION.USER_CREATED,
+      target: user.username,
+      metadata: { newUserId: user.id, isAdmin: user.isAdmin },
+      ipAddress: extractIpAddress(request),
+    });
+
     return NextResponse.json(
       {
         success: true,
@@ -166,7 +196,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("User creation error:", error);
+    logger.error({ err: error }, "User creation error");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -218,8 +248,24 @@ export async function DELETE(request: NextRequest) {
       where: { id: userIdToDelete },
     });
 
-    console.log(
-      `Admin ${authResult.username} deleted user ${targetUser.username} (${userIdToDelete}). Cascade: ${cascadeResult.keysRemoved} keys, ${cascadeResult.oauthRemoved} OAuth removed; ${cascadeResult.keysFailedToRemove} keys failed, ${cascadeResult.oauthFailedToRemove} OAuth failed`
+    logAuditAsync({
+      userId: authResult.userId,
+      action: AUDIT_ACTION.USER_DELETED,
+      target: targetUser.username,
+      metadata: {
+        deletedUserId: userIdToDelete,
+        wasAdmin: targetUser.isAdmin,
+        cascade: {
+          keysRemoved: cascadeResult.keysRemoved,
+          oauthRemoved: cascadeResult.oauthRemoved,
+        },
+      },
+      ipAddress: extractIpAddress(request),
+    });
+
+    logger.info(
+      { admin: authResult.username, deletedUser: targetUser.username, deletedUserId: userIdToDelete, cascade: cascadeResult },
+      "Admin deleted user"
     );
 
     return NextResponse.json({
@@ -234,7 +280,7 @@ export async function DELETE(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("User deletion error:", error);
+    logger.error({ err: error }, "User deletion error");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

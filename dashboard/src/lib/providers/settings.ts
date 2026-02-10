@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 const MAX_PROVIDER_KEYS_PER_USER_KEY = "max_provider_keys_per_user";
 const DEFAULT_MAX_PROVIDER_KEYS_PER_USER = 10;
@@ -20,7 +21,7 @@ export async function getMaxProviderKeysPerUser(): Promise<number> {
 
     return parsed;
   } catch (error) {
-    console.error("Failed to get max provider keys per user setting:", error);
+    logger.error({ err: error }, "Failed to get max provider keys per user setting");
     return DEFAULT_MAX_PROVIDER_KEYS_PER_USER;
   }
 }

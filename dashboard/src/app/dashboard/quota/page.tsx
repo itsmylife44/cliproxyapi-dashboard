@@ -243,7 +243,6 @@ export default function QuotaPage() {
   const [quotaData, setQuotaData] = useState<QuotaResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState<ProviderType>(PROVIDERS.ALL);
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -292,11 +291,6 @@ export default function QuotaPage() {
   const lowCapacityCount = providerSummaries.filter(
     (s) => s.windowCapacities.some((w) => w.capacity < 0.2) && s.totalAccounts > 0
   ).length;
-
-  const toggleGroup = (accountId: string, groupId: string) => {
-    const key = `${accountId}-${groupId}`;
-    setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
 
   const toggleCard = (accountId: string) => {
     setExpandedCards((prev) => ({ ...prev, [accountId]: !prev[accountId] }));
@@ -638,15 +632,9 @@ export default function QuotaPage() {
                         {account.groups && account.groups.length > 0 && (
                           <div className="space-y-2">
                             {account.groups.map((group) => {
-                              const isExpanded = expandedGroups[`${account.auth_index}-${group.id}`];
-                              
                               return (
                                 <div key={group.id} className="backdrop-blur-xl bg-white/5 rounded-lg p-2 border border-white/10">
-                                  <button
-                                    type="button"
-                                    className="w-full text-left"
-                                    onClick={() => toggleGroup(account.auth_index, group.id)}
-                                  >
+                                  <div className="w-full text-left">
                                     <div className="flex items-center justify-between mb-1.5">
                                       <span className="text-xs font-semibold text-white">{group.label}</span>
                                       <span className="text-xs font-medium text-white/70">
@@ -667,32 +655,7 @@ export default function QuotaPage() {
                                     <div className="mt-1 text-xs text-white/50">
                                       {formatRelativeTime(group.resetTime)}
                                     </div>
-                                  </button>
-
-                                  {isExpanded && group.models.length > 0 && (
-                                    <div className="mt-2 pt-2 space-y-2 border-t border-white/10">
-                                      {group.models.map((model) => (
-                                        <div key={model.id}>
-                                          <div className="flex items-center justify-between mb-0.5">
-                                            <span className="text-xs text-white/70 font-medium">{model.displayName}</span>
-                                            <span className="text-xs text-white/50">
-                                              {Math.round(model.remainingFraction * 100)}%
-                                            </span>
-                                          </div>
-                                          
-                                          <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                            <div
-                                              className={cn(
-                                                "h-full transition-all duration-300",
-                                                getProgressColor(model.remainingFraction)
-                                              )}
-                                              style={{ width: `${model.remainingFraction * 100}%` }}
-                                            />
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
+                                  </div>
                                 </div>
                               );
                             })}

@@ -5,18 +5,13 @@ import { prisma } from "@/lib/db";
 import { CONTAINER_CONFIG, isValidContainerName } from "@/lib/containers";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { z } from "zod";
+import { ContainerActionSchema, formatZodError } from "@/lib/validation/schemas";
+import { logger } from "@/lib/logger";
 
 const execFileAsync = promisify(execFile);
 
-const ALLOWED_ACTIONS = {
-  START: "start",
-  STOP: "stop",
-  RESTART: "restart",
-} as const;
-
-type ActionValue = (typeof ALLOWED_ACTIONS)[keyof typeof ALLOWED_ACTIONS];
-
-const VALID_ACTIONS = new Set<string>(Object.values(ALLOWED_ACTIONS));
+type ActionValue = "start" | "stop" | "restart";
 
 export async function POST(
   request: NextRequest,
@@ -58,37 +53,10 @@ export async function POST(
   }
 
   try {
-    const body: unknown = await request.json();
+    const body = await request.json();
+    const validated = ContainerActionSchema.parse(body);
 
-    if (
-      typeof body !== "object" ||
-      body === null ||
-      !("action" in body) ||
-      !("confirm" in body)
-    ) {
-      return NextResponse.json(
-        { error: "Request body must include 'action' and 'confirm'" },
-        { status: 400 }
-      );
-    }
-
-    const { action, confirm } = body as { action: string; confirm: unknown };
-
-    if (confirm !== true) {
-      return NextResponse.json(
-        { error: "Confirmation required: set confirm to true" },
-        { status: 400 }
-      );
-    }
-
-    if (!VALID_ACTIONS.has(action)) {
-      return NextResponse.json(
-        { error: `Invalid action. Allowed: ${[...VALID_ACTIONS].join(", ")}` },
-        { status: 400 }
-      );
-    }
-
-    const typedAction = action as ActionValue;
+    const typedAction: ActionValue = validated.action;
     const config = CONTAINER_CONFIG[name];
 
     const permissionKey = `allow${typedAction.charAt(0).toUpperCase()}${typedAction.slice(1)}` as
@@ -110,7 +78,10 @@ export async function POST(
       message: `Container '${config.displayName}' ${typedAction} completed`,
     });
   } catch (error) {
-    console.error(`Container action error for ${name}:`, error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(formatZodError(error), { status: 400 });
+    }
+    logger.error({ err: error, containerName: name }, "Container action error");
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { error: `Failed to perform action: ${message}` },

@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { logger } from "@/lib/logger";
 
 const execFileAsync = promisify(execFile);
 
@@ -115,7 +116,7 @@ export async function GET() {
 
     return NextResponse.json(versionInfo);
   } catch (error) {
-    console.error("Update check error:", error);
+    logger.error({ err: error }, "Update check error");
     return NextResponse.json(
       { error: "Failed to check for updates" },
       { status: 500 }

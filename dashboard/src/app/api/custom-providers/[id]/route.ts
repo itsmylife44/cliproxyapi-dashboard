@@ -4,6 +4,22 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { hashProviderKey } from "@/lib/providers/hash";
 import { z } from "zod";
+import { invalidateProxyModelsCache } from "@/lib/cache";
+import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
+import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
+
+const FETCH_TIMEOUT_MS = 10_000;
+
+async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal, cache: "no-store" });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 const UpdateCustomProviderSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -116,12 +132,15 @@ export async function PATCH(
       });
     });
 
-    const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
-    const secretKey = process.env.MANAGEMENT_API_KEY;
+    const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
+    const secretKey = env.MANAGEMENT_API_KEY;
+
+    let syncStatus: "ok" | "failed" = "ok";
+    let syncMessage: string | undefined;
 
     if (secretKey) {
       try {
-        const getRes = await fetch(`${managementUrl}/openai-compatibility`, {
+        const getRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
           headers: { "Authorization": `Bearer ${secretKey}` }
         });
         
@@ -136,8 +155,12 @@ export async function PATCH(
 
           if (!existingKey) {
             const currentEntry = currentList.find((entry) => entry.name === provider.providerId);
-            if (currentEntry && Array.isArray(currentEntry["api-key-entries"]) && currentEntry["api-key-entries"].length > 0) {
-              existingKey = currentEntry["api-key-entries"][0]["api-key"];
+            const apiKeyEntries = currentEntry?.["api-key-entries"];
+            if (Array.isArray(apiKeyEntries) && apiKeyEntries.length > 0) {
+              const firstEntry = apiKeyEntries[0];
+              if (firstEntry && typeof firstEntry["api-key"] === "string") {
+                existingKey = firstEntry["api-key"];
+              }
             }
           }
 
@@ -151,7 +174,7 @@ export async function PATCH(
                 ...(provider.proxyUrl ? { "proxy-url": provider.proxyUrl } : {})
               }],
               models: provider.models.map((m: { upstreamName: string; alias: string }) => ({ name: m.upstreamName, alias: m.alias })),
-              "excluded-models": provider.excludedModels.map((e: { pattern: string }) => e.pattern) || [],
+              "excluded-models": provider.excludedModels.map((e: { pattern: string }) => e.pattern),
               ...(provider.headers ? { headers: provider.headers } : {})
             };
 
@@ -159,7 +182,7 @@ export async function PATCH(
               entry.name === provider.providerId ? updatedEntry : entry
             );
 
-            await fetch(`${managementUrl}/openai-compatibility`, {
+            const putRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
               method: "PUT",
               headers: { 
                 "Content-Type": "application/json",
@@ -167,20 +190,53 @@ export async function PATCH(
               },
               body: JSON.stringify(newList)
             });
+
+            if (!putRes.ok) {
+              syncStatus = "failed";
+              syncMessage = "Backend sync failed - provider updated but changes may not apply immediately";
+              logger.error({ statusCode: putRes.status }, "Failed to sync updated custom provider to Management API");
+            } else {
+              invalidateProxyModelsCache();
+            }
+          } else {
+            syncStatus = "failed";
+            syncMessage = "Backend sync failed - could not retrieve API key for update";
+            logger.error("Failed to sync updated custom provider: no API key available");
           }
+        } else {
+          syncStatus = "failed";
+          syncMessage = "Backend sync failed - provider updated but changes may not apply immediately";
+          logger.error({ statusCode: getRes.status }, "Failed to fetch current config from Management API");
         }
       } catch (syncError) {
-        console.error("Failed to sync updated custom provider to Management API:", syncError);
+        syncStatus = "failed";
+        syncMessage = "Backend sync failed - provider updated but changes may not apply immediately";
+        logger.error({ err: syncError }, "Failed to sync updated custom provider to Management API");
       }
+    } else {
+      syncStatus = "failed";
+      syncMessage = "Backend sync unavailable - management API key not configured";
     }
 
-    return NextResponse.json({ provider });
+    logAuditAsync({
+      userId: session.userId,
+      action: AUDIT_ACTION.CUSTOM_PROVIDER_UPDATED,
+      target: provider.providerId,
+      metadata: {
+        providerId: id,
+        name: provider.name,
+        updatedFields: Object.keys(validated),
+      },
+      ipAddress: extractIpAddress(request),
+    });
+
+    return NextResponse.json({ provider, syncStatus, syncMessage });
 
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
-    console.error("PATCH /api/custom-providers/[id] error:", error);
+    logger.error({ err: error }, "PATCH /api/custom-providers/[id] error");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
@@ -215,12 +271,26 @@ export async function DELETE(
       where: { id }
     });
 
-    const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
-    const secretKey = process.env.MANAGEMENT_API_KEY;
+    logAuditAsync({
+      userId: session.userId,
+      action: AUDIT_ACTION.CUSTOM_PROVIDER_DELETED,
+      target: existingProvider.providerId,
+      metadata: {
+        deletedProviderId: id,
+        name: existingProvider.name,
+      },
+      ipAddress: extractIpAddress(request),
+    });
+
+    const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
+    const secretKey = env.MANAGEMENT_API_KEY;
+
+    let syncStatus: "ok" | "failed" = "ok";
+    let syncMessage: string | undefined;
 
     if (secretKey) {
       try {
-        const getRes = await fetch(`${managementUrl}/openai-compatibility`, {
+        const getRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
           headers: { "Authorization": `Bearer ${secretKey}` }
         });
         
@@ -233,7 +303,7 @@ export async function DELETE(
 
           const newList = currentList.filter((entry) => entry.name !== existingProvider.providerId);
 
-          await fetch(`${managementUrl}/openai-compatibility`, {
+          const putRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
             method: "PUT",
             headers: { 
               "Content-Type": "application/json",
@@ -241,16 +311,33 @@ export async function DELETE(
             },
             body: JSON.stringify(newList)
           });
+
+          if (!putRes.ok) {
+            syncStatus = "failed";
+            syncMessage = "Backend sync failed - provider deleted but may still work temporarily";
+            logger.error({ statusCode: putRes.status }, "Failed to sync deleted custom provider to Management API");
+          } else {
+            invalidateProxyModelsCache();
+          }
+        } else {
+          syncStatus = "failed";
+          syncMessage = "Backend sync failed - provider deleted but may still work temporarily";
+          logger.error({ statusCode: getRes.status }, "Failed to fetch current config from Management API");
         }
       } catch (syncError) {
-        console.error("Failed to sync deleted custom provider to Management API:", syncError);
+        syncStatus = "failed";
+        syncMessage = "Backend sync failed - provider deleted but may still work temporarily";
+        logger.error({ err: syncError }, "Failed to sync deleted custom provider to Management API");
       }
+    } else {
+      syncStatus = "failed";
+      syncMessage = "Backend sync unavailable - management API key not configured";
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, syncStatus, syncMessage });
 
   } catch (error) {
-    console.error("DELETE /api/custom-providers/[id] error:", error);
+    logger.error({ err: error }, "DELETE /api/custom-providers/[id] error");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

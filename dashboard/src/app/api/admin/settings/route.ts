@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
+import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 async function requireAdmin(): Promise<{ userId: string; username: string } | NextResponse> {
   const session = await verifySession();
@@ -41,7 +43,7 @@ export async function GET() {
 
     return NextResponse.json({ settings: settingsResponse });
   } catch (error) {
-    console.error("Failed to fetch system settings:", error);
+    logger.error({ err: error }, "Failed to fetch system settings");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -98,6 +100,14 @@ export async function PUT(request: NextRequest) {
       update: { value },
     });
 
+    logAuditAsync({
+      userId: authResult.userId,
+      action: AUDIT_ACTION.SETTINGS_CHANGED,
+      target: key,
+      metadata: { settingId: setting.id },
+      ipAddress: extractIpAddress(request),
+    });
+
     return NextResponse.json(
       {
         success: true,
@@ -110,7 +120,7 @@ export async function PUT(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Failed to update system setting:", error);
+    logger.error({ err: error }, "Failed to update system setting");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

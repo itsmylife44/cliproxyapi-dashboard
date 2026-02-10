@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import type { McpEntry } from "@/lib/config-generators/opencode";
+import { logger } from "@/lib/logger";
 
 interface UserConfigRequest {
   mcpServers?: McpEntry[];
@@ -68,7 +69,7 @@ export async function GET() {
     const overrides = override.overrides as Record<string, unknown>;
     return NextResponse.json(overrides);
   } catch (error) {
-    console.error("Failed to fetch user config:", error);
+    logger.error({ err: error }, "Failed to fetch user config");
     return NextResponse.json(
       { error: "Failed to fetch config" },
       { status: 500 }
@@ -139,7 +140,7 @@ export async function PUT(request: NextRequest) {
       overrides: override.overrides,
     });
   } catch (error) {
-    console.error("Failed to update user config:", error);
+    logger.error({ err: error }, "Failed to update user config");
     return NextResponse.json(
       { error: "Failed to update config" },
       { status: 500 }

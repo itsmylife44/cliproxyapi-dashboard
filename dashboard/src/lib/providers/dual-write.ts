@@ -1,9 +1,12 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 import { Prisma } from "@/generated/prisma/client";
 import { hashProviderKey, maskProviderKey } from "./hash";
 import { PROVIDER, PROVIDER_ENDPOINT, type Provider, type OAuthProvider } from "./constants";
 import { getMaxProviderKeysPerUser } from "./settings";
+import { invalidateUsageCaches, invalidateProxyModelsCache } from "@/lib/cache";
 
 // Per-provider async mutex to serialize GET-modify-PUT sequences.
 // Prevents race conditions where concurrent requests read the same state,
@@ -30,9 +33,25 @@ class AsyncMutex {
 
 const providerMutex = new AsyncMutex();
 
-const MANAGEMENT_BASE_URL =
-  process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
-const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
+const MANAGEMENT_BASE_URL = env.CLIPROXYAPI_MANAGEMENT_URL;
+const MANAGEMENT_API_KEY = env.MANAGEMENT_API_KEY;
+const FETCH_TIMEOUT_MS = 10000; // 10 second timeout for all Management API calls
+
+/**
+ * Wrapper for fetch with timeout using AbortController.
+ * Ensures requests don't hang indefinitely.
+ */
+function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => {
+    clearTimeout(timeout);
+  });
+}
 
 interface ContributeKeyResult {
   ok: boolean;
@@ -159,10 +178,25 @@ export async function contributeKey(
 
     const endpoint = `${MANAGEMENT_BASE_URL}${PROVIDER_ENDPOINT[provider]}`;
 
-    const getRes = await fetch(endpoint, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-    });
+    let getRes: Response;
+    try {
+      getRes = await fetchWithTimeout(endpoint, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+      });
+    } catch (fetchError) {
+      if (fetchError instanceof Error && fetchError.name === "AbortError") {
+        logger.error({
+          err: fetchError,
+          endpoint,
+          provider,
+          timeoutMs: FETCH_TIMEOUT_MS,
+        }, "Fetch timeout - contributeKey GET");
+        await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
+        return { ok: false, error: "Request timeout fetching existing keys" };
+      }
+      throw fetchError;
+    }
 
     if (!getRes.ok) {
       await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
@@ -206,19 +240,37 @@ export async function contributeKey(
       }
     }
 
-    const putRes = await fetch(endpoint, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
-      },
-      body: JSON.stringify(updatedPayload),
-    });
+    let putRes: Response;
+    try {
+      putRes = await fetchWithTimeout(endpoint, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
+        },
+        body: JSON.stringify(updatedPayload),
+      });
+    } catch (fetchError) {
+      if (fetchError instanceof Error && fetchError.name === "AbortError") {
+        logger.error({
+          err: fetchError,
+          endpoint,
+          provider,
+          timeoutMs: FETCH_TIMEOUT_MS,
+        }, "Fetch timeout - contributeKey PUT");
+        await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
+        return { ok: false, error: "Request timeout adding key to Management API" };
+      }
+      throw fetchError;
+    }
 
     if (!putRes.ok) {
       await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
       return { ok: false, error: `Failed to add key to Management API: HTTP ${putRes.status}` };
     }
+
+    invalidateUsageCaches();
+    invalidateProxyModelsCache();
 
     return {
       ok: true,
@@ -226,14 +278,14 @@ export async function contributeKey(
       keyIdentifier,
     };
   } catch (error) {
-    console.error("contributeKey error:", error);
+    logger.error({ err: error, provider }, "contributeKey error");
 
     try {
       await prisma.providerKeyOwnership.deleteMany({
         where: { keyHash },
       });
     } catch (rollbackError) {
-      console.error("Failed to rollback ownership record:", rollbackError);
+      logger.error({ err: rollbackError, keyHash }, "Failed to rollback ownership record");
     }
 
     return {
@@ -270,17 +322,32 @@ export async function removeKey(
   const lockKey = PROVIDER_ENDPOINT[ownership.provider as Provider];
   const release = await providerMutex.acquire(lockKey);
 
-  try {
-    const endpoint = `${MANAGEMENT_BASE_URL}${PROVIDER_ENDPOINT[ownership.provider as Provider]}`;
+   try {
+     const endpoint = `${MANAGEMENT_BASE_URL}${PROVIDER_ENDPOINT[ownership.provider as Provider]}`;
 
-    const getRes = await fetch(endpoint, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-    });
+     let getRes: Response;
+     try {
+       getRes = await fetchWithTimeout(endpoint, {
+         method: "GET",
+         headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+       });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            provider: ownership.provider,
+            keyHash,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - removeKey GET");
+         return { ok: false, error: "Request timeout fetching existing keys" };
+       }
+       throw fetchError;
+     }
 
-    if (!getRes.ok) {
-      return { ok: false, error: `Failed to fetch existing keys: HTTP ${getRes.status}` };
-    }
+     if (!getRes.ok) {
+       return { ok: false, error: `Failed to fetch existing keys: HTTP ${getRes.status}` };
+     }
 
     const getData = await getRes.json();
     const responseKey =
@@ -325,28 +392,46 @@ export async function removeKey(
       }
     }
 
-    if (!matchingKey) {
-      await prisma.providerKeyOwnership.delete({ where: { keyHash } });
-      return { ok: false, error: "Key not found in Management API (orphan record removed)" };
-    }
+     if (!matchingKey) {
+       await prisma.providerKeyOwnership.delete({ where: { keyHash } });
+       return { ok: false, error: "Key not found in Management API (orphan record removed)" };
+     }
 
-    const deleteRes = await fetch(
-      `${endpoint}?api-key=${encodeURIComponent(matchingKey)}`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-      }
-    );
+     let deleteRes: Response;
+     try {
+       deleteRes = await fetchWithTimeout(
+         `${endpoint}?api-key=${encodeURIComponent(matchingKey)}`,
+         {
+           method: "DELETE",
+           headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+         }
+       );
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            provider: ownership.provider,
+            keyHash,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - removeKey DELETE");
+         return { ok: false, error: "Request timeout deleting key from Management API" };
+       }
+       throw fetchError;
+     }
 
-    if (!deleteRes.ok) {
-      return { ok: false, error: `Failed to delete key from Management API: HTTP ${deleteRes.status}` };
-    }
+     if (!deleteRes.ok) {
+       return { ok: false, error: `Failed to delete key from Management API: HTTP ${deleteRes.status}` };
+     }
 
     await prisma.providerKeyOwnership.delete({ where: { keyHash } });
 
+    invalidateUsageCaches();
+    invalidateProxyModelsCache();
+
     return { ok: true };
   } catch (error) {
-    console.error("removeKey error:", error);
+    logger.error({ err: error, keyHash }, "removeKey error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during key removal",
@@ -367,23 +452,38 @@ export async function removeKeyByAdmin(
   const lockKey = PROVIDER_ENDPOINT[provider];
   const release = await providerMutex.acquire(lockKey);
 
-  try {
-    const endpoint = `${MANAGEMENT_BASE_URL}${PROVIDER_ENDPOINT[provider]}`;
+   try {
+     const endpoint = `${MANAGEMENT_BASE_URL}${PROVIDER_ENDPOINT[provider]}`;
 
-    const getRes = await fetch(endpoint, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-    });
+     let getRes: Response;
+     try {
+       getRes = await fetchWithTimeout(endpoint, {
+         method: "GET",
+         headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+       });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            provider,
+            keyHash,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - removeKeyByAdmin GET");
+         return { ok: false, error: "Request timeout fetching existing keys" };
+       }
+       throw fetchError;
+     }
 
-    if (!getRes.ok) {
-      return { ok: false, error: `Failed to fetch existing keys: HTTP ${getRes.status}` };
-    }
+     if (!getRes.ok) {
+       return { ok: false, error: `Failed to fetch existing keys: HTTP ${getRes.status}` };
+     }
 
-    const getData = await getRes.json();
-    const responseKey =
-      provider === PROVIDER.OPENAI_COMPAT
-        ? "openai-compatibility"
-        : `${provider}-api-key`;
+     const getData = await getRes.json();
+     const responseKey =
+       provider === PROVIDER.OPENAI_COMPAT
+         ? "openai-compatibility"
+         : `${provider}-api-key`;
 
     if (!isRecord(getData)) {
       return { ok: false, error: "Invalid Management API response" };
@@ -421,25 +521,43 @@ export async function removeKeyByAdmin(
       }
     }
 
-    if (!matchingKey) {
-      return { ok: false, error: "Key not found in Management API" };
-    }
+     if (!matchingKey) {
+       return { ok: false, error: "Key not found in Management API" };
+     }
 
-    const deleteRes = await fetch(
-      `${endpoint}?api-key=${encodeURIComponent(matchingKey)}`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-      }
-    );
+     let deleteRes: Response;
+     try {
+       deleteRes = await fetchWithTimeout(
+         `${endpoint}?api-key=${encodeURIComponent(matchingKey)}`,
+         {
+           method: "DELETE",
+           headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+         }
+       );
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            provider,
+            keyHash,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - removeKeyByAdmin DELETE");
+         return { ok: false, error: "Request timeout deleting key from Management API" };
+       }
+       throw fetchError;
+     }
 
-    if (!deleteRes.ok) {
-      return { ok: false, error: `Failed to delete key from Management API: HTTP ${deleteRes.status}` };
-    }
+     if (!deleteRes.ok) {
+       return { ok: false, error: `Failed to delete key from Management API: HTTP ${deleteRes.status}` };
+     }
 
-    return { ok: true };
-  } catch (error) {
-    console.error("removeKeyByAdmin error:", error);
+     invalidateUsageCaches();
+     invalidateProxyModelsCache();
+
+     return { ok: true };
+} catch (error) {
+      logger.error({ err: error, keyHash, provider }, "removeKeyByAdmin error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during key removal",
@@ -457,21 +575,35 @@ export async function listKeysWithOwnership(
     return { ok: false, error: "Management API key not configured" };
   }
 
-  try {
-    const endpoint = `${MANAGEMENT_BASE_URL}${PROVIDER_ENDPOINT[provider]}`;
+   try {
+     const endpoint = `${MANAGEMENT_BASE_URL}${PROVIDER_ENDPOINT[provider]}`;
 
-    const getRes = await fetch(endpoint, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-    });
+     let getRes: Response;
+     try {
+       getRes = await fetchWithTimeout(endpoint, {
+         method: "GET",
+         headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+       });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            provider,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - listKeysWithOwnership GET");
+         return { ok: false, error: "Request timeout fetching keys" };
+       }
+       throw fetchError;
+     }
 
-    if (!getRes.ok) {
-      return { ok: false, error: `Failed to fetch keys: HTTP ${getRes.status}` };
-    }
+     if (!getRes.ok) {
+       return { ok: false, error: `Failed to fetch keys: HTTP ${getRes.status}` };
+     }
 
-    const getData = await getRes.json();
-    const responseKey =
-      provider === PROVIDER.OPENAI_COMPAT ? "openai-compatibility" : `${provider}-api-key`;
+     const getData = await getRes.json();
+     const responseKey =
+       provider === PROVIDER.OPENAI_COMPAT ? "openai-compatibility" : `${provider}-api-key`;
 
     if (!isRecord(getData)) {
       return { ok: false, error: "Invalid Management API response" };
@@ -534,7 +666,7 @@ export async function listKeysWithOwnership(
 
     return { ok: true, keys: keysWithOwnership };
   } catch (error) {
-    console.error("listKeysWithOwnership error:", error);
+    logger.error({ err: error, provider }, "listKeysWithOwnership error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during key listing",
@@ -568,7 +700,7 @@ export async function contributeOAuthAccount(
 
     return { ok: true, id: ownership.id };
   } catch (error) {
-    console.error("contributeOAuthAccount error:", error);
+    logger.error({ err: error, provider }, "contributeOAuthAccount error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during OAuth registration",
@@ -584,19 +716,32 @@ export async function listOAuthWithOwnership(
     return { ok: false, error: "Management API key not configured" };
   }
 
-  try {
-    const endpoint = `${MANAGEMENT_BASE_URL}/auth-files`;
+   try {
+     const endpoint = `${MANAGEMENT_BASE_URL}/auth-files`;
 
-    const getRes = await fetch(endpoint, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-    });
+     let getRes: Response;
+     try {
+       getRes = await fetchWithTimeout(endpoint, {
+         method: "GET",
+         headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+       });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - listOAuthWithOwnership GET");
+         return { ok: false, error: "Request timeout fetching OAuth accounts" };
+       }
+       throw fetchError;
+     }
 
-    if (!getRes.ok) {
-      return { ok: false, error: `Failed to fetch OAuth accounts: HTTP ${getRes.status}` };
-    }
+     if (!getRes.ok) {
+       return { ok: false, error: `Failed to fetch OAuth accounts: HTTP ${getRes.status}` };
+     }
 
-    const getData = await getRes.json();
+     const getData = await getRes.json();
 
     if (!isRecord(getData) || !Array.isArray(getData.files)) {
       return { ok: false, error: "Invalid Management API response for OAuth accounts" };
@@ -637,7 +782,7 @@ export async function listOAuthWithOwnership(
 
     return { ok: true, accounts: accountsWithOwnership };
   } catch (error) {
-    console.error("listOAuthWithOwnership error:", error);
+    logger.error({ err: error }, "listOAuthWithOwnership error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during OAuth listing",
@@ -691,16 +836,30 @@ export async function removeOAuthAccount(
       return { ok: false, error: "Access denied" };
     }
 
-    const endpoint = `${MANAGEMENT_BASE_URL}/auth-files?name=${encodeURIComponent(accountName)}`;
+     const endpoint = `${MANAGEMENT_BASE_URL}/auth-files?name=${encodeURIComponent(accountName)}`;
 
-    const deleteRes = await fetch(endpoint, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-    });
+     let deleteRes: Response;
+     try {
+       deleteRes = await fetchWithTimeout(endpoint, {
+         method: "DELETE",
+         headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+       });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            accountName,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - removeOAuthAccount DELETE");
+         return { ok: false, error: "Request timeout removing OAuth account" };
+       }
+       throw fetchError;
+     }
 
-    if (!deleteRes.ok) {
-      return { ok: false, error: `Failed to remove OAuth account: HTTP ${deleteRes.status}` };
-    }
+     if (!deleteRes.ok) {
+       return { ok: false, error: `Failed to remove OAuth account: HTTP ${deleteRes.status}` };
+     }
 
     if (ownership) {
       await prisma.providerOAuthOwnership.delete({ where: { accountName } });
@@ -708,7 +867,7 @@ export async function removeOAuthAccount(
 
     return { ok: true };
   } catch (error) {
-    console.error("removeOAuthAccount error:", error);
+    logger.error({ err: error, accountName }, "removeOAuthAccount error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during OAuth removal",
@@ -744,16 +903,30 @@ export async function removeOAuthAccountByIdOrName(
       }
     }
 
-    const endpoint = `${MANAGEMENT_BASE_URL}/auth-files?name=${encodeURIComponent(resolved.accountName)}`;
+     const endpoint = `${MANAGEMENT_BASE_URL}/auth-files?name=${encodeURIComponent(resolved.accountName)}`;
 
-    const deleteRes = await fetch(endpoint, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-    });
+     let deleteRes: Response;
+     try {
+       deleteRes = await fetchWithTimeout(endpoint, {
+         method: "DELETE",
+         headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+       });
+} catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          logger.error({
+            err: fetchError,
+            endpoint,
+            accountName: resolved.accountName,
+            timeoutMs: FETCH_TIMEOUT_MS,
+          }, "Fetch timeout - removeOAuthAccountByIdOrName DELETE");
+         return { ok: false, error: "Request timeout removing OAuth account" };
+       }
+       throw fetchError;
+     }
 
-    if (!deleteRes.ok) {
-      return { ok: false, error: `Failed to remove OAuth account: HTTP ${deleteRes.status}` };
-    }
+     if (!deleteRes.ok) {
+       return { ok: false, error: `Failed to remove OAuth account: HTTP ${deleteRes.status}` };
+     }
 
     // Clean up DB record if it exists
     if (resolved.ownership) {
@@ -762,14 +935,13 @@ export async function removeOAuthAccountByIdOrName(
           where: { id: resolved.ownership.id },
         });
       } catch (e) {
-        console.error("Failed to delete ownership record:", e);
-        // Don't fail the deletion if DB cleanup fails
+        logger.error({ err: e, ownershipId: resolved.ownership.id }, "Failed to delete ownership record");
       }
     }
 
     return { ok: true };
   } catch (error) {
-    console.error("removeOAuthAccountByIdOrName error:", error);
+    logger.error({ err: error, idOrName }, "removeOAuthAccountByIdOrName error");
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during OAuth removal",

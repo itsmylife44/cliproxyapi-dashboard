@@ -3,8 +3,21 @@ import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { generateSyncToken } from "@/lib/auth/sync-token";
 import { prisma } from "@/lib/db";
+import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
+  const rateLimit = checkRateLimitWithPreset(request, "config-sync-tokens", "CONFIG_SYNC_TOKENS");
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many token creation requests. Try again later." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+      }
+    );
+  }
+
   const session = await verifySession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -22,6 +35,7 @@ export async function POST(request: NextRequest) {
     const userApiKey = await prisma.userApiKey.findFirst({
       where: { userId: session.userId },
       orderBy: { createdAt: "asc" },
+      select: { id: true },
     });
 
     if (!userApiKey) {
@@ -48,7 +62,7 @@ export async function POST(request: NextRequest) {
       createdAt: syncToken.createdAt.toISOString(),
     });
   } catch (error) {
-    console.error("Failed to create sync token:", error);
+    logger.error({ err: error }, "Failed to create sync token");
     return NextResponse.json(
       { error: "Failed to create token" },
       { status: 500 }
@@ -107,7 +121,7 @@ export async function GET() {
 
     return NextResponse.json({ tokens, apiKeys: allUserKeys });
   } catch (error) {
-    console.error("Failed to fetch sync tokens:", error);
+    logger.error({ err: error }, "Failed to fetch sync tokens");
     return NextResponse.json(
       { error: "Failed to fetch tokens" },
       { status: 500 }

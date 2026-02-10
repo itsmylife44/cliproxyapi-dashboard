@@ -11,6 +11,9 @@ import {
   USERNAME_MIN_LENGTH,
   isValidUsernameFormat,
 } from "@/lib/auth/validation";
+import { ERROR_CODE, Errors, apiErrorWithHeaders } from "@/lib/errors";
+import { AUDIT_ACTION, logAuditAsync } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 const LOGIN_ATTEMPTS_LIMIT = 10;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -28,16 +31,12 @@ export async function POST(request: NextRequest) {
     );
 
     if (!rateLimit.allowed) {
-      return NextResponse.json(
-        {
-          error: "Too many login attempts. Try again later.",
-        },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(rateLimit.retryAfterSeconds),
-          },
-        }
+      return apiErrorWithHeaders(
+        ERROR_CODE.RATE_LIMIT_EXCEEDED,
+        "Too many login attempts. Try again later.",
+        429,
+        undefined,
+        { "Retry-After": String(rateLimit.retryAfterSeconds) }
       );
     }
 
@@ -45,17 +44,11 @@ export async function POST(request: NextRequest) {
     const { username, password } = body;
 
     if (!username || !password) {
-      return NextResponse.json(
-        { error: "Username and password are required" },
-        { status: 400 }
-      );
+      return Errors.missingFields(["username", "password"]);
     }
 
     if (typeof username !== "string" || typeof password !== "string") {
-      return NextResponse.json(
-        { error: "Invalid input types" },
-        { status: 400 }
-      );
+      return Errors.validation("Invalid input types");
     }
 
     if (
@@ -63,38 +56,28 @@ export async function POST(request: NextRequest) {
       username.length > USERNAME_MAX_LENGTH ||
       !isValidUsernameFormat(username)
     ) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
-      );
+      return Errors.invalidCredentials();
     }
 
     if (
       password.length < PASSWORD_MIN_LENGTH ||
       password.length > PASSWORD_MAX_LENGTH
     ) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
-      );
+      return Errors.invalidCredentials();
     }
 
     const user = await getUserByUsername(username);
 
     if (!user) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
-      );
+      logger.warn({ username, ip: ipAddress }, "Failed login attempt - user not found");
+      return Errors.invalidCredentials();
     }
 
     const isValid = await verifyPassword(password, user.passwordHash);
 
     if (!isValid) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
-      );
+      logger.warn({ username, ip: ipAddress }, "Failed login attempt - invalid password");
+      return Errors.invalidCredentials();
     }
 
     const token = await signToken({
@@ -107,6 +90,13 @@ export async function POST(request: NextRequest) {
       token
     );
 
+    logAuditAsync({
+      userId: user.id,
+      action: AUDIT_ACTION.USER_LOGIN,
+      metadata: { username: user.username },
+      ipAddress: ipAddress,
+    });
+
     return NextResponse.json({
       success: true,
       user: {
@@ -115,10 +105,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return Errors.internal("Login error", error);
   }
 }

@@ -39,18 +39,19 @@ client.connect()
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
     -- Sync tokens table
-    CREATE TABLE IF NOT EXISTS "sync_tokens" (
-      "id" TEXT NOT NULL,
-      "userId" TEXT NOT NULL,
-      "name" TEXT NOT NULL DEFAULT 'Default',
-      "tokenHash" TEXT NOT NULL,
-      "syncApiKey" TEXT,
-      "lastUsedAt" TIMESTAMP(3),
-      "revokedAt" TIMESTAMP(3),
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "sync_tokens_pkey" PRIMARY KEY ("id")
-    );
-    CREATE INDEX IF NOT EXISTS "sync_tokens_userId_idx" ON "sync_tokens"("userId");
+     CREATE TABLE IF NOT EXISTS "sync_tokens" (
+       "id" TEXT NOT NULL,
+       "userId" TEXT NOT NULL,
+       "name" TEXT NOT NULL DEFAULT 'Default',
+       "tokenHash" TEXT NOT NULL,
+       "syncApiKey" TEXT,
+       "lastUsedAt" TIMESTAMP(3),
+       "revokedAt" TIMESTAMP(3),
+       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       CONSTRAINT "sync_tokens_pkey" PRIMARY KEY ("id")
+     );
+     CREATE INDEX IF NOT EXISTS "sync_tokens_userId_idx" ON "sync_tokens"("userId");
+     CREATE INDEX IF NOT EXISTS "sync_tokens_tokenHash_idx" ON "sync_tokens"("tokenHash");
     DO $$ BEGIN
       ALTER TABLE "sync_tokens" ADD CONSTRAINT "sync_tokens_userId_fkey"
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
@@ -148,6 +149,7 @@ client.connect()
     CREATE UNIQUE INDEX IF NOT EXISTS "provider_key_ownerships_keyHash_key" ON "provider_key_ownerships"("keyHash");
     CREATE INDEX IF NOT EXISTS "provider_key_ownerships_userId_idx" ON "provider_key_ownerships"("userId");
     CREATE INDEX IF NOT EXISTS "provider_key_ownerships_provider_idx" ON "provider_key_ownerships"("provider");
+    CREATE INDEX IF NOT EXISTS "provider_key_ownerships_provider_keyHash_idx" ON "provider_key_ownerships"("provider", "keyHash");
     DO $$ BEGIN
       ALTER TABLE "provider_key_ownerships" ADD CONSTRAINT "provider_key_ownerships_userId_fkey"
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
@@ -231,6 +233,25 @@ client.connect()
     DO $$ BEGIN
       ALTER TABLE "custom_provider_excluded_models" ADD CONSTRAINT "custom_provider_excluded_models_customProviderId_fkey"
         FOREIGN KEY ("customProviderId") REFERENCES "custom_providers"("id") ON DELETE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- Audit logs table (track admin actions for compliance and security)
+    CREATE TABLE IF NOT EXISTS "audit_logs" (
+      "id" TEXT NOT NULL,
+      "userId" TEXT NOT NULL,
+      "action" TEXT NOT NULL,
+      "target" TEXT,
+      "metadata" JSONB,
+      "ipAddress" TEXT,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
+    );
+    CREATE INDEX IF NOT EXISTS "audit_logs_userId_idx" ON "audit_logs"("userId");
+    CREATE INDEX IF NOT EXISTS "audit_logs_createdAt_idx" ON "audit_logs"("createdAt");
+    CREATE INDEX IF NOT EXISTS "audit_logs_action_idx" ON "audit_logs"("action");
+    DO $$ BEGIN
+      ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_userId_fkey"
+        FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   `))
   .then(() => {

@@ -187,6 +187,7 @@ interface AggregatedKeyUsage {
   output_tokens: number;
   reasoning_tokens: number;
   cached_tokens: number;
+  sources: string[];
   models: Record<string, { total_requests: number; total_tokens: number; input_tokens: number; output_tokens: number }>;
 }
 
@@ -218,6 +219,7 @@ function groupUsageByApiKey(
             output_tokens: 0,
             reasoning_tokens: 0,
             cached_tokens: 0,
+            sources: [],
             models: {},
           };
         }
@@ -229,6 +231,9 @@ function groupUsageByApiKey(
         keyUsage.output_tokens += detail.tokens?.output_tokens || 0;
         keyUsage.reasoning_tokens += detail.tokens?.reasoning_tokens || 0;
         keyUsage.cached_tokens += detail.tokens?.cached_tokens || 0;
+        if (detail.source && !keyUsage.sources.includes(detail.source)) {
+          keyUsage.sources.push(detail.source);
+        }
 
         if (detail.failed) {
           keyUsage.failure_count += 1;
@@ -259,12 +264,14 @@ function groupUsageByApiKey(
 function filterAndLabelApis(
   apis: Record<string, ApiUsageEntry>,
   userKeys: ApiKeyDbRecord[],
-  isAdmin: boolean
+  isAdmin: boolean,
+  username: string
 ): { apis: Record<string, AggregatedKeyUsage>; totals: { requests: number; tokens: number; success: number; failure: number; inputTokens: number; outputTokens: number } } {
   // First, regroup usage by API key (auth_index)
   const usageByKey = groupUsageByApiKey(apis);
   
   const result: Record<string, AggregatedKeyUsage> = {};
+  const normalizedUsername = username.trim().toLowerCase();
   // Dashboard stores full keys like "sk-abc123...", CLIProxyAPI uses 16-char auth_index
   // Match by checking if the stored key starts with "sk-" and comparing after prefix,
   // or by direct 16-char prefix match
@@ -290,17 +297,17 @@ function filterAndLabelApis(
 
   for (const [authIndex, usage] of Object.entries(usageByKey)) {
     const keyName = keyNameMap.get(authIndex);
-    const keyUserId = keyUserMap.get(authIndex);
     const isUserKey = keyName !== undefined;
+    const isUserSource = usage.sources.some((source) => source.toLowerCase() === normalizedUsername);
     
     // Non-admin users only see their own keys
-    if (!isAdmin && !isUserKey) {
+    if (!isAdmin && !isUserKey && !isUserSource) {
       continue;
     }
 
     // For admin: show key name if known, otherwise show truncated auth_index
     // For user: show key name if known, otherwise "My Key"
-    let baseLabel = keyName ? keyName : (isAdmin ? `Key ${authIndex}` : "My Key");
+    let baseLabel = keyName ? keyName : (isAdmin ? `Key ${authIndex}` : `My Key ${authIndex.slice(0, 6)}`);
     
     // Ensure unique labels
     let label = baseLabel;
@@ -405,7 +412,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { apis: filteredApis, totals } = filterAndLabelApis(rawData.apis, userKeys, isAdmin);
+    const { apis: filteredApis, totals } = filterAndLabelApis(
+      rawData.apis,
+      userKeys,
+      isAdmin,
+      session.username
+    );
 
     const responseData = {
       data: {

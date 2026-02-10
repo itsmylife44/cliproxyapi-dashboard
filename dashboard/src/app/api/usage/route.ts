@@ -12,17 +12,16 @@ const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
 interface ApiKeyDbRecord {
   key: string;
   name: string;
-  user: { username: string };
-}
-
-interface ApiKeyLabel {
-  name: string;
-  username: string;
+  userId: string;
 }
 
 interface ApiUsageEntry {
   total_requests: number;
   total_tokens: number;
+  success_count?: number;
+  failure_count?: number;
+  input_tokens?: number;
+  output_tokens?: number;
   models?: Record<string, unknown>;
   [key: string]: unknown;
 }
@@ -75,79 +74,62 @@ function isRawUsageResponse(value: unknown): value is RawUsageResponse {
     return false;
   }
 
-   const apis = obj.apis as Record<string, unknown>;
-   for (const apiValue of Object.values(apis)) {
-     if (!isApiUsageEntry(apiValue)) {
-       return false;
-     }
-   }
-
-   return true;
-}
-
-function buildKeyLookup(
-  dbKeys: ApiKeyDbRecord[]
-): Map<string, ApiKeyLabel> {
-  const lookup = new Map<string, ApiKeyLabel>();
-  for (const record of dbKeys) {
-    lookup.set(record.key, {
-      name: record.name,
-      username: record.user.username,
-    });
+  const apis = obj.apis as Record<string, unknown>;
+  for (const apiValue of Object.values(apis)) {
+    if (!isApiUsageEntry(apiValue)) {
+      return false;
+    }
   }
-  return lookup;
+
+  return true;
 }
 
-function sanitizeApiKeys(
+function filterAndLabelApis(
   apis: Record<string, ApiUsageEntry>,
-  keyLookup: Map<string, ApiKeyLabel>
-): Record<string, ApiUsageEntry> {
-  const sanitized: Record<string, ApiUsageEntry> = {};
-  let unknownCounter = 0;
+  userKeys: ApiKeyDbRecord[],
+  isAdmin: boolean
+): { apis: Record<string, ApiUsageEntry>; totals: { requests: number; tokens: number; success: number; failure: number } } {
+  const result: Record<string, ApiUsageEntry> = {};
+  const keySet = new Set(userKeys.map((k) => k.key));
+  const keyNameMap = new Map(userKeys.map((k) => [k.key, k.name]));
+  
+  let totalRequests = 0;
+  let totalTokens = 0;
+  let totalSuccess = 0;
+  let totalFailure = 0;
 
   for (const [rawKey, entry] of Object.entries(apis)) {
-    const label = keyLookup.get(rawKey);
-    let sanitizedLabel: string;
-
-    if (label) {
-      const keyName = label.name.trim() || "Unnamed Key";
-      sanitizedLabel = `${keyName} (${label.username})`;
-    } else {
-      unknownCounter++;
-      sanitizedLabel = `Unknown Key ${unknownCounter}`;
+    const isUserKey = keySet.has(rawKey);
+    
+    if (!isAdmin && !isUserKey) {
+      continue;
     }
 
-    sanitized[sanitizedLabel] = { ...entry };
+    const keyName = keyNameMap.get(rawKey);
+    const label = keyName ? keyName : (isAdmin ? `Unknown Key` : "My Key");
+
+    result[label] = { ...entry };
+    totalRequests += entry.total_requests || 0;
+    totalTokens += entry.total_tokens || 0;
+    totalSuccess += entry.success_count || 0;
+    totalFailure += entry.failure_count || 0;
   }
 
-  return sanitized;
-}
-
-async function requireAdmin(): Promise<{ userId: string; username: string } | NextResponse> {
-  const session = await verifySession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { isAdmin: true },
-  });
-
-  if (!user?.isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden - Admin access required" },
-      { status: 403 }
-    );
-  }
-
-  return { userId: session.userId, username: session.username };
+  return {
+    apis: result,
+    totals: {
+      requests: totalRequests,
+      tokens: totalTokens,
+      success: totalSuccess,
+      failure: totalFailure,
+    },
+  };
 }
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireAdmin();
-  if (authResult instanceof NextResponse) {
-    return authResult;
+  const session = await verifySession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   if (!MANAGEMENT_API_KEY) {
@@ -159,19 +141,23 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { isAdmin: true },
+    });
+    const isAdmin = user?.isAdmin ?? false;
+
     const { searchParams } = new URL(request.url);
-    
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10) || 50));
-    const skip = (page - 1) * limit;
 
-    const cacheKey = `${CACHE_KEYS.usage(authResult.userId)}:${page}:${limit}`;
+    const cacheKey = `${CACHE_KEYS.usage(session.userId)}:${isAdmin}:${page}:${limit}`;
     const cached = usageCache.get(cacheKey);
     if (cached) {
       return NextResponse.json(cached);
     }
 
-    const [usageResponse, allKeys, totalKeys] = await Promise.all([
+    const [usageResponse, userKeys] = await Promise.all([
       fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/usage`, {
         method: "GET",
         headers: {
@@ -179,15 +165,13 @@ export async function GET(request: NextRequest) {
         },
       }),
       prisma.userApiKey.findMany({
+        where: isAdmin ? undefined : { userId: session.userId },
         select: {
           key: true,
           name: true,
-          user: { select: { username: true } },
+          userId: true,
         },
-        skip,
-        take: limit,
       }),
-      prisma.userApiKey.count(),
     ]);
 
     if (!usageResponse.ok) {
@@ -203,7 +187,6 @@ export async function GET(request: NextRequest) {
 
     const responseJson: unknown = await usageResponse.json();
 
-    // CLIProxyAPI wraps data in { usage: { ... } } — unwrap it
     const rawData: unknown =
       typeof responseJson === "object" &&
       responseJson !== null &&
@@ -219,21 +202,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const keyLookup = buildKeyLookup(allKeys);
-    const sanitizedApis = sanitizeApiKeys(rawData.apis, keyLookup);
-
-    const sanitizedResponse = {
-      ...rawData,
-      apis: sanitizedApis,
-    };
+    const { apis: filteredApis, totals } = filterAndLabelApis(rawData.apis, userKeys, isAdmin);
 
     const responseData = {
-      data: sanitizedResponse,
+      data: {
+        total_requests: isAdmin ? rawData.total_requests : totals.requests,
+        success_count: isAdmin ? rawData.success_count : totals.success,
+        failure_count: isAdmin ? rawData.failure_count : totals.failure,
+        total_tokens: isAdmin ? rawData.total_tokens : totals.tokens,
+        apis: filteredApis,
+        requests_by_day: isAdmin ? rawData.requests_by_day : undefined,
+        requests_by_hour: isAdmin ? rawData.requests_by_hour : undefined,
+        tokens_by_day: isAdmin ? rawData.tokens_by_day : undefined,
+        tokens_by_hour: isAdmin ? rawData.tokens_by_hour : undefined,
+      },
+      isAdmin,
       pagination: {
         page,
         limit,
-        total: totalKeys,
-        hasMore: skip + allKeys.length < totalKeys,
+        total: userKeys.length,
+        hasMore: false,
       },
     };
 

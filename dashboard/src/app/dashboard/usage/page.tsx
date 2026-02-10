@@ -63,26 +63,18 @@ interface FetchUsageParams {
   setStats: (stats: UsageStats | null) => void;
   setLoading: (loading: boolean) => void;
   showToast: (message: string, type: "success" | "error" | "info") => void;
-  setAdminRequired: (required: boolean) => void;
   isFirstLoad: boolean;
 }
 
 async function fetchUsage(params: FetchUsageParams) {
-  const { setStats, setLoading, showToast, setAdminRequired, isFirstLoad } = params;
+  const { setStats, setLoading, showToast, isFirstLoad } = params;
   
-  // Only show loading spinner on first load or manual refresh
   if (isFirstLoad) {
     setLoading(true);
   }
   
   try {
     const res = await fetch("/api/usage");
-    
-    if (res.status === 403) {
-      setAdminRequired(true);
-      setLoading(false);
-      return;
-    }
     
     if (!res.ok) {
       showToast("Failed to load usage statistics", "error");
@@ -91,7 +83,6 @@ async function fetchUsage(params: FetchUsageParams) {
     }
 
     const data = await res.json();
-    // API returns { data: { ... }, pagination: { ... } }
     const usage = data?.data ?? data;
     setStats({
       total_requests: usage?.total_requests ?? 0,
@@ -104,7 +95,6 @@ async function fetchUsage(params: FetchUsageParams) {
       tokens_by_day: usage?.tokens_by_day ?? undefined,
       tokens_by_hour: usage?.tokens_by_hour ?? undefined,
     });
-    setAdminRequired(false);
     setLoading(false);
   } catch {
     showToast("Network error", "error");
@@ -115,7 +105,6 @@ async function fetchUsage(params: FetchUsageParams) {
 export default function UsagePage() {
   const [stats, setStats] = useState<UsageStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [adminRequired, setAdminRequired] = useState(false);
   const [expandedApis, setExpandedApis] = useState<Set<string>>(new Set());
   const { showToast } = useToast();
   const isFirstLoadRef = useRef(true);
@@ -125,22 +114,18 @@ export default function UsagePage() {
       setStats, 
       setLoading, 
       showToast, 
-      setAdminRequired,
       isFirstLoad: isFirstLoadRef.current 
     });
     
-    // Mark first load complete
     if (isFirstLoadRef.current) {
       isFirstLoadRef.current = false;
     }
     
-    // Set up 30-second auto-refresh
     const interval = setInterval(() => {
       void fetchUsage({ 
         setStats, 
-        setLoading: () => {}, // Silent background refresh
+        setLoading: () => {},
         showToast, 
-        setAdminRequired,
         isFirstLoad: false
       });
     }, 30000);
@@ -148,17 +133,17 @@ export default function UsagePage() {
     return () => clearInterval(interval);
   }, [showToast]);
 
-   return (
-     <div className="space-y-4">
-       <div className="flex items-center justify-between">
-         <div>
-           <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-             Usage Statistics
-           </h1>
-           <p className="mt-1 text-xs text-white/50">
-             Auto-refreshes every 30s
-           </p>
-         </div>
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
+            Usage Statistics
+          </h1>
+          <p className="mt-1 text-xs text-white/50">
+            Auto-refreshes every 30s
+          </p>
+        </div>
         <Button
           onClick={() => {
             isFirstLoadRef.current = true;
@@ -166,7 +151,6 @@ export default function UsagePage() {
               setStats, 
               setLoading, 
               showToast, 
-              setAdminRequired,
               isFirstLoad: true 
             });
           }}
@@ -180,14 +164,6 @@ export default function UsagePage() {
         <Card>
           <CardContent>
             <div className="p-8 text-center text-white">Loading statistics...</div>
-          </CardContent>
-        </Card>
-      ) : adminRequired ? (
-        <Card>
-          <CardContent>
-            <div className="border-l-4 border-yellow-400/60 backdrop-blur-xl bg-yellow-500/20 p-4 text-sm text-white rounded-r-xl">
-              Usage statistics are only available to administrators.
-            </div>
           </CardContent>
         </Card>
       ) : !stats ? (

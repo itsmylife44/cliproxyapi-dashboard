@@ -891,6 +891,7 @@ if [[ "$INSTALL_WEBHOOK" =~ ^[Yy]$ ]]; then
     # Copy and configure webhook.yaml
     log_info "Configuring webhook..."
     sed "s/{{DEPLOY_SECRET}}/$DEPLOY_SECRET/g" "$INSTALL_DIR/infrastructure/webhook.yaml" > /etc/webhook/hooks.yaml
+    chmod 600 /etc/webhook/hooks.yaml
     
     # Make deploy script executable
     chmod +x "$INSTALL_DIR/infrastructure/deploy.sh"
@@ -931,12 +932,14 @@ EOF
     
     OVERRIDE_FILE="$INSTALL_DIR/infrastructure/docker-compose.override.yml"
     if [ -f "$OVERRIDE_FILE" ]; then
-        # Append to existing override file
-        if ! grep -q "extra_hosts" "$OVERRIDE_FILE"; then
-            cat >> "$OVERRIDE_FILE" << 'OVERRIDE_APPEND'
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-OVERRIDE_APPEND
+        # Check if extra_hosts already configured
+        if grep -q "extra_hosts" "$OVERRIDE_FILE"; then
+            log_info "extra_hosts already configured in override file"
+        else
+            log_warn "docker-compose.override.yml exists but doesn't have extra_hosts."
+            log_warn "Please manually add the following under 'services: dashboard:':"
+            log_warn "    extra_hosts:"
+            log_warn "      - \"host.docker.internal:host-gateway\""
         fi
     else
         # Create new override file
@@ -946,6 +949,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 OVERRIDE_NEW
+        log_success "Created docker-compose.override.yml with host networking"
     fi
     
     log_success "Webhook deploy service configured"

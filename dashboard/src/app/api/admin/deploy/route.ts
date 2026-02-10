@@ -104,7 +104,9 @@ export async function GET(request: Request) {
 
     if (!response.ok) {
       if (response.status === 404) {
-        return NextResponse.json({ status: "idle", message: "No deployment in progress" });
+        return NextResponse.json({
+          status: { status: "idle", message: "No deployment in progress" },
+        });
       }
       return NextResponse.json(
         { error: "Failed to get deploy status" },
@@ -120,9 +122,11 @@ export async function GET(request: Request) {
     
     try {
       const status = JSON.parse(text);
-      return NextResponse.json(status);
+      return NextResponse.json({ status });
     } catch {
-      return NextResponse.json({ status: "idle", message: "No deployment in progress" });
+      return NextResponse.json({
+        status: { status: "idle", message: "No deployment in progress" },
+      });
     }
   } catch (error) {
     console.error("Deploy status error:", error);

@@ -860,6 +860,109 @@ CADDY_DOCKER_CONFIG
 fi
 
 # ============================================================================
+# WEBHOOK DEPLOY SERVICE (Optional)
+# ============================================================================
+
+echo ""
+log_info "=== Dashboard Deploy Webhook (Optional) ==="
+echo ""
+log_info "The webhook service enables one-click dashboard updates from the admin panel."
+log_info "It runs a lightweight HTTP server that triggers git pull + docker compose build."
+echo ""
+
+read -p "Install webhook deploy service? [y/N]: " INSTALL_WEBHOOK
+if [[ "$INSTALL_WEBHOOK" =~ ^[Yy]$ ]]; then
+    log_info "Installing webhook..."
+    
+    # Install webhook binary
+    if command -v webhook &> /dev/null; then
+        log_success "webhook already installed"
+    else
+        apt-get install -y webhook
+        log_success "webhook installed"
+    fi
+    
+    # Generate deploy secret
+    DEPLOY_SECRET=$(openssl rand -hex 32)
+    
+    # Create webhook config directory
+    mkdir -p /etc/webhook
+    
+    # Copy and configure webhook.yaml
+    log_info "Configuring webhook..."
+    sed "s/{{DEPLOY_SECRET}}/$DEPLOY_SECRET/g" "$INSTALL_DIR/infrastructure/webhook.yaml" > /etc/webhook/hooks.yaml
+    
+    # Make deploy script executable
+    chmod +x "$INSTALL_DIR/infrastructure/deploy.sh"
+    
+    # Create systemd service for webhook
+    cat > /etc/systemd/system/webhook-deploy.service << EOF
+[Unit]
+Description=Webhook Deploy Service for CLIProxyAPI Dashboard
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/webhook -hooks /etc/webhook/hooks.yaml -port 9000 -verbose
+Restart=on-failure
+RestartSec=5
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    # Enable and start webhook service
+    systemctl daemon-reload
+    systemctl enable webhook-deploy.service
+    systemctl start webhook-deploy.service
+    
+    log_success "Webhook service installed and started on port 9000"
+    
+    # Add webhook env vars to .env file
+    log_info "Adding webhook configuration to .env..."
+    cat >> "$ENV_FILE" << EOF
+
+# Webhook Deploy Service
+WEBHOOK_HOST=http://host.docker.internal:9000
+DEPLOY_SECRET=$DEPLOY_SECRET
+EOF
+    
+    OVERRIDE_FILE="$INSTALL_DIR/infrastructure/docker-compose.override.yml"
+    if [ -f "$OVERRIDE_FILE" ]; then
+        # Append to existing override file
+        if ! grep -q "extra_hosts" "$OVERRIDE_FILE"; then
+            cat >> "$OVERRIDE_FILE" << 'OVERRIDE_APPEND'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+OVERRIDE_APPEND
+        fi
+    else
+        # Create new override file
+        cat > "$OVERRIDE_FILE" << 'OVERRIDE_NEW'
+services:
+  dashboard:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+OVERRIDE_NEW
+    fi
+    
+    log_success "Webhook deploy service configured"
+    echo ""
+    log_info "Deploy secret saved to $ENV_FILE"
+    log_info "You can now use 'Quick Update' and 'Full Rebuild' buttons in Dashboard Settings"
+    
+    WEBHOOK_INSTALLED=1
+else
+    log_info "Skipping webhook installation"
+    log_info "You can install it later by following: infrastructure/WEBHOOK_SETUP.md"
+    WEBHOOK_INSTALLED=0
+fi
+
+echo ""
+
+# ============================================================================
 # FINAL STEPS
 # ============================================================================
 

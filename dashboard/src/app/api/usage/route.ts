@@ -331,6 +331,71 @@ function filterAndLabelApis(
     totalOutputTokens += usage.output_tokens;
   }
 
+  if (!isAdmin && userKeys.length === 1) {
+    const onlyLabel = userKeys[0]?.name || "My Key";
+    const allEntries = Object.values(result);
+
+    if (allEntries.length > 1) {
+      const merged: AggregatedKeyUsage = {
+        total_requests: 0,
+        total_tokens: 0,
+        success_count: 0,
+        failure_count: 0,
+        input_tokens: 0,
+        output_tokens: 0,
+        reasoning_tokens: 0,
+        cached_tokens: 0,
+        sources: [],
+        models: {},
+      };
+
+      for (const entry of allEntries) {
+        merged.total_requests += entry.total_requests;
+        merged.total_tokens += entry.total_tokens;
+        merged.success_count += entry.success_count;
+        merged.failure_count += entry.failure_count;
+        merged.input_tokens += entry.input_tokens;
+        merged.output_tokens += entry.output_tokens;
+        merged.reasoning_tokens += entry.reasoning_tokens;
+        merged.cached_tokens += entry.cached_tokens;
+
+        for (const source of entry.sources) {
+          if (!merged.sources.includes(source)) {
+            merged.sources.push(source);
+          }
+        }
+
+        for (const [modelName, modelUsage] of Object.entries(entry.models)) {
+          if (!merged.models[modelName]) {
+            merged.models[modelName] = {
+              total_requests: 0,
+              total_tokens: 0,
+              input_tokens: 0,
+              output_tokens: 0,
+            };
+          }
+
+          merged.models[modelName].total_requests += modelUsage.total_requests;
+          merged.models[modelName].total_tokens += modelUsage.total_tokens;
+          merged.models[modelName].input_tokens += modelUsage.input_tokens;
+          merged.models[modelName].output_tokens += modelUsage.output_tokens;
+        }
+      }
+
+      return {
+        apis: { [onlyLabel]: merged },
+        totals: {
+          requests: merged.total_requests,
+          tokens: merged.total_tokens,
+          success: merged.success_count,
+          failure: merged.failure_count,
+          inputTokens: merged.input_tokens,
+          outputTokens: merged.output_tokens,
+        },
+      };
+    }
+  }
+
   return {
     apis: result,
     totals: {

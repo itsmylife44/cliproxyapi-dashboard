@@ -36,7 +36,7 @@ async function getDockerHubTags(): Promise<DockerHubTag[]> {
   return data.results || [];
 }
 
-async function getCurrentImageDigest(): Promise<{ version: string; digest: string }> {
+async function getCurrentImageDigest(): Promise<{ version: string; digest: string; fullDigest: string }> {
   try {
     const { stdout } = await execFileAsync("docker", [
       "inspect",
@@ -45,12 +45,17 @@ async function getCurrentImageDigest(): Promise<{ version: string; digest: strin
       "{{.Config.Image}} {{.Image}}",
     ]);
     
-    const [image, digest] = stdout.trim().split(" ");
-    const version = image.includes(":") ? image.split(":")[1] : "latest";
+    const [image, fullDigest] = stdout.trim().split(" ");
+    const tagVersion = image.includes(":") ? image.split(":")[1] : "latest";
+    const cleanDigest = fullDigest.replace("sha256:", "");
     
-    return { version, digest: digest.replace("sha256:", "").substring(0, 12) };
+    return { 
+      version: tagVersion, 
+      digest: cleanDigest.substring(0, 12),
+      fullDigest: cleanDigest 
+    };
   } catch {
-    return { version: "unknown", digest: "unknown" };
+    return { version: "unknown", digest: "unknown", fullDigest: "unknown" };
   }
 }
 
@@ -89,10 +94,10 @@ export async function GET() {
 
     const versionedTags = tags
       .filter((t) => t.name !== "latest" && t.name.startsWith("v"))
-      .map((t) => t.name)
+      .map((t) => ({ name: t.name, digest: t.digest.replace("sha256:", "") }))
       .sort((a, b) => {
-        const aParts = a.replace("v", "").split(".").map(Number);
-        const bParts = b.replace("v", "").split(".").map(Number);
+        const aParts = a.name.replace("v", "").split(".").map(Number);
+        const bParts = b.name.replace("v", "").split(".").map(Number);
         for (let i = 0; i < 3; i++) {
           if ((bParts[i] || 0) !== (aParts[i] || 0)) {
             return (bParts[i] || 0) - (aParts[i] || 0);
@@ -101,17 +106,31 @@ export async function GET() {
         return 0;
       });
 
+    // If current tag is "latest", resolve to actual version by matching digest
+    let resolvedCurrentVersion = current.version;
+    if (current.version === "latest" && current.fullDigest !== "unknown") {
+      const matchingTag = versionedTags.find((t) => 
+        t.digest.startsWith(current.fullDigest.substring(0, 12)) ||
+        current.fullDigest.startsWith(t.digest.substring(0, 12))
+      );
+      if (matchingTag) {
+        resolvedCurrentVersion = matchingTag.name;
+      }
+    }
+
+    const versionNames = versionedTags.map((t) => t.name);
+
     const updateAvailable = latestDigest !== "unknown" && 
       current.digest !== "unknown" && 
       latestDigest !== current.digest;
 
     const versionInfo: VersionInfo = {
-      currentVersion: current.version,
+      currentVersion: resolvedCurrentVersion,
       currentDigest: current.digest,
-      latestVersion: versionedTags[0] || "latest",
+      latestVersion: versionNames[0] || "latest",
       latestDigest,
       updateAvailable,
-      availableVersions: versionedTags.slice(0, 10),
+      availableVersions: versionNames.slice(0, 10),
     };
 
     return NextResponse.json(versionInfo);

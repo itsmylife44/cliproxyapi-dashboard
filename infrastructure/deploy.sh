@@ -16,9 +16,15 @@ chmod 755 "$LOG_DIR"
 
 # Parse arguments
 NO_CACHE=""
-if [ "$1" = "--no-cache" ]; then
-    NO_CACHE="--no-cache"
-fi
+FOREGROUND=false
+for arg in "$@"; do
+    if [ "$arg" = "--no-cache" ]; then
+        NO_CACHE="--no-cache"
+    fi
+    if [ "$arg" = "--foreground" ]; then
+        FOREGROUND=true
+    fi
+done
 
 # Helper function to update status
 update_status() {
@@ -29,32 +35,28 @@ update_status() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$step] $message" >> "$LOG_FILE"
 }
 
-# Check if already running (with stale lock detection)
-if [ -f "$LOCK_FILE" ]; then
-    # Check if lock file is older than 10 minutes (stale)
-    LOCK_AGE=$(($(date +%s) - $(stat -c %Y "$LOCK_FILE" 2>/dev/null || echo 0)))
-    if [ "$LOCK_AGE" -gt 600 ]; then
-        echo "Removing stale lock file (age: ${LOCK_AGE}s)" >> "$LOG_FILE"
-        rm -f "$LOCK_FILE"
-    else
-        PID=$(cat "$LOCK_FILE" 2>/dev/null)
-        if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
-            echo "Deployment already in progress (PID: $PID)" >> "$LOG_FILE"
-            echo "Deployment already in progress (PID: $PID)"
-            exit 0
+# Skip lock check if running in foreground (child process)
+# The parent already verified no deployment is running before forking
+if [ "$FOREGROUND" = false ]; then
+    # Check if already running (with stale lock detection)
+    if [ -f "$LOCK_FILE" ]; then
+        # Check if lock file is older than 10 minutes (stale)
+        LOCK_AGE=$(($(date +%s) - $(stat -c %Y "$LOCK_FILE" 2>/dev/null || echo 0)))
+        if [ "$LOCK_AGE" -gt 600 ]; then
+            echo "Removing stale lock file (age: ${LOCK_AGE}s)" >> "$LOG_FILE"
+            rm -f "$LOCK_FILE"
+        else
+            PID=$(cat "$LOCK_FILE" 2>/dev/null)
+            if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+                echo "Deployment already in progress (PID: $PID)" >> "$LOG_FILE"
+                echo "Deployment already in progress (PID: $PID)"
+                exit 0
+            fi
+            # Process not running but lock exists - remove stale lock
+            rm -f "$LOCK_FILE"
         fi
-        # Process not running but lock exists - remove stale lock
-        rm -f "$LOCK_FILE"
     fi
 fi
-
-# Check if running in foreground mode (passed as last argument by the fork below)
-FOREGROUND=false
-for arg in "$@"; do
-    if [ "$arg" = "--foreground" ]; then
-        FOREGROUND=true
-    fi
-done
 
 # Fork to background and return immediately (only parent forks)
 if [ "$FOREGROUND" = false ]; then

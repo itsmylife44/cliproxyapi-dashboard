@@ -52,6 +52,8 @@ interface UsageStats {
   success_count: number;
   failure_count: number;
   total_tokens: number;
+  input_tokens?: number;
+  output_tokens?: number;
   apis?: ApisMap;
   requests_by_day?: DayHourMap;
   requests_by_hour?: DayHourMap;

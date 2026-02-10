@@ -14,6 +14,9 @@ COPY public ./public
 COPY src ./src
 COPY prisma ./prisma
 RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" npx prisma generate
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+ENV JWT_SECRET="build-time-placeholder-replaced-at-runtime"
+ENV MANAGEMENT_API_KEY="build-time-placeholder-replaced-at-runtime"
 RUN npm run build
 
 FROM node:20-alpine AS runner

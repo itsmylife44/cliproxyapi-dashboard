@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
-import { buildAvailableModelsFromProxy, extractOAuthModelAliases, getProxyUrl, type McpEntry, type ModelDefinition } from "@/lib/config-generators/opencode";
+import { buildAvailableModelsFromProxy, extractOAuthModelAliases, getProxyUrl, getInternalProxyUrl, type McpEntry, type ModelDefinition } from "@/lib/config-generators/opencode";
 import { buildOhMyOpenCodeConfig } from "@/lib/config-generators/oh-my-opencode";
 import { fetchProxyModels, type ProxyModel } from "@/lib/config-generators/shared";
 import { validateFullConfig, type OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
@@ -302,9 +302,10 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
 
    const apiKey = resolvedSyncApiKey || userApiKey?.key || (apiKeyStrings.length > 0 ? apiKeyStrings[0] : "no-api-key-create-one-in-dashboard");
 
-   const proxyUrl = getProxyUrl();
+   const externalProxyUrl = getProxyUrl();
+   const internalProxyUrl = getInternalProxyUrl();
    const proxyModels = apiKey !== "no-api-key-create-one-in-dashboard"
-     ? await fetchProxyModelsCached(proxyUrl, apiKey)
+     ? await fetchProxyModelsCached(internalProxyUrl, apiKey)
      : [];
    const allModels: Record<string, ModelDefinition> = {
      ...buildAvailableModelsFromProxy(proxyModels),
@@ -349,7 +350,7 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
        npm: "@ai-sdk/openai-compatible",
        name: "CLIProxyAPI",
        options: {
-         baseURL: `${proxyUrl}/v1`,
+          baseURL: `${externalProxyUrl}/v1`,
          apiKey,
        },
        models: modelEntries,

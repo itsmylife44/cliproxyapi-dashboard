@@ -9,6 +9,16 @@ export function getProxyUrl(): string {
   return process.env.API_URL || "";
 }
 
+export function getInternalProxyUrl(): string {
+  const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
+  try {
+    const url = new URL(managementUrl);
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return "http://cliproxyapi:8317";
+  }
+}
+
 export interface ModelDefinition {
   name: string;
   context: number;

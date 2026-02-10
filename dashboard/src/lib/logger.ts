@@ -92,7 +92,6 @@ if (env.NODE_ENV === "development") {
   
   logMethods.forEach((method) => {
     const original = originalLogger[method].bind(originalLogger);
-    // @ts-expect-error - we're overriding the method
     originalLogger[method] = (...args: Parameters<typeof original>) => {
       // Store the log entry
       const level = { trace: 10, debug: 20, info: 30, warn: 40, error: 50, fatal: 60 }[method];

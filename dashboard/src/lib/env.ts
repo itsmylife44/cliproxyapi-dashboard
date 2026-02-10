@@ -56,7 +56,7 @@ function parseEnv() {
       })
       .join("\n");
     
-    console.error("❌ Environment validation failed:\n" + errors);
+    console.error("Environment validation failed:\n" + errors);
     throw new Error(
       `Invalid environment variables:\n${errors}\n\n` +
       "Please check your .env file or environment configuration."

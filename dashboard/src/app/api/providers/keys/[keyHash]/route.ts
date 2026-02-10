@@ -5,6 +5,7 @@ import { removeKey, removeKeyByAdmin } from "@/lib/providers/dual-write";
 import { prisma } from "@/lib/db";
 import { PROVIDER, type Provider } from "@/lib/providers/constants";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 function isValidProvider(provider: string): provider is Provider {
   return Object.values(PROVIDER).includes(provider as Provider);
@@ -78,7 +79,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("DELETE /api/providers/keys/[keyHash] error:", error);
+    logger.error({ err: error }, "DELETE /api/providers/keys/[keyHash] error");
     return NextResponse.json(
       { error: "Failed to remove provider key" },
       { status: 500 }

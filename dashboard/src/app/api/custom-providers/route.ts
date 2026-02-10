@@ -7,6 +7,7 @@ import { z } from "zod";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { invalidateProxyModelsCache } from "@/lib/cache";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 const CreateCustomProviderSchema = z.object({
   name: z.string().min(1).max(100),
@@ -55,7 +56,7 @@ export async function GET() {
       }))
     });
   } catch (error) {
-    console.error("GET /api/custom-providers error:", error);
+    logger.error({ err: error }, "GET /api/custom-providers error");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
@@ -185,19 +186,19 @@ export async function POST(request: NextRequest) {
           if (!putRes.ok) {
             syncStatus = "failed";
             syncMessage = "Backend sync failed - provider created but may not work immediately";
-            console.error("Failed to sync custom provider to Management API: HTTP", putRes.status);
+            logger.error({ status: putRes.status }, "Failed to sync custom provider to Management API");
           } else {
             invalidateProxyModelsCache();
           }
         } else {
           syncStatus = "failed";
           syncMessage = "Backend sync failed - provider created but may not work immediately";
-          console.error("Failed to fetch current config from Management API: HTTP", getRes.status);
+          logger.error({ status: getRes.status }, "Failed to fetch current config from Management API");
         }
       } catch (syncError) {
         syncStatus = "failed";
         syncMessage = "Backend sync failed - provider created but may not work immediately";
-        console.error("Failed to sync custom provider to Management API:", syncError);
+        logger.error({ err: syncError }, "Failed to sync custom provider to Management API");
       }
     } else {
       syncStatus = "failed";
@@ -210,7 +211,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
-    console.error("POST /api/custom-providers error:", error);
+    logger.error({ err: error }, "POST /api/custom-providers error");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

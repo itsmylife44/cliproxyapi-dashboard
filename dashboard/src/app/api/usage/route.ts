@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { usageCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";
+import { logger } from "@/lib/logger";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -150,7 +151,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!MANAGEMENT_API_KEY) {
-    console.error("MANAGEMENT_API_KEY is not configured");
+    logger.error("MANAGEMENT_API_KEY is not configured");
     return NextResponse.json(
       { error: "Server configuration error: management API key not set" },
       { status: 500 }
@@ -190,8 +191,9 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!usageResponse.ok) {
-      console.error(
-        `CLIProxyAPI usage endpoint returned ${usageResponse.status}: ${usageResponse.statusText}`
+      logger.error(
+        { status: usageResponse.status, statusText: usageResponse.statusText },
+        "CLIProxyAPI usage endpoint returned error"
       );
       return NextResponse.json(
         { error: "Failed to fetch usage data from CLIProxyAPI" },
@@ -210,7 +212,7 @@ export async function GET(request: NextRequest) {
         : responseJson;
 
     if (!isRawUsageResponse(rawData)) {
-      console.error("Unexpected usage response format from CLIProxyAPI:", JSON.stringify(responseJson).slice(0, 200));
+      logger.error({ response: JSON.stringify(responseJson).slice(0, 200) }, "Unexpected usage response format from CLIProxyAPI");
       return NextResponse.json(
         { error: "Invalid usage data format from CLIProxyAPI" },
         { status: 502 }
@@ -239,7 +241,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(responseData);
   } catch (error) {
-    console.error("Failed to fetch usage data:", error);
+    logger.error({ err: error }, "Failed to fetch usage data");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

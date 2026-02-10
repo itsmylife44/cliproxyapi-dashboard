@@ -1,5 +1,6 @@
 import "server-only";
 import { NextRequest } from "next/server";
+import { logger } from "@/lib/logger";
 
 type Entry = {
   count: number;
@@ -52,7 +53,7 @@ export function checkRateLimit(
   }
 
   if (existing.count >= limit) {
-    console.log(`[rate-limit] Blocked: key=${key}, count=${existing.count}, limit=${limit}`);
+    logger.info({ key, count: existing.count, limit }, "[rate-limit] Blocked");
     return {
       allowed: false,
       retryAfterSeconds: Math.max(1, Math.ceil((existing.resetAt - now) / 1000)),

@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 const MANAGEMENT_BASE_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -68,7 +69,7 @@ async function sleep(ms: number): Promise<void> {
 export async function syncKeysToCliProxyApi(): Promise<SyncResult> {
   const apiKey = process.env.MANAGEMENT_API_KEY;
   if (!apiKey) {
-    console.error("MANAGEMENT_API_KEY not set");
+    logger.error("MANAGEMENT_API_KEY not set");
     return {
       ok: false,
       error: "Management API key not configured",
@@ -113,16 +114,16 @@ export async function syncKeysToCliProxyApi(): Promise<SyncResult> {
 
         if (attempt < maxRetries - 1) {
           const delayMs = delays[attempt];
-          console.warn(
-            `Sync attempt ${attempt + 1} failed, retrying in ${delayMs}ms:`,
-            lastError.message
+          logger.warn(
+            { attempt: attempt + 1, delayMs, error: lastError.message },
+            "Sync attempt failed, retrying"
           );
           await sleep(delayMs);
         }
       }
     }
 
-    console.error("Final sync failure after retries:", lastError?.message);
+    logger.error({ error: lastError?.message }, "Final sync failure after retries");
     return {
       ok: false,
       error: lastError?.message || "Sync failed",
@@ -130,7 +131,7 @@ export async function syncKeysToCliProxyApi(): Promise<SyncResult> {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown error during sync";
-    console.error("Sync error:", message);
+    logger.error({ error: message }, "Sync error");
     return {
       ok: false,
       error: message,
@@ -208,10 +209,7 @@ export async function reconcileKeys(userId: string): Promise<SyncResult> {
     const extra = currentKeys.filter((k) => !userKeySet.has(k));
 
     if (missing.length > 0 || extra.length > 0) {
-      console.warn("Key mismatch detected:", {
-        missing: missing.length,
-        extra: extra.length,
-      });
+      logger.warn({ missing: missing.length, extra: extra.length }, "Key mismatch detected");
       return {
         ok: false,
         error: `Discrepancy: ${missing.length} missing, ${extra.length} extra`,

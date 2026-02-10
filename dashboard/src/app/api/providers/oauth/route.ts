@@ -4,6 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { contributeOAuthAccount, listOAuthWithOwnership } from "@/lib/providers/dual-write";
 import { OAUTH_PROVIDER, type OAuthProvider } from "@/lib/providers/constants";
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 interface ContributeOAuthRequest {
   provider: string;
@@ -49,7 +50,7 @@ export async function GET() {
 
     return NextResponse.json({ accounts: result.accounts });
   } catch (error) {
-    console.error("GET /api/providers/oauth error:", error);
+    logger.error({ err: error }, "GET /api/providers/oauth error");
     return NextResponse.json(
       { error: "Failed to fetch OAuth accounts" },
       { status: 500 }
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ id: result.id }, { status: 201 });
   } catch (error) {
-    console.error("POST /api/providers/oauth error:", error);
+    logger.error({ err: error }, "POST /api/providers/oauth error");
     return NextResponse.json(
       { error: "Failed to register OAuth account" },
       { status: 500 }

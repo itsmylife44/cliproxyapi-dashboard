@@ -12,6 +12,7 @@ import {
 import { prisma } from "@/lib/db";
 import { cascadeDeleteUserProviders } from "@/lib/providers/cascade";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 async function requireAdmin(): Promise<{ userId: string; username: string } | NextResponse> {
   const session = await verifySession();
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Failed to fetch users:", error);
+    logger.error({ err: error }, "Failed to fetch users");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -195,7 +196,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("User creation error:", error);
+    logger.error({ err: error }, "User creation error");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -262,8 +263,9 @@ export async function DELETE(request: NextRequest) {
       ipAddress: extractIpAddress(request),
     });
 
-    console.log(
-      `Admin ${authResult.username} deleted user ${targetUser.username} (${userIdToDelete}). Cascade: ${cascadeResult.keysRemoved} keys, ${cascadeResult.oauthRemoved} OAuth removed; ${cascadeResult.keysFailedToRemove} keys failed, ${cascadeResult.oauthFailedToRemove} OAuth failed`
+    logger.info(
+      { admin: authResult.username, deletedUser: targetUser.username, deletedUserId: userIdToDelete, cascade: cascadeResult },
+      "Admin deleted user"
     );
 
     return NextResponse.json({
@@ -278,7 +280,7 @@ export async function DELETE(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("User deletion error:", error);
+    logger.error({ err: error }, "User deletion error");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

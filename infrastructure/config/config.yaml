@@ -46,10 +46,10 @@ remote-management:
 auth-dir: "/root/.cli-proxy-api"
 # API keys for authentication
 # These keys authenticate client requests to the API proxy endpoints.
-# Replace with strong, randomly generated keys (e.g., use `openssl rand -hex 32`).
-# WARNING: Keep these secret! Never commit real keys to version control.
-api-keys:
-  - ${API_KEY_PLACEHOLDER}
+# Managed automatically by the Dashboard via Management API sync.
+# Keys created in the Dashboard are synced to CLIProxyAPI on creation/deletion.
+# To add keys manually, use the Management API: PUT /v0/management/api-keys
+api-keys: []
 # ============================================================================
 # LOGGING & DEBUGGING
 # ============================================================================

@@ -11,6 +11,7 @@ const JWT_EXPIRES_IN = env.JWT_EXPIRES_IN;
 export interface SessionPayload extends Record<string, unknown> {
   userId: string;
   username: string;
+  sessionVersion: number;
 }
 
 export async function signToken(payload: SessionPayload): Promise<string> {

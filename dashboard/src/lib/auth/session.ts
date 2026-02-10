@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { verifyToken, type SessionPayload } from "./jwt";
+import { prisma } from "@/lib/db";
 
 const SESSION_COOKIE_NAME = "session";
 
@@ -14,7 +15,32 @@ export const verifySession = cache(async (): Promise<SessionPayload | null> => {
   }
 
   const payload = await verifyToken(token);
-  return payload;
+  if (!payload) {
+    return null;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: {
+      id: true,
+      username: true,
+      sessionVersion: true,
+    },
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  if (user.sessionVersion !== payload.sessionVersion) {
+    return null;
+  }
+
+  return {
+    userId: user.id,
+    username: user.username,
+    sessionVersion: user.sessionVersion,
+  };
 });
 
 export async function createSession(_payload: SessionPayload, token: string): Promise<void> {

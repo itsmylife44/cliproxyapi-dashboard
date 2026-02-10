@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
+import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 
 const WEBHOOK_HOST = process.env.WEBHOOK_HOST || "http://localhost:9000";
@@ -19,6 +20,9 @@ export async function POST(request: Request) {
     if (!session?.userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const originError = validateOrigin(request);
+    if (originError) return originError;
 
     if (!(await isAdmin(session.userId))) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -47,8 +51,9 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       const text = await response.text();
+      console.error("Webhook error:", text);
       return NextResponse.json(
-        { error: `Webhook failed: ${text}` },
+        { error: "Failed to trigger deployment" },
         { status: response.status }
       );
     }

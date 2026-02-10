@@ -30,10 +30,10 @@
 
 - id: deploy-status
   execute-command: /bin/cat
-  command-working-directory: /tmp
+  command-working-directory: /var/log/cliproxyapi
   pass-arguments-to-command:
     - source: string
-      name: "/tmp/dashboard-deploy-status.json"
+      name: "/var/log/cliproxyapi/dashboard-deploy-status.json"
   trigger-rule:
     and:
       - match:
@@ -45,10 +45,10 @@
 
 - id: deploy-log
   execute-command: /bin/cat
-  command-working-directory: /tmp
+  command-working-directory: /var/log/cliproxyapi
   pass-arguments-to-command:
     - source: string
-      name: "/tmp/dashboard-deploy.log"
+      name: "/var/log/cliproxyapi/dashboard-deploy.log"
   trigger-rule:
     and:
       - match:

@@ -24,7 +24,7 @@ export function DeployDashboard() {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const { showToast } = useToast();
 
-  const fetchStatus = useCallback(async () => {
+  const fetchStatus = useCallback(async (shouldStartPolling = false) => {
     try {
       const res = await fetch("/api/admin/deploy");
       if (res.ok) {
@@ -36,6 +36,9 @@ export function DeployDashboard() {
         if (data.status?.status === "running") {
           setDeploying(true);
           setShowLog(true);
+          if (shouldStartPolling && !pollingRef.current) {
+            pollingRef.current = setInterval(() => fetchStatus(false), 2000);
+          }
         } else if (data.status?.status === "success" || data.status?.status === "error") {
           setDeploying(false);
           if (pollingRef.current) {
@@ -50,7 +53,7 @@ export function DeployDashboard() {
   }, []);
 
   useEffect(() => {
-    fetchStatus();
+    fetchStatus(true);
     return () => {
       if (pollingRef.current) {
         clearInterval(pollingRef.current);

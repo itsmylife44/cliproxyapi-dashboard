@@ -42,7 +42,7 @@ trigger-rule:
 Add to your dashboard's `.env` or docker-compose environment:
 
 ```env
-WEBHOOK_HOST=http://localhost:9000
+WEBHOOK_HOST=http://host.docker.internal:9000
 DEPLOY_SECRET=your-generated-token-here
 ```
 

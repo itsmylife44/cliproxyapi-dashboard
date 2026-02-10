@@ -7,8 +7,13 @@ set -e
 # Configuration
 REPO_DIR="/opt/cliproxyapi-dashboard"
 INFRA_DIR="/opt/cliproxyapi-dashboard/infrastructure"
-LOG_FILE="/tmp/dashboard-deploy.log"
-STATUS_FILE="/tmp/dashboard-deploy-status.json"
+LOG_DIR="/var/log/cliproxyapi"
+LOG_FILE="${LOG_DIR}/dashboard-deploy.log"
+STATUS_FILE="${LOG_DIR}/dashboard-deploy-status.json"
+
+# Ensure log directory exists with proper permissions
+mkdir -p "$LOG_DIR"
+chmod 755 "$LOG_DIR"
 
 # Parse arguments
 NO_CACHE=""

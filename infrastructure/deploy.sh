@@ -2,14 +2,13 @@
 # Dashboard Deploy Script
 # Triggered by webhook from dashboard admin panel
 
-set -e
-
 # Configuration
 REPO_DIR="/opt/cliproxyapi-dashboard"
 INFRA_DIR="/opt/cliproxyapi-dashboard/infrastructure"
 LOG_DIR="/var/log/cliproxyapi"
 LOG_FILE="${LOG_DIR}/dashboard-deploy.log"
 STATUS_FILE="${LOG_DIR}/dashboard-deploy-status.json"
+LOCK_FILE="${LOG_DIR}/deploy.lock"
 
 # Ensure log directory exists with proper permissions
 mkdir -p "$LOG_DIR"
@@ -29,6 +28,28 @@ update_status() {
     echo "{\"step\": \"$step\", \"status\": \"$status\", \"message\": \"$message\", \"timestamp\": \"$(date -Iseconds)\"}" > "$STATUS_FILE"
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$step] $message" >> "$LOG_FILE"
 }
+
+# Check if already running
+if [ -f "$LOCK_FILE" ]; then
+    PID=$(cat "$LOCK_FILE")
+    if kill -0 "$PID" 2>/dev/null; then
+        echo "Deployment already in progress (PID: $PID)"
+        exit 0
+    fi
+    rm -f "$LOCK_FILE"
+fi
+
+# Fork to background and return immediately
+if [ "$2" != "--foreground" ]; then
+    nohup "$0" "$1" --foreground >> "$LOG_FILE" 2>&1 &
+    echo $! > "$LOCK_FILE"
+    echo "Deployment started in background (PID: $!)"
+    exit 0
+fi
+
+# Running in foreground (forked process)
+set -e
+trap 'rm -f "$LOCK_FILE"' EXIT
 
 # Clear previous log
 echo "" > "$LOG_FILE"

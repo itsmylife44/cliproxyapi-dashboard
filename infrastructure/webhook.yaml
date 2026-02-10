@@ -1,0 +1,59 @@
+- id: deploy-dashboard
+  execute-command: /opt/cliproxyapi-dashboard/infrastructure/deploy.sh
+  command-working-directory: /opt/cliproxyapi-dashboard/infrastructure
+  pass-arguments-to-command:
+    - source: payload
+      name: no_cache
+  trigger-rule:
+    and:
+      - match:
+          type: value
+          value: "{{DEPLOY_SECRET}}"
+          parameter:
+            source: header
+            name: X-Deploy-Token
+
+- id: deploy-dashboard-nocache
+  execute-command: /opt/cliproxyapi-dashboard/infrastructure/deploy.sh
+  command-working-directory: /opt/cliproxyapi-dashboard/infrastructure
+  pass-arguments-to-command:
+    - source: string
+      name: "--no-cache"
+  trigger-rule:
+    and:
+      - match:
+          type: value
+          value: "{{DEPLOY_SECRET}}"
+          parameter:
+            source: header
+            name: X-Deploy-Token
+
+- id: deploy-status
+  execute-command: /bin/cat
+  command-working-directory: /tmp
+  pass-arguments-to-command:
+    - source: string
+      name: "/tmp/dashboard-deploy-status.json"
+  trigger-rule:
+    and:
+      - match:
+          type: value
+          value: "{{DEPLOY_SECRET}}"
+          parameter:
+            source: header
+            name: X-Deploy-Token
+
+- id: deploy-log
+  execute-command: /bin/cat
+  command-working-directory: /tmp
+  pass-arguments-to-command:
+    - source: string
+      name: "/tmp/dashboard-deploy.log"
+  trigger-rule:
+    and:
+      - match:
+          type: value
+          value: "{{DEPLOY_SECRET}}"
+          parameter:
+            source: header
+            name: X-Deploy-Token

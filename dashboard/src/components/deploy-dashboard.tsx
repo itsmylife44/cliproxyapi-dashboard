@@ -15,6 +15,16 @@ interface DeployStatus {
   error?: string;
 }
 
+function normalizeStatus(payload: unknown): DeployStatus {
+  if (payload && typeof payload === "object" && "status" in payload) {
+    const candidate = payload as DeployStatus;
+    if (typeof candidate.status === "string") {
+      return candidate;
+    }
+  }
+  return { status: "idle", message: "No deployment in progress" };
+}
+
 export function DeployDashboard() {
   const [status, setStatus] = useState<DeployStatus>({ status: "idle" });
   const [log, setLog] = useState<string>("");
@@ -30,11 +40,12 @@ export function DeployDashboard() {
       const res = await fetch("/api/admin/deploy");
       if (res.ok) {
         const data = await res.json();
-        setStatus(data.status || { status: "idle" });
+        const normalized = normalizeStatus(data.status ?? data);
+        setStatus(normalized);
         setLog(data.log || "");
         setWebhookConfigured(data.webhookConfigured ?? null);
         
-        const s = data.status?.status;
+        const s = normalized.status;
         if (s === "running") {
           setDeploying(true);
           setShowLog(true);

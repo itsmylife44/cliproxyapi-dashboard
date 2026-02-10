@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
@@ -14,7 +14,7 @@ async function isAdmin(userId: string): Promise<boolean> {
   return user?.isAdmin ?? false;
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const session = await verifySession();
     if (!session?.userId) {

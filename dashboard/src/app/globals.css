@@ -1,4 +1,4 @@
-@import "tailwindcss/index.css";
+@import "tailwindcss";
 
 /* Toast enter animation (replaces tw-animate-css) */
 @keyframes slide-in-from-right {

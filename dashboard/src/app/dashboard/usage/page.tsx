@@ -64,8 +64,8 @@ async function fetchUsage(params: FetchUsageParams) {
     }
 
     const data = await res.json();
-    // Handle both { usage: { ... } } and direct stats object shapes
-    const usage = data?.usage ?? data;
+    // API returns { data: { ... }, pagination: { ... } }
+    const usage = data?.data ?? data;
     setStats({
       total_requests: usage?.total_requests ?? 0,
       success_count: usage?.success_count ?? 0,

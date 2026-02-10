@@ -6,11 +6,12 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 
 interface DeployStatus {
-  status: "idle" | "running" | "success" | "error";
+  status: "idle" | "running" | "success" | "error" | "completed" | "failed";
   step?: string;
   message?: string;
   startedAt?: string;
   completedAt?: string;
+  timestamp?: string;
   error?: string;
 }
 
@@ -33,13 +34,14 @@ export function DeployDashboard() {
         setLog(data.log || "");
         setWebhookConfigured(data.webhookConfigured ?? null);
         
-        if (data.status?.status === "running") {
+        const s = data.status?.status;
+        if (s === "running") {
           setDeploying(true);
           setShowLog(true);
           if (shouldStartPolling && !pollingRef.current) {
             pollingRef.current = setInterval(() => fetchStatus(false), 2000);
           }
-        } else if (data.status?.status === "success" || data.status?.status === "error") {
+        } else if (s === "success" || s === "error" || s === "completed" || s === "failed") {
           setDeploying(false);
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
@@ -123,8 +125,10 @@ export function DeployDashboard() {
   const getStatusColor = (s: string) => {
     switch (s) {
       case "running": return "text-blue-400";
-      case "success": return "text-green-400";
-      case "error": return "text-red-400";
+      case "success":
+      case "completed": return "text-green-400";
+      case "error":
+      case "failed": return "text-red-400";
       default: return "text-white/70";
     }
   };
@@ -170,12 +174,12 @@ export function DeployDashboard() {
               Deploying...
             </span>
           )}
-          {status.status === "success" && (
+          {(status.status === "success" || status.status === "completed") && (
             <span className="rounded-full bg-green-500/20 px-2 py-0.5 text-xs font-medium text-green-400">
               Success
             </span>
           )}
-          {status.status === "error" && (
+          {(status.status === "error" || status.status === "failed") && (
             <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400">
               Failed
             </span>

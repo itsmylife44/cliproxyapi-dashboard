@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
+import { DeployDashboard } from "@/components/deploy-dashboard";
 
 interface UpdateInfo {
   currentVersion: string;
@@ -599,17 +600,19 @@ export default function SettingsPage() {
                      </div>
                    </div>
                  )}
-               </>
-             ) : (
-               <div className="text-white/70">Failed to check for updates</div>
-             )}
-           </CardContent>
-         </Card>
+                </>
+              ) : (
+                <div className="text-white/70">Failed to check for updates</div>
+              )}
+            </CardContent>
+          </Card>
 
-         <Card>
-           <CardHeader>
-             <CardTitle>System Information</CardTitle>
-           </CardHeader>
+          <DeployDashboard />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>System Information</CardTitle>
+            </CardHeader>
            <CardContent>
              <div className="grid gap-4 md:grid-cols-3 text-sm">
                <div className="border-l-4 border-purple-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">

@@ -48,9 +48,18 @@ if [ -f "$LOCK_FILE" ]; then
     fi
 fi
 
+# Check if running in foreground mode (set by the fork below)
+FOREGROUND=false
+for arg in "$@"; do
+    if [ "$arg" = "--foreground" ]; then
+        FOREGROUND=true
+        break
+    fi
+done
+
 # Fork to background and return immediately
-if [ "$2" != "--foreground" ]; then
-    nohup "$0" "$1" --foreground >> "$LOG_FILE" 2>&1 &
+if [ "$FOREGROUND" = "false" ]; then
+    nohup "$0" "$@" --foreground >> "$LOG_FILE" 2>&1 &
     echo $! > "$LOCK_FILE"
     echo "Deployment started in background (PID: $!)"
     exit 0

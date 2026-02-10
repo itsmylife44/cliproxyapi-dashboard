@@ -29,13 +29,18 @@ update_status() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$step] $message" >> "$LOG_FILE"
 }
 
-# Check if already running
+# Check if already running (with stale lock detection)
 if [ -f "$LOCK_FILE" ]; then
-    PID=$(cat "$LOCK_FILE")
-    if kill -0 "$PID" 2>/dev/null; then
-        echo "Deployment already in progress (PID: $PID)"
-        exit 0
+    PID=$(cat "$LOCK_FILE" 2>/dev/null)
+    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+        # Check if the process is actually deploy.sh (not a random process with same PID)
+        if ps -p "$PID" -o comm= 2>/dev/null | grep -q "deploy.sh\|bash"; then
+            echo "Deployment already in progress (PID: $PID)" >> "$LOG_FILE"
+            echo "Deployment already in progress (PID: $PID)"
+            exit 0
+        fi
     fi
+    # Stale lock file - remove it
     rm -f "$LOCK_FILE"
 fi
 

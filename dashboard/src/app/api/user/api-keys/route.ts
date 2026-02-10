@@ -129,7 +129,9 @@ export async function POST(request: NextRequest) {
       if (!result.ok) {
         logger.error({ error: result.error }, "Background sync failed after API key creation");
       }
-    }).catch(() => {});
+    }).catch((err) => {
+      logger.error({ err }, "Background sync threw unexpected error after API key creation");
+    });
 
     const response: CreateApiKeyResponse = {
       id: apiKey.id,

@@ -17,7 +17,8 @@ export default function LoginPage() {
     fetch("/api/setup")
       .then((res) => res.json())
       .then((data) => {
-        if (data.setupRequired) {
+        const setupRequired = data.data?.setupRequired ?? data.setupRequired;
+        if (setupRequired) {
           router.replace("/setup");
         } else {
           setReady(true);
@@ -40,7 +41,7 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Login failed");
+        setError(data.error?.message ?? data.error ?? "Login failed");
         setLoading(false);
         return;
       }

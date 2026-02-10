@@ -249,8 +249,9 @@ const loadProvidersData = async (): Promise<Record<ProviderId, ProviderState>> =
       const res = await fetch(`/api/providers/keys?provider=${provider.id}`);
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data.keys)) {
-          newConfigs[provider.id] = { keys: data.keys };
+        const keys = data.data?.keys ?? data.keys;
+        if (Array.isArray(keys)) {
+          newConfigs[provider.id] = { keys };
         }
       }
     } catch (error) {
@@ -401,12 +402,13 @@ export default function ProvidersPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        const errorMessage = data.error?.message ?? data.error ?? "Failed to add provider key";
         if (res.status === 409) {
           showToast("This API key has already been contributed", "error");
         } else if (res.status === 403) {
-          showToast(data.error || "Key limit reached", "error");
+          showToast(errorMessage, "error");
         } else {
-          showToast(data.error || "Failed to add provider key", "error");
+          showToast(errorMessage, "error");
         }
         setSaving(false);
         return;
@@ -431,7 +433,7 @@ export default function ProvidersPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        showToast(data.error || "Failed to delete provider key", "error");
+        showToast(data.error?.message ?? data.error ?? "Failed to delete provider key", "error");
         return;
       }
       showToast("Provider key deleted", "success");

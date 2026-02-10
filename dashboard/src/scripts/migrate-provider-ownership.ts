@@ -103,6 +103,7 @@ async function main() {
   const admin = await prisma.user.findFirst({
     where: { isAdmin: true },
     orderBy: { createdAt: "asc" },
+    select: { id: true, username: true },
   });
 
   if (!admin) {

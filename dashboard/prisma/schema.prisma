@@ -27,6 +27,7 @@ model User {
   providerKeys        ProviderKeyOwnership[]
   providerOAuth       ProviderOAuthOwnership[]
   customProviders     CustomProvider[]
+  auditLogs           AuditLog[]
 
   @@map("users")
 }
@@ -68,6 +69,7 @@ model SyncToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([tokenHash])
   @@map("sync_tokens")
 }
 
@@ -131,6 +133,7 @@ model ProviderKeyOwnership {
 
   @@index([userId])
   @@index([provider])
+  @@index([provider, keyHash])
   @@map("provider_key_ownerships")
 }
 
@@ -199,4 +202,21 @@ model CustomProviderExcludedModel {
   
   @@index([customProviderId])
   @@map("custom_provider_excluded_models")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String   // Who performed the action
+  action    String   // e.g., "USER_CREATED", "API_KEY_REVOKED"
+  target    String?  // What was affected (e.g., username, keyId)
+  metadata  Json?    // Additional context
+  ipAddress String?  // Source IP
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
 }

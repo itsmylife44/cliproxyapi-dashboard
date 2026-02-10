@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateSyncTokenFromHeader } from "@/lib/auth/sync-token";
 import { generateConfigBundle } from "@/lib/config-sync/generate-bundle";
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   const authResult = await validateSyncTokenFromHeader(request);
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
       ohMyOpencode: bundle.ohMyOpencode,
     });
   } catch (error) {
-    console.error("Config sync bundle error:", error);
+    logger.error({ err: error }, "Config sync bundle error");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

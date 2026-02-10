@@ -3,6 +3,8 @@ import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { contributeKey, listKeysWithOwnership } from "@/lib/providers/dual-write";
 import { PROVIDER, type Provider } from "@/lib/providers/constants";
+import { ERROR_CODE, Errors, apiError } from "@/lib/errors";
+import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 
 interface ContributeKeyRequest {
   provider: string;
@@ -27,7 +29,7 @@ function isValidProvider(provider: string): provider is Provider {
 export async function GET(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   try {
@@ -35,32 +37,29 @@ export async function GET(request: NextRequest) {
     const provider = searchParams.get("provider");
 
     if (!provider || !isValidProvider(provider)) {
-      return NextResponse.json(
-        { error: "Invalid or missing provider parameter" },
-        { status: 400 }
+      return apiError(
+        ERROR_CODE.PROVIDER_INVALID,
+        "Invalid or missing provider parameter",
+        400
       );
     }
 
     const result = await listKeysWithOwnership(session.userId, provider);
 
     if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
+      return apiError(ERROR_CODE.PROVIDER_ERROR, result.error ?? "Provider error", 500);
     }
 
-    return NextResponse.json({ keys: result.keys });
+    return NextResponse.json({ data: { keys: result.keys } });
   } catch (error) {
-    console.error("GET /api/providers/keys error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch provider keys" },
-      { status: 500 }
-    );
+    return Errors.internal("GET /api/providers/keys error", error);
   }
 }
 
 export async function POST(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -72,43 +71,43 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     if (!isContributeKeyRequest(body)) {
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 }
-      );
+      return Errors.validation("Invalid request body");
     }
 
     if (!isValidProvider(body.provider)) {
-      return NextResponse.json(
-        { error: "Invalid provider" },
-        { status: 400 }
-      );
+      return apiError(ERROR_CODE.PROVIDER_INVALID, "Invalid provider", 400);
     }
 
-      const result = await contributeKey(session.userId, body.provider, body.apiKey);
+    const result = await contributeKey(session.userId, body.provider, body.apiKey);
 
-     if (!result.ok) {
-       if (result.error?.includes("already contributed")) {
-         return NextResponse.json({ error: result.error }, { status: 409 });
-       }
-       if (result.error?.includes("limit reached")) {
-         return NextResponse.json({ error: result.error }, { status: 403 });
-       }
-       return NextResponse.json({ error: result.error }, { status: 500 });
-     }
+    if (!result.ok) {
+      if (result.error?.includes("already contributed")) {
+        return apiError(ERROR_CODE.KEY_ALREADY_EXISTS, result.error, 409);
+      }
+      if (result.error?.includes("limit reached")) {
+        return apiError(ERROR_CODE.LIMIT_REACHED, result.error, 403);
+      }
+      return apiError(ERROR_CODE.PROVIDER_ERROR, result.error ?? "Provider error", 500);
+    }
 
-      return NextResponse.json(
-        {
+    logAuditAsync({
+      userId: session.userId,
+      action: AUDIT_ACTION.PROVIDER_KEY_ADDED,
+      target: body.provider,
+      metadata: { keyIdentifier: result.keyIdentifier },
+      ipAddress: extractIpAddress(request),
+    });
+
+    return NextResponse.json(
+      {
+        data: {
           keyHash: result.keyHash,
           keyIdentifier: result.keyIdentifier,
         },
-        { status: 201 }
-      );
-  } catch (error) {
-    console.error("POST /api/providers/keys error:", error);
-    return NextResponse.json(
-      { error: "Failed to contribute provider key" },
-      { status: 500 }
+      },
+      { status: 201 }
     );
+  } catch (error) {
+    return Errors.internal("POST /api/providers/keys error", error);
   }
 }

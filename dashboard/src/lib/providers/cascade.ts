@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { removeKey, removeOAuthAccount } from "./dual-write";
+import { logger } from "@/lib/logger";
 
 interface CascadeResult {
   keysRemoved: number;
@@ -45,13 +46,13 @@ export async function cascadeDeleteUserProviders(
           result.keysFailedToRemove++;
           const errorMsg = `Failed to remove ${key.provider} key ${key.keyHash}: ${removeResult.error}`;
           result.errors.push(errorMsg);
-          console.error(errorMsg);
+          logger.error({ provider: key.provider, keyHash: key.keyHash, error: removeResult.error }, "Failed to remove provider key");
         }
       } catch (error) {
         result.keysFailedToRemove++;
         const errorMsg = `Exception removing ${key.provider} key ${key.keyHash}: ${error instanceof Error ? error.message : "Unknown error"}`;
         result.errors.push(errorMsg);
-        console.error(errorMsg);
+        logger.error({ err: error, provider: key.provider, keyHash: key.keyHash }, "Exception removing provider key");
       }
     }
 
@@ -69,23 +70,24 @@ export async function cascadeDeleteUserProviders(
           result.oauthFailedToRemove++;
           const errorMsg = `Failed to remove ${oauth.provider} OAuth account ${oauth.accountName}: ${removeResult.error}`;
           result.errors.push(errorMsg);
-          console.error(errorMsg);
+          logger.error({ provider: oauth.provider, accountName: oauth.accountName, error: removeResult.error }, "Failed to remove OAuth account");
         }
       } catch (error) {
         result.oauthFailedToRemove++;
         const errorMsg = `Exception removing ${oauth.provider} OAuth account ${oauth.accountName}: ${error instanceof Error ? error.message : "Unknown error"}`;
         result.errors.push(errorMsg);
-        console.error(errorMsg);
+        logger.error({ err: error, provider: oauth.provider, accountName: oauth.accountName }, "Exception removing OAuth account");
       }
     }
 
-    console.log(
-      `User cascade deletion completed for ${userId}: ${result.keysRemoved} keys removed, ${result.keysFailedToRemove} keys failed, ${result.oauthRemoved} OAuth removed, ${result.oauthFailedToRemove} OAuth failed`
+    logger.info(
+      { userId, keysRemoved: result.keysRemoved, keysFailedToRemove: result.keysFailedToRemove, oauthRemoved: result.oauthRemoved, oauthFailedToRemove: result.oauthFailedToRemove },
+      "User cascade deletion completed"
     );
   } catch (error) {
     const errorMsg = `Fatal error during cascade deletion for user ${userId}: ${error instanceof Error ? error.message : "Unknown error"}`;
     result.errors.push(errorMsg);
-    console.error(errorMsg);
+    logger.error({ err: error, userId }, "Fatal error during cascade deletion");
   }
 
   return result;

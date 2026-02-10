@@ -531,6 +531,9 @@ INSTALL_DIR=$INSTALL_DIR
 # Timezone
 TZ=UTC
 
+# Logging
+LOG_LEVEL=info
+
 # Full URLs (for reference)
 DASHBOARD_URL=https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}
 API_URL=https://${API_SUBDOMAIN}.${DOMAIN}

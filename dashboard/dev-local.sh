@@ -134,6 +134,9 @@ run_migrations() {
         npx prisma migrate resolve --applied 20260207_add_provider_ownership_models >/dev/null 2>&1 || true
          npx prisma migrate resolve --applied 20260208_add_name_to_provider_key_ownership >/dev/null 2>&1 || true
          npx prisma migrate resolve --applied 20260208_add_custom_providers >/dev/null 2>&1 || true
+         npx prisma migrate resolve --applied 20260208_add_sync_token_hash_index >/dev/null 2>&1 || true
+         npx prisma migrate resolve --applied 20260208_add_provider_key_composite_index >/dev/null 2>&1 || true
+         npx prisma migrate resolve --applied 20260209_add_audit_logs >/dev/null 2>&1 || true
       fi
     
     if npx prisma migrate deploy; then

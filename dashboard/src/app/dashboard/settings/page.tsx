@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -51,7 +50,6 @@ export default function SettingsPage() {
   const [availableApiKeys, setAvailableApiKeys] = useState<AvailableApiKey[]>([]);
   
   const { showToast } = useToast();
-  const router = useRouter();
 
   const fetchUpdateInfo = useCallback(async () => {
     setUpdateLoading(true);
@@ -150,12 +148,6 @@ export default function SettingsPage() {
       showToast("Network error", "error");
       setLoading(false);
     }
-  };
-
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
   };
 
   const handleUpdate = async (version: string = "latest") => {
@@ -267,370 +259,391 @@ export default function SettingsPage() {
   };
 
    return (
-     <div className="space-y-4">
-       <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-         Settings
-       </h1>
+     <div className="space-y-6">
+       {/* Page Title */}
+       <div>
+         <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">
+           Settings
+         </h1>
+         <p className="mt-1 text-sm text-white/60">
+           Manage your account, security, and system preferences
+         </p>
+       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Change Password</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePasswordChange} className="space-y-4">
-              <div>
-                <label htmlFor="currentPassword" className="mb-2 block text-sm font-medium text-white/90">
-                  Current Password
-                </label>
-                <Input
-                  type="password"
-                  name="currentPassword"
-                  value={currentPassword}
-                  onChange={setCurrentPassword}
-                  required
-                  autoComplete="current-password"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="newPassword" className="mb-2 block text-sm font-medium text-white/90">
-                  New Password
-                </label>
-                <Input
-                  type="password"
-                  name="newPassword"
-                  value={newPassword}
-                  onChange={setNewPassword}
-                  required
-                  autoComplete="new-password"
-                  placeholder="Minimum 8 characters"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium text-white/90">
-                  Confirm New Password
-                </label>
-                <Input
-                  type="password"
-                  name="confirmPassword"
-                  value={confirmPassword}
-                  onChange={setConfirmPassword}
-                  required
-                  autoComplete="new-password"
-                />
-              </div>
-
-              <Button type="submit" disabled={loading}>
-                {loading ? "Changing..." : "Change Password"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Account Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h3 className="mb-2 text-sm font-medium text-white/90">Session</h3>
-              <Button variant="danger" onClick={handleLogout}>
-                Logout
-              </Button>
-            </div>
-
-            <div className="border-t border-white/20 pt-4">
-              <h3 className="mb-2 text-sm font-medium text-white/90">About</h3>
-              <div className="space-y-1 text-sm">
-                <div className="text-white/80">
-                  <strong className="text-white">Dashboard Version:</strong> 1.0.0
-                </div>
-                <div className="text-white/80">
-                  <strong className="text-white">CLIProxyAPI:</strong>{" "}
-                  {cliProxyLoading ? "Loading..." : cliProxyVersion || "Unknown"}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              CLIProxyAPI Updates
-              {updateInfo?.updateAvailable && (
-                <span className="rounded-full bg-green-500/20 px-2 py-0.5 text-xs font-medium text-green-400">
-                  Update Available
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {updateLoading ? (
-              <div className="text-white/70">Checking for updates...</div>
-            ) : updateInfo ? (
-              <>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-lg bg-white/5 p-4">
-                    <div className="text-sm font-medium text-white/70">Current Version</div>
-                    <div className="mt-1 text-lg font-semibold text-white">
-                      {updateInfo.currentVersion}
-                    </div>
-                    <div className="mt-0.5 text-xs text-white/50 truncate">
-                      Digest: {updateInfo.currentDigest}
-                    </div>
+       {/* Account & Security Section */}
+       <section className="space-y-4">
+         <div>
+           <h2 className="text-lg font-semibold text-white/90">Account & Security</h2>
+           <div className="mt-1 h-px bg-gradient-to-r from-white/20 to-transparent"></div>
+         </div>
+         
+          <Card>
+            <CardHeader>
+              <CardTitle>Change Password</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handlePasswordChange} className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label htmlFor="currentPassword" className="mb-2 block text-sm font-medium text-white/90">
+                      Current Password
+                    </label>
+                    <Input
+                      type="password"
+                      name="currentPassword"
+                      value={currentPassword}
+                      onChange={setCurrentPassword}
+                      required
+                      autoComplete="current-password"
+                    />
                   </div>
-                  <div className="rounded-lg bg-white/5 p-4">
-                    <div className="text-sm font-medium text-white/70">Latest Version</div>
-                    <div className="mt-1 text-lg font-semibold text-white">
-                      {updateInfo.latestVersion}
-                    </div>
-                    <div className="mt-0.5 text-xs text-white/50 truncate">
-                      Digest: {updateInfo.latestDigest}
-                    </div>
+
+                  <div>
+                    <label htmlFor="newPassword" className="mb-2 block text-sm font-medium text-white/90">
+                      New Password
+                    </label>
+                    <Input
+                      type="password"
+                      name="newPassword"
+                      value={newPassword}
+                      onChange={setNewPassword}
+                      required
+                      autoComplete="new-password"
+                      placeholder="Minimum 8 characters"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium text-white/90">
+                      Confirm New Password
+                    </label>
+                    <Input
+                      type="password"
+                      name="confirmPassword"
+                      value={confirmPassword}
+                      onChange={setConfirmPassword}
+                      required
+                      autoComplete="new-password"
+                    />
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-                  <Button
-                    onClick={() => handleUpdate("latest")}
-                    disabled={updating || !updateInfo.updateAvailable}
-                  >
-                    {updating ? "Updating..." : updateInfo.updateAvailable ? "Update to Latest" : "Up to Date"}
-                  </Button>
-                  <Button variant="secondary" onClick={() => fetchUpdateInfo()} disabled={updateLoading}>
-                    Refresh
-                  </Button>
-                </div>
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Changing..." : "Change Password"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+       </section>
 
-                {updateInfo.availableVersions.length > 0 && (
-                  <div className="border-t border-white/10 pt-4">
-                    <div className="mb-2 text-sm font-medium text-white/70">Available Versions</div>
-                    <div className="flex flex-wrap gap-2">
-                      {updateInfo.availableVersions.slice(0, 5).map((v) => (
-                        <button
-                          key={v}
-                          type="button"
-                          onClick={() => handleUpdate(v)}
-                          disabled={updating}
-                          className="rounded bg-white/10 px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/20 disabled:opacity-50"
-                        >
-                          {v}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-white/70">Failed to check for updates</div>
-            )}
-          </CardContent>
-        </Card>
+       {/* Config Sync Section */}
+       <section className="space-y-4">
+         <div>
+           <h2 className="text-lg font-semibold text-white/90">Config Sync</h2>
+           <div className="mt-1 h-px bg-gradient-to-r from-white/20 to-transparent"></div>
+         </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>System Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3 text-sm">
-            <div className="border-l-4 border-purple-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-              <div className="font-medium text-white/70">Environment</div>
-              <div className="mt-1 text-white">{process.env.NODE_ENV || "production"}</div>
-            </div>
-            <div className="border-l-4 border-blue-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-              <div className="font-medium text-white/70">Next.js</div>
-              <div className="mt-1 text-white">16.1.6</div>
-            </div>
-            <div className="border-l-4 border-teal-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-              <div className="font-medium text-white/70">React</div>
-              <div className="mt-1 text-white">19.2.3</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+         <Card>
+           <CardHeader>
+             <CardTitle>Sync Tokens</CardTitle>
+           </CardHeader>
+           <CardContent className="space-y-4">
+             <div className="space-y-3">
+               <div className="flex items-center justify-between">
+                 <p className="text-sm text-white/70">
+                   Generate tokens to sync OpenCode configurations
+                 </p>
+                 <Button onClick={handleGenerateToken} disabled={generatingToken}>
+                   {generatingToken ? "Generating..." : "Generate Token"}
+                 </Button>
+               </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Config Sync</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-white/90">Sync Tokens</h3>
-              <Button onClick={handleGenerateToken} disabled={generatingToken}>
-                {generatingToken ? "Generating..." : "Generate Token"}
-              </Button>
-            </div>
+               {generatedToken && (
+                 <div className="space-y-3 rounded-lg border border-green-500/50 bg-green-500/10 p-4">
+                   <div className="flex items-center justify-between">
+                     <span className="text-sm font-medium text-green-400">New Token Generated</span>
+                     <button
+                       type="button"
+                       onClick={() => setGeneratedToken(null)}
+                       className="text-white/50 hover:text-white/80"
+                     >
+                       ✕
+                     </button>
+                   </div>
+                   <div className="space-y-2">
+                     <div className="break-all rounded bg-black/30 p-3 font-mono text-xs text-white">
+                       {generatedToken}
+                     </div>
+                     <Button variant="secondary" onClick={() => handleCopyToken(generatedToken)}>
+                       Copy to Clipboard
+                     </Button>
+                   </div>
+                   <div className="border-l-4 border-yellow-400/60 bg-yellow-500/20 p-3 text-sm rounded-r-xl">
+                     <span className="text-white/90">
+                       This token will only be shown once. Copy it now.
+                     </span>
+                   </div>
+                 </div>
+               )}
 
-            {generatedToken && (
-              <div className="space-y-3 rounded-lg border border-green-500/50 bg-green-500/10 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-green-400">New Token Generated</span>
-                  <button
-                    type="button"
-                    onClick={() => setGeneratedToken(null)}
-                    className="text-white/50 hover:text-white/80"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <div className="break-all rounded bg-black/30 p-3 font-mono text-xs text-white">
-                    {generatedToken}
-                  </div>
-                  <Button variant="secondary" onClick={() => handleCopyToken(generatedToken)}>
-                    Copy to Clipboard
-                  </Button>
-                </div>
-                <div className="border-l-4 border-yellow-400/60 bg-yellow-500/20 p-3 text-sm rounded-r-xl">
-                  <span className="text-white/90">
-                    This token will only be shown once. Copy it now.
-                  </span>
-                </div>
-              </div>
-            )}
+               {syncTokensLoading ? (
+                 <div className="p-4 text-center text-white/70">Loading tokens...</div>
+               ) : syncTokens.length === 0 ? (
+                 <div className="border-l-4 border-white/30 backdrop-blur-xl bg-white/5 p-4 text-sm text-white/80 rounded-r-xl">
+                   No sync tokens configured. Generate one to get started.
+                 </div>
+               ) : (
+                 <div className="space-y-2">
+                   {syncTokens.map((token) => (
+                     <div
+                       key={token.id}
+                       className="rounded-lg border border-white/20 bg-white/5 p-4 space-y-3"
+                     >
+                       <div className="flex items-center justify-between">
+                         <div className="flex-1 space-y-1">
+                           <div className="flex items-center gap-2">
+                             <div className="text-sm font-medium text-white">{token.name}</div>
+                             {token.isRevoked && (
+                               <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400">
+                                 Revoked
+                               </span>
+                             )}
+                           </div>
+                           <div className="text-xs text-white/70">
+                             Created: {new Date(token.createdAt).toLocaleDateString()}
+                           </div>
+                           {token.lastUsedAt && (
+                             <div className="text-xs text-white/60">
+                               Last used: {new Date(token.lastUsedAt).toLocaleDateString()}
+                             </div>
+                           )}
+                         </div>
+                         {!token.isRevoked && (
+                           <Button
+                             variant="danger"
+                             onClick={() => handleRevokeToken(token.id)}
+                           >
+                             Revoke
+                           </Button>
+                         )}
+                       </div>
+                       {!token.isRevoked && (
+                         <div className="flex items-center gap-3 pt-1 border-t border-white/10">
+                           <label htmlFor={`sync-api-key-${token.id}`} className="text-xs font-medium text-white/50 whitespace-nowrap">
+                             Sync API Key
+                           </label>
+                           <select
+                             id={`sync-api-key-${token.id}`}
+                             value={token.syncApiKeyId || ""}
+                             onChange={(e) => handleUpdateTokenApiKey(token.id, e.target.value)}
+                             className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white/90 font-mono focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+                           >
+                             {availableApiKeys.length > 0 ? (
+                               <>
+                                 <option value="" className="bg-[#1a1a2e] text-white">
+                                   Auto (first available)
+                                 </option>
+                                 {availableApiKeys.map((apiKey) => (
+                                   <option key={apiKey.id} value={apiKey.id} className="bg-[#1a1a2e] text-white">
+                                     {apiKey.name}
+                                   </option>
+                                 ))}
+                               </>
+                             ) : (
+                               <option value="" className="bg-[#1a1a2e] text-white">
+                                 No API keys — create one first
+                               </option>
+                             )}
+                           </select>
+                         </div>
+                       )}
+                     </div>
+                   ))}
+                 </div>
+               )}
+             </div>
 
-            {syncTokensLoading ? (
-              <div className="p-4 text-center text-white/70">Loading tokens...</div>
-            ) : syncTokens.length === 0 ? (
-              <div className="border-l-4 border-white/30 backdrop-blur-xl bg-white/5 p-4 text-sm text-white/80 rounded-r-xl">
-                No sync tokens configured. Generate one to get started.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {syncTokens.map((token) => (
-                  <div
-                    key={token.id}
-                    className="rounded-lg border border-white/20 bg-white/5 p-4 space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <div className="text-sm font-medium text-white">{token.name}</div>
-                          {token.isRevoked && (
-                            <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400">
-                              Revoked
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-white/70">
-                          Created: {new Date(token.createdAt).toLocaleDateString()}
-                        </div>
-                        {token.lastUsedAt && (
-                          <div className="text-xs text-white/60">
-                            Last used: {new Date(token.lastUsedAt).toLocaleDateString()}
-                          </div>
-                        )}
-                      </div>
-                      {!token.isRevoked && (
-                        <Button
-                          variant="danger"
-                          onClick={() => handleRevokeToken(token.id)}
-                        >
-                          Revoke
-                        </Button>
-                      )}
-                    </div>
-                    {!token.isRevoked && (
-                      <div className="flex items-center gap-3 pt-1 border-t border-white/10">
-                        <label htmlFor={`sync-api-key-${token.id}`} className="text-xs font-medium text-white/50 whitespace-nowrap">
-                          Sync API Key
-                        </label>
-                        <select
-                          id={`sync-api-key-${token.id}`}
-                          value={token.syncApiKeyId || ""}
-                          onChange={(e) => handleUpdateTokenApiKey(token.id, e.target.value)}
-                          className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white/90 font-mono focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
-                        >
-                          {availableApiKeys.length > 0 ? (
-                            <>
-                              <option value="" className="bg-[#1a1a2e] text-white">
-                                Auto (first available)
-                              </option>
-                              {availableApiKeys.map((apiKey) => (
-                                <option key={apiKey.id} value={apiKey.id} className="bg-[#1a1a2e] text-white">
-                                  {apiKey.name}
-                                </option>
-                              ))}
-                            </>
-                          ) : (
-                            <option value="" className="bg-[#1a1a2e] text-white">
-                              No API keys — create one first
-                            </option>
-                          )}
-                        </select>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-white/10 pt-4">
-            <button
-              type="button"
-              onClick={() => setShowInstructions(!showInstructions)}
-              className="flex items-center gap-2 text-sm font-medium text-white/90 hover:text-white"
-            >
-              <span>{showInstructions ? "▼" : "▶"}</span>
-              Setup Instructions
-            </button>
-            {showInstructions && (
-              <div className="mt-3 space-y-4 rounded-lg bg-white/5 p-4 text-sm text-white/80">
-                <div>
-                  <div className="font-medium text-white">1. Add to opencode.jsonc plugin array:</div>
-                  <div className="mt-2 rounded bg-black/30 p-2 font-mono text-xs">
-                    {`"plugin": ["opencode-cliproxyapi-sync@latest", ...]`}
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="font-medium text-white mb-3">2. Create config file:</div>
-                  
-                  <div className="space-y-4">
-                    <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                      <div className="text-xs font-medium text-white/90 mb-2">Standard:</div>
-                      <div className="text-xs text-white/70 font-mono mb-2">
-                        ~/.config/opencode-cliproxyapi-sync/config.json
-                      </div>
-                      <div className="rounded bg-black/30 p-2 font-mono text-xs">
-                        {`{
+             <div className="border-t border-white/10 pt-4">
+               <button
+                 type="button"
+                 onClick={() => setShowInstructions(!showInstructions)}
+                 className="flex items-center gap-2 text-sm font-medium text-white/90 hover:text-white"
+               >
+                 <span>{showInstructions ? "▼" : "▶"}</span>
+                 Setup Instructions
+               </button>
+               {showInstructions && (
+                 <div className="mt-3 space-y-4 rounded-lg bg-white/5 p-4 text-sm text-white/80">
+                   <div>
+                     <div className="font-medium text-white">1. Add to opencode.jsonc plugin array:</div>
+                     <div className="mt-2 rounded bg-black/30 p-2 font-mono text-xs">
+                       {`"plugin": ["opencode-cliproxyapi-sync@latest", ...]`}
+                     </div>
+                   </div>
+                   
+                   <div>
+                     <div className="font-medium text-white mb-3">2. Create config file:</div>
+                     
+                     <div className="space-y-4">
+                       <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                         <div className="text-xs font-medium text-white/90 mb-2">Standard:</div>
+                         <div className="text-xs text-white/70 font-mono mb-2">
+                           ~/.config/opencode-cliproxyapi-sync/config.json
+                         </div>
+                         <div className="rounded bg-black/30 p-2 font-mono text-xs">
+                           {`{
   "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
   "syncToken": "paste-token-here",
   "lastKnownVersion": null
 }`}
-                      </div>
-                    </div>
+                         </div>
+                       </div>
 
-                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
-                      <div className="text-xs font-medium text-emerald-400 mb-2">With OCX Profile:</div>
-                      <div className="text-xs text-emerald-300/70 font-mono mb-2">
-                        ~/.config/opencode/profiles/&lt;profilename&gt;/opencode-cliproxyapi-sync/config.json
-                      </div>
-                      <div className="rounded bg-black/30 p-2 font-mono text-xs">
-                        {`{
+                       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+                         <div className="text-xs font-medium text-emerald-400 mb-2">With OCX Profile:</div>
+                         <div className="text-xs text-emerald-300/70 font-mono mb-2">
+                           ~/.config/opencode/profiles/&lt;profilename&gt;/opencode-cliproxyapi-sync/config.json
+                         </div>
+                         <div className="rounded bg-black/30 p-2 font-mono text-xs">
+                           {`{
   "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
   "syncToken": "paste-token-here",
   "lastKnownVersion": null
 }`}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="text-xs text-white/60 pt-2 border-t border-white/10">
-                  The plugin will be auto-installed from npm when opencode starts.
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                   
+                   <div className="text-xs text-white/60 pt-2 border-t border-white/10">
+                     The plugin will be auto-installed from npm when opencode starts.
+                   </div>
+                 </div>
+               )}
+             </div>
+           </CardContent>
+         </Card>
+       </section>
+
+       {/* System Section */}
+       <section className="space-y-4">
+         <div>
+           <h2 className="text-lg font-semibold text-white/90">System</h2>
+           <div className="mt-1 h-px bg-gradient-to-r from-white/20 to-transparent"></div>
+         </div>
+
+         <Card>
+           <CardHeader>
+             <CardTitle className="flex items-center gap-2">
+               CLIProxyAPI Updates
+               {updateInfo?.updateAvailable && (
+                 <span className="rounded-full bg-green-500/20 px-2 py-0.5 text-xs font-medium text-green-400">
+                   Update Available
+                 </span>
+               )}
+             </CardTitle>
+           </CardHeader>
+           <CardContent className="space-y-4">
+             {updateLoading ? (
+               <div className="text-white/70">Checking for updates...</div>
+             ) : updateInfo ? (
+               <>
+                 <div className="grid gap-4 md:grid-cols-2">
+                   <div className="rounded-lg bg-white/5 p-4">
+                     <div className="text-sm font-medium text-white/70">Current Version</div>
+                     <div className="mt-1 text-lg font-semibold text-white">
+                       {updateInfo.currentVersion}
+                     </div>
+                     <div className="mt-0.5 text-xs text-white/50 truncate">
+                       Digest: {updateInfo.currentDigest}
+                     </div>
+                   </div>
+                   <div className="rounded-lg bg-white/5 p-4">
+                     <div className="text-sm font-medium text-white/70">Latest Version</div>
+                     <div className="mt-1 text-lg font-semibold text-white">
+                       {updateInfo.latestVersion}
+                     </div>
+                     <div className="mt-0.5 text-xs text-white/50 truncate">
+                       Digest: {updateInfo.latestDigest}
+                     </div>
+                   </div>
+                 </div>
+
+                 <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+                   <Button
+                     onClick={() => handleUpdate("latest")}
+                     disabled={updating || !updateInfo.updateAvailable}
+                   >
+                     {updating ? "Updating..." : updateInfo.updateAvailable ? "Update to Latest" : "Up to Date"}
+                   </Button>
+                   <Button variant="secondary" onClick={() => fetchUpdateInfo()} disabled={updateLoading}>
+                     Refresh
+                   </Button>
+                 </div>
+
+                 {updateInfo.availableVersions.length > 0 && (
+                   <div className="border-t border-white/10 pt-4">
+                     <div className="mb-2 text-sm font-medium text-white/70">Available Versions</div>
+                     <div className="flex flex-wrap gap-2">
+                       {updateInfo.availableVersions.slice(0, 5).map((v) => (
+                         <button
+                           key={v}
+                           type="button"
+                           onClick={() => handleUpdate(v)}
+                           disabled={updating}
+                           className="rounded bg-white/10 px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/20 disabled:opacity-50"
+                         >
+                           {v}
+                         </button>
+                       ))}
+                     </div>
+                   </div>
+                 )}
+               </>
+             ) : (
+               <div className="text-white/70">Failed to check for updates</div>
+             )}
+           </CardContent>
+         </Card>
+
+         <Card>
+           <CardHeader>
+             <CardTitle>System Information</CardTitle>
+           </CardHeader>
+           <CardContent>
+             <div className="grid gap-4 md:grid-cols-3 text-sm">
+               <div className="border-l-4 border-purple-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
+                 <div className="font-medium text-white/70">Environment</div>
+                 <div className="mt-1 text-white">{process.env.NODE_ENV || "production"}</div>
+               </div>
+               <div className="border-l-4 border-blue-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
+                 <div className="font-medium text-white/70">Next.js</div>
+                 <div className="mt-1 text-white">16.1.6</div>
+               </div>
+               <div className="border-l-4 border-teal-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
+                 <div className="font-medium text-white/70">React</div>
+                 <div className="mt-1 text-white">19.2.3</div>
+               </div>
+             </div>
+             
+             <div className="mt-4 pt-4 border-t border-white/10">
+               <h3 className="text-sm font-medium text-white/70 mb-3">Version Details</h3>
+               <div className="space-y-2 text-sm">
+                 <div className="flex items-center justify-between text-white/80">
+                   <span>Dashboard Version:</span>
+                   <span className="font-mono">1.0.0</span>
+                 </div>
+                 <div className="flex items-center justify-between text-white/80">
+                   <span>CLIProxyAPI:</span>
+                   <span className="font-mono">
+                     {cliProxyLoading ? "Loading..." : cliProxyVersion || "Unknown"}
+                   </span>
+                 </div>
+               </div>
+             </div>
+           </CardContent>
+         </Card>
+       </section>
+     </div>
+   );
 }

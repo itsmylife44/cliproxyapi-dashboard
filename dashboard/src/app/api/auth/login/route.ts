@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth/validation";
 import { ERROR_CODE, Errors, apiErrorWithHeaders } from "@/lib/errors";
 import { AUDIT_ACTION, logAuditAsync } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 const LOGIN_ATTEMPTS_LIMIT = 10;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -68,12 +69,14 @@ export async function POST(request: NextRequest) {
     const user = await getUserByUsername(username);
 
     if (!user) {
+      logger.warn({ username, ip: ipAddress }, "Failed login attempt - user not found");
       return Errors.invalidCredentials();
     }
 
     const isValid = await verifyPassword(password, user.passwordHash);
 
     if (!isValid) {
+      logger.warn({ username, ip: ipAddress }, "Failed login attempt - invalid password");
       return Errors.invalidCredentials();
     }
 

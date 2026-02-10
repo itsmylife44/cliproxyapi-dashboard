@@ -1,10 +1,19 @@
-import { NextResponse } from "next/server";
-import { deleteSession } from "@/lib/auth/session";
+import { NextRequest, NextResponse } from "next/server";
+import { deleteSession, verifySession } from "@/lib/auth/session";
 import { logger } from "@/lib/logger";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    const session = await verifySession();
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
+      || request.headers.get("x-real-ip") 
+      || "unknown";
+
     await deleteSession();
+
+    if (session) {
+      logger.info({ userId: session.userId, username: session.username, ip }, "User logged out");
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

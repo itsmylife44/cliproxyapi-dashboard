@@ -27,11 +27,21 @@ interface AuditParams {
 }
 
 export function extractIpAddress(request: Request): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const realIp = request.headers.get("x-real-ip");
+  const via = request.headers.get("via");
+  
+  const isBehindProxy = via !== null || request.headers.get("x-forwarded-proto") !== null;
+  
+  if (isBehindProxy && forwardedFor) {
+    return forwardedFor.split(",")[0]?.trim() || "unknown";
+  }
+  
+  if (isBehindProxy && realIp) {
+    return realIp;
+  }
+  
+  return "direct";
 }
 
 export async function logAudit(params: AuditParams): Promise<void> {
@@ -47,6 +57,15 @@ export async function logAudit(params: AuditParams): Promise<void> {
         ipAddress: params.ipAddress,
       },
     });
+
+    logger.info({
+      audit: true,
+      action: params.action,
+      userId: params.userId,
+      target: params.target,
+      ip: params.ipAddress,
+      metadata: params.metadata,
+    }, `Audit: ${params.action}`);
   } catch (error) {
     logger.error({ err: error, ...params }, "Audit logging failed");
   }

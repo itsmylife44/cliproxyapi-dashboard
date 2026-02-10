@@ -1,11 +1,7 @@
 import "server-only";
 import * as fs from "node:fs";
+import * as fsPromises from "node:fs/promises";
 import * as path from "node:path";
-
-/**
- * File-based log storage with in-memory ring buffer for fast access.
- * Logs persist across restarts and rotate when file exceeds MAX_FILE_SIZE.
- */
 
 export interface LogEntry {
   level: number;
@@ -15,14 +11,13 @@ export interface LogEntry {
   [key: string]: unknown;
 }
 
-// Configuration
-const MAX_MEMORY_LOGS = 1000; // Keep last 1000 logs in memory for fast access
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per log file
-const MAX_LOG_FILES = 5; // Keep last 5 rotated files
+const MAX_MEMORY_LOGS = 1000;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_LOG_FILES = 5;
+const FLUSH_INTERVAL_MS = 1000;
 const LOG_DIR = process.env.LOG_DIR ?? path.join(process.cwd(), "logs");
 const LOG_FILE = path.join(LOG_DIR, "app.log");
 
-// Level number to label mapping (Pino standard)
 const LEVEL_LABELS: Record<number, string> = {
   10: "trace",
   20: "debug",
@@ -32,16 +27,16 @@ const LEVEL_LABELS: Record<number, string> = {
   60: "fatal",
 };
 
-// In-memory ring buffer for fast access
 const memoryLogs: LogEntry[] = [];
-
-// Track if we've initialized
+const writeBuffer: string[] = [];
 let initialized = false;
+let flushScheduled = false;
+let currentFileSize = 0;
+let cachedFileCount = 0;
+let cacheTimestamp = 0;
+const CACHE_TTL_MS = 10000;
 
-/**
- * Ensure log directory exists
- */
-function ensureLogDir(): void {
+function ensureLogDirSync(): void {
   try {
     if (!fs.existsSync(LOG_DIR)) {
       fs.mkdirSync(LOG_DIR, { recursive: true });
@@ -51,52 +46,72 @@ function ensureLogDir(): void {
   }
 }
 
-/**
- * Rotate log files when current file exceeds MAX_FILE_SIZE
- */
-function rotateLogsIfNeeded(): void {
+async function rotateLogsIfNeeded(): Promise<void> {
+  if (currentFileSize < MAX_FILE_SIZE) return;
+  
   try {
-    if (!fs.existsSync(LOG_FILE)) return;
-
-    const stats = fs.statSync(LOG_FILE);
-    if (stats.size < MAX_FILE_SIZE) return;
-
-    // Rotate: app.log -> app.log.1, app.log.1 -> app.log.2, etc.
     for (let i = MAX_LOG_FILES - 1; i >= 1; i--) {
       const oldFile = `${LOG_FILE}.${i}`;
       const newFile = `${LOG_FILE}.${i + 1}`;
-      if (fs.existsSync(oldFile)) {
+      try {
         if (i === MAX_LOG_FILES - 1) {
-          fs.unlinkSync(oldFile); // Delete oldest
+          await fsPromises.unlink(oldFile).catch(() => {});
         } else {
-          fs.renameSync(oldFile, newFile);
+          await fsPromises.rename(oldFile, newFile).catch(() => {});
         }
+      } catch {
+        // File doesn't exist, skip
       }
     }
-
-    // Move current to .1
-    fs.renameSync(LOG_FILE, `${LOG_FILE}.1`);
+    await fsPromises.rename(LOG_FILE, `${LOG_FILE}.1`).catch(() => {});
+    currentFileSize = 0;
   } catch (error) {
     console.error("[log-storage] Failed to rotate logs:", error);
   }
 }
 
-/**
- * Load existing logs from file into memory buffer on startup
- */
+async function flushBuffer(): Promise<void> {
+  if (writeBuffer.length === 0) {
+    flushScheduled = false;
+    return;
+  }
+  
+  const toWrite = writeBuffer.splice(0, writeBuffer.length).join("");
+  
+  try {
+    await rotateLogsIfNeeded();
+    await fsPromises.appendFile(LOG_FILE, toWrite);
+    currentFileSize += Buffer.byteLength(toWrite);
+  } catch (error) {
+    console.error("[log-storage] Failed to write logs to file:", error);
+  }
+  
+  flushScheduled = false;
+}
+
+function scheduleFlush(): void {
+  if (flushScheduled) return;
+  flushScheduled = true;
+  setTimeout(() => {
+    flushBuffer().catch(console.error);
+  }, FLUSH_INTERVAL_MS);
+}
+
 function loadLogsFromFile(): void {
   if (initialized) return;
   initialized = true;
 
-  ensureLogDir();
+  ensureLogDirSync();
 
   try {
     if (!fs.existsSync(LOG_FILE)) return;
 
+    const stats = fs.statSync(LOG_FILE);
+    currentFileSize = stats.size;
+    
     const content = fs.readFileSync(LOG_FILE, "utf-8");
     const lines = content.trim().split("\n").filter(Boolean);
 
-    // Load last MAX_MEMORY_LOGS entries
     const startIndex = Math.max(0, lines.length - MAX_MEMORY_LOGS);
     for (let i = startIndex; i < lines.length; i++) {
       try {
@@ -114,34 +129,24 @@ function loadLogsFromFile(): void {
   }
 }
 
-/**
- * Add a log entry to both file and memory buffer.
- */
 export function addLog(entry: LogEntry): void {
-  // Lazy initialization
   if (!initialized) {
     loadLogsFromFile();
   }
 
-  // Add level label if not present
   if (!entry.levelLabel && entry.level) {
     entry.levelLabel = LEVEL_LABELS[entry.level] ?? "unknown";
   }
 
-  // Add to memory buffer (ring buffer)
   memoryLogs.push(entry);
   if (memoryLogs.length > MAX_MEMORY_LOGS) {
     memoryLogs.shift();
   }
 
-  // Write to file (sync for reliability)
-  try {
-    ensureLogDir();
-    rotateLogsIfNeeded();
-    fs.appendFileSync(LOG_FILE, JSON.stringify(entry) + "\n");
-  } catch (error) {
-    console.error("[log-storage] Failed to write log to file:", error);
-  }
+  const line = JSON.stringify(entry) + "\n";
+  writeBuffer.push(line);
+  currentFileSize += Buffer.byteLength(line);
+  scheduleFlush();
 }
 
 export interface GetLogsOptions {
@@ -150,23 +155,13 @@ export interface GetLogsOptions {
   since?: number;
 }
 
-/**
- * Get logs from the memory buffer with optional filtering.
- *
- * @param options.level - Filter by minimum level (e.g., "error", "warn", "info")
- * @param options.limit - Maximum number of logs to return (default: all)
- * @param options.since - Only return logs after this timestamp (ms)
- * @returns Array of log entries, newest first
- */
 export function getLogs(options: GetLogsOptions = {}): LogEntry[] {
-  // Lazy initialization
   if (!initialized) {
     loadLogsFromFile();
   }
 
   const { level, limit, since } = options;
 
-  // Convert level name to number for filtering
   const levelNumber = level
     ? Object.entries(LEVEL_LABELS).find(([, label]) => label === level)?.[0]
     : undefined;
@@ -174,20 +169,16 @@ export function getLogs(options: GetLogsOptions = {}): LogEntry[] {
 
   let result = [...memoryLogs];
 
-  // Filter by minimum level (e.g., "error" means >= 50)
   if (minLevel !== undefined) {
     result = result.filter((log) => log.level >= minLevel);
   }
 
-  // Filter by timestamp
-  if (since !== undefined) {
+  if (since !== undefined && !Number.isNaN(since)) {
     result = result.filter((log) => log.time > since);
   }
 
-  // Return newest first
   result.reverse();
 
-  // Apply limit
   if (limit !== undefined && limit > 0) {
     result = result.slice(0, limit);
   }
@@ -195,9 +186,6 @@ export function getLogs(options: GetLogsOptions = {}): LogEntry[] {
   return result;
 }
 
-/**
- * Get total number of logs in memory buffer.
- */
 export function getLogCount(): number {
   if (!initialized) {
     loadLogsFromFile();
@@ -205,38 +193,38 @@ export function getLogCount(): number {
   return memoryLogs.length;
 }
 
-/**
- * Get total logs on disk (approximate, based on file line count)
- */
-export function getTotalLogCount(): number {
-  if (!initialized) {
-    loadLogsFromFile();
+function getFileCountCached(): number {
+  const now = Date.now();
+  if (now - cacheTimestamp < CACHE_TTL_MS) {
+    return cachedFileCount;
   }
-
+  
   try {
-    if (!fs.existsSync(LOG_FILE)) return memoryLogs.length;
-
-    const content = fs.readFileSync(LOG_FILE, "utf-8");
-    const lineCount = content.trim().split("\n").filter(Boolean).length;
-    return lineCount;
+    if (!fs.existsSync(LOG_FILE)) {
+      cachedFileCount = 0;
+    } else {
+      const content = fs.readFileSync(LOG_FILE, "utf-8");
+      cachedFileCount = content.trim().split("\n").filter(Boolean).length;
+    }
+    cacheTimestamp = now;
   } catch {
-    return memoryLogs.length;
+    cachedFileCount = 0;
   }
+  
+  return cachedFileCount;
 }
 
-/**
- * Clear all logs from both memory and file.
- */
 export function clearLogs(): void {
   memoryLogs.length = 0;
+  writeBuffer.length = 0;
+  currentFileSize = 0;
+  cachedFileCount = 0;
 
   try {
-    // Remove main log file
     if (fs.existsSync(LOG_FILE)) {
       fs.unlinkSync(LOG_FILE);
     }
 
-    // Remove rotated files
     for (let i = 1; i <= MAX_LOG_FILES; i++) {
       const rotatedFile = `${LOG_FILE}.${i}`;
       if (fs.existsSync(rotatedFile)) {
@@ -248,16 +236,10 @@ export function clearLogs(): void {
   }
 }
 
-/**
- * Get log file path (for debugging/admin info)
- */
 export function getLogFilePath(): string {
   return LOG_FILE;
 }
 
-/**
- * Get log storage stats
- */
 export function getLogStats(): {
   memoryCount: number;
   fileCount: number;
@@ -269,31 +251,22 @@ export function getLogStats(): {
     loadLogsFromFile();
   }
 
-  let fileSizeBytes = 0;
-  let fileCount = 0;
   let rotatedFiles = 0;
 
   try {
-    if (fs.existsSync(LOG_FILE)) {
-      const stats = fs.statSync(LOG_FILE);
-      fileSizeBytes = stats.size;
-      const content = fs.readFileSync(LOG_FILE, "utf-8");
-      fileCount = content.trim().split("\n").filter(Boolean).length;
-    }
-
     for (let i = 1; i <= MAX_LOG_FILES; i++) {
       if (fs.existsSync(`${LOG_FILE}.${i}`)) {
         rotatedFiles++;
       }
     }
   } catch {
-    // Ignore errors
+    // Ignore
   }
 
   return {
     memoryCount: memoryLogs.length,
-    fileCount,
-    fileSizeBytes,
+    fileCount: getFileCountCached(),
+    fileSizeBytes: currentFileSize,
     rotatedFiles,
     logDir: LOG_DIR,
   };

@@ -12,15 +12,6 @@ const LEVEL_LABELS: Record<number, string> = {
   60: "fatal",
 };
 
-const LEVEL_NUMBERS: Record<string, number> = {
-  trace: 10,
-  debug: 20,
-  info: 30,
-  warn: 40,
-  error: 50,
-  fatal: 60,
-};
-
 function createDualDestination(pretty: boolean) {
   const stdout = pino.destination(1);
   
@@ -28,13 +19,14 @@ function createDualDestination(pretty: boolean) {
     write(chunk: string) {
       if (pretty) {
         try {
-          const entry = JSON.parse(chunk) as LogEntry;
-          const time = new Date(entry.time).toLocaleTimeString();
-          const level = (entry.levelLabel ?? LEVEL_LABELS[entry.level] ?? "info").toUpperCase();
-          const msg = entry.msg || "";
-          const extra = Object.keys(entry)
-            .filter(k => !["level", "levelLabel", "time", "msg", "pid", "hostname"].includes(k))
-            .map(k => `${k}=${JSON.stringify(entry[k as keyof LogEntry])}`)
+          const parsed = JSON.parse(chunk) as Record<string, unknown>;
+          const time = new Date(parsed.time as number).toLocaleTimeString();
+          const levelNum = parsed.level as number;
+          const level = (LEVEL_LABELS[levelNum] ?? "info").toUpperCase();
+          const msg = (parsed.msg as string) || "";
+          const extra = Object.keys(parsed)
+            .filter(k => !["level", "time", "msg", "pid", "hostname"].includes(k))
+            .map(k => `${k}=${JSON.stringify(parsed[k])}`)
             .join(" ");
           stdout.write(`[${time}] ${level}: ${msg}${extra ? " " + extra : ""}\n`);
         } catch {
@@ -45,9 +37,17 @@ function createDualDestination(pretty: boolean) {
       }
       
       try {
-        const entry = JSON.parse(chunk) as LogEntry;
-        if (!entry.levelLabel && entry.level) {
-          entry.levelLabel = LEVEL_LABELS[entry.level] ?? "unknown";
+        const parsed = JSON.parse(chunk) as Record<string, unknown>;
+        const entry: LogEntry = {
+          level: parsed.level as number,
+          levelLabel: LEVEL_LABELS[parsed.level as number] ?? "unknown",
+          time: parsed.time as number,
+          msg: (parsed.msg as string) || "",
+        };
+        for (const [key, value] of Object.entries(parsed)) {
+          if (!["level", "time", "msg", "pid", "hostname"].includes(key)) {
+            entry[key] = value;
+          }
         }
         addLog(entry);
       } catch {
@@ -57,59 +57,9 @@ function createDualDestination(pretty: boolean) {
   };
 }
 
-function createLogger() {
-  const isDev = env.NODE_ENV === "development";
-  
-  const baseLogger = pino(
-    { level: env.LOG_LEVEL },
-    createDualDestination(isDev)
-  );
-  
-  const logMethods = ["trace", "debug", "info", "warn", "error", "fatal"] as const;
-  
-  const wrappedLogger: Record<string, unknown> = {};
-  
-  for (const method of logMethods) {
-    const original = baseLogger[method].bind(baseLogger);
-    wrappedLogger[method] = function(
-      this: unknown,
-      objOrMsg?: Record<string, unknown> | string,
-      msg?: string,
-      ...args: unknown[]
-    ) {
-      const entry: LogEntry = {
-        level: LEVEL_NUMBERS[method],
-        levelLabel: method,
-        time: Date.now(),
-        msg: "",
-      };
-      
-      if (typeof objOrMsg === "string") {
-        entry.msg = objOrMsg;
-        addLog(entry);
-        return (original as (msg: string) => void)(objOrMsg);
-      }
-      
-      if (typeof objOrMsg === "object" && objOrMsg !== null) {
-        Object.assign(entry, objOrMsg);
-        if (typeof msg === "string") {
-          entry.msg = msg;
-        }
-        addLog(entry);
-        return (original as (obj: object, msg?: string, ...args: unknown[]) => void)(objOrMsg, msg, ...args);
-      }
-      
-      addLog(entry);
-      return (original as (msg: string) => void)("");
-    };
-  }
-  
-  wrappedLogger.child = baseLogger.child.bind(baseLogger);
-  wrappedLogger.level = baseLogger.level;
-  wrappedLogger.isLevelEnabled = baseLogger.isLevelEnabled.bind(baseLogger);
-  
-  return wrappedLogger as unknown as pino.Logger;
-}
+export const logger = pino(
+  { level: env.LOG_LEVEL },
+  createDualDestination(env.NODE_ENV === "development")
+);
 
-export const logger = createLogger();
 export default logger;

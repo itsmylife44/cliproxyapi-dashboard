@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -281,9 +281,8 @@ export default function AdminLogsPage() {
                 </thead>
                 <tbody>
                   {logs.map((log, index) => (
-                    <>
+                    <React.Fragment key={`log-${log.time}-${index}`}>
                       <tr
-                        key={`row-${log.time}-${index}`}
                         className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
                         onClick={() => toggleRowExpansion(index)}
                       >
@@ -317,7 +316,7 @@ export default function AdminLogsPage() {
                         </td>
                       </tr>
                       {expandedRow === index && (
-                        <tr key={`details-${log.time}-${index}`}>
+                        <tr>
                           <td
                             colSpan={4}
                             className="py-3 px-4 bg-black/20 border-b border-white/5"
@@ -328,7 +327,7 @@ export default function AdminLogsPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>

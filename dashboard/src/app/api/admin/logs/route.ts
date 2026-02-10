@@ -41,8 +41,8 @@ export async function GET(request: NextRequest) {
   const since = sinceParam ? parseInt(sinceParam, 10) : undefined;
 
   const logs: LogEntry[] = getLogs({ level, limit, since });
-  const total = getLogCount();
   const stats = getLogStats();
+  const total = Math.max(stats.memoryCount, stats.fileCount);
 
   return NextResponse.json({
     logs,

@@ -48,7 +48,8 @@ auth-dir: "/root/.cli-proxy-api"
 # These keys authenticate client requests to the API proxy endpoints.
 # Replace with strong, randomly generated keys (e.g., use `openssl rand -hex 32`).
 # WARNING: Keep these secret! Never commit real keys to version control.
-api-keys: []
+api-keys:
+  - sk-c28ab05f2ca3ffb92c3daed67c90ccc2f39c33adf76d8ebc6ddbd2aaf7a0848e
 # ============================================================================
 # LOGGING & DEBUGGING
 # ============================================================================

@@ -177,18 +177,110 @@ function enrichApiEntryWithTokenBreakdown(entry: ApiUsageEntry): ApiUsageEntry {
   };
 }
 
+// Aggregated usage per API key (auth_index)
+interface AggregatedKeyUsage {
+  total_requests: number;
+  total_tokens: number;
+  success_count: number;
+  failure_count: number;
+  input_tokens: number;
+  output_tokens: number;
+  reasoning_tokens: number;
+  cached_tokens: number;
+  models: Record<string, { total_requests: number; total_tokens: number; input_tokens: number; output_tokens: number }>;
+}
+
+// CLIProxyAPI groups by endpoint -> model -> details (with auth_index per request)
+// We need to regroup by auth_index (API key) to show per-user usage
+function groupUsageByApiKey(
+  apis: Record<string, ApiUsageEntry>
+): Record<string, AggregatedKeyUsage> {
+  const byKey: Record<string, AggregatedKeyUsage> = {};
+
+  for (const endpointEntry of Object.values(apis)) {
+    const models = endpointEntry.models as Record<string, ModelUsage> | undefined;
+    if (!models) continue;
+
+    for (const [modelName, modelData] of Object.entries(models)) {
+      if (!modelData.details || !Array.isArray(modelData.details)) continue;
+
+      for (const detail of modelData.details) {
+        const authIndex = detail.auth_index;
+        if (!authIndex) continue;
+
+        if (!byKey[authIndex]) {
+          byKey[authIndex] = {
+            total_requests: 0,
+            total_tokens: 0,
+            success_count: 0,
+            failure_count: 0,
+            input_tokens: 0,
+            output_tokens: 0,
+            reasoning_tokens: 0,
+            cached_tokens: 0,
+            models: {},
+          };
+        }
+
+        const keyUsage = byKey[authIndex];
+        keyUsage.total_requests += 1;
+        keyUsage.total_tokens += detail.tokens?.total_tokens || 0;
+        keyUsage.input_tokens += detail.tokens?.input_tokens || 0;
+        keyUsage.output_tokens += detail.tokens?.output_tokens || 0;
+        keyUsage.reasoning_tokens += detail.tokens?.reasoning_tokens || 0;
+        keyUsage.cached_tokens += detail.tokens?.cached_tokens || 0;
+
+        if (detail.failed) {
+          keyUsage.failure_count += 1;
+        } else {
+          keyUsage.success_count += 1;
+        }
+
+        // Aggregate per model
+        if (!keyUsage.models[modelName]) {
+          keyUsage.models[modelName] = {
+            total_requests: 0,
+            total_tokens: 0,
+            input_tokens: 0,
+            output_tokens: 0,
+          };
+        }
+        keyUsage.models[modelName].total_requests += 1;
+        keyUsage.models[modelName].total_tokens += detail.tokens?.total_tokens || 0;
+        keyUsage.models[modelName].input_tokens += detail.tokens?.input_tokens || 0;
+        keyUsage.models[modelName].output_tokens += detail.tokens?.output_tokens || 0;
+      }
+    }
+  }
+
+  return byKey;
+}
+
 function filterAndLabelApis(
   apis: Record<string, ApiUsageEntry>,
   userKeys: ApiKeyDbRecord[],
   isAdmin: boolean
-): { apis: Record<string, ApiUsageEntry>; totals: { requests: number; tokens: number; success: number; failure: number; inputTokens: number; outputTokens: number } } {
-  const result: Record<string, ApiUsageEntry> = {};
-  // CLIProxyAPI sends first 16 chars of API key as auth_index
-  // We need to match using the same prefix from our stored keys
-  const keySet = new Set(userKeys.map((k) => k.key.substring(0, 16)));
-  const keyNameMap = new Map(userKeys.map((k) => [k.key.substring(0, 16), k.name]));
-  const usedLabels = new Set<string>();
+): { apis: Record<string, AggregatedKeyUsage>; totals: { requests: number; tokens: number; success: number; failure: number; inputTokens: number; outputTokens: number } } {
+  // First, regroup usage by API key (auth_index)
+  const usageByKey = groupUsageByApiKey(apis);
   
+  const result: Record<string, AggregatedKeyUsage> = {};
+  // Dashboard stores full keys like "sk-abc123...", CLIProxyAPI uses 16-char auth_index
+  // Match by checking if the stored key starts with "sk-" and comparing after prefix,
+  // or by direct 16-char prefix match
+  const keyNameMap = new Map<string, string>();
+  const keyUserMap = new Map<string, string>();
+  
+  for (const k of userKeys) {
+    // Try matching: CLIProxyAPI might use first 16 chars of the key (without sk- prefix)
+    // or some other hash. We'll try multiple matching strategies.
+    const keyWithoutPrefix = k.key.startsWith("sk-") ? k.key.slice(3) : k.key;
+    const prefix16 = keyWithoutPrefix.substring(0, 16);
+    keyNameMap.set(prefix16, k.name);
+    keyUserMap.set(prefix16, k.userId);
+  }
+  
+  const usedLabels = new Set<string>();
   let totalRequests = 0;
   let totalTokens = 0;
   let totalSuccess = 0;
@@ -196,17 +288,21 @@ function filterAndLabelApis(
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
 
-  for (const [rawKey, entry] of Object.entries(apis)) {
-    const isUserKey = keySet.has(rawKey);
+  for (const [authIndex, usage] of Object.entries(usageByKey)) {
+    const keyName = keyNameMap.get(authIndex);
+    const keyUserId = keyUserMap.get(authIndex);
+    const isUserKey = keyName !== undefined;
     
+    // Non-admin users only see their own keys
     if (!isAdmin && !isUserKey) {
       continue;
     }
 
-    const keyName = keyNameMap.get(rawKey);
-    let baseLabel = keyName ? keyName : (isAdmin ? `Unknown Key` : "My Key");
+    // For admin: show key name if known, otherwise show truncated auth_index
+    // For user: show key name if known, otherwise "My Key"
+    let baseLabel = keyName ? keyName : (isAdmin ? `Key ${authIndex}` : "My Key");
     
-    // Ensure unique labels by appending suffix if collision detected
+    // Ensure unique labels
     let label = baseLabel;
     let suffix = 1;
     while (usedLabels.has(label)) {
@@ -215,16 +311,13 @@ function filterAndLabelApis(
     }
     usedLabels.add(label);
 
-    // Enrich entry with aggregated token breakdown from model details
-    const enrichedEntry = enrichApiEntryWithTokenBreakdown(entry);
-    
-    result[label] = enrichedEntry;
-    totalRequests += enrichedEntry.total_requests || 0;
-    totalTokens += enrichedEntry.total_tokens || 0;
-    totalSuccess += enrichedEntry.success_count || 0;
-    totalFailure += enrichedEntry.failure_count || 0;
-    totalInputTokens += enrichedEntry.input_tokens || 0;
-    totalOutputTokens += enrichedEntry.output_tokens || 0;
+    result[label] = usage;
+    totalRequests += usage.total_requests;
+    totalTokens += usage.total_tokens;
+    totalSuccess += usage.success_count;
+    totalFailure += usage.failure_count;
+    totalInputTokens += usage.input_tokens;
+    totalOutputTokens += usage.output_tokens;
   }
 
   return {

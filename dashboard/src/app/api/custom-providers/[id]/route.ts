@@ -15,7 +15,7 @@ async function fetchWithTimeout(url: string, options: RequestInit): Promise<Resp
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    return await fetch(url, { ...options, signal: controller.signal, cache: "no-store" });
   } finally {
     clearTimeout(timeoutId);
   }
@@ -174,7 +174,7 @@ export async function PATCH(
                 ...(provider.proxyUrl ? { "proxy-url": provider.proxyUrl } : {})
               }],
               models: provider.models.map((m: { upstreamName: string; alias: string }) => ({ name: m.upstreamName, alias: m.alias })),
-              "excluded-models": provider.excludedModels.map((e: { pattern: string }) => e.pattern) || [],
+              "excluded-models": provider.excludedModels.map((e: { pattern: string }) => e.pattern),
               ...(provider.headers ? { headers: provider.headers } : {})
             };
 

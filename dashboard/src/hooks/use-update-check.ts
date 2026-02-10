@@ -43,11 +43,18 @@ export function useUpdateCheck() {
     try {
       // Check admin status
       const meRes = await fetch("/api/auth/me");
-      if (!meRes.ok) return;
+      if (!meRes.ok) {
+        setIsAdmin(false);
+        setShowPopup(false);
+        setUpdateInfo(null);
+        return;
+      }
       const meData = await meRes.json();
       
       if (!meData.isAdmin) {
         setIsAdmin(false);
+        setShowPopup(false);
+        setUpdateInfo(null);
         return;
       }
       setIsAdmin(true);

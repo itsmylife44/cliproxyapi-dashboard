@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 
 const LOG_LEVEL = {
@@ -182,36 +181,33 @@ export default function LogsPage() {
 
   return (
     <div className="space-y-4">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight text-white drop-shadow-lg">
-          Logs
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-100">Logs</h1>
         <div className="flex items-center gap-3">
-          <Button onClick={handleRefresh} disabled={loading}>
+          <Button onClick={handleRefresh} disabled={loading} className="px-2.5 py-1 text-xs">
             Refresh
           </Button>
-          <Button onClick={handleClearLogs} disabled={loading}>
+          <Button onClick={handleClearLogs} disabled={loading} className="px-2.5 py-1 text-xs">
             Clear Logs
           </Button>
         </div>
       </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Logs</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <h2 className="mb-3 text-sm font-semibold text-slate-100">Recent Logs</h2>
           {loading ? (
-            <div className="p-4 text-center text-white">Loading logs...</div>
+            <div className="p-4 text-center text-slate-400">Loading logs...</div>
           ) : logs.length === 0 ? (
-              <div className="border-l-4 border-white/30 backdrop-blur-xl bg-white/5 p-4 text-sm text-white/80 rounded-r-xl">
+              <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4 text-sm text-slate-400">
                 No logs available. File logging may be disabled in the CLIProxyAPI configuration.
-                Check <code className="bg-white/10 px-1 rounded">logging-to-file</code> in config.
+                Check <code className="rounded bg-slate-800/80 px-1">logging-to-file</code> in config.
               </div>
           ) : (
             <div
               ref={containerRef}
-              className="max-h-[520px] overflow-y-auto backdrop-blur-2xl bg-black/60 border border-white/20 rounded-xl p-4 font-mono text-xs text-zinc-200 shadow-2xl"
+              className="max-h-[520px] overflow-y-auto rounded-sm border border-slate-700/70 bg-black/50 p-4 font-mono text-xs text-zinc-200"
             >
               <div className="space-y-1">
                 {logs.map((line, index) => {
@@ -225,10 +221,9 @@ export default function LogsPage() {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+      </section>
 
-      <div className="border-l-4 border-blue-400/60 backdrop-blur-xl bg-white/10 p-4 text-xs text-white rounded-r-xl">
+      <div className="rounded-sm border border-slate-700/70 bg-slate-900/25 p-4 text-xs text-slate-400">
         <strong>TIP:</strong> Logs are fetched from the CLIProxyAPI service. Recent entries are shown here.
         For complete logs, check the Docker container logs.
       </div>

@@ -59,8 +59,8 @@ export default function SetupPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-10 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-600 shadow-lg shadow-purple-600/30">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-600 shadow-lg shadow-purple-600/30">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <title>Setup</title>
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -73,12 +73,12 @@ export default function SetupPage() {
           <p className="mt-1 text-sm text-white/50">First-time setup</p>
         </div>
 
-         <div className="glass-card rounded-2xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-          <div className="mb-5 rounded-xl bg-amber-500/15 border border-amber-400/25 p-3 text-sm text-amber-200">
+         <div className="glass-card rounded-xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+          <div className="mb-4 rounded-xl bg-amber-500/15 border border-amber-400/25 p-3 text-sm text-amber-200">
             Create your administrator account. Keep these credentials secure.
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="username" className="mb-2 block text-xs font-medium text-white/70 uppercase tracking-wider">
                 Username

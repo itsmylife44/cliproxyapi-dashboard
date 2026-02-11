@@ -42,6 +42,7 @@ export default function SettingsPage() {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [updateLoading, setUpdateLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [revokingSessions, setRevokingSessions] = useState(false);
   
   const [syncTokens, setSyncTokens] = useState<SyncToken[]>([]);
   const [syncTokensLoading, setSyncTokensLoading] = useState(true);
@@ -256,6 +257,33 @@ export default function SettingsPage() {
       showToast("Token copied to clipboard", "success");
     } catch {
       showToast("Failed to copy token", "error");
+    }
+  };
+
+  const handleRevokeAllSessions = async () => {
+    if (!confirm("Force logout all users from all devices? This action cannot be undone.")) {
+      return;
+    }
+
+    setRevokingSessions(true);
+    try {
+      const res = await fetch("/api/admin/revoke-sessions", {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        showToast(data.error || "Failed to revoke sessions", "error");
+        setRevokingSessions(false);
+        return;
+      }
+
+      const data = await res.json();
+      showToast(data.message || "All sessions revoked", "success");
+      setRevokingSessions(false);
+    } catch {
+      showToast("Network error", "error");
+      setRevokingSessions(false);
     }
   };
 
@@ -608,6 +636,20 @@ export default function SettingsPage() {
           </Card>
 
           <DeployDashboard />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Session Control</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-white/70">
+                Immediately revoke all active user sessions across all devices.
+              </p>
+              <Button variant="danger" onClick={handleRevokeAllSessions} disabled={revokingSessions}>
+                {revokingSessions ? "Revoking..." : "Force Logout All Users"}
+              </Button>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

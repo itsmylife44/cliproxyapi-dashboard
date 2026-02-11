@@ -7,14 +7,14 @@ import { cn } from "@/lib/utils";
 interface QuotaModel {
   id: string;
   displayName: string;
-  remainingFraction: number;
+  remainingFraction?: number | null;
   resetTime: string | null;
 }
 
 interface QuotaGroup {
   id: string;
   label: string;
-  remainingFraction: number;
+  remainingFraction?: number | null;
   resetTime: string | null;
   models: QuotaModel[];
 }
@@ -41,6 +41,15 @@ const PROVIDERS = {
 } as const;
 
 type ProviderType = (typeof PROVIDERS)[keyof typeof PROVIDERS];
+
+function normalizeFraction(value: unknown): number | null {
+  if (typeof value !== "number" || Number.isNaN(value) || !Number.isFinite(value)) {
+    return null;
+  }
+  if (value < 0) return 0;
+  if (value > 1) return 1;
+  return value;
+}
 
 function maskEmail(email: string): string {
   const parts = email.split("@");
@@ -97,8 +106,10 @@ function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: 
   const result: Record<string, { score: number; label: string; isShortTerm: boolean }> = {};
   for (const group of groups) {
     if (group.id === "extra-usage") continue;
+    const score = normalizeFraction(group.remainingFraction);
+    if (score === null) continue;
     result[group.id] = {
-      score: group.remainingFraction,
+      score,
       label: group.label,
       isShortTerm: isShortTermGroup(group),
     };
@@ -146,8 +157,12 @@ function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
 
     const scores = relevantAccounts.map((a) => {
       const group = a.groups?.find((g) => g.id === windowId);
-      return group ? group.remainingFraction : 1;
-    });
+      return normalizeFraction(group?.remainingFraction);
+    }).filter((score): score is number => score !== null);
+
+    if (scores.length === 0) {
+      continue;
+    }
 
     const exhaustedProduct = scores.reduce((prod, score) => prod * (1 - score), 1);
     const capacity = 1 - exhaustedProduct;
@@ -198,38 +213,38 @@ function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
 }
 
 function calcOverallCapacity(summaries: ProviderSummary[]): { value: number; label: string; provider: string } {
-  let minCap = 1;
-  let minLabel = "";
-  let minProvider = "";
-  let foundLongTerm = false;
-
-  for (const s of summaries) {
-    for (const w of s.windowCapacities) {
-      if (!w.isShortTerm) {
-        if (!foundLongTerm || w.capacity < minCap) {
-          minCap = w.capacity;
-          minLabel = w.label;
-          minProvider = s.provider;
-          foundLongTerm = true;
-        }
-      }
-    }
-  }
-
-  if (!foundLongTerm) {
-    for (const s of summaries) {
-      for (const w of s.windowCapacities) {
-        if (w.capacity < minCap) {
-          minCap = w.capacity;
-          minLabel = w.label;
-          minProvider = s.provider;
-        }
-      }
-    }
-  }
-
   if (summaries.length === 0) return { value: 0, label: "No Data", provider: "" };
-  return { value: minCap, label: minLabel, provider: minProvider };
+
+  let weightedCapacity = 0;
+  let weightedAccounts = 0;
+
+  for (const summary of summaries) {
+    if (summary.healthyAccounts === 0) {
+      continue;
+    }
+
+    const longTerm = summary.windowCapacities.filter((w) => !w.isShortTerm);
+    const shortTerm = summary.windowCapacities.filter((w) => w.isShortTerm);
+    const relevantWindows = longTerm.length > 0 ? longTerm : shortTerm;
+
+    if (relevantWindows.length === 0) {
+      continue;
+    }
+
+    const providerCapacity = Math.min(...relevantWindows.map((w) => w.capacity));
+    weightedCapacity += providerCapacity * summary.healthyAccounts;
+    weightedAccounts += summary.healthyAccounts;
+  }
+
+  if (weightedAccounts === 0) {
+    return { value: 0, label: "No Data", provider: "" };
+  }
+
+  return {
+    value: weightedCapacity / weightedAccounts,
+    label: "Weighted capacity",
+    provider: "all",
+  };
 }
 
 function getCapacityBarClass(value: number): string {
@@ -497,11 +512,12 @@ export default function QuotaPage() {
                         {account.groups && account.groups.length > 0 && (
                           <div className="overflow-hidden rounded-sm border border-slate-700/70">
                             {account.groups.map((group) => {
-                              const pct = Math.round(group.remainingFraction * 100);
+                              const fraction = normalizeFraction(group.remainingFraction);
+                              const pct = fraction === null ? null : Math.round(fraction * 100);
                               return (
                                 <div key={group.id} className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-slate-700/60 bg-slate-900/20 px-3 py-2 last:border-b-0">
                                   <span className="truncate text-xs text-slate-200">{group.label}</span>
-                                  <span className="text-xs text-slate-300">{pct}%</span>
+                                  <span className="text-xs text-slate-300">{pct === null ? "-" : `${pct}%`}</span>
                                   <span className="truncate text-xs text-slate-500">{formatRelativeTime(group.resetTime)}</span>
                                 </div>
                               );

@@ -86,6 +86,10 @@ const PROVIDERS = [
   },
 ] as const;
 
+const API_KEY_PROVIDERS = PROVIDERS.filter(
+  (provider) => provider.id !== PROVIDER_IDS.OPENAI
+);
+
 interface OwnerBadgeProps {
   ownerUsername: string | null;
   isOwn: boolean;
@@ -732,7 +736,7 @@ export default function ProvidersPage() {
     oauthModalStatus === MODAL_STATUS.POLLING ||
     oauthModalStatus === MODAL_STATUS.SUCCESS ||
     callbackValidation !== CALLBACK_VALIDATION.VALID;
-  const providerStats = PROVIDERS.map((provider) => ({
+  const providerStats = API_KEY_PROVIDERS.map((provider) => ({
     id: provider.id,
     count: configs[provider.id]?.keys.length ?? 0,
   }));
@@ -767,7 +771,7 @@ export default function ProvidersPage() {
         </div>
         <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Active Providers</p>
-          <p className="mt-0.5 text-xs font-semibold text-slate-100">{activeApiProviders}/{PROVIDERS.length}</p>
+          <p className="mt-0.5 text-xs font-semibold text-slate-100">{activeApiProviders}/{API_KEY_PROVIDERS.length}</p>
         </div>
         <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">OAuth Accounts</p>
@@ -807,7 +811,7 @@ export default function ProvidersPage() {
                 <span>Keys</span>
                 <span>Actions</span>
               </div>
-              {PROVIDERS.map((provider) => {
+              {API_KEY_PROVIDERS.map((provider) => {
                 const config = configs[provider.id];
                 const userKeyCount = currentUser ? config.keys.filter((k) => k.isOwn).length : 0;
                 const configuredCount = config.keys.length;

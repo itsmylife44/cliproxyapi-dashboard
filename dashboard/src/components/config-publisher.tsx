@@ -156,7 +156,7 @@ export function ConfigPublisher() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="p-3">
         <CardHeader>
           <CardTitle>
             <span className="flex items-center gap-3">
@@ -178,7 +178,7 @@ export function ConfigPublisher() {
 
   if (!status) {
     return (
-      <Card>
+      <Card className="p-3">
         <CardHeader>
           <CardTitle>
             <span className="flex items-center gap-3">
@@ -224,7 +224,7 @@ export function ConfigPublisher() {
   }
 
   return (
-    <Card>
+    <Card className="p-3">
       <CardHeader>
         <CardTitle>
           <span className="flex items-center gap-3">
@@ -236,29 +236,19 @@ export function ConfigPublisher() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="backdrop-blur-2xl glass-card rounded-xl p-3 shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
-              <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-1">
-                Status
-              </div>
-              <div className={status.isActive ? "text-sm font-semibold text-emerald-400" : "text-sm font-semibold text-amber-400"}>
-                {status.isActive ? "Active" : "Inactive"}
-              </div>
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-2 rounded-sm border border-slate-700/70 bg-slate-900/30 px-3 py-2">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Status</div>
+              <div className={status.isActive ? "text-xs font-semibold text-emerald-300" : "text-xs font-semibold text-amber-300"}>{status.isActive ? "Active" : "Inactive"}</div>
             </div>
-            <div className="backdrop-blur-2xl glass-card rounded-xl p-3 shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
-              <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-1">
-                Subscribers
-              </div>
-              <div className="text-sm font-semibold text-white">{status.subscriberCount}</div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Subscribers</div>
+              <div className="text-xs font-semibold text-slate-200">{status.subscriberCount}</div>
             </div>
-            <div className="backdrop-blur-2xl glass-card rounded-xl p-3 shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
-              <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-1">
-                Created
-              </div>
-              <div className="text-sm font-semibold text-white">
-                {new Date(status.createdAt).toLocaleDateString()}
-              </div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Created</div>
+              <div className="text-xs font-semibold text-slate-200">{new Date(status.createdAt).toLocaleDateString()}</div>
             </div>
           </div>
 
@@ -304,7 +294,7 @@ export function ConfigPublisher() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <div className="flex-1 px-4 py-3 text-sm rounded-xl glass-input text-white">
+                <div className="flex-1 rounded-sm border border-slate-700/70 bg-slate-900/30 px-3 py-2 text-xs text-slate-200">
                   {status.name}
                 </div>
                 <Button

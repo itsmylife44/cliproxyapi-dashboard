@@ -142,7 +142,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="p-3">
         <CardHeader>
           <CardTitle>
             <span className="flex items-center gap-3">
@@ -164,7 +164,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
 
   if (!status) {
     return (
-      <Card>
+      <Card className="p-3">
         <CardHeader>
           <CardTitle>
             <span className="flex items-center gap-3">
@@ -220,7 +220,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
   }
 
   return (
-    <Card>
+    <Card className="p-3">
       <CardHeader>
         <CardTitle>
           <span className="flex items-center gap-3">
@@ -232,44 +232,23 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="backdrop-blur-2xl glass-card rounded-xl p-3 shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
-              <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-1">
-                Publisher
-              </div>
-              <div className="text-sm font-semibold text-white">
-                {status.publisherUsername}
-              </div>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 rounded-sm border border-slate-700/70 bg-slate-900/30 px-3 py-2">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Publisher</div>
+              <div className="text-xs font-semibold text-slate-200">{status.publisherUsername}</div>
             </div>
-            <div className="backdrop-blur-2xl glass-card rounded-xl p-3 shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
-              <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-1">
-                Template
-              </div>
-              <div className="text-sm font-semibold text-white">
-                {status.templateName}
-              </div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Template</div>
+              <div className="text-xs font-semibold text-slate-200">{status.templateName}</div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="backdrop-blur-2xl glass-card rounded-xl p-3 shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
-              <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-1">
-                Status
-              </div>
-              <div className={status.isActive ? "text-sm font-semibold text-emerald-400" : "text-sm font-semibold text-amber-400"}>
-                {status.isActive ? "Active" : "Paused"}
-              </div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Status</div>
+              <div className={status.isActive ? "text-xs font-semibold text-emerald-300" : "text-xs font-semibold text-amber-300"}>{status.isActive ? "Active" : "Paused"}</div>
             </div>
-            <div className="backdrop-blur-2xl glass-card rounded-xl p-3 shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
-              <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-1">
-                Last Synced
-              </div>
-              <div className="text-sm font-semibold text-white">
-                {status.lastSyncedAt
-                  ? new Date(status.lastSyncedAt).toLocaleString()
-                  : "Never"}
-              </div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Last Synced</div>
+              <div className="text-xs font-semibold text-slate-200">{status.lastSyncedAt ? new Date(status.lastSyncedAt).toLocaleString() : "Never"}</div>
             </div>
           </div>
 

@@ -335,14 +335,14 @@ export default async function QuickStartPage() {
 
       <section id="sharing" className="scroll-mt-24">
         <details className="group rounded-lg border border-slate-700/70 bg-slate-900/40">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5">
             <div>
               <p className="text-sm font-semibold text-slate-100">Publisher / Subscriber</p>
               <p className="text-xs text-slate-400">Share your config template or subscribe to another user.</p>
             </div>
             <span className="text-xs font-medium uppercase tracking-[0.1em] text-slate-400 transition-transform duration-200 group-open:rotate-180">⌄</span>
           </summary>
-          <div className="grid gap-4 border-t border-slate-700/70 px-4 py-3 2xl:grid-cols-2">
+          <div className="grid gap-3 border-t border-slate-700/70 px-3 py-2.5 2xl:grid-cols-2">
             {!isSubscriber && <ConfigPublisher />}
             {!isPublisher && <ConfigSubscriber hasApiKey={hasApiKey} />}
           </div>

@@ -288,7 +288,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-3">
         <h1 className="text-xl font-semibold tracking-tight text-slate-100">Settings</h1>
         <p className="mt-1 text-sm text-slate-400">Manage account, security, config sync, and system operations.</p>
       </section>
@@ -299,7 +299,7 @@ export default function SettingsPage() {
           <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-400">Account & Security</h2>
         </div>
 
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
           <h3 className="mb-3 text-sm font-semibold text-slate-100">Change Password</h3>
               <form onSubmit={handlePasswordChange} className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-3">
@@ -360,7 +360,7 @@ export default function SettingsPage() {
           <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-400">Config Sync</h2>
         </div>
 
-        <div className="space-y-4 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <div className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
           <h3 className="text-sm font-semibold text-slate-100">Sync Tokens</h3>
                <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -544,7 +544,7 @@ export default function SettingsPage() {
           <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-400">System</h2>
         </div>
 
-        <div className="space-y-4 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <div className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
                 CLIProxyAPI Updates
                 {updateInfo?.updateAvailable && (

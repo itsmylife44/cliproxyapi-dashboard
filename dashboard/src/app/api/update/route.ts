@@ -9,74 +9,11 @@ import { logger } from "@/lib/logger";
 const execFileAsync = promisify(execFile);
 
 const CONTAINER_NAME = "cliproxyapi";
+const COMPOSE_FILE = "/opt/cliproxyapi/infrastructure/docker-compose.yml";
 const IMAGE_NAME = "eceasy/cli-proxy-api";
 const VERSION_PATTERN = /^(latest|v\d+\.\d+\.\d+)$/;
-
-interface PortBinding {
-  HostIp: string;
-  HostPort: string;
-}
-
-interface ContainerConfig {
-  env: string[];
-  volumes: string[];
-  networks: string[];
-  ports: string[];
-  restartPolicy: string;
-}
-
-async function getContainerConfig(): Promise<ContainerConfig> {
-  const { stdout } = await execFileAsync("docker", [
-    "inspect",
-    CONTAINER_NAME,
-  ]);
-
-  const inspect = JSON.parse(stdout)[0];
-  const config = inspect.Config;
-  const hostConfig = inspect.HostConfig;
-
-  const ports: string[] = [];
-  const portBindings: Record<string, PortBinding[]> = hostConfig.PortBindings || {};
-  for (const containerPort of Object.keys(portBindings)) {
-    for (const binding of portBindings[containerPort] || []) {
-      const hostIp = binding.HostIp || "";
-      const hostPort = binding.HostPort;
-      const port = containerPort.replace("/tcp", "");
-      ports.push(hostIp ? `${hostIp}:${hostPort}:${port}` : `${hostPort}:${port}`);
-    }
-  }
-
-  return {
-    env: config.Env || [],
-    volumes: hostConfig.Binds || [],
-    networks: Object.keys(inspect.NetworkSettings?.Networks || {}),
-    ports,
-    restartPolicy: hostConfig.RestartPolicy?.Name || "unless-stopped",
-  };
-}
-
-function buildRunArgs(cfg: ContainerConfig, imageTag: string): string[] {
-  const args = [
-    "run", "-d",
-    "--name", CONTAINER_NAME,
-    "--restart", cfg.restartPolicy || "unless-stopped",
-  ];
-
-  for (const env of cfg.env) args.push("-e", env);
-  for (const vol of cfg.volumes) args.push("-v", vol);
-  for (const port of cfg.ports) args.push("-p", port);
-  for (const net of cfg.networks) args.push("--network", net);
-
-  args.push(
-    "--health-cmd", "wget --no-verbose --tries=1 -O /dev/null http://localhost:8317/",
-    "--health-interval", "30s",
-    "--health-timeout", "10s",
-    "--health-retries", "3",
-    "--health-start-period", "20s",
-  );
-
-  args.push(imageTag);
-  return args;
+async function runCompose(args: string[]) {
+  return execFileAsync("docker", ["compose", "-f", COMPOSE_FILE, ...args]);
 }
 
 export async function POST(request: NextRequest) {
@@ -106,8 +43,6 @@ export async function POST(request: NextRequest) {
     return originError;
   }
 
-  let configSnapshot: ContainerConfig | null = null;
-
   try {
     const body = await request.json();
     const { version = "latest", confirm } = body;
@@ -128,15 +63,15 @@ export async function POST(request: NextRequest) {
 
     const imageTag = `${IMAGE_NAME}:${version}`;
 
-    configSnapshot = await getContainerConfig();
-
     const pullResult = await execFileAsync("docker", ["pull", imageTag]);
     logger.info({ stdout: pullResult.stdout }, "Pull result");
 
-    await execFileAsync("docker", ["stop", CONTAINER_NAME]);
-    await execFileAsync("docker", ["rm", CONTAINER_NAME]);
+    if (version !== "latest") {
+      await execFileAsync("docker", ["tag", imageTag, `${IMAGE_NAME}:latest`]);
+      logger.info({ version }, "Tagged selected version as latest for compose rollout");
+    }
 
-    await execFileAsync("docker", buildRunArgs(configSnapshot, imageTag));
+    await runCompose(["up", "-d", "--no-deps", "--force-recreate", CONTAINER_NAME]);
 
     return NextResponse.json({
       success: true,
@@ -146,27 +81,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error({ err: error }, "Update error");
 
-    if (configSnapshot) {
-      try {
-        const { stdout } = await execFileAsync("docker", [
-          "ps", "-a",
-          "--filter", `name=^/${CONTAINER_NAME}$`,
-          "--format", "{{.Status}}",
-        ]);
-
-        if (!stdout.trim()) {
-          await execFileAsync(
-            "docker",
-            buildRunArgs(configSnapshot, `${IMAGE_NAME}:latest`),
-          );
-          logger.info("Recovery: container recreated with previous image");
-        } else if (stdout.includes("Exited")) {
-          await execFileAsync("docker", ["start", CONTAINER_NAME]);
-          logger.info("Recovery: started stopped container");
-        }
-      } catch (restartError) {
-        logger.error({ err: restartError }, "Recovery failed");
-      }
+    try {
+      await runCompose(["up", "-d", "--no-deps", CONTAINER_NAME]);
+      logger.info("Recovery: compose ensured proxy service is up");
+    } catch (restartError) {
+      logger.error({ err: restartError }, "Recovery failed");
     }
 
     return NextResponse.json(

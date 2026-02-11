@@ -12,6 +12,7 @@ client.connect()
       "id" TEXT NOT NULL,
       "username" TEXT NOT NULL,
       "passwordHash" TEXT NOT NULL,
+      "sessionVersion" INTEGER NOT NULL DEFAULT 0,
       "isAdmin" BOOLEAN NOT NULL DEFAULT false,
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -21,6 +22,9 @@ client.connect()
     -- Add isAdmin column if missing (existing installs)
     DO $$ BEGIN
       ALTER TABLE "users" ADD COLUMN "isAdmin" BOOLEAN NOT NULL DEFAULT false;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE "users" ADD COLUMN "sessionVersion" INTEGER NOT NULL DEFAULT 0;
     EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
     -- Model preferences table

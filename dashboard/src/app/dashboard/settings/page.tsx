@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { DeployDashboard } from "@/components/deploy-dashboard";
 
@@ -287,34 +286,25 @@ export default function SettingsPage() {
     }
   };
 
-   return (
-     <div className="space-y-4">
-       {/* Page Title */}
-       <div>
-         <h1 className="text-xl font-bold tracking-tight text-white drop-shadow-lg">
-           Settings
-         </h1>
-         <p className="mt-1 text-sm text-white/60">
-           Manage your account, security, and system preferences
-         </p>
-       </div>
+  return (
+    <div className="space-y-4">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+        <h1 className="text-xl font-semibold tracking-tight text-slate-100">Settings</h1>
+        <p className="mt-1 text-sm text-slate-400">Manage account, security, config sync, and system operations.</p>
+      </section>
 
-       {/* Account & Security Section */}
-       <section className="space-y-4">
-         <div>
-           <h2 className="text-lg font-semibold text-white/90">Account & Security</h2>
-           <div className="mt-1 h-px bg-gradient-to-r from-white/20 to-transparent"></div>
-         </div>
-         
-          <Card>
-            <CardHeader>
-              <CardTitle>Change Password</CardTitle>
-            </CardHeader>
-            <CardContent>
+      {/* Account & Security Section */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-400">Account & Security</h2>
+        </div>
+
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-slate-100">Change Password</h3>
               <form onSubmit={handlePasswordChange} className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-3">
                   <div>
-                    <label htmlFor="currentPassword" className="mb-2 block text-sm font-medium text-white/90">
+                    <label htmlFor="currentPassword" className="mb-2 block text-sm font-medium text-slate-300">
                       Current Password
                     </label>
                     <Input
@@ -328,7 +318,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="newPassword" className="mb-2 block text-sm font-medium text-white/90">
+                    <label htmlFor="newPassword" className="mb-2 block text-sm font-medium text-slate-300">
                       New Password
                     </label>
                     <Input
@@ -343,7 +333,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium text-white/90">
+                    <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium text-slate-300">
                       Confirm New Password
                     </label>
                     <Input
@@ -361,91 +351,86 @@ export default function SettingsPage() {
                   {loading ? "Changing..." : "Change Password"}
                 </Button>
               </form>
-            </CardContent>
-          </Card>
-       </section>
+        </div>
+      </section>
 
-       {/* Config Sync Section */}
-       <section className="space-y-4">
-         <div>
-           <h2 className="text-lg font-semibold text-white/90">Config Sync</h2>
-           <div className="mt-1 h-px bg-gradient-to-r from-white/20 to-transparent"></div>
-         </div>
+      {/* Config Sync Section */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-400">Config Sync</h2>
+        </div>
 
-         <Card>
-           <CardHeader>
-             <CardTitle>Sync Tokens</CardTitle>
-           </CardHeader>
-           <CardContent className="space-y-4">
-             <div className="space-y-3">
-               <div className="flex items-center justify-between">
-                 <p className="text-sm text-white/70">
-                   Generate tokens to sync OpenCode configurations
-                 </p>
+        <div className="space-y-4 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+          <h3 className="text-sm font-semibold text-slate-100">Sync Tokens</h3>
+               <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                 <p className="text-sm text-slate-400">
+                    Generate tokens to sync OpenCode configurations
+                  </p>
                  <Button onClick={handleGenerateToken} disabled={generatingToken}>
                    {generatingToken ? "Generating..." : "Generate Token"}
                  </Button>
                </div>
 
                {generatedToken && (
-                 <div className="space-y-3 rounded-lg border border-green-500/50 bg-green-500/10 p-4">
+                 <div className="space-y-3 rounded-sm border border-emerald-500/40 bg-emerald-500/10 p-4">
                    <div className="flex items-center justify-between">
-                     <span className="text-sm font-medium text-green-400">New Token Generated</span>
+                     <span className="text-sm font-medium text-emerald-300">New Token Generated</span>
                      <button
                        type="button"
                        onClick={() => setGeneratedToken(null)}
-                       className="text-white/50 hover:text-white/80"
+                       className="text-slate-400 hover:text-slate-200"
                      >
                        ✕
                      </button>
                    </div>
                    <div className="space-y-2">
-                     <div className="break-all rounded bg-black/30 p-3 font-mono text-xs text-white">
+                     <div className="break-all rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 font-mono text-xs text-slate-200">
                        {generatedToken}
                      </div>
                      <Button variant="secondary" onClick={() => handleCopyToken(generatedToken)}>
                        Copy to Clipboard
                      </Button>
                    </div>
-                   <div className="border-l-4 border-yellow-400/60 bg-yellow-500/20 p-3 text-sm rounded-r-xl">
-                     <span className="text-white/90">
-                       This token will only be shown once. Copy it now.
-                     </span>
-                   </div>
-                 </div>
-               )}
+                    <div className="rounded-sm border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                      <span className="text-amber-200">
+                        This token will only be shown once. Copy it now.
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                {syncTokensLoading ? (
-                 <div className="p-4 text-center text-white/70">Loading tokens...</div>
-               ) : syncTokens.length === 0 ? (
-                 <div className="border-l-4 border-white/30 backdrop-blur-xl bg-white/5 p-4 text-sm text-white/80 rounded-r-xl">
+                 <div className="p-4 text-center text-slate-400">Loading tokens...</div>
+                ) : syncTokens.length === 0 ? (
+                 <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4 text-sm text-slate-400">
                    No sync tokens configured. Generate one to get started.
                  </div>
-               ) : (
-                 <div className="space-y-2">
+                ) : (
+                 <div className="overflow-hidden rounded-sm border border-slate-700/70 bg-slate-900/25">
                    {syncTokens.map((token) => (
-                     <div
-                       key={token.id}
-                       className="rounded-lg border border-white/20 bg-white/5 p-4 space-y-3"
-                     >
-                       <div className="flex items-center justify-between">
-                         <div className="flex-1 space-y-1">
-                           <div className="flex items-center gap-2">
-                             <div className="text-sm font-medium text-white">{token.name}</div>
-                             {token.isRevoked && (
-                               <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400">
-                                 Revoked
-                               </span>
-                             )}
-                           </div>
-                           <div className="text-xs text-white/70">
-                             Created: {new Date(token.createdAt).toLocaleDateString()}
-                           </div>
-                           {token.lastUsedAt && (
-                             <div className="text-xs text-white/60">
-                               Last used: {new Date(token.lastUsedAt).toLocaleDateString()}
-                             </div>
-                           )}
+                      <div
+                        key={token.id}
+                        className="space-y-3 border-b border-slate-700/60 px-3 py-3 last:border-b-0"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-medium text-slate-100">{token.name}</div>
+                              {token.isRevoked && (
+                                <span className="rounded-sm border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-300">
+                                  Revoked
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-400">
+                              Created: {new Date(token.createdAt).toLocaleDateString()}
+                            </div>
+                            {token.lastUsedAt && (
+                              <div className="text-xs text-slate-500">
+                                Last used: {new Date(token.lastUsedAt).toLocaleDateString()}
+                              </div>
+                            )}
                          </div>
                          {!token.isRevoked && (
                            <Button
@@ -457,32 +442,32 @@ export default function SettingsPage() {
                          )}
                        </div>
                        {!token.isRevoked && (
-                         <div className="flex items-center gap-3 pt-1 border-t border-white/10">
-                           <label htmlFor={`sync-api-key-${token.id}`} className="text-xs font-medium text-white/50 whitespace-nowrap">
-                             Sync API Key
-                           </label>
-                           <select
-                             id={`sync-api-key-${token.id}`}
-                             value={token.syncApiKeyId || ""}
-                             onChange={(e) => handleUpdateTokenApiKey(token.id, e.target.value)}
-                             className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white/90 font-mono focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
-                           >
-                             {availableApiKeys.length > 0 ? (
-                               <>
-                                 <option value="" className="bg-[#1a1a2e] text-white">
-                                   Auto (first available)
-                                 </option>
-                                 {availableApiKeys.map((apiKey) => (
-                                   <option key={apiKey.id} value={apiKey.id} className="bg-[#1a1a2e] text-white">
-                                     {apiKey.name}
-                                   </option>
-                                 ))}
-                               </>
-                             ) : (
-                               <option value="" className="bg-[#1a1a2e] text-white">
-                                 No API keys — create one first
-                               </option>
-                             )}
+                          <div className="flex items-center gap-3 border-t border-slate-700/70 pt-1">
+                            <label htmlFor={`sync-api-key-${token.id}`} className="whitespace-nowrap text-xs font-medium text-slate-500">
+                              Sync API Key
+                            </label>
+                            <select
+                              id={`sync-api-key-${token.id}`}
+                              value={token.syncApiKeyId || ""}
+                              onChange={(e) => handleUpdateTokenApiKey(token.id, e.target.value)}
+                              className="flex-1 rounded-sm border border-slate-700/70 bg-slate-900/50 px-3 py-1.5 font-mono text-xs text-slate-200 transition-colors focus:border-blue-400/50 focus:outline-none"
+                            >
+                              {availableApiKeys.length > 0 ? (
+                                <>
+                                  <option value="" className="bg-[#0f172a] text-slate-100">
+                                    Auto (first available)
+                                  </option>
+                                  {availableApiKeys.map((apiKey) => (
+                                    <option key={apiKey.id} value={apiKey.id} className="bg-[#0f172a] text-slate-100">
+                                      {apiKey.name}
+                                    </option>
+                                  ))}
+                                </>
+                              ) : (
+                                <option value="" className="bg-[#0f172a] text-slate-100">
+                                  No API keys — create one first
+                                </option>
+                              )}
                            </select>
                          </div>
                        )}
@@ -492,20 +477,20 @@ export default function SettingsPage() {
                )}
              </div>
 
-             <div className="border-t border-white/10 pt-4">
-               <button
-                 type="button"
-                 onClick={() => setShowInstructions(!showInstructions)}
-                 className="flex items-center gap-2 text-sm font-medium text-white/90 hover:text-white"
-               >
+              <div className="border-t border-slate-700/70 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowInstructions(!showInstructions)}
+                  className="flex items-center gap-2 text-sm font-medium text-slate-200 hover:text-slate-100"
+                >
                  <span>{showInstructions ? "▼" : "▶"}</span>
                  Setup Instructions
                </button>
                {showInstructions && (
-                 <div className="mt-3 space-y-4 rounded-lg bg-white/5 p-4 text-sm text-white/80">
-                   <div>
-                     <div className="font-medium text-white">1. Add to opencode.jsonc plugin array:</div>
-                     <div className="mt-2 rounded bg-black/30 p-2 font-mono text-xs">
+                  <div className="mt-3 space-y-4 rounded-sm border border-slate-700/70 bg-slate-900/30 p-4 text-sm text-slate-300">
+                    <div>
+                      <div className="font-medium text-slate-100">1. Add to opencode.jsonc plugin array:</div>
+                      <div className="mt-2 rounded-sm border border-slate-700/70 bg-slate-900/40 p-2 font-mono text-xs">
                        {`"plugin": ["opencode-cliproxyapi-sync@latest", ...]`}
                      </div>
                    </div>
@@ -514,12 +499,12 @@ export default function SettingsPage() {
                      <div className="font-medium text-white mb-3">2. Create config file:</div>
                      
                      <div className="space-y-4">
-                       <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                         <div className="text-xs font-medium text-white/90 mb-2">Standard:</div>
-                         <div className="text-xs text-white/70 font-mono mb-2">
+                        <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
+                          <div className="mb-2 text-xs font-medium text-slate-200">Standard:</div>
+                          <div className="mb-2 font-mono text-xs text-slate-400">
                            ~/.config/opencode-cliproxyapi-sync/config.json
                          </div>
-                         <div className="rounded bg-black/30 p-2 font-mono text-xs">
+                          <div className="rounded-sm border border-slate-700/70 bg-slate-900/40 p-2 font-mono text-xs">
                            {`{
   "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
   "syncToken": "paste-token-here",
@@ -528,12 +513,12 @@ export default function SettingsPage() {
                          </div>
                        </div>
 
-                       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
-                         <div className="text-xs font-medium text-emerald-400 mb-2">With OCX Profile:</div>
-                         <div className="text-xs text-emerald-300/70 font-mono mb-2">
+                        <div className="rounded-sm border border-emerald-500/30 bg-emerald-500/5 p-3">
+                          <div className="mb-2 text-xs font-medium text-emerald-300">With OCX Profile:</div>
+                          <div className="mb-2 font-mono text-xs text-emerald-200/70">
                            ~/.config/opencode/profiles/&lt;profilename&gt;/opencode-cliproxyapi-sync/config.json
                          </div>
-                         <div className="rounded bg-black/30 p-2 font-mono text-xs">
+                          <div className="rounded-sm border border-slate-700/70 bg-slate-900/40 p-2 font-mono text-xs">
                            {`{
   "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
   "syncToken": "paste-token-here",
@@ -544,58 +529,54 @@ export default function SettingsPage() {
                      </div>
                    </div>
                    
-                   <div className="text-xs text-white/60 pt-2 border-t border-white/10">
-                     The plugin will be auto-installed from npm when opencode starts.
-                   </div>
-                 </div>
-               )}
-             </div>
-           </CardContent>
-         </Card>
-       </section>
+                    <div className="border-t border-slate-700/70 pt-2 text-xs text-slate-500">
+                      The plugin will be auto-installed from npm when opencode starts.
+                    </div>
+                  </div>
+                )}
+              </div>
+        </div>
+      </section>
 
-       {/* System Section */}
-       <section className="space-y-4">
-         <div>
-           <h2 className="text-lg font-semibold text-white/90">System</h2>
-           <div className="mt-1 h-px bg-gradient-to-r from-white/20 to-transparent"></div>
-         </div>
+      {/* System Section */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-400">System</h2>
+        </div>
 
-         <Card>
-           <CardHeader>
-             <CardTitle className="flex items-center gap-2">
-               CLIProxyAPI Updates
-               {updateInfo?.updateAvailable && (
-                 <span className="rounded-full bg-green-500/20 px-2 py-0.5 text-xs font-medium text-green-400">
-                   Update Available
-                 </span>
-               )}
-             </CardTitle>
-           </CardHeader>
-           <CardContent className="space-y-4">
-             {updateLoading ? (
-               <div className="text-white/70">Checking for updates...</div>
-             ) : updateInfo ? (
-               <>
-                 <div className="grid gap-4 md:grid-cols-2">
-                   <div className="rounded-lg bg-white/5 p-4">
-                     <div className="text-sm font-medium text-white/70">Current Version</div>
-                     <div className="mt-1 text-lg font-semibold text-white">
-                       {updateInfo.currentVersion}
-                     </div>
-                     <div className="mt-0.5 text-xs text-white/50 truncate">
-                       Digest: {updateInfo.currentDigest}
-                     </div>
-                   </div>
-                   <div className="rounded-lg bg-white/5 p-4">
-                     <div className="text-sm font-medium text-white/70">Latest Version</div>
-                     <div className="mt-1 text-lg font-semibold text-white">
-                       {updateInfo.latestVersion}
-                     </div>
-                     <div className="mt-0.5 text-xs text-white/50 truncate">
-                       Digest: {updateInfo.latestDigest}
-                     </div>
-                   </div>
+        <div className="space-y-4 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+                CLIProxyAPI Updates
+                {updateInfo?.updateAvailable && (
+                  <span className="rounded-sm border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
+                    Update Available
+                  </span>
+                )}
+              </h3>
+             <div className="space-y-4">
+              {updateLoading ? (
+                <div className="text-slate-400">Checking for updates...</div>
+              ) : updateInfo ? (
+                <>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
+                      <div className="text-sm font-medium text-slate-400">Current Version</div>
+                      <div className="mt-1 text-lg font-semibold text-slate-100">
+                        {updateInfo.currentVersion}
+                      </div>
+                      <div className="mt-0.5 truncate text-xs text-slate-500">
+                        Digest: {updateInfo.currentDigest}
+                      </div>
+                    </div>
+                    <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
+                      <div className="text-sm font-medium text-slate-400">Latest Version</div>
+                      <div className="mt-1 text-lg font-semibold text-slate-100">
+                        {updateInfo.latestVersion}
+                      </div>
+                      <div className="mt-0.5 truncate text-xs text-slate-500">
+                        Digest: {updateInfo.latestDigest}
+                      </div>
+                    </div>
                  </div>
 
                  <div className="flex flex-col sm:flex-row flex-wrap gap-2">
@@ -610,85 +591,77 @@ export default function SettingsPage() {
                    </Button>
                  </div>
 
-                 {updateInfo.availableVersions.length > 0 && (
-                   <div className="border-t border-white/10 pt-4">
-                     <div className="mb-2 text-sm font-medium text-white/70">Available Versions</div>
-                     <div className="flex flex-wrap gap-2">
-                       {updateInfo.availableVersions.slice(0, 5).map((v) => (
-                         <button
+                  {updateInfo.availableVersions.length > 0 && (
+                    <div className="border-t border-slate-700/70 pt-4">
+                      <div className="mb-2 text-sm font-medium text-slate-400">Available Versions</div>
+                      <div className="flex flex-wrap gap-2">
+                        {updateInfo.availableVersions.slice(0, 5).map((v) => (
+                          <button
                            key={v}
                            type="button"
                            onClick={() => handleUpdate(v)}
                            disabled={updating}
-                           className="rounded bg-white/10 px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/20 disabled:opacity-50"
-                         >
-                           {v}
-                         </button>
+                            className="rounded-sm border border-slate-700/70 bg-slate-800/60 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-700/70 disabled:opacity-50"
+                          >
+                            {v}
+                          </button>
                        ))}
                      </div>
                    </div>
                  )}
                 </>
               ) : (
-                <div className="text-white/70">Failed to check for updates</div>
+                <div className="text-slate-400">Failed to check for updates</div>
               )}
-            </CardContent>
-          </Card>
+             </div>
 
           <DeployDashboard />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Session Control</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-white/70">
+          <div className="space-y-3 rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
+              <h3 className="text-sm font-semibold text-slate-100">Session Control</h3>
+              <p className="text-sm text-slate-400">
                 Immediately revoke all active user sessions across all devices.
               </p>
               <Button variant="danger" onClick={handleRevokeAllSessions} disabled={revokingSessions}>
                 {revokingSessions ? "Revoking..." : "Force Logout All Users"}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>System Information</CardTitle>
-            </CardHeader>
-           <CardContent>
-             <div className="grid gap-4 md:grid-cols-3 text-sm">
-               <div className="border-l-4 border-purple-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                 <div className="font-medium text-white/70">Environment</div>
-                 <div className="mt-1 text-white">{process.env.NODE_ENV || "production"}</div>
+          <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
+              <h3 className="mb-3 text-sm font-semibold text-slate-100">System Information</h3>
+             <div className="grid gap-3 text-sm md:grid-cols-3">
+               <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
+                 <div className="font-medium text-slate-400">Environment</div>
+                 <div className="mt-1 text-slate-100">{process.env.NODE_ENV || "production"}</div>
                </div>
-               <div className="border-l-4 border-blue-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                 <div className="font-medium text-white/70">Next.js</div>
-                 <div className="mt-1 text-white">16.1.6</div>
+               <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
+                 <div className="font-medium text-slate-400">Next.js</div>
+                 <div className="mt-1 text-slate-100">16.1.6</div>
                </div>
-               <div className="border-l-4 border-teal-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                 <div className="font-medium text-white/70">React</div>
-                 <div className="mt-1 text-white">19.2.3</div>
+               <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
+                 <div className="font-medium text-slate-400">React</div>
+                 <div className="mt-1 text-slate-100">19.2.3</div>
                </div>
              </div>
-             
-             <div className="mt-4 pt-4 border-t border-white/10">
-               <h3 className="text-sm font-medium text-white/70 mb-3">Version Details</h3>
+
+             <div className="mt-4 border-t border-slate-700/70 pt-4">
+               <h3 className="mb-3 text-sm font-medium text-slate-400">Version Details</h3>
                <div className="space-y-2 text-sm">
-                 <div className="flex items-center justify-between text-white/80">
+                 <div className="flex items-center justify-between text-slate-300">
                    <span>Dashboard Version:</span>
-                   <span className="font-mono">1.0.0</span>
-                 </div>
-                 <div className="flex items-center justify-between text-white/80">
-                   <span>CLIProxyAPI:</span>
-                   <span className="font-mono">
+                    <span className="font-mono">1.0.0</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span>CLIProxyAPI:</span>
+                    <span className="font-mono">
                      {cliProxyLoading ? "Loading..." : cliProxyVersion || "Unknown"}
                    </span>
                  </div>
                </div>
              </div>
-           </CardContent>
-         </Card>
-       </section>
-     </div>
-   );
+            </div>
+        </div>
+      </section>
+    </div>
+  );
 }

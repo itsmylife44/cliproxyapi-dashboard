@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
@@ -90,8 +89,7 @@ export default function ApiKeysPage() {
 
   useEffect(() => {
     void fetchApiKeys();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchApiKeys]);
 
   const handleCreateKey = async () => {
     setCreating(true);
@@ -150,57 +148,51 @@ export default function ApiKeysPage() {
     setNewKeyValue(null);
   };
 
-   return (
-     <div className="space-y-4">
-       <div className="flex items-center justify-between">
-         <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-           API Keys
-         </h1>
-         <Button onClick={() => { setKeyNameInput(""); setIsCreateModalOpen(true); }} disabled={creating}>
-           Create New Key
-         </Button>
-      </div>
+  return (
+    <div className="space-y-4">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-100">API Keys</h1>
+            <p className="mt-1 text-xs text-slate-400">Manage dashboard access keys for clients and integrations.</p>
+          </div>
+          <Button onClick={() => { setKeyNameInput(""); setIsCreateModalOpen(true); }} disabled={creating} className="px-2.5 py-1 text-xs">
+            Create Key
+          </Button>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Active API Keys</CardTitle>
-        </CardHeader>
-        <CardContent>
-            {loading ? (
-              <div className="p-4 text-center text-white">Loading...</div>
-            ) : apiKeys.length === 0 ? (
-              <div className="border-l-4 border-white/30 backdrop-blur-xl bg-white/5 p-4 text-sm text-white/80 rounded-r-xl">
-                No API keys configured. Create one to get started.
+      {loading ? (
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">Loading...</div>
+      ) : apiKeys.length === 0 ? (
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4 text-sm text-slate-400">
+          No API keys configured. Create one to get started.
+        </div>
+      ) : (
+        <section className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+          <div className="grid grid-cols-[minmax(0,1fr)_180px_160px_110px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            <span>Name</span>
+            <span>Created</span>
+            <span>Last Used</span>
+            <span>Actions</span>
+          </div>
+          {apiKeys.map((apiKey) => (
+            <div key={apiKey.id} className="grid grid-cols-[minmax(0,1fr)_180px_160px_110px] items-center border-b border-slate-700/60 px-3 py-2 last:border-b-0">
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-slate-100">{apiKey.name}</p>
+                <p className="mt-0.5 truncate font-mono text-xs text-slate-400">{apiKey.keyPreview}</p>
               </div>
-            ) : (
-              <div className="space-y-3">
-              {apiKeys.map((apiKey) => (
-                <div
-                  key={apiKey.id}
-                  className="flex items-center justify-between backdrop-blur-xl bg-white/5 border border-white/20 rounded-xl p-4"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-white">
-                      {apiKey.name}
-                    </div>
-                    <div className="mt-1 text-xs text-white/70 font-mono truncate">
-                      {apiKey.keyPreview}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="danger"
-                      onClick={() => handleDeleteKey(apiKey.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              ))}
+              <span className="text-xs text-slate-400">{new Date(apiKey.createdAt).toLocaleDateString()}</span>
+              <span className="text-xs text-slate-400">{apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleDateString() : "Never"}</span>
+              <div className="flex justify-end">
+                <Button variant="danger" onClick={() => handleDeleteKey(apiKey.id)} className="px-2.5 py-1 text-xs">
+                  Delete
+                </Button>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          ))}
+        </section>
+      )}
 
       {/* ── Create Key Modal ── */}
       <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)}>
@@ -210,7 +202,7 @@ export default function ApiKeysPage() {
         <ModalContent>
           <div className="space-y-4">
             <div>
-              <label htmlFor="key-name-input" className="mb-2 block text-sm font-semibold text-white">
+              <label htmlFor="key-name-input" className="mb-2 block text-sm font-semibold text-slate-300">
                 Key Name
               </label>
               <Input
@@ -221,7 +213,7 @@ export default function ApiKeysPage() {
                 placeholder="e.g. Development, Production, CLI"
                 disabled={creating}
               />
-              <p className="mt-1.5 text-xs text-white/50">Give your key a descriptive name for easy identification</p>
+              <p className="mt-1.5 text-xs text-slate-500">Give your key a descriptive name for easy identification</p>
             </div>
           </div>
         </ModalContent>
@@ -241,10 +233,10 @@ export default function ApiKeysPage() {
         </ModalHeader>
         <ModalContent>
           <div className="space-y-4">
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 p-4 text-sm rounded-xl">
-              <div className="mb-2 font-medium text-white">Copy this key now</div>
+            <div className="rounded-sm border border-slate-700/70 bg-slate-900/40 p-4 text-sm">
+              <div className="mb-2 font-medium text-slate-100">Copy this key now</div>
               <div className="relative group">
-                <div className="break-all backdrop-blur-xl bg-white/5 border border-white/20 p-3 pr-12 text-xs text-white font-mono rounded-lg">
+                <div className="break-all rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 pr-12 font-mono text-xs text-slate-200">
                   {newKeyValue}
                 </div>
                 <button
@@ -255,15 +247,15 @@ export default function ApiKeysPage() {
                       showToast("API key copied", "success");
                     }
                   }}
-                  className="absolute top-2.5 right-2.5 p-1.5 rounded-md border border-white/15 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/90 transition-all duration-200 active:scale-95"
+                  className="absolute right-2.5 top-2.5 rounded-sm border border-slate-700/70 bg-slate-800/60 p-1.5 text-slate-400 transition-colors duration-200 hover:bg-slate-700/70 hover:text-slate-200"
                   title="Copy API key"
                 >
                   {copiedKey === "modal" ? <CheckIcon /> : <CopyIcon />}
                 </button>
               </div>
             </div>
-            <div className="border-l-4 border-yellow-400/60 bg-yellow-500/20 backdrop-blur-xl p-3 text-sm rounded-r-xl">
-              <span className="text-white/90">This key will only be shown once. Store it securely.</span>
+            <div className="rounded-sm border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+              <span className="text-amber-200">This key will only be shown once. Store it securely.</span>
             </div>
           </div>
         </ModalContent>

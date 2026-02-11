@@ -184,14 +184,14 @@ export function DashboardNav() {
 
       <nav
         className={cn(
-          "w-64 glass-nav p-6 flex flex-col",
+          "w-52 glass-nav p-4 flex flex-col",
           "lg:block",
           "fixed lg:static inset-y-0 left-0 z-50",
           "transform transition-transform duration-300 ease-in-out",
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        <div className="mb-8">
+        <div className="mb-4">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
@@ -202,7 +202,7 @@ export function DashboardNav() {
               className="rounded-lg"
             />
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-white">
+              <h1 className="text-lg font-bold tracking-tight text-white">
                 CLIProxy
               </h1>
               <p className="mt-0.5 text-xs text-white/70">Management</p>
@@ -224,7 +224,7 @@ export function DashboardNav() {
                   href={item.href}
                   onClick={handleNavClick}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300",
+                    "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300",
                     isActive
                       ? "glass-nav-item-active text-white"
                       : "glass-nav-item text-white/70 hover:text-white/90"
@@ -242,7 +242,7 @@ export function DashboardNav() {
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full glass-button-secondary px-4 py-3 text-sm font-medium text-white/70 rounded-xl hover:text-white transition-all duration-200"
+            className="w-full glass-button-secondary px-4 py-2 text-sm font-medium text-white/70 rounded-lg hover:text-white transition-all duration-200"
           >
             Logout
           </button>

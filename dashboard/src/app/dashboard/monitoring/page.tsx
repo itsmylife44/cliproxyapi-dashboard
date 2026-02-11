@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -340,28 +339,23 @@ export default function MonitoringPage() {
       }))
     : [];
 
-   return (
-     <div className="space-y-4">
-       <div className="flex items-center justify-between">
-         <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-           Monitoring
-         </h1>
-       </div>
+  return (
+    <div className="space-y-4">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+        <h1 className="text-xl font-semibold tracking-tight text-slate-100">Monitoring</h1>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Service Status</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <h2 className="mb-3 text-sm font-semibold text-slate-100">Service Status</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-white/90">CLIProxyAPI</span>
               {status?.running ? (
-                <span className="backdrop-blur-xl bg-emerald-500/30 border border-emerald-400/40 px-3 py-1 text-xs font-medium text-white rounded-lg">
+                <span className="rounded-sm border border-emerald-400/40 bg-emerald-500/20 px-2 py-1 text-xs font-medium text-emerald-200">
                   RUNNING
                 </span>
               ) : (
-                <span className="backdrop-blur-xl bg-red-500/30 border border-red-400/40 px-3 py-1 text-xs font-medium text-white rounded-lg">
+                <span className="rounded-sm border border-rose-400/40 bg-rose-500/20 px-2 py-1 text-xs font-medium text-rose-200">
                   STOPPED
                 </span>
               )}
@@ -385,70 +379,51 @@ export default function MonitoringPage() {
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Usage Statistics</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <h2 className="mb-3 text-sm font-semibold text-slate-100">Usage Statistics</h2>
            {usage ? (
              <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="border-l-4 border-cyan-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-2xl font-bold text-white">
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                <div className="rounded-md border border-slate-700/70 bg-slate-900/30 px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Requests</p>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-100">
                     {(usage.usage?.total_requests ?? 0).toLocaleString()}
-                  </div>
-                  <div className="mt-1 text-xs font-medium text-white/70">
-                    Total Requests
-                  </div>
+                  </p>
                 </div>
-                <div className="border-l-4 border-green-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-2xl font-bold text-white">
+                <div className="rounded-md border border-slate-700/70 bg-slate-900/30 px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Success</p>
+                  <p className="mt-0.5 text-xs font-semibold text-emerald-300">
                     {(usage.usage?.success_count ?? 0).toLocaleString()}
-                  </div>
-                  <div className="mt-1 text-xs font-medium text-white/70">
-                    Success
-                  </div>
+                  </p>
                 </div>
-                <div className="border-l-4 border-red-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-2xl font-bold text-white">
+                <div className="rounded-md border border-slate-700/70 bg-slate-900/30 px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Failed</p>
+                  <p className="mt-0.5 text-xs font-semibold text-rose-300">
                     {(usage.usage?.failure_count ?? 0).toLocaleString()}
-                  </div>
-                  <div className="mt-1 text-xs font-medium text-white/70">
-                    Failed
-                  </div>
+                  </p>
                 </div>
-              </div>
-
-              <div className="border-l-4 border-amber-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                <div className="text-2xl font-bold text-white">
+                <div className="rounded-md border border-slate-700/70 bg-slate-900/30 px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Tokens</p>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-100">
                   {(usage.usage?.total_tokens ?? 0).toLocaleString()}
-                </div>
-                <div className="mt-1 text-xs font-medium text-white/70">
-                  Total Tokens
+                  </p>
                 </div>
               </div>
 
               {modelStats.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-white/90 mb-3">Requests by Model</h3>
-                  <div className="space-y-2">
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Requests by Model</h3>
+                  <div className="overflow-hidden rounded-sm border border-slate-700/70 bg-slate-900/25">
                     {modelStats.map((stat) => (
                       <div
                         key={stat.model}
-                        className="flex items-center justify-between p-3 backdrop-blur-xl bg-white/5 rounded-lg border border-white/10"
+                        className="grid grid-cols-[minmax(0,1fr)_120px_120px] items-center border-b border-slate-700/60 px-3 py-2 last:border-b-0"
                       >
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-white">{stat.model}</span>
-                          <span className="text-xs text-white/60">
-                            {stat.tokens.toLocaleString()} tokens
-                          </span>
-                        </div>
-                        <span className="text-lg font-bold text-white/90">
-                          {stat.requests.toLocaleString()}
-                        </span>
+                        <span className="truncate text-xs text-slate-200">{stat.model}</span>
+                        <span className="text-xs text-slate-400">{stat.tokens.toLocaleString()} tokens</span>
+                        <span className="text-right text-xs text-slate-300">{stat.requests.toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
@@ -456,30 +431,25 @@ export default function MonitoringPage() {
               )}
 
               {hourlyData.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-white/90 mb-3">Requests by Hour</h3>
-                  <div className="space-y-2">
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Requests by Hour</h3>
+                  <div className="overflow-hidden rounded-sm border border-slate-700/70 bg-slate-900/25">
                     {hourlyData.map((item) => {
                       const maxCount = Math.max(...hourlyData.map((d) => d.count));
                       const widthPercent = (item.count / maxCount) * 100;
-                      
+
                       return (
-                        <div key={item.hour} className="flex items-center gap-3">
-                          <span className="text-xs font-medium text-white/70 w-12">
+                        <div key={item.hour} className="grid grid-cols-[80px_minmax(0,1fr)_64px] items-center gap-3 border-b border-slate-700/60 px-3 py-2 last:border-b-0">
+                          <span className="text-xs text-slate-400">
                             {item.hour}
                           </span>
-                          <div className="flex-1 h-8 backdrop-blur-xl bg-white/5 rounded-lg overflow-hidden border border-white/10">
+                          <div className="h-2 overflow-hidden rounded-full bg-slate-700/60">
                             <div
-                              className="h-full bg-gradient-to-r from-violet-500/60 to-fuchsia-500/60 flex items-center justify-end pr-3"
+                              className="h-full bg-blue-500/70"
                               style={{ width: `${widthPercent}%` }}
-                            >
-                              {item.count > 0 && (
-                                <span className="text-xs font-bold text-white">
-                                  {item.count}
-                                </span>
-                              )}
-                            </div>
+                            />
                           </div>
+                          <span className="text-right text-xs text-slate-300">{item.count}</span>
                         </div>
                       );
                     })}
@@ -488,14 +458,13 @@ export default function MonitoringPage() {
               )}
             </div>
           ) : (
-            <div className="text-sm text-white/60">Loading usage statistics...</div>
+            <div className="text-sm text-slate-400">Loading usage statistics...</div>
           )}
-        </CardContent>
-      </Card>
+      </section>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Live Logs</CardTitle>
+      <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-100">Live Logs</h2>
           {loggingState === LOGGING_STATE.ENABLED && (
             <Button
               variant="ghost"
@@ -505,11 +474,10 @@ export default function MonitoringPage() {
               Clear
             </Button>
           )}
-        </CardHeader>
-        <CardContent>
+        </div>
           {loggingState === LOGGING_STATE.CHECKING && (
             <div className="flex items-center justify-center py-6">
-              <div className="flex items-center gap-3 text-white/60">
+              <div className="flex items-center gap-3 text-slate-400">
                 <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -521,7 +489,7 @@ export default function MonitoringPage() {
 
           {loggingState === LOGGING_STATE.DISABLED && (
             <div className="flex flex-col items-center justify-center py-6 gap-4">
-              <div className="w-10 h-10 rounded-xl backdrop-blur-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-amber-400/30 bg-amber-500/15">
                 <span className="text-xl">&#128196;</span>
               </div>
               <div className="text-center space-y-2">
@@ -543,7 +511,7 @@ export default function MonitoringPage() {
 
           {loggingState === LOGGING_STATE.ERROR && (
             <div className="flex flex-col items-center justify-center py-6 gap-4">
-              <div className="w-10 h-10 rounded-xl backdrop-blur-xl bg-red-500/20 border border-red-400/30 flex items-center justify-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-rose-400/30 bg-rose-500/15">
                 <span className="text-xl">&#9888;</span>
               </div>
               <div className="text-center space-y-2">
@@ -567,10 +535,10 @@ export default function MonitoringPage() {
               <div
                 ref={logsContainerRef}
                 onScroll={handleScroll}
-                className="h-96 overflow-auto backdrop-blur-xl bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4 font-mono text-[10px] sm:text-xs"
+                className="h-96 overflow-auto rounded-sm border border-slate-700/70 bg-black/40 p-3 font-mono text-[10px] sm:p-4 sm:text-xs"
               >
                 {logs.length === 0 ? (
-                  <div className="text-white/50">Waiting for logs...</div>
+                  <div className="text-slate-500">Waiting for logs...</div>
                 ) : (
                   logs.map((log) => (
                     <div
@@ -598,14 +566,13 @@ export default function MonitoringPage() {
                 <div ref={logsEndRef} />
               </div>
               {!autoScroll && (
-                <div className="mt-2 text-xs text-white/50 text-center">
+                <div className="mt-2 text-center text-xs text-slate-500">
                   Scroll to bottom to enable auto-scroll
                 </div>
               )}
             </>
           )}
-        </CardContent>
-      </Card>
+      </section>
     </div>
   );
 }

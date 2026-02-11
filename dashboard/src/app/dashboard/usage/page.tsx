@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 
 interface TokenStats {
@@ -135,16 +134,28 @@ export default function UsagePage() {
     return () => clearInterval(interval);
   }, [showToast]);
 
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let hasTokenBreakdown = false;
+
+  if (stats?.apis) {
+    for (const entry of Object.values(stats.apis)) {
+      const apiEntry = entry as Partial<ApiEntry>;
+      if (apiEntry.input_tokens !== undefined && apiEntry.output_tokens !== undefined) {
+        totalInputTokens += apiEntry.input_tokens;
+        totalOutputTokens += apiEntry.output_tokens;
+        hasTokenBreakdown = true;
+      }
+    }
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+        <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-            Usage Statistics
-          </h1>
-          <p className="mt-1 text-xs text-white/50">
-            Auto-refreshes every 30s
-          </p>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-100">Usage Statistics</h1>
+            <p className="mt-1 text-xs text-slate-400">Auto-refreshes every 30s</p>
         </div>
         <Button
           onClick={() => {
@@ -160,176 +171,68 @@ export default function UsagePage() {
         >
           Refresh
         </Button>
-      </div>
+        </div>
+      </section>
 
       {loading ? (
-        <Card>
-          <CardContent>
-            <div className="p-4 text-center text-white">Loading statistics...</div>
-          </CardContent>
-        </Card>
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">
+          Loading statistics...
+        </div>
       ) : !stats ? (
-        <Card>
-          <CardContent>
-            <div className="border-l-4 border-red-400/60 backdrop-blur-xl bg-red-500/20 p-4 text-sm text-white rounded-r-xl">
-              Unable to load usage statistics
-            </div>
-          </CardContent>
-        </Card>
-       ) : (
+        <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-200">
+          Unable to load usage statistics
+        </div>
+      ) : (
         <>
-              <div className="grid gap-3 md:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Total Requests</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="border-l-4 border-purple-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-2xl font-bold text-white">
-                    {(stats.total_requests ?? 0).toLocaleString()}
-                  </div>
-                  <div className="mt-1 text-xs font-medium text-white/70">
-                    Total Requests
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Successful</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="border-l-4 border-green-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-2xl font-bold text-white">
-                    {(stats.success_count ?? 0).toLocaleString()}
-                  </div>
-                  <div className="mt-1 text-xs font-medium text-white/70">
-                    Successful Requests
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Failed</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="border-l-4 border-red-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-2xl font-bold text-white">
-                    {(stats.failure_count ?? 0).toLocaleString()}
-                  </div>
-                  <div className="mt-1 text-xs font-medium text-white/70">
-                    Failed Requests
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Requests</p>
+              <p className="mt-0.5 text-xs font-semibold text-slate-100">{(stats.total_requests ?? 0).toLocaleString()}</p>
+            </div>
+            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Successful</p>
+              <p className="mt-0.5 text-xs font-semibold text-emerald-300">{(stats.success_count ?? 0).toLocaleString()}</p>
+            </div>
+            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Failed</p>
+              <p className="mt-0.5 text-xs font-semibold text-rose-300">{(stats.failure_count ?? 0).toLocaleString()}</p>
+            </div>
+            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Tokens</p>
+              <p className="mt-0.5 text-xs font-semibold text-slate-100">{(stats.total_tokens ?? 0).toLocaleString()}</p>
+            </div>
           </div>
 
-          {/* Token breakdown cards */}
-          {(() => {
-            let totalInputTokens = 0;
-            let totalOutputTokens = 0;
-            let hasTokenBreakdown = false;
-
-            if (stats.apis) {
-              for (const entry of Object.values(stats.apis)) {
-                const apiEntry = entry as Partial<ApiEntry>;
-                if (apiEntry.input_tokens !== undefined && apiEntry.output_tokens !== undefined) {
-                  totalInputTokens += apiEntry.input_tokens;
-                  totalOutputTokens += apiEntry.output_tokens;
-                  hasTokenBreakdown = true;
-                }
-              }
-            }
-
-            return hasTokenBreakdown ? (
-          <div className="grid gap-3 md:grid-cols-3">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Input Tokens</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="border-l-4 border-cyan-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                      <div className="text-2xl font-bold text-white">
-                        {totalInputTokens.toLocaleString()}
-                      </div>
-                      <div className="mt-1 text-xs font-medium text-white/70">
-                        Tokens Sent
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Output Tokens</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="border-l-4 border-amber-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                      <div className="text-2xl font-bold text-white">
-                        {totalOutputTokens.toLocaleString()}
-                      </div>
-                      <div className="mt-1 text-xs font-medium text-white/70">
-                        Tokens Received
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Total Tokens</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="border-l-4 border-blue-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                      <div className="text-2xl font-bold text-white">
-                        {(stats.total_tokens ?? 0).toLocaleString()}
-                      </div>
-                      <div className="mt-1 text-xs font-medium text-white/70">
-                        Total Tokens Consumed
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+          {hasTokenBreakdown && (
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+              <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Input Tokens</p>
+                <p className="mt-0.5 text-xs font-semibold text-slate-100">{totalInputTokens.toLocaleString()}</p>
               </div>
-            ) : (stats.total_tokens ?? 0) > 0 ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Total Tokens</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="border-l-4 border-blue-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                    <div className="text-2xl font-bold text-white">
-                      {(stats.total_tokens ?? 0).toLocaleString()}
-                    </div>
-                    <div className="mt-1 text-xs font-medium text-white/70">
-                      Tokens Consumed
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : null;
-          })()}
+              <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Output Tokens</p>
+                <p className="mt-0.5 text-xs font-semibold text-slate-100">{totalOutputTokens.toLocaleString()}</p>
+              </div>
+              <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Tokens</p>
+                <p className="mt-0.5 text-xs font-semibold text-slate-100">{(stats.total_tokens ?? 0).toLocaleString()}</p>
+              </div>
+            </div>
+          )}
 
           {stats.apis && Object.keys(stats.apis).length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Usage By API</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full backdrop-blur-xl bg-white/5 border border-white/20 rounded-xl text-sm">
-                    <thead className="border-b border-white/20 bg-white/5">
+            <section className="space-y-2">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Usage by API</h2>
+              <div className="overflow-x-auto rounded-md border border-slate-700/70 bg-slate-900/25">
+                  <table className="w-full text-sm">
+                    <thead className="border-b border-slate-700/70 bg-slate-900/60">
                       <tr>
-                        <th className="p-3 text-left font-medium text-white/90 w-8"></th>
-                        <th className="p-3 text-left font-medium text-white/90">API Key</th>
-                        <th className="p-3 text-right font-medium text-white/90">Total</th>
-                        <th className="p-3 text-right font-medium text-white/90">Success</th>
-                        <th className="p-3 text-right font-medium text-white/90">Failed</th>
-                        <th className="p-3 text-right font-medium text-white/90">Tokens</th>
+                        <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 w-8"></th>
+                        <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">API Key</th>
+                        <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Total</th>
+                        <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Success</th>
+                        <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Failed</th>
+                        <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Tokens</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -340,9 +243,9 @@ export default function UsagePage() {
                          
                          return (
                            <React.Fragment key={api}>
-                             <tr 
-                               className={`border-b border-white/10 ${hasModels ? 'cursor-pointer hover:bg-white/5' : ''}`}
-                               onClick={() => {
+                               <tr
+                                className={`border-b border-slate-700/60 ${hasModels ? "cursor-pointer hover:bg-slate-800/40" : ""}`}
+                                onClick={() => {
                                  if (hasModels) {
                                    setExpandedApis(prev => {
                                      const next = new Set(prev);
@@ -355,48 +258,48 @@ export default function UsagePage() {
                                    });
                                  }
                                }}
-                             >
-                               <td className="p-3 text-white/70">
-                                 {hasModels && (
-                                   <span className="text-xs">
-                                     {isExpanded ? '▼' : '▶'}
-                                   </span>
-                                 )}
-                               </td>
-                               <td className="p-3 font-medium text-white">{api}</td>
-                               <td className="p-3 text-right text-white/80">{(entry.total_requests ?? 0).toLocaleString()}</td>
-                               <td className="p-3 text-right text-white/80">{(entry.success_count ?? 0).toLocaleString()}</td>
-                               <td className="p-3 text-right text-white/80">{(entry.failure_count ?? 0).toLocaleString()}</td>
-                               <td className="p-3 text-right text-white/80">{(entry.total_tokens ?? 0).toLocaleString()}</td>
-                             </tr>
+                              >
+                                <td className="p-2 text-slate-400">
+                                  {hasModels && (
+                                    <span className="text-xs">
+                                      {isExpanded ? "▼" : "▶"}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-2 font-mono text-xs text-slate-200">{api}</td>
+                                <td className="p-2 text-right text-xs text-slate-300">{(entry.total_requests ?? 0).toLocaleString()}</td>
+                                <td className="p-2 text-right text-xs text-slate-300">{(entry.success_count ?? 0).toLocaleString()}</td>
+                                <td className="p-2 text-right text-xs text-slate-300">{(entry.failure_count ?? 0).toLocaleString()}</td>
+                                <td className="p-2 text-right text-xs text-slate-300">{(entry.total_tokens ?? 0).toLocaleString()}</td>
+                              </tr>
                              
                              {isExpanded && hasModels && (
-                               <tr>
-                                 <td colSpan={6} className="p-0 bg-white/[0.02]">
-                                   <div className="p-4 pl-12">
-                                     <table className="w-full text-xs">
-                                       <thead className="border-b border-white/10">
-                                         <tr>
-                                           <th className="p-2 text-left font-medium text-white/70">Model</th>
-                                           <th className="p-2 text-right font-medium text-white/70">Requests</th>
-                                           <th className="p-2 text-right font-medium text-white/70">Input Tokens</th>
-                                           <th className="p-2 text-right font-medium text-white/70">Output Tokens</th>
-                                           <th className="p-2 text-right font-medium text-white/70">Total Tokens</th>
-                                         </tr>
-                                       </thead>
-                                       <tbody>
+                                <tr>
+                                  <td colSpan={6} className="p-0 bg-slate-900/25">
+                                    <div className="p-3 pl-8">
+                                      <table className="w-full text-xs">
+                                        <thead className="border-b border-slate-700/60">
+                                          <tr>
+                                            <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Model</th>
+                                            <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Requests</th>
+                                            <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Input</th>
+                                            <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Output</th>
+                                            <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Total</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
                                          {Object.entries(entry.models!).map(([modelName, modelData]) => {
                                            const model = modelData as ModelSnapshot;
                                            return (
-                                             <tr key={modelName} className="border-b border-white/5 last:border-0">
-                                               <td className="p-2 text-left text-white/80 font-mono text-[11px]">{modelName}</td>
-                                               <td className="p-2 text-right text-white/70">{(model.total_requests ?? 0).toLocaleString()}</td>
-                                               <td className="p-2 text-right text-white/70">{(model.input_tokens ?? 0).toLocaleString()}</td>
-                                               <td className="p-2 text-right text-white/70">{(model.output_tokens ?? 0).toLocaleString()}</td>
-                                               <td className="p-2 text-right text-white/70">{(model.total_tokens ?? 0).toLocaleString()}</td>
-                                             </tr>
-                                           );
-                                         })}
+                                              <tr key={modelName} className="border-b border-slate-700/40 last:border-0">
+                                                <td className="p-2 text-left font-mono text-[11px] text-slate-300">{modelName}</td>
+                                                <td className="p-2 text-right text-slate-400">{(model.total_requests ?? 0).toLocaleString()}</td>
+                                                <td className="p-2 text-right text-slate-400">{(model.input_tokens ?? 0).toLocaleString()}</td>
+                                                <td className="p-2 text-right text-slate-400">{(model.output_tokens ?? 0).toLocaleString()}</td>
+                                                <td className="p-2 text-right text-slate-400">{(model.total_tokens ?? 0).toLocaleString()}</td>
+                                              </tr>
+                                            );
+                                          })}
                                        </tbody>
                                      </table>
                                    </div>
@@ -408,9 +311,8 @@ export default function UsagePage() {
                         })}
                     </tbody>
                   </table>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </section>
           )}
         </>
       )}

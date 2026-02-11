@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -148,22 +147,6 @@ export default function ContainersPage() {
     }
   };
 
-  const getStateBadgeClasses = (state: ContainerInfo["state"]) => {
-    switch (state) {
-      case "running":
-        return "bg-emerald-500/30 border-emerald-400/40";
-      case "exited":
-      case "dead":
-        return "bg-red-500/30 border-red-400/40";
-      case "paused":
-        return "bg-amber-500/30 border-amber-400/40";
-      case "restarting":
-        return "bg-blue-500/30 border-blue-400/40";
-      default:
-        return "bg-gray-500/30 border-gray-400/40";
-    }
-  };
-
   const getActionVariant = (action: string): "primary" | "secondary" | "danger" | "ghost" => {
     switch (action.toLowerCase()) {
       case "start":
@@ -194,113 +177,74 @@ export default function ContainersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-          Containers
-        </h1>
-      </div>
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+        <h1 className="text-xl font-semibold tracking-tight text-slate-100">Containers</h1>
+      </section>
 
       {loading ? (
-        <div className="text-sm text-white/60">Loading containers...</div>
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">Loading containers...</div>
       ) : (
         <>
           {fetchError && (
-            <Card>
-              <CardContent className="pt-4">
-                <div className="rounded-xl bg-red-500/20 border border-red-400/30 p-3 text-sm text-red-300">
-                  {fetchError}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">{fetchError}</div>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+            <div className="grid grid-cols-[minmax(0,1.2fr)_100px_120px_120px_220px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+              <span>Container</span>
+              <span>State</span>
+              <span>Uptime</span>
+              <span>Resources</span>
+              <span>Actions</span>
+            </div>
             {containers.map((container) => {
               const isActionLoading = actionLoading[container.name] || false;
 
               return (
-                <Card key={container.name}>
-                  <CardContent className="pt-4">
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between">
-                        <h3 className="text-lg font-bold text-white">
-                          {container.displayName}
-                        </h3>
-                        <span
-                          className={cn(
-                            "backdrop-blur-xl px-3 py-1 text-xs font-medium text-white rounded-lg border",
-                            getStateBadgeClasses(container.state)
-                          )}
-                        >
-                          {container.state.toUpperCase()}
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 text-sm">
-                        {container.uptime !== null && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-white/70">Uptime:</span>
-                            <span className="text-white font-medium">
-                              {formatUptime(container.uptime)}
-                            </span>
-                          </div>
-                        )}
-
-                        {container.cpu !== null && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-white/70">CPU:</span>
-                            <span className="text-white font-medium">{container.cpu}</span>
-                          </div>
-                        )}
-
-                        {container.memory !== null && container.memoryPercent !== null && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-white/70">Memory:</span>
-                            <span className="text-white font-medium">
-                              {container.memory} ({container.memoryPercent})
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="pt-2 border-t border-white/10">
-                          <span className="text-xs text-white/60">{container.status}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 pt-2">
+                <div key={container.name} className="border-b border-slate-700/60 px-3 py-3 last:border-b-0">
+                  <div className="grid grid-cols-[minmax(0,1.2fr)_100px_120px_120px_220px] items-start gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-slate-100">{container.displayName}</p>
+                      <p className="mt-0.5 truncate text-[11px] text-slate-500">{container.status}</p>
+                    </div>
+                    <span className={cn("text-xs font-medium", container.state === "running" ? "text-emerald-300" : container.state === "exited" || container.state === "dead" ? "text-rose-300" : "text-amber-300")}>
+                      {container.state}
+                    </span>
+                    <span className="text-xs text-slate-300">{container.uptime !== null ? formatUptime(container.uptime) : "-"}</span>
+                    <span className="text-xs text-slate-300">
+                      {container.cpu ?? "-"}
+                      {container.memory !== null && container.memoryPercent !== null ? ` · ${container.memoryPercent}` : ""}
+                    </span>
+                    <div className="flex flex-wrap justify-end gap-1.5">
                         {container.actions.map((action) => (
                           <Button
                             key={action}
                             variant={getActionVariant(action)}
                             onClick={() => handleAction(container.name, container.displayName, action)}
                             disabled={isActionLoading}
-                            className="flex-1 min-w-[80px] py-2 text-xs"
+                            className="px-2.5 py-1 text-xs"
                           >
                             {isActionLoading ? getActionLoadingText(action) : action}
                           </Button>
                         ))}
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleViewLogs(container.name)}
+                          className="px-2.5 py-1 text-xs"
+                        >
+                          Logs
+                        </Button>
                       </div>
-
-                      <Button
-                        variant="ghost"
-                        onClick={() => handleViewLogs(container.name)}
-                        className="w-full py-2 text-xs"
-                      >
-                        View Logs
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
             })}
           </div>
 
           {selectedContainer && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>
-                  Logs: {selectedContainerInfo?.displayName || selectedContainer}
-                </CardTitle>
+            <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-slate-100">Logs: {selectedContainerInfo?.displayName || selectedContainer}</h2>
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
@@ -318,24 +262,22 @@ export default function ContainersPage() {
                     Close
                   </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-96 overflow-auto backdrop-blur-xl bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4 font-mono text-[10px] sm:text-xs">
+              </div>
+                <div className="h-96 overflow-auto rounded-sm border border-slate-700/70 bg-black/40 p-3 font-mono text-[10px] sm:p-4 sm:text-xs">
                   {logsLoading ? (
-                    <div className="text-white/50">Loading logs...</div>
+                    <div className="text-slate-500">Loading logs...</div>
                   ) : logLines.length === 0 ? (
-                    <div className="text-white/50">No logs available</div>
+                    <div className="text-slate-500">No logs available</div>
                   ) : (
                     logLines.map((entry) => (
-                      <div key={entry.id} className="mb-1 break-all text-white/90">
+                      <div key={entry.id} className="mb-1 break-all text-slate-200">
                         {entry.text}
                       </div>
                     ))
                   )}
                   <div ref={logsEndRef} />
                 </div>
-              </CardContent>
-            </Card>
+            </section>
           )}
         </>
       )}

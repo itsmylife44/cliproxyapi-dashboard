@@ -198,38 +198,38 @@ function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
 }
 
 function calcOverallCapacity(summaries: ProviderSummary[]): { value: number; label: string; provider: string } {
-  let minCap = 1;
-  let minLabel = "";
-  let minProvider = "";
-  let foundLongTerm = false;
-
-  for (const s of summaries) {
-    for (const w of s.windowCapacities) {
-      if (!w.isShortTerm) {
-        if (!foundLongTerm || w.capacity < minCap) {
-          minCap = w.capacity;
-          minLabel = w.label;
-          minProvider = s.provider;
-          foundLongTerm = true;
-        }
-      }
-    }
-  }
-
-  if (!foundLongTerm) {
-    for (const s of summaries) {
-      for (const w of s.windowCapacities) {
-        if (w.capacity < minCap) {
-          minCap = w.capacity;
-          minLabel = w.label;
-          minProvider = s.provider;
-        }
-      }
-    }
-  }
-
   if (summaries.length === 0) return { value: 0, label: "No Data", provider: "" };
-  return { value: minCap, label: minLabel, provider: minProvider };
+
+  let weightedCapacity = 0;
+  let weightedAccounts = 0;
+
+  for (const summary of summaries) {
+    if (summary.healthyAccounts === 0) {
+      continue;
+    }
+
+    const longTerm = summary.windowCapacities.filter((w) => !w.isShortTerm);
+    const shortTerm = summary.windowCapacities.filter((w) => w.isShortTerm);
+    const relevantWindows = longTerm.length > 0 ? longTerm : shortTerm;
+
+    if (relevantWindows.length === 0) {
+      continue;
+    }
+
+    const providerCapacity = Math.min(...relevantWindows.map((w) => w.capacity));
+    weightedCapacity += providerCapacity * summary.healthyAccounts;
+    weightedAccounts += summary.healthyAccounts;
+  }
+
+  if (weightedAccounts === 0) {
+    return { value: 0, label: "No Data", provider: "" };
+  }
+
+  return {
+    value: weightedCapacity / weightedAccounts,
+    label: "Weighted capacity",
+    provider: "all",
+  };
 }
 
 function getCapacityBarClass(value: number): string {

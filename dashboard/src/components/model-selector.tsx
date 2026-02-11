@@ -180,12 +180,12 @@ export function ModelSelector({
   useEffect(() => {
     const currentSignature = buildExcludedSignature(excludedModels);
 
-    if (currentSignature === lastSavedSignatureRef.current) {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
       return;
     }
 
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
+    if (currentSignature === lastSavedSignatureRef.current) {
       return;
     }
 

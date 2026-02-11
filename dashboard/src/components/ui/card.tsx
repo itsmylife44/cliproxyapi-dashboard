@@ -8,7 +8,7 @@ interface CardProps {
 
 export function Card({ children, className }: CardProps) {
   return (
-    <div className={cn("backdrop-blur-2xl glass-card rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.3)]", className)}>
+    <div className={cn("backdrop-blur-2xl glass-card rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.25)]", className)}>
       {children}
     </div>
   );
@@ -21,7 +21,7 @@ interface CardHeaderProps {
 
 export function CardHeader({ children, className }: CardHeaderProps) {
   return (
-    <div className={cn("mb-3 border-b border-white/10 pb-3", className)}>
+    <div className={cn("mb-2 border-b border-white/10 pb-2", className)}>
       {children}
     </div>
   );

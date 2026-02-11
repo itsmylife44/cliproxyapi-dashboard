@@ -113,24 +113,30 @@ function IconLogs({ className }: { className?: string }) {
   );
 }
 
+const NAV_SECTIONS = [
+  { key: "general", label: "General" },
+  { key: "access", label: "Access" },
+  { key: "admin", label: "Admin" },
+] as const;
+
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Quick Start", icon: IconPlayCircle, adminOnly: false },
-  { href: "/dashboard/monitoring", label: "Monitoring", icon: IconActivity, adminOnly: true },
-  { href: "/dashboard/containers", label: "Containers", icon: IconBox, adminOnly: true },
-  { href: "/dashboard/config", label: "Config", icon: IconFileCode, adminOnly: true },
-  { href: "/dashboard/api-keys", label: "API Keys", icon: IconKey, adminOnly: false },
-  { href: "/dashboard/providers", label: "Providers", icon: IconLayers, adminOnly: false },
-  { href: "/dashboard/usage", label: "Usage", icon: IconBarChart, adminOnly: false },
-  { href: "/dashboard/quota", label: "Quota", icon: IconGauge, adminOnly: false },
-  { href: "/dashboard/admin/users", label: "Users", icon: IconUsers, adminOnly: true },
-  { href: "/dashboard/admin/logs", label: "Logs", icon: IconLogs, adminOnly: true },
-  { href: "/dashboard/settings", label: "Settings", icon: IconSettings, adminOnly: false },
+  { href: "/dashboard", label: "Quick Start", icon: IconPlayCircle, adminOnly: false, section: "general" },
+  { href: "/dashboard/providers", label: "Providers", icon: IconLayers, adminOnly: false, section: "general" },
+  { href: "/dashboard/usage", label: "Usage", icon: IconBarChart, adminOnly: false, section: "general" },
+  { href: "/dashboard/quota", label: "Quota", icon: IconGauge, adminOnly: false, section: "general" },
+  { href: "/dashboard/api-keys", label: "API Keys", icon: IconKey, adminOnly: false, section: "access" },
+  { href: "/dashboard/settings", label: "Settings", icon: IconSettings, adminOnly: false, section: "access" },
+  { href: "/dashboard/monitoring", label: "Monitoring", icon: IconActivity, adminOnly: true, section: "admin" },
+  { href: "/dashboard/containers", label: "Containers", icon: IconBox, adminOnly: true, section: "admin" },
+  { href: "/dashboard/config", label: "Config", icon: IconFileCode, adminOnly: true, section: "admin" },
+  { href: "/dashboard/admin/users", label: "Users", icon: IconUsers, adminOnly: true, section: "admin" },
+  { href: "/dashboard/admin/logs", label: "Logs", icon: IconLogs, adminOnly: true, section: "admin" },
 ] as const;
 
 export function DashboardNav() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isOpen, close } = useMobileSidebar();
+  const { isOpen, isCollapsed, toggleCollapsed, close } = useMobileSidebar();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -159,6 +165,8 @@ export function DashboardNav() {
     close();
   };
 
+  const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -184,7 +192,8 @@ export function DashboardNav() {
 
       <nav
         className={cn(
-          "w-52 glass-nav p-4 flex flex-col",
+          "w-56 glass-nav p-4 flex flex-col lg:transition-[width] lg:duration-200",
+          isCollapsed ? "lg:w-[4.5rem]" : "lg:w-56",
           "lg:block",
           "fixed lg:static inset-y-0 left-0 z-50",
           "transform transition-transform duration-300 ease-in-out",
@@ -192,59 +201,92 @@ export function DashboardNav() {
         )}
       >
         <div className="mb-4">
-          <div className="flex items-center gap-3">
+          <div className={cn("flex", isCollapsed ? "flex-col items-center gap-2" : "items-center justify-between")}> 
+            <div className={cn("flex items-center gap-3", isCollapsed && "lg:flex-col lg:gap-1")}> 
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
               src="/icon.png" 
               alt="CLIProxy Logo" 
-              width={32} 
-              height={32}
-              className="rounded-lg"
+              width={isCollapsed ? 38 : 32}
+              height={isCollapsed ? 38 : 32}
+              className="rounded-md"
             />
-            <div>
-              <h1 className="text-lg font-bold tracking-tight text-white">
+            <div className={cn(isCollapsed && "lg:hidden")}> 
+              <h1 className="text-base font-semibold tracking-tight text-slate-100">
                 CLIProxy
               </h1>
-              <p className="mt-0.5 text-xs text-white/70">Management</p>
+              <p className="mt-0.5 text-xs text-slate-400">Management</p>
             </div>
+            </div>
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              className="hidden rounded-md border border-slate-700/70 bg-slate-800/60 p-1.5 text-slate-300 transition-colors hover:bg-slate-700/70 hover:text-slate-100 lg:inline-flex"
+              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!isCollapsed}
+            >
+              <svg className={cn("h-4 w-4 transition-transform", isCollapsed && "rotate-180")} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M12.707 14.707a1 1 0 01-1.414 0L7.293 10.707a1 1 0 010-1.414l4-4a1 1 0 111.414 1.414L9.414 10l3.293 3.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
           </div>
         </div>
 
-        <ul className="space-y-1">
-          {NAV_ITEMS.map((item) => {
-            if (item.adminOnly && !isAdmin) {
+        <ul className="space-y-4">
+          {NAV_SECTIONS.map((section) => {
+            const items = visibleItems.filter((item) => item.section === section.key);
+            if (items.length === 0) {
               return null;
             }
-            
-            const isActive = pathname === item.href;
-            const IconComponent = item.icon;
+
             return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  onClick={handleNavClick}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300",
-                    isActive
-                      ? "glass-nav-item-active text-white"
-                      : "glass-nav-item text-white/70 hover:text-white/90"
-                  )}
-                >
-                  <IconComponent className="w-5 h-5" />
-                  {item.label}
-                </Link>
+              <li key={section.key} className="space-y-1.5">
+                <p className={cn("px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500", isCollapsed && "lg:hidden")}>
+                  {section.label}
+                </p>
+                <ul className="space-y-1">
+                  {items.map((item) => {
+                    const isActive = pathname === item.href;
+                    const IconComponent = item.icon;
+
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          onClick={handleNavClick}
+                          className={cn(
+                            "flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200",
+                            isCollapsed && "lg:justify-center lg:px-0",
+                            isActive
+                              ? "glass-nav-item-active text-slate-100"
+                              : "glass-nav-item text-slate-300 hover:text-slate-100"
+                          )}
+                          title={isCollapsed ? item.label : undefined}
+                        >
+                          <IconComponent className="h-4 w-4" />
+                          <span className={cn(isCollapsed && "lg:hidden")}>{item.label}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
               </li>
             );
           })}
         </ul>
 
-        <div className="mt-auto border-t border-white/10 pt-4">
+        <div className="mt-auto border-t border-slate-700/80 pt-4">
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full glass-button-secondary px-4 py-2 text-sm font-medium text-white/70 rounded-lg hover:text-white transition-all duration-200"
+            className={cn(
+              "w-full glass-button-secondary px-3 py-2 text-sm font-medium text-slate-300 rounded-md hover:text-slate-100 transition-colors duration-200",
+              isCollapsed && "lg:px-0"
+            )}
+            title={isCollapsed ? "Logout" : undefined}
           >
-            Logout
+            <span className={cn(isCollapsed && "lg:hidden")}>Logout</span>
+            <span className={cn("hidden", isCollapsed && "lg:inline")}>⎋</span>
           </button>
         </div>
       </nav>

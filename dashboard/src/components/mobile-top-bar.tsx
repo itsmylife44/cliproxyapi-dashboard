@@ -6,12 +6,12 @@ export function MobileTopBar() {
   const { toggle } = useMobileSidebar();
 
   return (
-    <div className="lg:hidden fixed top-0 left-0 right-0 z-30 glass-nav border-b border-white/10">
-      <div className="flex items-center justify-between p-4">
+    <div className="fixed left-0 right-0 top-0 z-30 border-b border-slate-700/80 glass-nav lg:hidden">
+      <div className="flex items-center justify-between px-3 py-2.5">
         <button
           type="button"
           onClick={toggle}
-          className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
+          className="rounded-md p-2 text-slate-200 transition-colors duration-200 hover:bg-slate-700/50"
           aria-label="Toggle menu"
         >
           <svg
@@ -32,14 +32,14 @@ export function MobileTopBar() {
         </button>
         <div className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img 
-            src="/icon.png" 
-            alt="CLIProxy Logo" 
-            width={24} 
+          <img
+            src="/icon.png"
+            alt="CLIProxy Logo"
+            width={22}
             height={24}
-            className="rounded-md"
+            className="rounded-sm"
           />
-          <h1 className="text-lg font-bold tracking-tight text-white">
+          <h1 className="text-base font-semibold tracking-tight text-slate-100">
             CLIProxy
           </h1>
         </div>

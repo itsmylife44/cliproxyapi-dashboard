@@ -24,13 +24,12 @@ export function Button({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "px-4 py-1.5 text-sm font-medium tracking-wide transition-all duration-200 rounded-lg",
+        "px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md",
         "border disabled:opacity-50 disabled:cursor-not-allowed",
-        "hover:scale-[1.02] active:scale-[0.98]",
-        variant === "primary" && "bg-purple-600 text-white border-purple-500 hover:bg-purple-500 shadow-lg shadow-purple-600/20",
-        variant === "secondary" && "glass-button-secondary text-white",
-        variant === "danger" && "bg-red-600/80 text-white border-red-500/60 hover:bg-red-500/80 shadow-lg shadow-red-600/20",
-        variant === "ghost" && "glass-button-ghost text-white/80 hover:text-white",
+        variant === "primary" && "glass-button-primary text-white shadow-[0_8px_20px_rgba(37,99,235,0.2)]",
+        variant === "secondary" && "glass-button-secondary text-slate-100",
+        variant === "danger" && "bg-rose-700/80 text-white border-rose-500/60 hover:bg-rose-600/80",
+        variant === "ghost" && "glass-button-ghost text-slate-300 hover:text-slate-100",
         className
       )}
     >

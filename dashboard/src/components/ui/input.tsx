@@ -37,11 +37,11 @@ export function Input({
       disabled={disabled}
       autoComplete={autoComplete}
       className={cn(
-          "w-full px-3 py-2 text-sm rounded-lg",
+          "w-full px-3 py-2 text-sm rounded-md",
           "glass-input text-white",
-          "focus:outline-none focus:border-purple-400/50 focus:ring-1 focus:ring-purple-400/30",
+          "focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30",
           "disabled:opacity-50 disabled:cursor-not-allowed",
-          "placeholder:text-white/40 transition-all duration-200",
+          "placeholder:text-slate-500 transition-colors duration-200",
           className
         )}
     />

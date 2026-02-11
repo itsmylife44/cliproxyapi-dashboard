@@ -16,9 +16,6 @@
   animation: slide-in-from-right 0.3s ease-out;
 }
 
-.slide-in-from-right-5 {
-}
-
 * {
   box-sizing: border-box;
 }
@@ -27,24 +24,26 @@ body {
   margin: 0;
   padding: 0;
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #0a0a12;
-  color: #ffffff;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(30, 64, 175, 0.16), transparent 34%),
+    radial-gradient(circle at 100% 0%, rgba(30, 41, 59, 0.22), transparent 42%),
+    #080b11;
+  color: #e5e7eb;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
 }
 
 :root {
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-bg-hover: rgba(255, 255, 255, 0.08);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-border-strong: rgba(255, 255, 255, 0.15);
-  --input-bg: rgba(255, 255, 255, 0.08);
-  --input-border: rgba(255, 255, 255, 0.15);
-  --nav-bg: rgba(255, 255, 255, 0.03);
-  --nav-border: rgba(255, 255, 255, 0.08);
-  --card-bg: rgba(255, 255, 255, 0.07);
-  --card-border: rgba(255, 255, 255, 0.12);
+  --surface-base: rgba(15, 23, 42, 0.68);
+  --surface-muted: rgba(15, 23, 42, 0.86);
+  --surface-hover: rgba(30, 41, 59, 0.78);
+  --surface-border: rgba(148, 163, 184, 0.2);
+  --surface-border-strong: rgba(148, 163, 184, 0.32);
+  --accent: rgb(59, 130, 246);
+  --accent-strong: rgb(37, 99, 235);
+  --text-primary: #e5e7eb;
+  --text-muted: #94a3b8;
 }
 
 /* Scrollbar */
@@ -69,13 +68,13 @@ body {
 
 /* Selection */
 ::selection {
-  background: rgba(139, 92, 246, 0.4);
+  background: rgba(59, 130, 246, 0.3);
   color: #ffffff;
 }
 
 /* Focus visible */
 *:focus-visible {
-  outline: 2px solid rgba(139, 92, 246, 0.6);
+  outline: 2px solid rgba(59, 130, 246, 0.65);
   outline-offset: 2px;
 }
 
@@ -123,52 +122,55 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 
 /* Glassmorphic utility classes */
 .glass-card {
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(16px);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.75));
+  border: 1px solid var(--surface-border);
+  backdrop-filter: blur(8px);
 }
 
 .glass-input {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(12px);
+  background: var(--surface-muted);
+  border: 1px solid var(--surface-border);
+  color: var(--text-primary);
+  backdrop-filter: blur(4px);
 }
 
 .glass-input:focus {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(139, 92, 246, 0.5);
+  background: rgba(15, 23, 42, 0.96);
+  border-color: rgba(59, 130, 246, 0.55);
 }
 
 .glass-button-primary {
-  background: rgb(139, 92, 246);
-  border: 1px solid rgb(124, 77, 255);
+  background: var(--accent);
+  border: 1px solid var(--accent-strong);
 }
 
 .glass-button-primary:hover {
-  background: rgb(124, 77, 255);
+  background: var(--accent-strong);
 }
 
 .glass-button-secondary {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(30, 41, 59, 0.72);
+  border: 1px solid var(--surface-border);
 }
 
 .glass-button-secondary:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(51, 65, 85, 0.84);
+  border-color: var(--surface-border-strong);
 }
 
 .glass-button-ghost {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--surface-border);
 }
 
 .glass-button-ghost:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(30, 41, 59, 0.5);
 }
 
 .glass-nav {
-  background: rgba(255, 255, 255, 0.03);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(2, 6, 23, 0.86);
+  border-right: 1px solid var(--surface-border);
+  backdrop-filter: blur(10px);
 }
 
 .glass-nav-item {
@@ -177,10 +179,10 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 }
 
 .glass-nav-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(30, 41, 59, 0.58);
 }
 
 .glass-nav-item-active {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(30, 64, 175, 0.24);
+  border-color: rgba(96, 165, 250, 0.4);
 }

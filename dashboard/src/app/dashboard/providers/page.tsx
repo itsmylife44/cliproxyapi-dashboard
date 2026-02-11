@@ -3,11 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { CustomProviderModal } from "@/components/custom-provider-modal";
-import { CustomProviderCard } from "@/components/custom-provider-card";
+import { cn } from "@/lib/utils";
 
 // ── Types & Constants ──────────────────────────────────────────────────────────
 
@@ -69,25 +68,21 @@ const PROVIDERS = [
     id: PROVIDER_IDS.CLAUDE,
     name: "Claude (Anthropic)",
     description: "Official Anthropic API",
-    icon: "🤖",
   },
   {
     id: PROVIDER_IDS.GEMINI,
     name: "Gemini (Google)",
     description: "Google Gemini API",
-    icon: "✨",
   },
   {
     id: PROVIDER_IDS.CODEX,
     name: "OpenAI / Codex",
     description: "OpenAI API including GPT models",
-    icon: "🔮",
   },
   {
     id: PROVIDER_IDS.OPENAI,
     name: "OpenAI Compatible",
     description: "Custom providers like OpenRouter",
-    icon: "🔌",
   },
 ] as const;
 
@@ -176,8 +171,7 @@ interface OAuthCallbackResponse {
 function OwnerBadge({ ownerUsername, isOwn }: OwnerBadgeProps) {
   if (isOwn) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-500/30 to-cyan-500/30 border border-blue-400/50 px-2.5 py-1 text-xs font-bold text-blue-300 shadow-sm">
-        <span className="size-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+      <span className="inline-flex items-center rounded-sm border border-blue-400/50 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-200">
         You
       </span>
     );
@@ -185,16 +179,14 @@ function OwnerBadge({ ownerUsername, isOwn }: OwnerBadgeProps) {
 
   if (ownerUsername) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-2.5 py-1 text-xs font-medium text-white/70">
-        <span className="size-1.5 rounded-full bg-purple-400"></span>
+      <span className="inline-flex items-center rounded-sm border border-slate-600/70 bg-slate-800/60 px-2 py-0.5 text-[11px] font-medium text-slate-300">
         {ownerUsername}
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-2.5 py-1 text-xs font-medium text-white/40">
-      <span className="size-1.5 rounded-full bg-white/20"></span>
+    <span className="inline-flex items-center rounded-sm border border-slate-700/70 bg-slate-800/40 px-2 py-0.5 text-[11px] font-medium text-slate-400">
       Team
     </span>
   );
@@ -740,46 +732,81 @@ export default function ProvidersPage() {
     oauthModalStatus === MODAL_STATUS.POLLING ||
     oauthModalStatus === MODAL_STATUS.SUCCESS ||
     callbackValidation !== CALLBACK_VALIDATION.VALID;
+  const providerStats = PROVIDERS.map((provider) => ({
+    id: provider.id,
+    count: configs[provider.id]?.keys.length ?? 0,
+  }));
+  const totalApiKeys = providerStats.reduce((sum, item) => sum + item.count, 0);
+  const activeApiProviders = providerStats.filter((item) => item.count > 0).length;
+  const ownApiKeyCount = currentUser
+    ? Object.values(configs).reduce(
+        (sum, providerConfig) => sum + providerConfig.keys.filter((key) => key.isOwn).length,
+        0
+      )
+    : 0;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-   return (
-     <div className="space-y-4">
-       <div>
-         <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-           AI Provider Configuration
-         </h1>
-        <p className="mt-3 text-sm text-white/70">
-          Configure API keys and OAuth authentication for your AI providers
+  return (
+    <div className="space-y-4">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+        <h1 className="text-xl font-semibold tracking-tight text-slate-100">
+          AI Provider Configuration
+        </h1>
+        <p className="mt-1 text-sm text-slate-400">
+          Manage API keys, OAuth accounts, and custom provider endpoints in one place.
         </p>
-      </div>
+      </section>
+
+      <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">API Keys</p>
+          <p className="mt-0.5 text-xs font-semibold text-slate-100">
+            {totalApiKeys} configured{currentUser ? ` · ${ownApiKeyCount} yours` : ""}
+          </p>
+        </div>
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Active Providers</p>
+          <p className="mt-0.5 text-xs font-semibold text-slate-100">{activeApiProviders}/{PROVIDERS.length}</p>
+        </div>
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">OAuth Accounts</p>
+          <p className="mt-0.5 text-xs font-semibold text-slate-100">{accounts.length} connected</p>
+        </div>
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Custom Providers</p>
+          <p className="mt-0.5 text-xs font-semibold text-slate-100">{customProviders.length} configured</p>
+        </div>
+      </section>
 
       {loading ? (
-        <Card>
-          <CardContent>
-            <div className="flex items-center justify-center p-6">
-              <div className="flex flex-col items-center gap-4">
-                <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-purple-500"></div>
-                <p className="text-white/80">Loading providers...</p>
-              </div>
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/30 p-6">
+          <div className="flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+              <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-purple-500"></div>
+              <p className="text-white/80">Loading providers...</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : (
-         <>
-           {/* ── API Key Provider Management ───────────────────────────────────── */}
-           <section className="space-y-4">
-             <div className="flex items-center gap-3 border-b border-white/10 pb-3">
-               <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 text-xl backdrop-blur-xl">
-                 🔑
-               </div>
-               <div>
-                 <h2 className="text-lg font-bold text-white">API Key Providers</h2>
-                 <p className="text-sm text-white/60">Manage API keys for direct provider access</p>
-               </div>
-             </div>
+        <>
+          {/* ── API Key Provider Management ───────────────────────────────────── */}
+          <section id="provider-api-keys" className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-100">API Key Providers</h2>
+                <p className="text-xs text-slate-400">Direct provider access keys</p>
+              </div>
+              <span className="text-xs font-medium text-slate-400">{totalApiKeys} keys total</span>
+            </div>
 
-             <div className="grid gap-4 lg:grid-cols-2">
+            <div className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/20">
+              <div className="grid grid-cols-[minmax(0,1.6fr)_96px_120px_128px] items-center border-b border-slate-700/70 bg-slate-900/60 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                <span>Provider</span>
+                <span>Status</span>
+                <span>Keys</span>
+                <span>Actions</span>
+              </div>
               {PROVIDERS.map((provider) => {
                 const config = configs[provider.id];
                 const userKeyCount = currentUser ? config.keys.filter((k) => k.isOwn).length : 0;
@@ -787,305 +814,250 @@ export default function ProvidersPage() {
                 const isConfigured = configuredCount > 0;
 
                  return (
-                  <Card key={provider.id} className="relative overflow-hidden">
-                    <CardHeader>
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3">
-                          <div className="flex size-8 items-center justify-center rounded-xl bg-white/10 text-base backdrop-blur-xl">
-                            {provider.icon}
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg">{provider.name}</CardTitle>
-                            <p className="mt-1 text-sm text-white/60">{provider.description}</p>
-                          </div>
-                        </div>
-                        {isConfigured ? (
-                          <div className="flex flex-col items-end gap-1">
-                            <span className="rounded-full bg-gradient-to-r from-green-500/30 to-emerald-500/30 border border-green-400/50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-green-300 shadow-lg shadow-green-500/10">
-                              Active
-                            </span>
-                            <span className="text-xs text-white/50">{configuredCount} key{configuredCount !== 1 ? "s" : ""}</span>
-                          </div>
-                        ) : (
-                          <span className="rounded-full bg-white/5 border border-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white/50">
-                            Inactive
-                          </span>
-                        )}
+                  <div key={provider.id} className="border-b border-slate-700/70 last:border-b-0">
+                    <div className="grid grid-cols-[minmax(0,1.6fr)_96px_120px_128px] items-center gap-3 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-slate-100">{provider.name}</p>
+                        <p className="truncate text-xs text-slate-400">{provider.description}</p>
                       </div>
-                    </CardHeader>
+                      <span className={`text-xs font-medium ${isConfigured ? "text-emerald-300" : "text-slate-400"}`}>
+                        {isConfigured ? "Active" : "Inactive"}
+                      </span>
+                      <span className="text-xs text-slate-300">
+                        {configuredCount} {configuredCount === 1 ? "key" : "keys"}
+                      </span>
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={() => openModal(provider.id)}
+                          className="px-2.5 py-1 text-xs"
+                          disabled={!currentUser}
+                        >
+                          Add Key
+                        </Button>
+                      </div>
+                    </div>
 
-                    <CardContent>
-                       <div className="space-y-4">
-                         {configuredCount === 0 ? (
-                           <div className="rounded-xl border-l-4 border-purple-500/50 bg-gradient-to-r from-purple-500/5 to-transparent p-3">
-                            <p className="text-sm font-medium text-white/80">No API keys configured</p>
-                            <p className="mt-1 text-xs text-white/60">Add your first API key to get started</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {config.keys.map((keyInfo, idx) => (
-                              <div
-                                key={keyInfo.keyHash}
-                                className="group flex items-center justify-between gap-3 rounded-xl border border-white/20 bg-gradient-to-r from-white/5 to-white/[0.02] px-4 py-3 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
-                                style={{ animationDelay: `${idx * 50}ms` }}
-                              >
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                  <div className="flex size-8 items-center justify-center rounded-lg bg-purple-500/20 text-xs font-bold text-purple-300 shrink-0">
-                                    {idx + 1}
-                                  </div>
-                               <div className="flex flex-col min-w-0">
-                                     <span className="font-mono text-sm text-white/90">{keyInfo.maskedKey}</span>
-                                   </div>
-                                  {currentUser && (
-                                    <OwnerBadge
-                                      ownerUsername={keyInfo.ownerUsername}
-                                      isOwn={keyInfo.isOwn}
-                                    />
-                                  )}
-                                </div>
+                    <div className="px-4 pb-3">
+                      {configuredCount === 0 ? (
+                        <p className="text-xs text-slate-500">No API keys configured.</p>
+                      ) : (
+                        <div className="overflow-hidden rounded-sm border border-slate-700/60">
+                          {config.keys.map((keyInfo) => (
+                            <div
+                              key={keyInfo.keyHash}
+                              className="group flex items-center justify-between gap-3 border-b border-slate-700/60 bg-slate-900/30 px-3 py-2 last:border-b-0"
+                            >
+                              <div className="flex min-w-0 items-center gap-2">
+                                <span className="truncate font-mono text-xs text-slate-200">{keyInfo.maskedKey}</span>
+                                {currentUser && (
+                                  <OwnerBadge ownerUsername={keyInfo.ownerUsername} isOwn={keyInfo.isOwn} />
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3">
+                                {currentUser && (
+                                  <span className="text-[11px] text-slate-500">{userKeyCount}/{maxKeysPerUser}</span>
+                                )}
                                 {currentUser && (keyInfo.isOwn || currentUser.isAdmin) && (
                                   <Button
                                     variant="danger"
-                                    className="px-3 py-1.5 text-xs shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                                    className="px-2 py-1 text-[11px]"
                                     onClick={() => handleDeleteKey(keyInfo.keyHash, provider.id)}
                                   >
                                     Remove
                                   </Button>
                                 )}
                               </div>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="flex gap-2 pt-2">
-                          <Button 
-                            onClick={() => openModal(provider.id)}
-                            className="flex-1"
-                            disabled={!currentUser}
-                          >
-                            + Add API Key
-                          </Button>
-                          {currentUser && (
-                            <div className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/20 px-3 py-2 text-xs text-white/70">
-                              <span className="font-medium text-white/90">{userKeyCount}</span>
-                              <span>/</span>
-                              <span>{maxKeysPerUser}</span>
                             </div>
-                          )}
+                          ))}
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      )}
+                    </div>
+                  </div>
                 );
               })}
             </div>
-           </section>
+          </section>
 
-           {/* ── OAuth Account Management ──────────────────────────────────────── */}
-           <section className="space-y-4">
-             <div className="flex items-center gap-3 border-b border-white/10 pb-3">
-               <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 text-xl backdrop-blur-xl">
-                 🔐
-               </div>
-               <div>
-                 <h2 className="text-lg font-bold text-white">OAuth Accounts</h2>
-                 <p className="text-sm text-white/60">Connect and manage provider accounts via OAuth</p>
-               </div>
-             </div>
+          {/* ── OAuth Account Management ──────────────────────────────────────── */}
+          <section id="provider-oauth" className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-100">OAuth Accounts</h2>
+                <p className="text-xs text-slate-400">Subscription-based provider connections</p>
+              </div>
+              <span className="text-xs font-medium text-slate-400">{accounts.length} connected</span>
+            </div>
 
-             {/* Connected OAuth Accounts */}
-             <Card>
-               <CardHeader>
-                 <div className="flex items-center justify-between">
-                   <div>
-                     <CardTitle className="text-lg">Connected Accounts</CardTitle>
-                     <p className="mt-1 text-sm text-white/60">
-                       Active OAuth provider connections
-                     </p>
-                   </div>
-                   {accounts.length > 0 && (
-                     <span className="rounded-full bg-white/10 border border-white/20 px-3 py-1.5 text-xs font-bold text-white/80">
-                       {accounts.length} {accounts.length === 1 ? "account" : "accounts"}
-                     </span>
-                   )}
-                 </div>
-               </CardHeader>
-               <CardContent>
-                 {oauthAccountsLoading ? (
-                   <div className="flex items-center justify-center p-8">
-                     <div className="flex flex-col items-center gap-3">
-                       <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-purple-500"></div>
-                       <p className="text-sm text-white/70">Loading accounts...</p>
-                     </div>
-                   </div>
-                 ) : accounts.length === 0 ? (
-                   <div className="rounded-xl border-l-4 border-white/30 bg-white/5 p-4 text-sm text-white/80 backdrop-blur-xl">
-                     No OAuth accounts connected yet. Connect your first account below.
-                   </div>
-                 ) : (
-                    <div className="space-y-3">
-                      {accounts.map((account) => (
-                        <div
-                          key={account.id}
-                          className="group rounded-xl border border-white/20 bg-gradient-to-r from-white/5 to-white/[0.02] p-4 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0 space-y-2">
-                              <div className="flex items-center gap-3 flex-wrap">
-                                <span className="text-base font-bold text-white">
-                                  {account.provider}
-                                </span>
-                                {currentUser && (
-                                  <OwnerBadge
-                                    ownerUsername={account.ownerUsername}
-                                    isOwn={account.isOwn}
-                                  />
-                                )}
-                              </div>
-                              {account.accountEmail && (
-                                <p className="truncate text-sm text-white/70">
-                                  {account.accountEmail}
-                                </p>
-                              )}
-                              <p className="truncate text-xs text-white/50 font-mono">
-                                {account.accountName}
-                              </p>
-                            </div>
-                            {currentUser && (account.isOwn || currentUser.isAdmin) && (
-                              <div className="flex items-center gap-2 shrink-0">
-                                <Button
-                                  variant="danger"
-                                  className="px-4 py-2 text-xs"
-                                  onClick={() => handleOAuthDelete(account.id)}
-                                >
-                                  Disconnect
-                                </Button>
-                              </div>
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Connected Accounts</h3>
+                <p className="mt-1 text-xs text-slate-500">Active OAuth provider connections</p>
+              </div>
+              {oauthAccountsLoading ? (
+                <div className="flex items-center justify-center rounded-md border border-slate-700/70 bg-slate-900/25 p-8">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-blue-500"></div>
+                    <p className="text-sm text-slate-400">Loading accounts...</p>
+                  </div>
+                </div>
+              ) : accounts.length === 0 ? (
+                <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3 text-xs text-slate-400">
+                  No OAuth accounts connected yet. Connect your first account below.
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-700/70 rounded-md border border-slate-700/70 bg-slate-900/25">
+                  {accounts.map((account) => (
+                    <div key={account.id} className="group p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-100">{account.provider}</span>
+                            {currentUser && (
+                              <OwnerBadge ownerUsername={account.ownerUsername} isOwn={account.isOwn} />
                             )}
                           </div>
+                          {account.accountEmail && (
+                            <p className="truncate text-xs text-slate-300">{account.accountEmail}</p>
+                          )}
+                          <p className="truncate text-xs font-mono text-slate-500">{account.accountName}</p>
                         </div>
-                      ))}
-                    </div>
-                 )}
-               </CardContent>
-             </Card>
-
-             {/* Connect OAuth Account */}
-             <Card>
-               <CardHeader>
-                 <CardTitle className="text-lg">Connect New Account</CardTitle>
-                 <p className="mt-1 text-sm text-white/60">
-                   Link OAuth provider accounts for subscription-based access
-                 </p>
-               </CardHeader>
-               <CardContent>
-                 <div className="mb-4 rounded-xl border-l-4 border-blue-400/60 bg-blue-500/10 p-3 text-sm backdrop-blur-xl">
-                   <strong className="text-white">Note:</strong>{" "}
-                   <span className="text-white/90">
-                     OAuth flows open in a popup window. Make sure pop-ups are allowed in your browser.
-                   </span>
-                 </div>
-
-                 <div className="grid gap-4 sm:grid-cols-2">
-                   {OAUTH_PROVIDERS.map((provider) => (
-                     <div
-                       key={provider.id}
-                       className="group flex flex-col justify-between rounded-xl border border-white/20 bg-gradient-to-br from-white/5 to-white/[0.02] p-3 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
-                     >
-                       <div className="space-y-2">
-                         <div className="text-base font-bold text-white">
-                           {provider.name}
-                         </div>
-                         <p className="text-sm text-white/60 leading-relaxed">
-                           {provider.description}
-                         </p>
-                       </div>
-                       <Button
-                         variant="secondary"
-                         onClick={() => handleOAuthConnect(provider.id)}
-                         className="mt-4 w-full"
-                       >
-                         Connect {provider.name}
-                       </Button>
-                     </div>
-                   ))}
-                 </div>
-               </CardContent>
-               </Card>
-            </section>
-
-            {/* ── Custom Providers ──────────────────────────────────────────────────── */}
-            <section className="space-y-4">
-              <div className="flex items-center gap-3 border-b border-white/10 pb-3">
-                <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 text-xl backdrop-blur-xl">
-                  🔧
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-lg font-bold text-white">Custom Providers</h2>
-                  <p className="text-sm text-white/60">Manage your custom OpenAI-compatible providers</p>
-                </div>
-                <Button onClick={() => setShowCustomProviderModal(true)}>
-                  Add Custom Provider
-                </Button>
-              </div>
-
-              {customProvidersLoading ? (
-                <Card>
-                  <CardContent>
-                    <div className="flex items-center justify-center p-8">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-purple-500"></div>
-                        <p className="text-sm text-white/70">Loading custom providers...</p>
+                        {currentUser && (account.isOwn || currentUser.isAdmin) && (
+                          <div className="shrink-0">
+                            <Button
+                              variant="danger"
+                              className="px-2.5 py-1 text-xs"
+                              onClick={() => handleOAuthDelete(account.id)}
+                            >
+                              Disconnect
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ) : customProviders.length === 0 ? (
-                <Card>
-                  <CardContent>
-                    <div className="rounded-xl border-l-4 border-white/30 bg-white/5 p-4 text-sm text-white/80 backdrop-blur-xl">
-                      No custom providers yet. Add one to get started.
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {customProviders.map((provider) => (
-                    <CustomProviderCard
-                      key={provider.id}
-                      provider={provider}
-                      onEdit={() => handleCustomProviderEdit(provider)}
-                      onDelete={() => handleCustomProviderDelete(provider.id)}
-                    />
                   ))}
                 </div>
               )}
-            </section>
 
-            {/* ── Admin Settings ────────────────────────────────────────────────── */}
-           {currentUser?.isAdmin && (
-             <section className="space-y-4">
-               <div className="flex items-center gap-3 border-b border-white/10 pb-3">
-                 <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-xl backdrop-blur-xl">
-                   ⚙️
-                 </div>
-                 <div>
-                   <h2 className="text-lg font-bold text-white">Admin Settings</h2>
-                   <p className="text-sm text-white/60">Configure provider key limits and policies</p>
-                 </div>
-               </div>
+              <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3 text-xs text-slate-400">
+                <strong className="text-slate-200">Note:</strong> OAuth flows open in a popup window. Make sure pop-ups are allowed in your browser.
+              </div>
 
-               <Card>
-                 <CardHeader>
-                   <CardTitle className="text-lg">Key Contribution Limits</CardTitle>
-                   <p className="mt-1 text-sm text-white/60">
-                     Control how many provider keys each user can contribute
-                   </p>
-                 </CardHeader>
-                 <CardContent>
-                   <div className="flex items-center gap-4">
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Connect New Account</h3>
+              </div>
+              <div className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+                {OAUTH_PROVIDERS.map((provider, index) => (
+                  <div
+                    key={provider.id}
+                    className={cn(
+                      "flex items-center justify-between gap-3 px-3 py-2.5",
+                      index !== OAUTH_PROVIDERS.length - 1 && "border-b border-slate-700/70"
+                    )}
+                  >
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium text-slate-100">{provider.name}</div>
+                      <p className="text-xs leading-relaxed text-slate-400">{provider.description}</p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleOAuthConnect(provider.id)}
+                      className="shrink-0 px-2.5 py-1 text-xs"
+                    >
+                      Connect
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ── Custom Providers ──────────────────────────────────────────────────── */}
+          <section id="provider-custom" className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-100">Custom Providers</h2>
+                <p className="text-xs text-slate-400">OpenAI-compatible endpoints and mappings</p>
+              </div>
+              <Button onClick={() => setShowCustomProviderModal(true)} className="px-2.5 py-1 text-xs">
+                Add Custom Provider
+              </Button>
+            </div>
+
+            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
+
+              {customProvidersLoading ? (
+                <div className="rounded-md border border-slate-700/70 bg-slate-900/30 p-8">
+                  <div className="flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-purple-500"></div>
+                      <p className="text-sm text-white/70">Loading custom providers...</p>
+                    </div>
+                  </div>
+                </div>
+              ) : customProviders.length === 0 ? (
+                <div className="rounded-md border border-slate-700/70 bg-slate-900/30 p-4">
+                  <div className="rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 text-xs text-slate-400">
+                    No custom providers yet. Add one to get started.
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-sm border border-slate-700/70 bg-slate-900/30">
+                  <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px_120px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                    <span>Name</span>
+                    <span>Endpoint</span>
+                    <span>Models</span>
+                    <span>Actions</span>
+                  </div>
+                  {customProviders.map((provider) => (
+                    <div
+                      key={provider.id}
+                      className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px_120px] items-center border-b border-slate-700/60 px-3 py-2 last:border-b-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-slate-100">{provider.name}</p>
+                        <p className="truncate text-xs text-slate-500">{provider.providerId}</p>
+                      </div>
+                      <p className="truncate text-xs text-slate-300">{provider.baseUrl}</p>
+                      <p className="text-xs text-slate-300">{provider.models.length}</p>
+                      <div className="flex items-center gap-2 justify-end">
+                        <Button
+                          variant="secondary"
+                          className="px-2.5 py-1 text-xs"
+                          onClick={() => handleCustomProviderEdit(provider)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="danger"
+                          className="px-2.5 py-1 text-xs"
+                          onClick={() => handleCustomProviderDelete(provider.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ── Admin Settings ────────────────────────────────────────────────── */}
+          {currentUser?.isAdmin && (
+            <section id="provider-admin" className="space-y-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-100">Admin Settings</h2>
+                <p className="text-xs text-slate-400">Provider limits and policies</p>
+              </div>
+
+                <div className="rounded-md border border-slate-700/70 bg-slate-900/30 p-4">
+                  <h3 className="text-sm font-semibold text-slate-100">Key Contribution Limits</h3>
+                  <p className="mt-1 text-sm text-slate-400">
+                    Control how many provider keys each user can contribute
+                  </p>
+                    <div className="flex items-center gap-4">
                      <div className="flex-1">
-                       <label htmlFor="max-keys" className="mb-2 block text-sm font-semibold text-white">
+                       <label htmlFor="max-keys" className="mb-2 block text-sm font-semibold text-slate-300">
                          Max Keys Per User
                        </label>
                        <Input
@@ -1099,9 +1071,9 @@ export default function ProvidersPage() {
                            }
                          }}
                        />
-                       <p className="mt-1.5 text-xs text-white/50">
-                         Maximum number of provider keys a single user can contribute (current: {maxKeysPerUser})
-                       </p>
+                       <p className="mt-1.5 text-xs text-slate-500">
+                          Maximum number of provider keys a single user can contribute (current: {maxKeysPerUser})
+                        </p>
                      </div>
                      <Button
                        variant="secondary"
@@ -1127,16 +1099,15 @@ export default function ProvidersPage() {
                            showToast("Network error", "error");
                          }
                        }}
-                     >
-                       Save
+                      >
+                        Save
                      </Button>
-                   </div>
-                 </CardContent>
-               </Card>
-             </section>
-           )}
-        </>
-      )}
+                    </div>
+                </div>
+            </section>
+          )}
+         </>
+       )}
 
       {/* ── API Key Add Modal ──────────────────────────────────────────────── */}
       <Modal isOpen={modalProvider !== null} onClose={closeModal}>

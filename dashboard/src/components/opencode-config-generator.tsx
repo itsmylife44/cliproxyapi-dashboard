@@ -44,7 +44,7 @@ const DEFAULT_PLUGINS = [
 ];
 
 export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
-  const { apiKeys, oauthAccounts, models: allModels, excludedModels, proxyUrl } = props;
+  const { apiKeys, config, oauthAccounts, models: allModels, excludedModels, proxyUrl } = props;
    const [selectedKeyIndex, setSelectedKeyIndex] = useState(0);
    const [isExpanded, setIsExpanded] = useState(false);
    const [isModelsExpanded, setIsModelsExpanded] = useState(false);
@@ -135,6 +135,18 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   const hasModels = Object.keys(availableModels).length > 0;
   const hasKeys = apiKeys.length > 0;
   const hasActiveOAuth = oauthAccounts.some((a) => !a.disabled);
+  const providerKeys = [
+    "gemini-api-key",
+    "claude-api-key",
+    "codex-api-key",
+    "vertex-api-key",
+    "openai-compatibility",
+  ] as const;
+  const hasConfiguredProviderKey = providerKeys.some((key) => {
+    const value = (config as Record<string, unknown> | null)?.[key];
+    return Array.isArray(value) ? value.length > 0 : Boolean(value);
+  });
+  const hasAnyProviderConfigured = hasConfiguredProviderKey || hasActiveOAuth;
 
   const selectedEntry = hasKeys
     ? apiKeys[selectedKeyIndex] ?? apiKeys[0]
@@ -195,7 +207,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
     downloadFile(configJson, "opencode.json");
   };
 
-  if (!hasModels) {
+  if (!hasAnyProviderConfigured) {
     return (
       <div className="space-y-4">
         <div className="border-l-4 border-amber-400/60 bg-amber-500/10 backdrop-blur-xl p-4 text-sm rounded-r-xl">
@@ -216,17 +228,6 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-center gap-3 py-8">
-          <div className="h-5 w-5 rounded-full border-2 border-white/20 border-t-purple-400 animate-spin" />
-          <span className="text-sm text-white/60">Loading configuration...</span>
-        </div>
-      </div>
-    );
-  }
-
   if (apiKeys.length === 0) {
     return (
       <div className="space-y-3">
@@ -241,6 +242,35 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           >
             Create API Key →
           </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasModels) {
+    return (
+      <div className="space-y-4">
+        <div className="border-l-4 border-amber-400/60 bg-amber-500/10 backdrop-blur-xl p-4 text-sm rounded-r-xl">
+          <p className="text-white/90 font-medium mb-1">No models available yet</p>
+          <p className="text-white/60 text-xs">
+            Providers are configured, but no models were discovered yet. If you just added providers,
+            wait a moment and refresh. If the issue persists, verify provider credentials on the{" "}
+            <a href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
+              Providers
+            </a>{" "}
+            page.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-center gap-3 py-8">
+          <div className="h-5 w-5 rounded-full border-2 border-white/20 border-t-purple-400 animate-spin" />
+          <span className="text-sm text-white/60">Loading configuration...</span>
         </div>
       </div>
     );

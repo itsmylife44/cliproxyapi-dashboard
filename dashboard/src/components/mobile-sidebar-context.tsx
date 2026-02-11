@@ -4,15 +4,31 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 
 interface MobileSidebarContextValue {
   isOpen: boolean;
+  isCollapsed: boolean;
   open: () => void;
   close: () => void;
   toggle: () => void;
+  toggleCollapsed: () => void;
 }
 
 const MobileSidebarContext = createContext<MobileSidebarContextValue | undefined>(undefined);
 
 export function MobileSidebarProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("dashboard.sidebar.collapsed");
+    setIsCollapsed(saved === "true");
+  }, []);
+
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      window.localStorage.setItem("dashboard.sidebar.collapsed", String(next));
+      return next;
+    });
+  };
 
   const open = () => setIsOpen(true);
   const close = () => setIsOpen(false);
@@ -32,7 +48,7 @@ export function MobileSidebarProvider({ children }: { children: ReactNode }) {
   }, [isOpen]);
 
   return (
-    <MobileSidebarContext.Provider value={{ isOpen, open, close, toggle }}>
+    <MobileSidebarContext.Provider value={{ isOpen, isCollapsed, open, close, toggle, toggleCollapsed }}>
       {children}
     </MobileSidebarContext.Provider>
   );

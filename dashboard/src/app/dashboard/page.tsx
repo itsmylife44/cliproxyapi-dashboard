@@ -183,111 +183,203 @@ export default async function QuickStartPage() {
     modelSourceMap.set(aliasId, "OAuth Alias");
   }
   const allProxyModels = { ...buildAvailableModelsFromProxy(proxyModels), ...oauthAliasModels };
+  const setupItems = [
+    {
+      label: "Provider connected",
+      done: providerCount > 0,
+      link: "/dashboard/providers",
+      linkLabel: "Providers",
+    },
+    {
+      label: "API key created",
+      done: apiKeys.length > 0,
+      link: "/dashboard/api-keys",
+      linkLabel: "API Keys",
+    },
+    {
+      label: "Model catalog available",
+      done: availableModelIds.length > 0,
+      link: "/dashboard/providers",
+      linkLabel: "Verify providers",
+    },
+  ];
+  const completedSetupItems = setupItems.filter((item) => item.done).length;
+  const shouldShowSetupChecklist = completedSetupItems < setupItems.length;
+  const statusCards = [
+    {
+      label: "Service",
+      value: isHealthy ? "Online" : "Offline",
+      tone: isHealthy ? "text-emerald-400" : "text-rose-400",
+      icon: "●",
+      iconTone: isHealthy ? "text-emerald-300" : "text-rose-300",
+    },
+    {
+      label: "Providers",
+      value: `${providerCount} configured`,
+      tone: "text-slate-100",
+      icon: "◆",
+      iconTone: "text-blue-300",
+    },
+    {
+      label: "API Keys",
+      value: `${apiKeys.length} active`,
+      tone: "text-slate-100",
+      icon: "♟",
+      iconTone: "text-amber-300",
+    },
+    {
+      label: "Proxy URL",
+      value: getProxyUrl(),
+      tone: "text-slate-100",
+      icon: "◈",
+      iconTone: "text-cyan-300",
+      truncate: true,
+    },
+  ] as const;
 
-   return (
-     <div className="space-y-5">
-       <div>
-         <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-           Quick Start
-         </h1>
-        <p className="mt-2 text-sm text-white/60">
-          Get up and running with CLIProxyAPI in minutes
-        </p>
-      </div>
-
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-         <div className="backdrop-blur-2xl glass-card rounded-2xl p-3 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
-              <span className="text-emerald-400 text-lg" aria-hidden="true">&#9679;</span>
-            </div>
-            <div>
-              <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Service</div>
-              {isHealthy ? (
-                <div className="text-sm font-semibold text-emerald-400">Online</div>
-              ) : (
-                <div className="text-sm font-semibold text-red-400">Offline</div>
-              )}
-            </div>
+  return (
+    <div className="space-y-4">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-100">Quick Start</h1>
+            <p className="mt-1 text-sm text-slate-400">
+              Configure providers, generate client config, and validate access from one place.
+            </p>
           </div>
-        </div>
-
-         <div className="backdrop-blur-2xl glass-card rounded-2xl p-3 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-xl bg-violet-500/20 border border-violet-400/30 flex items-center justify-center">
-              <span className="text-violet-400 text-lg" aria-hidden="true">&#9670;</span>
-            </div>
-            <div>
-              <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Providers</div>
-              <div className="text-sm font-semibold text-white">{providerCount} configured</div>
-            </div>
-          </div>
-        </div>
-
-         <div className="backdrop-blur-2xl glass-card rounded-2xl p-3 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center">
-              <span className="text-amber-400 text-lg" aria-hidden="true">&#9919;</span>
-            </div>
-            <div>
-              <div className="text-xs font-medium text-white/50 uppercase tracking-wider">API Keys</div>
-              <div className="text-sm font-semibold text-white">{apiKeys.length} active</div>
-            </div>
-          </div>
-        </div>
-
-         <div className="backdrop-blur-2xl glass-card rounded-2xl p-3 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-xl bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center">
-              <span className="text-cyan-400 text-lg" aria-hidden="true">&#9672;</span>
-            </div>
-            <div>
-              <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Proxy URL</div>
-              <div className="text-sm font-semibold text-white truncate">{getProxyUrl()}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-        <QuickStartConfigSection
-          apiKeys={apiKeys}
-          config={config}
-          oauthAccounts={oauthAccounts}
-          availableModels={availableModelIds}
-          allModels={allProxyModels}
-          modelSourceMap={modelSourceMap}
-         initialExcludedModels={initialExcludedModels}
-         agentOverrides={agentOverrides}
-         hasSyncActive={hasSyncActive}
-         isSubscribed={isSubscriber}
-         proxyUrl={getProxyUrl()}
-       />
-
-      {!isSubscriber && <ConfigPublisher />}
-      {!isPublisher && <ConfigSubscriber hasApiKey={hasApiKey} />}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <span className="flex items-center gap-3">
-             <span className="w-6 h-6 rounded-lg bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-sm" aria-hidden="true">&#9654;</span>
-               Using with Claude Code
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-white/70 mb-4">
-            As an alternative, you can use CLIProxyAPI with Claude Code by setting environment variables before launching it.
-            Replace <code className="px-1.5 py-0.5 rounded bg-white/10 text-blue-300 text-xs font-mono break-all">your-api-key</code> with
-            your key from the{" "}
-            <Link href="/dashboard/api-keys" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/dashboard/providers"
+              className="rounded-md border border-slate-600/80 bg-slate-800/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-slate-200 transition-colors hover:bg-slate-700/80"
+            >
+              Providers
+            </Link>
+            <Link
+              href="/dashboard/api-keys"
+              className="rounded-md border border-slate-600/80 bg-slate-800/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-slate-200 transition-colors hover:bg-slate-700/80"
+            >
               API Keys
-            </Link>{" "}
-            page.
-          </p>
-          <CopyBlock code={getClaudeCodeEnv()} />
-        </CardContent>
-      </Card>
+            </Link>
+            <Link
+              href="/dashboard/settings"
+              className="rounded-md border border-slate-600/80 bg-slate-800/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-slate-200 transition-colors hover:bg-slate-700/80"
+            >
+              Settings
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="overview"
+        className={`scroll-mt-24 grid gap-3 ${shouldShowSetupChecklist ? "xl:grid-cols-[minmax(0,2.2fr)_minmax(280px,1fr)]" : ""}`}
+      >
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {statusCards.map((card) => (
+            <div key={card.label} className="glass-card rounded-md border border-slate-700/70 px-2.5 py-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{card.label}</div>
+                <span className={`text-xs ${card.iconTone}`} aria-hidden="true">{card.icon}</span>
+              </div>
+              <div className={`mt-0.5 text-xs font-semibold ${card.tone} ${"truncate" in card && card.truncate ? "truncate" : ""}`}>
+                {card.value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {shouldShowSetupChecklist && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Setup Checklist</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-3 text-sm text-slate-400">
+                {completedSetupItems}/{setupItems.length} steps complete
+              </p>
+              <div className="space-y-2.5">
+                {setupItems.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between gap-3 rounded-md border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className={item.done ? "text-emerald-400" : "text-amber-300"} aria-hidden="true">
+                        {item.done ? "●" : "○"}
+                      </span>
+                      <span className="text-sm text-slate-200">{item.label}</span>
+                    </div>
+                    {!item.done && (
+                      <Link href={item.link} className="text-xs font-medium text-blue-300 hover:text-blue-200">
+                        {item.linkLabel}
+                      </Link>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </section>
+
+      <QuickStartConfigSection
+        apiKeys={apiKeys}
+        config={config}
+        oauthAccounts={oauthAccounts}
+        availableModels={availableModelIds}
+        allModels={allProxyModels}
+        modelSourceMap={modelSourceMap}
+        initialExcludedModels={initialExcludedModels}
+        agentOverrides={agentOverrides}
+        hasSyncActive={hasSyncActive}
+        isSubscribed={isSubscriber}
+        proxyUrl={getProxyUrl()}
+      />
+
+      <section id="sharing" className="scroll-mt-24">
+        <details className="group rounded-lg border border-slate-700/70 bg-slate-900/40">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-100">Publisher / Subscriber</p>
+              <p className="text-xs text-slate-400">Share your config template or subscribe to another user.</p>
+            </div>
+            <span className="text-xs font-medium uppercase tracking-[0.1em] text-slate-400 transition-transform duration-200 group-open:rotate-180">⌄</span>
+          </summary>
+          <div className="grid gap-4 border-t border-slate-700/70 px-4 py-3 2xl:grid-cols-2">
+            {!isSubscriber && <ConfigPublisher />}
+            {!isPublisher && <ConfigSubscriber hasApiKey={hasApiKey} />}
+          </div>
+        </details>
+      </section>
+
+      <section id="integrations" className="scroll-mt-24">
+        <details className="group rounded-lg border border-slate-700/70 bg-slate-900/40">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-100">Integrations</p>
+              <p className="text-xs text-slate-400">Reference setup snippets for external clients.</p>
+            </div>
+            <span className="text-xs font-medium uppercase tracking-[0.1em] text-slate-400 transition-transform duration-200 group-open:rotate-180">⌄</span>
+          </summary>
+          <div className="border-t border-slate-700/70 px-4 py-3">
+            <div className="rounded-md border border-slate-700/70 bg-slate-900/30 p-4">
+              <h3 className="mb-3 text-sm font-semibold text-slate-100">
+                <span className="flex items-center gap-3">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-blue-400/30 bg-blue-500/15 text-sm text-blue-300" aria-hidden="true">&#9654;</span>
+                  Using with Claude Code
+                </span>
+              </h3>
+              <p className="mb-4 text-sm text-slate-300">
+                As an alternative, you can use CLIProxyAPI with Claude Code by setting environment variables before launching it.
+                Replace <code className="break-all rounded bg-slate-800/80 px-1.5 py-0.5 font-mono text-xs text-blue-200">your-api-key</code> with
+                your key from the{" "}
+                <Link href="/dashboard/api-keys" className="font-medium text-blue-300 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-200">
+                  API Keys
+                </Link>{" "}
+                page.
+              </p>
+              <CopyBlock code={getClaudeCodeEnv()} />
+            </div>
+          </div>
+        </details>
+      </section>
     </div>
   );
 }

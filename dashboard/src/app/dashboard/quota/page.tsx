@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -75,12 +74,6 @@ function formatRelativeTime(isoDate: string | null): string {
   } catch {
     return "Unknown";
   }
-}
-
-function getProgressColor(fraction: number): string {
-  if (fraction > 0.6) return "bg-emerald-500";
-  if (fraction > 0.2) return "bg-amber-500";
-  return "bg-red-500";
 }
 
 // Classify a group as short-term (≤6h) or long-term based on its id/label
@@ -239,6 +232,12 @@ function calcOverallCapacity(summaries: ProviderSummary[]): { value: number; lab
   return { value: minCap, label: minLabel, provider: minProvider };
 }
 
+function getCapacityBarClass(value: number): string {
+  if (value > 0.6) return "bg-emerald-500/80";
+  if (value > 0.2) return "bg-amber-500/80";
+  return "bg-rose-500/80";
+}
+
 export default function QuotaPage() {
   const [quotaData, setQuotaData] = useState<QuotaResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -292,6 +291,13 @@ export default function QuotaPage() {
     (s) => s.windowCapacities.some((w) => w.capacity < 0.2) && s.totalAccounts > 0
   ).length;
 
+  const providerFilters = [
+    { key: PROVIDERS.ALL, label: "All" },
+    { key: PROVIDERS.ANTIGRAVITY, label: "Antigravity" },
+    { key: PROVIDERS.CLAUDE, label: "Claude" },
+    { key: PROVIDERS.CODEX, label: "Codex" },
+  ] as const;
+
   const toggleCard = (accountId: string) => {
     setExpandedCards((prev) => ({ ...prev, [accountId]: !prev[accountId] }));
   };
@@ -315,347 +321,188 @@ export default function QuotaPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-            Quota
-          </h1>
-          <p className="mt-1 text-sm text-white/60">
-            Monitor OAuth account quotas and usage limits
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex gap-1.5">
-            <Button
-              variant={selectedProvider === PROVIDERS.ALL ? "secondary" : "ghost"}
-              onClick={() => setSelectedProvider(PROVIDERS.ALL)}
-              className="text-xs px-3 py-1.5"
-            >
-              All
-            </Button>
-            <Button
-              variant={selectedProvider === PROVIDERS.ANTIGRAVITY ? "secondary" : "ghost"}
-              onClick={() => setSelectedProvider(PROVIDERS.ANTIGRAVITY)}
-              className="text-xs px-3 py-1.5"
-            >
-              Antigravity
-            </Button>
-            <Button
-              variant={selectedProvider === PROVIDERS.CLAUDE ? "secondary" : "ghost"}
-              onClick={() => setSelectedProvider(PROVIDERS.CLAUDE)}
-              className="text-xs px-3 py-1.5"
-            >
-              Claude
-            </Button>
-            <Button
-              variant={selectedProvider === PROVIDERS.CODEX ? "secondary" : "ghost"}
-              onClick={() => setSelectedProvider(PROVIDERS.CODEX)}
-              className="text-xs px-3 py-1.5"
-            >
-              Codex
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-100">Quota</h1>
+            <p className="mt-1 text-sm text-slate-400">Monitor OAuth account quotas and usage windows.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap gap-1">
+              {providerFilters.map((filter) => (
+                <Button
+                  key={filter.key}
+                  variant={selectedProvider === filter.key ? "secondary" : "ghost"}
+                  onClick={() => setSelectedProvider(filter.key)}
+                  className="px-2.5 py-1 text-xs"
+                >
+                  {filter.label}
+                </Button>
+              ))}
+            </div>
+            <Button onClick={fetchQuota} disabled={loading} className="px-2.5 py-1 text-xs">
+              {loading ? "Loading..." : "Refresh"}
             </Button>
           </div>
-          
-          <Button
-            onClick={fetchQuota}
-            disabled={loading}
-            className="text-xs px-3 py-1.5"
-          >
-            {loading ? "Loading..." : "Refresh"}
-          </Button>
         </div>
-      </div>
+      </section>
 
       {loading && !quotaData ? (
-        <Card>
-          <CardContent>
-            <div className="py-6 text-center text-sm text-white/60">
-              Loading quota data...
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">
+          Loading quota data...
+        </div>
       ) : (
         <>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="backdrop-blur-2xl glass-card rounded-xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center flex-shrink-0">
-                  <span className="text-purple-400 text-lg" aria-hidden="true">&#9679;</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Active Accounts</div>
-                  <div className="text-xl font-bold text-white mt-0.5">{activeAccounts}</div>
-                  <div className="text-xs text-white/60 mt-0.5">Supported OAuth</div>
-                </div>
-              </div>
+          <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Active Accounts</p>
+              <p className="mt-0.5 text-xs font-semibold text-slate-100">{activeAccounts}</p>
             </div>
-
-            <div
-              className="backdrop-blur-2xl glass-card rounded-xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
-              title={providerSummaries.flatMap(s => s.windowCapacities.filter(w => !w.isShortTerm).map(w => `${s.provider} ${w.label}: ${Math.round(w.capacity * 100)}%`)).join("\n")}
-            >
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "w-8 h-8 rounded-xl border flex items-center justify-center flex-shrink-0",
-                  overallCapacity.value > 0.6
-                    ? "bg-emerald-500/20 border-emerald-400/30"
-                    : overallCapacity.value > 0.2
-                      ? "bg-amber-500/20 border-amber-400/30"
-                      : "bg-red-500/20 border-red-400/30"
-                )}>
-                  <span className={cn(
-                    "text-lg",
-                    overallCapacity.value > 0.6
-                      ? "text-emerald-400"
-                      : overallCapacity.value > 0.2
-                        ? "text-amber-400"
-                        : "text-red-400"
-                  )} aria-hidden="true">&#9650;</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Overall Capacity</div>
-                  <div className="text-xl font-bold text-white mt-0.5">
-                    {Math.round(overallCapacity.value * 100)}%
-                  </div>
-                  <div className="text-xs text-white/50 mt-0.5 truncate">
-                    {overallCapacity.provider ? (
-                      <span className={cn(
-                        overallCapacity.value > 0.6 ? "text-emerald-400/70" : overallCapacity.value > 0.2 ? "text-amber-400/70" : "text-red-400/70"
-                      )}>
-                        {overallCapacity.provider} {overallCapacity.label} bottleneck
-                      </span>
-                    ) : "No capacity data"}
-                  </div>
-                </div>
-              </div>
+            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Overall Capacity</p>
+              <p className="mt-0.5 text-xs font-semibold text-slate-100">{Math.round(overallCapacity.value * 100)}%</p>
             </div>
-
-            <div className="backdrop-blur-2xl glass-card rounded-xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] sm:col-span-2 lg:col-span-1">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-red-500/20 border border-red-400/30 flex items-center justify-center flex-shrink-0">
-                  <span className="text-red-400 text-lg" aria-hidden="true">&#9888;</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Low Capacity</div>
-                  <div className="text-xl font-bold text-white mt-0.5">{lowCapacityCount}</div>
-                  <div className="text-xs text-white/60 mt-0.5">Providers below 20%</div>
-                </div>
-              </div>
+            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Low Capacity</p>
+              <p className="mt-0.5 text-xs font-semibold text-slate-100">{lowCapacityCount}</p>
             </div>
-          </div>
+            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Providers</p>
+              <p className="mt-0.5 text-xs font-semibold text-slate-100">{providerSummaries.length}</p>
+            </div>
+          </section>
 
           {providerSummaries.length > 0 && (
-            <div className="space-y-2">
-              <h2 className="text-sm font-semibold text-white/70 uppercase tracking-wider">
-                Provider Capacity
-              </h2>
-              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <section className="space-y-2">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Provider Capacity</h2>
+              <div className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+                <div className="grid grid-cols-[minmax(0,1fr)_160px_160px_120px_100px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  <span>Provider</span>
+                  <span>Long-Term</span>
+                  <span>Short-Term</span>
+                  <span>Healthy</span>
+                  <span>Issues</span>
+                </div>
                 {providerSummaries.map((summary) => {
-                  const longTerm = summary.windowCapacities.filter(w => !w.isShortTerm);
-                  const shortTerm = summary.windowCapacities.filter(w => w.isShortTerm);
-                  const hasLongTerm = longTerm.length > 0;
-                  const hasShortTerm = shortTerm.length > 0;
-                  const hasBoth = hasLongTerm && hasShortTerm;
-
-                  const relevantForHeader = hasLongTerm ? longTerm : summary.windowCapacities;
-                  const minCap = relevantForHeader.length > 0
-                    ? Math.min(...relevantForHeader.map(w => w.capacity))
-                    : 0;
-                  const headerPct = Math.round(minCap * 100);
-
-                  const renderBar = (w: WindowCapacity, heightClass: string) => {
-                    const pct = Math.round(w.capacity * 100);
-                    return (
-                      <div key={w.id} className="mb-1.5 last:mb-0">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-[10px] text-white/70 truncate mr-2">{w.label}</span>
-                          <span className="text-[10px] font-medium text-white/70">{pct}%</span>
-                        </div>
-                        <div className={cn("w-full rounded-full bg-white/10 overflow-hidden", heightClass)}>
-                          <div
-                            className={cn("h-full transition-all duration-500", getProgressColor(w.capacity))}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <div className="mt-0.5 text-[10px] text-white/40">
-                          {formatRelativeTime(w.resetTime)}
-                        </div>
-                      </div>
-                    );
-                  };
+                  const longTerm = summary.windowCapacities.filter((w) => !w.isShortTerm);
+                  const shortTerm = summary.windowCapacities.filter((w) => w.isShortTerm);
+                  const longMin = longTerm.length > 0 ? Math.min(...longTerm.map((w) => w.capacity)) : null;
+                  const shortMin = shortTerm.length > 0 ? Math.min(...shortTerm.map((w) => w.capacity)) : null;
 
                   return (
-                    <div
-                      key={summary.provider}
-                      className="backdrop-blur-2xl glass-card rounded-xl p-3 shadow-[0_4px_16px_rgba(0,0,0,0.3)]"
-                    >
-                      <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-white/5">
-                        <span className="text-sm font-semibold text-white capitalize">
-                          {summary.provider}
-                        </span>
-                        <span className={cn(
-                          "text-sm font-bold",
-                          minCap > 0.6 ? "text-emerald-400" : minCap > 0.2 ? "text-amber-400" : "text-red-400"
-                        )}>
-                          {headerPct}%
-                        </span>
-                      </div>
-
-                      <div className="mb-2">
-                        {longTerm.map(w => renderBar(w, "h-2"))}
-                        {hasBoth && <div className="border-t border-white/5 my-1.5" />}
-                        {shortTerm.map(w => renderBar(w, hasLongTerm ? "h-1.5" : "h-2"))}
-                        {!hasLongTerm && hasShortTerm && (
-                          <div className="text-[10px] text-white/30 text-center mt-1">Weekly data unavailable</div>
-                        )}
-                        {summary.windowCapacities.length === 0 && (
-                          <div className="text-xs text-white/40 text-center py-2">No quota data</div>
+                    <div key={summary.provider} className="grid grid-cols-[minmax(0,1fr)_160px_160px_120px_100px] items-center border-b border-slate-700/60 px-3 py-2 last:border-b-0">
+                      <span className="truncate text-sm font-medium capitalize text-slate-100">{summary.provider}</span>
+                      <div className="pr-3">
+                        {longMin !== null ? (
+                          <>
+                            <span className="text-xs text-slate-300">{Math.round(longMin * 100)}%</span>
+                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-700/70">
+                              <div className={cn("h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-xs text-slate-500">-</span>
                         )}
                       </div>
-
-                      <div className="flex items-center justify-between pt-1.5 border-t border-white/5">
-                        <span className="text-xs text-white/50">
-                          {summary.healthyAccounts}/{summary.totalAccounts} accounts healthy
-                        </span>
-                        {summary.errorAccounts > 0 && (
-                          <span className="text-xs text-amber-400/80 flex items-center gap-0.5">
-                            &#9888; {summary.errorAccounts}
-                          </span>
+                      <div className="pr-3">
+                        {shortMin !== null ? (
+                          <>
+                            <span className="text-xs text-slate-300">{Math.round(shortMin * 100)}%</span>
+                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-700/70">
+                              <div className={cn("h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-xs text-slate-500">-</span>
                         )}
                       </div>
+                      <span className="text-xs text-slate-300">{summary.healthyAccounts}/{summary.totalAccounts}</span>
+                      <span className={cn("text-xs", summary.errorAccounts > 0 ? "text-amber-300" : "text-slate-500")}>
+                        {summary.errorAccounts > 0 ? summary.errorAccounts : "0"}
+                      </span>
                     </div>
                   );
                 })}
               </div>
-            </div>
+            </section>
           )}
 
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
-            {filteredAccounts.map((account) => {
-              const statusBadge = account.supported
-                ? account.error
-                  ? { label: "ERROR", class: "bg-red-500/20 border-red-400/40 text-red-300" }
-                  : { label: "ACTIVE", class: "bg-emerald-500/20 border-emerald-400/40 text-emerald-300" }
-                : { label: "NOT SUPPORTED", class: "bg-amber-500/20 border-amber-400/40 text-amber-300" };
+          <section className="space-y-2">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Accounts</h2>
+            <div className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+              <div className="grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                <span></span>
+                <span>Account</span>
+                <span>Provider</span>
+                <span>Status</span>
+                <span>Long-Term</span>
+                <span>Short-Term</span>
+              </div>
 
-              const isCardExpanded = expandedCards[account.auth_index];
-              
-              const scores = account.groups ? Object.values(calcAccountWindowScores(account.groups)) : [];
-              const longScores = scores.filter(s => !s.isShortTerm);
-              const shortScores = scores.filter(s => s.isShortTerm);
-              const longMin = longScores.length > 0 ? Math.min(...longScores.map(s => s.score)) : null;
-              const shortMin = shortScores.length > 0 ? Math.min(...shortScores.map(s => s.score)) : null;
+              {filteredAccounts.map((account) => {
+                const isRowExpanded = expandedCards[account.auth_index];
+                const scores = account.groups ? Object.values(calcAccountWindowScores(account.groups)) : [];
+                const longScores = scores.filter((s) => !s.isShortTerm);
+                const shortScores = scores.filter((s) => s.isShortTerm);
+                const longMin = longScores.length > 0 ? Math.min(...longScores.map((s) => s.score)) : null;
+                const shortMin = shortScores.length > 0 ? Math.min(...shortScores.map((s) => s.score)) : null;
+                const statusLabel = account.supported ? (account.error ? "Error" : "Active") : "Unsupported";
 
-              return (
-                <div key={account.auth_index} className="backdrop-blur-2xl glass-card rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
+                return (
+                  <div key={account.auth_index} className="border-b border-slate-700/60 last:border-b-0">
                     <button
                       type="button"
                       onClick={() => toggleCard(account.auth_index)}
-                      className="w-full text-left p-3 flex items-center justify-between gap-2 hover:bg-white/5 transition-colors duration-150"
+                      className="grid w-full grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px] items-center px-3 py-2 text-left transition-colors hover:bg-slate-800/40"
                     >
-                      <div className="flex-1 min-w-0 flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-white capitalize flex-shrink-0">
-                          {account.provider}
-                        </h3>
-                        <p className="text-xs text-white/60 truncate flex-shrink min-w-0">{maskEmail(account.email)}</p>
-                        
-                        {account.supported && !account.error && scores.length > 0 && (
-                          <div className="flex flex-col gap-0.5 flex-shrink-0">
-                            {longMin !== null && (
-                              <div className="flex items-center gap-1">
-                                <span className="text-[9px] text-white/40 w-2">L</span>
-                                <div className="w-24 h-1 rounded-full bg-white/10 overflow-hidden">
-                                  <div
-                                    className={cn("h-full transition-all duration-300", getProgressColor(longMin))}
-                                    style={{ width: `${longMin * 100}%` }}
-                                  />
-                                </div>
-                                <span className="text-[10px] font-medium text-white/60 w-7 text-right">{Math.round(longMin * 100)}%</span>
-                              </div>
-                            )}
-                            {shortMin !== null && (
-                              <div className="flex items-center gap-1">
-                                <span className="text-[9px] text-white/40 w-2">S</span>
-                                <div className="w-24 h-1 rounded-full bg-white/10 overflow-hidden">
-                                  <div
-                                    className={cn("h-full transition-all duration-300", getProgressColor(shortMin))}
-                                    style={{ width: `${shortMin * 100}%` }}
-                                  />
-                                </div>
-                                <span className="text-[10px] font-medium text-white/60 w-7 text-right">{Math.round(shortMin * 100)}%</span>
-                              </div>
-                            )}
-                          </div>
+                      <span className={cn("text-xs text-slate-500 transition-transform", isRowExpanded && "rotate-180")}>⌄</span>
+                      <span className="truncate text-xs text-slate-200">{maskEmail(account.email)}</span>
+                      <span className="truncate text-xs capitalize text-slate-300">{account.provider}</span>
+                      <span className={cn("text-xs", account.error ? "text-rose-300" : account.supported ? "text-emerald-300" : "text-amber-300")}>{statusLabel}</span>
+                      <div className="pr-3">
+                        {longMin !== null ? (
+                          <>
+                            <span className="text-xs text-slate-300">{Math.round(longMin * 100)}%</span>
+                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-700/70">
+                              <div className={cn("h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-xs text-slate-500">-</span>
                         )}
                       </div>
-
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span
-                          className={cn(
-                            "backdrop-blur-xl px-2 py-0.5 text-xs font-medium rounded-md border",
-                            statusBadge.class
-                          )}
-                        >
-                          {statusBadge.label}
-                        </span>
-                        <svg
-                          className={cn(
-                            "w-4 h-4 text-white/40 transition-transform duration-200",
-                            isCardExpanded && "rotate-180"
-                          )}
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                          aria-hidden="true"
-                        >
-                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
+                      <div className="pr-3">
+                        {shortMin !== null ? (
+                          <>
+                            <span className="text-xs text-slate-300">{Math.round(shortMin * 100)}%</span>
+                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-700/70">
+                              <div className={cn("h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-xs text-slate-500">-</span>
+                        )}
                       </div>
                     </button>
 
-                    {isCardExpanded && (
-                      <div className="border-t border-white/10 p-3 space-y-2">
+                    {isRowExpanded && (
+                      <div className="border-t border-slate-700/60 bg-slate-900/30 px-4 py-3">
                         {account.error && (
-                          <div className="backdrop-blur-xl bg-red-500/10 border border-red-400/30 rounded-lg p-2">
-                            <div className="text-xs text-red-200">{account.error}</div>
-                          </div>
+                          <p className="mb-2 text-xs text-rose-300">{account.error}</p>
                         )}
-
                         {!account.supported && !account.error && (
-                          <div className="backdrop-blur-xl bg-amber-500/10 border border-amber-400/30 rounded-lg p-2">
-                            <div className="text-xs text-amber-200">
-                              Quota monitoring not available for this provider
-                            </div>
-                          </div>
+                          <p className="mb-2 text-xs text-amber-300">Quota monitoring not available for this provider.</p>
                         )}
 
                         {account.groups && account.groups.length > 0 && (
-                          <div className="space-y-2">
+                          <div className="overflow-hidden rounded-sm border border-slate-700/70">
                             {account.groups.map((group) => {
+                              const pct = Math.round(group.remainingFraction * 100);
                               return (
-                                <div key={group.id} className="backdrop-blur-xl bg-white/5 rounded-lg p-2 border border-white/10">
-                                  <div className="w-full text-left">
-                                    <div className="flex items-center justify-between mb-1.5">
-                                      <span className="text-xs font-semibold text-white">{group.label}</span>
-                                      <span className="text-xs font-medium text-white/70">
-                                        {Math.round(group.remainingFraction * 100)}%
-                                      </span>
-                                    </div>
-                                    
-                                    <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                                      <div
-                                        className={cn(
-                                          "h-full transition-all duration-300",
-                                          getProgressColor(group.remainingFraction)
-                                        )}
-                                        style={{ width: `${group.remainingFraction * 100}%` }}
-                                      />
-                                    </div>
-                                    
-                                    <div className="mt-1 text-xs text-white/50">
-                                      {formatRelativeTime(group.resetTime)}
-                                    </div>
-                                  </div>
+                                <div key={group.id} className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-slate-700/60 bg-slate-900/20 px-3 py-2 last:border-b-0">
+                                  <span className="truncate text-xs text-slate-200">{group.label}</span>
+                                  <span className="text-xs text-slate-300">{pct}%</span>
+                                  <span className="truncate text-xs text-slate-500">{formatRelativeTime(group.resetTime)}</span>
                                 </div>
                               );
                             })}
@@ -663,20 +510,17 @@ export default function QuotaPage() {
                         )}
                       </div>
                     )}
-                </div>
-              );
-            })}
-          </div>
+                  </div>
+                );
+              })}
+            </div>
 
-          {filteredAccounts.length === 0 && !loading && (
-            <Card>
-              <CardContent>
-                <div className="text-center text-white/60 py-6 text-sm">
-                  No accounts found for the selected filter
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            {filteredAccounts.length === 0 && !loading && (
+              <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">
+                No accounts found for the selected filter.
+              </div>
+            )}
+          </section>
         </>
       )}
     </div>

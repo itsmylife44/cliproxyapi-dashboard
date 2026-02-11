@@ -35,7 +35,7 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
     >
       <div
         className={cn(
-          "relative max-h-[90vh] w-full max-w-2xl overflow-y-auto backdrop-blur-2xl bg-white/15 border border-white/20 rounded-2xl p-8 shadow-2xl",
+          "relative max-h-[90vh] w-full max-w-2xl overflow-y-auto backdrop-blur-2xl bg-white/15 border border-white/20 rounded-xl p-5 shadow-2xl",
           className
         )}
         onClick={(e) => e.stopPropagation()}
@@ -45,7 +45,7 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 text-2xl font-bold text-white/80 hover:text-white transition-colors"
+          className="absolute right-3 top-3 text-lg font-bold text-white/80 hover:text-white transition-colors"
           aria-label="Close"
         >
           ×
@@ -63,7 +63,7 @@ interface ModalHeaderProps {
 
 export function ModalHeader({ children, className }: ModalHeaderProps) {
   return (
-    <div className={cn("mb-6 border-b border-white/20 pb-4", className)}>
+    <div className={cn("mb-4 border-b border-white/20 pb-3", className)}>
       {children}
     </div>
   );
@@ -76,7 +76,7 @@ interface ModalTitleProps {
 
 export function ModalTitle({ children, className }: ModalTitleProps) {
   return (
-    <h2 className={cn("text-2xl font-semibold tracking-tight text-white", className)}>
+    <h2 className={cn("text-lg font-semibold tracking-tight text-white", className)}>
       {children}
     </h2>
   );
@@ -88,7 +88,7 @@ interface ModalContentProps {
 }
 
 export function ModalContent({ children, className }: ModalContentProps) {
-  return <div className={cn("mb-6", className)}>{children}</div>;
+  return <div className={cn("mb-4", className)}>{children}</div>;
 }
 
 interface ModalFooterProps {

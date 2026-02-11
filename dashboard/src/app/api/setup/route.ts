@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await hashPassword(password);
 
-    let user: { id: string; username: string } | null = null;
+    let user: { id: string; username: string; sessionVersion: number } | null = null;
 
     for (let attempt = 0; attempt < MAX_SETUP_RETRIES; attempt++) {
       try {
@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
               select: {
                 id: true,
                 username: true,
+                sessionVersion: true,
               },
             });
           },
@@ -130,10 +131,11 @@ export async function POST(request: NextRequest) {
     const token = await signToken({
       userId: user.id,
       username: user.username,
+      sessionVersion: user.sessionVersion,
     });
 
     await createSession(
-      { userId: user.id, username: user.username },
+      { userId: user.id, username: user.username, sessionVersion: user.sessionVersion },
       token
     );
 

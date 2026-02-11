@@ -137,7 +137,8 @@ run_migrations() {
          npx prisma migrate resolve --applied 20260208_add_sync_token_hash_index >/dev/null 2>&1 || true
          npx prisma migrate resolve --applied 20260208_add_provider_key_composite_index >/dev/null 2>&1 || true
          npx prisma migrate resolve --applied 20260209_add_audit_logs >/dev/null 2>&1 || true
-      fi
+         npx prisma migrate resolve --applied 20260210_add_user_session_version >/dev/null 2>&1 || true
+       fi
     
     if npx prisma migrate deploy; then
         log_success "Migrations applied"

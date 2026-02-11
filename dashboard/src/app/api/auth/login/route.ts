@@ -83,10 +83,11 @@ export async function POST(request: NextRequest) {
     const token = await signToken({
       userId: user.id,
       username: user.username,
+      sessionVersion: user.sessionVersion,
     });
 
     await createSession(
-      { userId: user.id, username: user.username },
+      { userId: user.id, username: user.username, sessionVersion: user.sessionVersion },
       token
     );
 

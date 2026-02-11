@@ -130,7 +130,17 @@ async function isComposeAvailable() {
     await execFileAsync("docker", ["compose", "version"]);
     return true;
   } catch (error) {
-    logger.warn({ err: error }, "Docker compose is not available in dashboard runtime");
+    const errorText = getCommandErrorText(error);
+    const composeMissing =
+      errorText.includes("unknown command: docker compose") ||
+      errorText.includes("unknown shorthand flag: 'f' in -f");
+
+    if (composeMissing) {
+      logger.info("Docker compose not available in runtime, using docker run fallback");
+    } else {
+      logger.warn({ err: error }, "Compose availability check failed, using fallback");
+    }
+
     return false;
   }
 }

@@ -98,8 +98,8 @@ else
 fi
 
 # Step 3: Docker Up
-update_status "deploy" "running" "Starting new container..."
-if docker compose up -d dashboard >> "$LOG_FILE" 2>&1; then
+update_status "deploy" "running" "Starting new dashboard container..."
+if docker compose up -d --no-deps dashboard >> "$LOG_FILE" 2>&1; then
     update_status "deploy" "completed" "Container started successfully"
 else
     update_status "deploy" "failed" "Failed to start container"

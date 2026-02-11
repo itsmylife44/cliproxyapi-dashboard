@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 
@@ -66,8 +65,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     void fetchUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchUsers]);
 
   const handleCreateUser = async () => {
     if (password !== confirmPassword) {
@@ -137,71 +135,50 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-          User Management
-        </h1>
-        <Button onClick={() => setIsModalOpen(true)}>
-          Create User
-        </Button>
-      </div>
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-100">User Management</h1>
+            <p className="mt-1 text-xs text-slate-400">Manage dashboard users and roles.</p>
+          </div>
+          <Button onClick={() => setIsModalOpen(true)} className="px-2.5 py-1 text-xs">Create User</Button>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Users</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="p-4 text-center text-white">Loading...</div>
-          ) : users.length === 0 ? (
-            <div className="border-l-4 border-white/30 backdrop-blur-xl bg-white/5 p-4 text-sm text-white/80 rounded-r-xl">
-              No users found. Create one to get started.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left py-3 px-4 font-medium text-white/70">Username</th>
-                    <th className="text-left py-3 px-4 font-medium text-white/70">Role</th>
-                    <th className="text-left py-3 px-4 font-medium text-white/70">Created</th>
-                    <th className="text-left py-3 px-4 font-medium text-white/70">API Keys</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr
-                      key={user.id}
-                      className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                    >
-                      <td className="py-3 px-4 text-white font-medium">
-                        {user.username}
-                      </td>
-                      <td className="py-3 px-4">
-                        {user.isAdmin ? (
-                          <span className="inline-flex items-center rounded-full bg-purple-500/20 px-2.5 py-0.5 text-xs font-medium text-purple-300 border border-purple-400/30">
-                            Admin
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-blue-500/20 px-2.5 py-0.5 text-xs font-medium text-blue-300 border border-blue-400/30">
-                            User
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-white/70 text-xs">
-                        {formatDate(user.createdAt)}
-                      </td>
-                      <td className="py-3 px-4 text-white/70">
-                        {user.apiKeyCount}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {loading ? (
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">Loading...</div>
+      ) : users.length === 0 ? (
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4 text-sm text-slate-400">
+          No users found. Create one to get started.
+        </div>
+      ) : (
+        <section className="overflow-x-auto rounded-md border border-slate-700/70 bg-slate-900/25">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-700/70 bg-slate-900/60">
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Username</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Role</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Created</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">API Keys</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user.id} className="border-b border-slate-700/60 last:border-b-0 hover:bg-slate-800/30 transition-colors">
+                  <td className="px-3 py-2 text-xs font-medium text-slate-100">{user.username}</td>
+                  <td className="px-3 py-2">
+                    <span className={`inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium ${user.isAdmin ? "border-blue-500/40 bg-blue-500/10 text-blue-200" : "border-slate-600/70 bg-slate-700/40 text-slate-300"}`}>
+                      {user.isAdmin ? "Admin" : "User"}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-xs text-slate-400">{formatDate(user.createdAt)}</td>
+                  <td className="px-3 py-2 text-xs text-slate-300">{user.apiKeyCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       <Modal isOpen={isModalOpen} onClose={handleCloseModal}>
         <ModalHeader>
@@ -210,7 +187,7 @@ export default function AdminUsersPage() {
         <ModalContent>
           <div className="space-y-4">
             <div>
-              <label htmlFor="username" className="mb-2 block text-sm font-medium text-white/90">
+              <label htmlFor="username" className="mb-2 block text-sm font-medium text-slate-300">
                 Username
               </label>
               <Input
@@ -225,7 +202,7 @@ export default function AdminUsersPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-2 block text-sm font-medium text-white/90">
+              <label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-300">
                 Password
               </label>
               <Input
@@ -240,7 +217,7 @@ export default function AdminUsersPage() {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium text-white/90">
+              <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium text-slate-300">
                 Confirm Password
               </label>
               <Input
@@ -260,13 +237,13 @@ export default function AdminUsersPage() {
                   type="checkbox"
                   checked={isAdmin}
                   onChange={(e) => setIsAdmin(e.target.checked)}
-                  className="size-4 shrink-0 rounded border-white/20 bg-white/5 text-purple-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer"
+                  className="size-4 shrink-0 cursor-pointer rounded border-slate-600/70 bg-slate-900/40 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
                 />
-                <span className="text-sm font-medium text-white/90 group-hover:text-white transition-colors">
+                <span className="text-sm font-medium text-slate-200 group-hover:text-slate-100 transition-colors">
                   Grant admin privileges
                 </span>
               </label>
-              <p className="mt-1 ml-7 text-xs text-white/60">
+              <p className="mt-1 ml-7 text-xs text-slate-500">
                 Admins can manage users and access all system features
               </p>
             </div>

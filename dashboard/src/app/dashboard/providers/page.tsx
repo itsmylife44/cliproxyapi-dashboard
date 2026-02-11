@@ -744,12 +744,12 @@ export default function ProvidersPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
    return (
-     <div className="space-y-8">
+     <div className="space-y-4">
        <div>
          <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
            AI Provider Configuration
          </h1>
-        <p className="mt-3 text-lg text-white/70">
+        <p className="mt-3 text-sm text-white/70">
           Configure API keys and OAuth authentication for your AI providers
         </p>
       </div>
@@ -757,9 +757,9 @@ export default function ProvidersPage() {
       {loading ? (
         <Card>
           <CardContent>
-            <div className="flex items-center justify-center p-12">
+            <div className="flex items-center justify-center p-6">
               <div className="flex flex-col items-center gap-4">
-                <div className="size-12 animate-spin rounded-full border-4 border-white/20 border-t-purple-500"></div>
+                <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-purple-500"></div>
                 <p className="text-white/80">Loading providers...</p>
               </div>
             </div>
@@ -770,11 +770,11 @@ export default function ProvidersPage() {
            {/* ── API Key Provider Management ───────────────────────────────────── */}
            <section className="space-y-4">
              <div className="flex items-center gap-3 border-b border-white/10 pb-3">
-               <div className="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 text-xl backdrop-blur-xl">
+               <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 text-xl backdrop-blur-xl">
                  🔑
                </div>
                <div>
-                 <h2 className="text-xl font-bold text-white">API Key Providers</h2>
+                 <h2 className="text-lg font-bold text-white">API Key Providers</h2>
                  <p className="text-sm text-white/60">Manage API keys for direct provider access</p>
                </div>
              </div>
@@ -786,18 +786,16 @@ export default function ProvidersPage() {
                 const configuredCount = config.keys.length;
                 const isConfigured = configuredCount > 0;
 
-                return (
+                 return (
                   <Card key={provider.id} className="relative overflow-hidden">
-                    <div className="absolute -right-8 -top-8 size-32 rounded-full bg-gradient-to-br from-purple-500/10 to-pink-500/10 blur-3xl"></div>
-                    
                     <CardHeader>
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-3">
-                          <div className="flex size-12 items-center justify-center rounded-xl bg-white/10 text-2xl backdrop-blur-xl">
+                          <div className="flex size-8 items-center justify-center rounded-xl bg-white/10 text-base backdrop-blur-xl">
                             {provider.icon}
                           </div>
                           <div>
-                            <CardTitle className="text-xl">{provider.name}</CardTitle>
+                            <CardTitle className="text-lg">{provider.name}</CardTitle>
                             <p className="mt-1 text-sm text-white/60">{provider.description}</p>
                           </div>
                         </div>
@@ -886,11 +884,11 @@ export default function ProvidersPage() {
            {/* ── OAuth Account Management ──────────────────────────────────────── */}
            <section className="space-y-4">
              <div className="flex items-center gap-3 border-b border-white/10 pb-3">
-               <div className="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 text-xl backdrop-blur-xl">
+               <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 text-xl backdrop-blur-xl">
                  🔐
                </div>
                <div>
-                 <h2 className="text-xl font-bold text-white">OAuth Accounts</h2>
+                 <h2 className="text-lg font-bold text-white">OAuth Accounts</h2>
                  <p className="text-sm text-white/60">Connect and manage provider accounts via OAuth</p>
                </div>
              </div>
@@ -992,7 +990,7 @@ export default function ProvidersPage() {
                    {OAUTH_PROVIDERS.map((provider) => (
                      <div
                        key={provider.id}
-                       className="group flex flex-col justify-between rounded-xl border border-white/20 bg-gradient-to-br from-white/5 to-white/[0.02] p-5 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
+                       className="group flex flex-col justify-between rounded-xl border border-white/20 bg-gradient-to-br from-white/5 to-white/[0.02] p-3 backdrop-blur-xl transition-all hover:border-white/30 hover:shadow-lg hover:shadow-purple-500/10"
                      >
                        <div className="space-y-2">
                          <div className="text-base font-bold text-white">
@@ -1019,11 +1017,11 @@ export default function ProvidersPage() {
             {/* ── Custom Providers ──────────────────────────────────────────────────── */}
             <section className="space-y-4">
               <div className="flex items-center gap-3 border-b border-white/10 pb-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 text-xl backdrop-blur-xl">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 text-xl backdrop-blur-xl">
                   🔧
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-xl font-bold text-white">Custom Providers</h2>
+                  <h2 className="text-lg font-bold text-white">Custom Providers</h2>
                   <p className="text-sm text-white/60">Manage your custom OpenAI-compatible providers</p>
                 </div>
                 <Button onClick={() => setShowCustomProviderModal(true)}>
@@ -1068,11 +1066,11 @@ export default function ProvidersPage() {
            {currentUser?.isAdmin && (
              <section className="space-y-4">
                <div className="flex items-center gap-3 border-b border-white/10 pb-3">
-                 <div className="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-xl backdrop-blur-xl">
+                 <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-xl backdrop-blur-xl">
                    ⚙️
                  </div>
                  <div>
-                   <h2 className="text-xl font-bold text-white">Admin Settings</h2>
+                   <h2 className="text-lg font-bold text-white">Admin Settings</h2>
                    <p className="text-sm text-white/60">Configure provider key limits and policies</p>
                  </div>
                </div>
@@ -1148,7 +1146,7 @@ export default function ProvidersPage() {
           </ModalTitle>
         </ModalHeader>
          <ModalContent>
-           <div className="space-y-5">
+           <div className="space-y-4">
              <div>
               <label htmlFor="api-key" className="mb-2 block text-sm font-semibold text-white">
                 API Key <span className="text-red-400">*</span>

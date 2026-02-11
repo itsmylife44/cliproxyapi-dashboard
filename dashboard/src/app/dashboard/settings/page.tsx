@@ -288,10 +288,10 @@ export default function SettingsPage() {
   };
 
    return (
-     <div className="space-y-6">
+     <div className="space-y-4">
        {/* Page Title */}
        <div>
-         <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">
+         <h1 className="text-xl font-bold tracking-tight text-white drop-shadow-lg">
            Settings
          </h1>
          <p className="mt-1 text-sm text-white/60">

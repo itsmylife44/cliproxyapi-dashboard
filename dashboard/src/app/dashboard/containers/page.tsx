@@ -206,7 +206,7 @@ export default function ContainersPage() {
         <>
           {fetchError && (
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="pt-4">
                 <div className="rounded-xl bg-red-500/20 border border-red-400/30 p-3 text-sm text-red-300">
                   {fetchError}
                 </div>
@@ -220,7 +220,7 @@ export default function ContainersPage() {
 
               return (
                 <Card key={container.name}>
-                  <CardContent className="pt-6">
+                  <CardContent className="pt-4">
                     <div className="space-y-4">
                       <div className="flex items-start justify-between">
                         <h3 className="text-lg font-bold text-white">

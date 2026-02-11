@@ -397,7 +397,7 @@ export default function MonitoringPage() {
              <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="border-l-4 border-cyan-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-3xl font-bold text-white">
+                  <div className="text-2xl font-bold text-white">
                     {(usage.usage?.total_requests ?? 0).toLocaleString()}
                   </div>
                   <div className="mt-1 text-xs font-medium text-white/70">
@@ -405,7 +405,7 @@ export default function MonitoringPage() {
                   </div>
                 </div>
                 <div className="border-l-4 border-green-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-3xl font-bold text-white">
+                  <div className="text-2xl font-bold text-white">
                     {(usage.usage?.success_count ?? 0).toLocaleString()}
                   </div>
                   <div className="mt-1 text-xs font-medium text-white/70">
@@ -413,7 +413,7 @@ export default function MonitoringPage() {
                   </div>
                 </div>
                 <div className="border-l-4 border-red-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-3xl font-bold text-white">
+                  <div className="text-2xl font-bold text-white">
                     {(usage.usage?.failure_count ?? 0).toLocaleString()}
                   </div>
                   <div className="mt-1 text-xs font-medium text-white/70">
@@ -423,7 +423,7 @@ export default function MonitoringPage() {
               </div>
 
               <div className="border-l-4 border-amber-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                <div className="text-3xl font-bold text-white">
+                <div className="text-2xl font-bold text-white">
                   {(usage.usage?.total_tokens ?? 0).toLocaleString()}
                 </div>
                 <div className="mt-1 text-xs font-medium text-white/70">
@@ -508,7 +508,7 @@ export default function MonitoringPage() {
         </CardHeader>
         <CardContent>
           {loggingState === LOGGING_STATE.CHECKING && (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-6">
               <div className="flex items-center gap-3 text-white/60">
                 <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -520,9 +520,9 @@ export default function MonitoringPage() {
           )}
 
           {loggingState === LOGGING_STATE.DISABLED && (
-            <div className="flex flex-col items-center justify-center py-12 gap-4">
-              <div className="w-16 h-16 rounded-2xl backdrop-blur-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center">
-                <span className="text-3xl">&#128196;</span>
+            <div className="flex flex-col items-center justify-center py-6 gap-4">
+              <div className="w-10 h-10 rounded-xl backdrop-blur-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center">
+                <span className="text-xl">&#128196;</span>
               </div>
               <div className="text-center space-y-2">
                 <p className="text-sm font-medium text-white/90">File logging is disabled</p>
@@ -542,9 +542,9 @@ export default function MonitoringPage() {
           )}
 
           {loggingState === LOGGING_STATE.ERROR && (
-            <div className="flex flex-col items-center justify-center py-12 gap-4">
-              <div className="w-16 h-16 rounded-2xl backdrop-blur-xl bg-red-500/20 border border-red-400/30 flex items-center justify-center">
-                <span className="text-3xl">&#9888;</span>
+            <div className="flex flex-col items-center justify-center py-6 gap-4">
+              <div className="w-10 h-10 rounded-xl backdrop-blur-xl bg-red-500/20 border border-red-400/30 flex items-center justify-center">
+                <span className="text-xl">&#9888;</span>
               </div>
               <div className="text-center space-y-2">
                 <p className="text-sm font-medium text-white/90">Logs unavailable</p>

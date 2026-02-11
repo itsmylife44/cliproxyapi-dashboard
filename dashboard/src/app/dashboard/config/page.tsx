@@ -93,7 +93,7 @@ function Select({
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
       className="
-        w-full px-4 py-3 text-sm rounded-xl
+        w-full px-4 py-2 text-sm rounded-xl
         backdrop-blur-xl bg-white/5 border border-white/20
         text-white
         focus:outline-none focus:border-purple-400/50 focus:ring-1 focus:ring-purple-400/30
@@ -113,7 +113,7 @@ function Select({
 // Section Header Component
 function SectionHeader({ icon, title }: { icon: string; title: string }) {
   return (
-    <div className="flex items-center gap-3 mb-6">
+    <div className="flex items-center gap-3 mb-3">
       <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-sm">
         {icon}
       </div>
@@ -259,14 +259,14 @@ export default function ConfigPage() {
            Configuration
          </h1>
         <Card>
-          <CardContent>
-            <div className="flex items-center justify-center p-12">
-              <div className="flex flex-col items-center gap-4">
-                <div className="size-12 animate-spin rounded-full border-4 border-white/20 border-t-purple-500"></div>
-                <p className="text-white/80">Loading configuration...</p>
-              </div>
-            </div>
-          </CardContent>
+           <CardContent>
+             <div className="flex items-center justify-center p-6">
+               <div className="flex flex-col items-center gap-4">
+                 <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-purple-500"></div>
+                 <p className="text-white/80">Loading configuration...</p>
+               </div>
+             </div>
+           </CardContent>
         </Card>
       </div>
     );
@@ -278,16 +278,16 @@ export default function ConfigPage() {
          <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
            Configuration
          </h1>
-        <Card>
-          <CardContent>
-            <div className="p-8 text-center">
-              <p className="text-white/80">Failed to load configuration</p>
-              <Button onClick={fetchConfig} className="mt-4">
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+         <Card>
+           <CardContent>
+             <div className="p-4 text-center">
+               <p className="text-white/80">Failed to load configuration</p>
+               <Button onClick={fetchConfig} className="mt-4">
+                 Retry
+               </Button>
+             </div>
+           </CardContent>
+         </Card>
       </div>
     );
   }

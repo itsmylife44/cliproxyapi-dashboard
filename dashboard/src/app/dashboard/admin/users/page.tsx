@@ -152,7 +152,7 @@ export default function AdminUsersPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="p-8 text-center text-white">Loading...</div>
+            <div className="p-4 text-center text-white">Loading...</div>
           ) : users.length === 0 ? (
             <div className="border-l-4 border-white/30 backdrop-blur-xl bg-white/5 p-4 text-sm text-white/80 rounded-r-xl">
               No users found. Create one to get started.

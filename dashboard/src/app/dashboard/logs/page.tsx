@@ -181,9 +181,9 @@ export default function LogsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-lg">
+        <h1 className="text-xl font-bold tracking-tight text-white drop-shadow-lg">
           Logs
         </h1>
         <div className="flex items-center gap-3">
@@ -202,7 +202,7 @@ export default function LogsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="p-8 text-center text-white">Loading logs...</div>
+            <div className="p-4 text-center text-white">Loading logs...</div>
           ) : logs.length === 0 ? (
               <div className="border-l-4 border-white/30 backdrop-blur-xl bg-white/5 p-4 text-sm text-white/80 rounded-r-xl">
                 No logs available. File logging may be disabled in the CLIProxyAPI configuration.

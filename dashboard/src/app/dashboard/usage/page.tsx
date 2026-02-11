@@ -165,7 +165,7 @@ export default function UsagePage() {
       {loading ? (
         <Card>
           <CardContent>
-            <div className="p-8 text-center text-white">Loading statistics...</div>
+            <div className="p-4 text-center text-white">Loading statistics...</div>
           </CardContent>
         </Card>
       ) : !stats ? (
@@ -178,14 +178,14 @@ export default function UsagePage() {
         </Card>
        ) : (
         <>
-          <div className="grid gap-6 md:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-3">
             <Card>
               <CardHeader>
                 <CardTitle>Total Requests</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="border-l-4 border-purple-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-3xl font-bold text-white">
+                  <div className="text-2xl font-bold text-white">
                     {(stats.total_requests ?? 0).toLocaleString()}
                   </div>
                   <div className="mt-1 text-xs font-medium text-white/70">
@@ -201,7 +201,7 @@ export default function UsagePage() {
               </CardHeader>
               <CardContent>
                 <div className="border-l-4 border-green-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-3xl font-bold text-white">
+                  <div className="text-2xl font-bold text-white">
                     {(stats.success_count ?? 0).toLocaleString()}
                   </div>
                   <div className="mt-1 text-xs font-medium text-white/70">
@@ -217,7 +217,7 @@ export default function UsagePage() {
               </CardHeader>
               <CardContent>
                 <div className="border-l-4 border-red-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                  <div className="text-3xl font-bold text-white">
+                  <div className="text-2xl font-bold text-white">
                     {(stats.failure_count ?? 0).toLocaleString()}
                   </div>
                   <div className="mt-1 text-xs font-medium text-white/70">
@@ -246,14 +246,14 @@ export default function UsagePage() {
             }
 
             return hasTokenBreakdown ? (
-              <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-3">
                 <Card>
                   <CardHeader>
                     <CardTitle>Input Tokens</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="border-l-4 border-cyan-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                      <div className="text-3xl font-bold text-white">
+                      <div className="text-2xl font-bold text-white">
                         {totalInputTokens.toLocaleString()}
                       </div>
                       <div className="mt-1 text-xs font-medium text-white/70">
@@ -269,7 +269,7 @@ export default function UsagePage() {
                   </CardHeader>
                   <CardContent>
                     <div className="border-l-4 border-amber-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                      <div className="text-3xl font-bold text-white">
+                      <div className="text-2xl font-bold text-white">
                         {totalOutputTokens.toLocaleString()}
                       </div>
                       <div className="mt-1 text-xs font-medium text-white/70">
@@ -285,7 +285,7 @@ export default function UsagePage() {
                   </CardHeader>
                   <CardContent>
                     <div className="border-l-4 border-blue-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                      <div className="text-3xl font-bold text-white">
+                      <div className="text-2xl font-bold text-white">
                         {(stats.total_tokens ?? 0).toLocaleString()}
                       </div>
                       <div className="mt-1 text-xs font-medium text-white/70">
@@ -302,7 +302,7 @@ export default function UsagePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="border-l-4 border-blue-400/60 p-4 backdrop-blur-xl bg-white/5 rounded-r-xl">
-                    <div className="text-3xl font-bold text-white">
+                    <div className="text-2xl font-bold text-white">
                       {(stats.total_tokens ?? 0).toLocaleString()}
                     </div>
                     <div className="mt-1 text-xs font-medium text-white/70">

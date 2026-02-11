@@ -370,7 +370,7 @@ export default function QuotaPage() {
       {loading && !quotaData ? (
         <Card>
           <CardContent>
-            <div className="py-12 text-center text-sm text-white/60">
+            <div className="py-6 text-center text-sm text-white/60">
               Loading quota data...
             </div>
           </CardContent>
@@ -378,26 +378,26 @@ export default function QuotaPage() {
       ) : (
         <>
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="backdrop-blur-2xl glass-card rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+            <div className="backdrop-blur-2xl glass-card rounded-xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center flex-shrink-0">
                   <span className="text-purple-400 text-lg" aria-hidden="true">&#9679;</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Active Accounts</div>
-                  <div className="text-2xl font-bold text-white mt-0.5">{activeAccounts}</div>
+                  <div className="text-xl font-bold text-white mt-0.5">{activeAccounts}</div>
                   <div className="text-xs text-white/60 mt-0.5">Supported OAuth</div>
                 </div>
               </div>
             </div>
 
             <div
-              className="backdrop-blur-2xl glass-card rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+              className="backdrop-blur-2xl glass-card rounded-xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
               title={providerSummaries.flatMap(s => s.windowCapacities.filter(w => !w.isShortTerm).map(w => `${s.provider} ${w.label}: ${Math.round(w.capacity * 100)}%`)).join("\n")}
             >
               <div className="flex items-center gap-3">
                 <div className={cn(
-                  "w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0",
+                  "w-8 h-8 rounded-xl border flex items-center justify-center flex-shrink-0",
                   overallCapacity.value > 0.6
                     ? "bg-emerald-500/20 border-emerald-400/30"
                     : overallCapacity.value > 0.2
@@ -415,7 +415,7 @@ export default function QuotaPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Overall Capacity</div>
-                  <div className="text-2xl font-bold text-white mt-0.5">
+                  <div className="text-xl font-bold text-white mt-0.5">
                     {Math.round(overallCapacity.value * 100)}%
                   </div>
                   <div className="text-xs text-white/50 mt-0.5 truncate">
@@ -431,14 +431,14 @@ export default function QuotaPage() {
               </div>
             </div>
 
-            <div className="backdrop-blur-2xl glass-card rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] sm:col-span-2 lg:col-span-1">
+            <div className="backdrop-blur-2xl glass-card rounded-xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] sm:col-span-2 lg:col-span-1">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-400/30 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-red-500/20 border border-red-400/30 flex items-center justify-center flex-shrink-0">
                   <span className="text-red-400 text-lg" aria-hidden="true">&#9888;</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Low Capacity</div>
-                  <div className="text-2xl font-bold text-white mt-0.5">{lowCapacityCount}</div>
+                  <div className="text-xl font-bold text-white mt-0.5">{lowCapacityCount}</div>
                   <div className="text-xs text-white/60 mt-0.5">Providers below 20%</div>
                 </div>
               </div>
@@ -671,7 +671,7 @@ export default function QuotaPage() {
           {filteredAccounts.length === 0 && !loading && (
             <Card>
               <CardContent>
-                <div className="text-center text-white/60 py-12 text-sm">
+                <div className="text-center text-white/60 py-6 text-sm">
                   No accounts found for the selected filter
                 </div>
               </CardContent>

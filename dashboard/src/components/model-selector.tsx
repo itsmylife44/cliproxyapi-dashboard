@@ -34,6 +34,10 @@ interface ModelGroup {
   models: string[];
 }
 
+function buildExcludedSignature(models: Iterable<string>): string {
+  return JSON.stringify(Array.from(models).sort((a, b) => a.localeCompare(b)));
+}
+
 function detectProvider(modelId: string, sourceMap?: Map<string, string>): ProviderName {
   // Prefer explicit source metadata
   const source = sourceMap?.get(modelId);
@@ -109,6 +113,7 @@ export function ModelSelector({
   const isFirstRender = useRef(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedSignatureRef = useRef<string>(buildExcludedSignature(initialExcludedModels));
 
   const modelGroups = groupModelsByProvider(availableModels, modelSourceMap);
 
@@ -173,6 +178,12 @@ export function ModelSelector({
   };
 
   useEffect(() => {
+    const currentSignature = buildExcludedSignature(excludedModels);
+
+    if (currentSignature === lastSavedSignatureRef.current) {
+      return;
+    }
+
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
@@ -199,6 +210,7 @@ export function ModelSelector({
           });
 
           if (response.ok) {
+            lastSavedSignatureRef.current = currentSignature;
             setSaveStatus(SAVE_STATUS.SAVED);
             savedTimeoutRef.current = setTimeout(() => {
               setSaveStatus(SAVE_STATUS.IDLE);
@@ -229,7 +241,7 @@ export function ModelSelector({
       className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl"
       data-testid="model-selector"
     >
-      <div className="flex items-center justify-between gap-3 border-b border-white/10 p-4">
+      <div className="flex items-center justify-between gap-3 p-4">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -299,7 +311,7 @@ export function ModelSelector({
       </div>
 
       {isOpen && (
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 px-4 pb-4">
           {isLocked && (
             <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-400/30">
               <span className="text-lg">🔒</span>

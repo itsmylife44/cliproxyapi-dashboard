@@ -59,10 +59,81 @@ interface ExtraFieldConfig {
   thirdFieldPlaceholder: string;
 }
 
+const PROVIDER_ORDER = [
+  "Claude",
+  "Gemini",
+  "OpenAI/Codex",
+  "OpenAI-Compatible",
+  "Other",
+] as const;
+
+type ProviderName = (typeof PROVIDER_ORDER)[number];
+
+interface ModelGroup {
+  provider: ProviderName;
+  models: string[];
+}
+
+const TIER_META: Record<1 | 2 | 3 | 4, { label: string; hint: string }> = {
+  1: { label: "Tier 1", hint: "Critical reasoning" },
+  2: { label: "Tier 2", hint: "Planning and review" },
+  3: { label: "Tier 3", hint: "Fast execution" },
+  4: { label: "Tier 4", hint: "Visual and creative" },
+};
+
+function detectProvider(modelId: string): ProviderName {
+  const lower = modelId.toLowerCase();
+
+  if (lower.startsWith("claude-")) return "Claude";
+  if (lower.startsWith("gemini-")) return "Gemini";
+  if (
+    lower.startsWith("gpt-") ||
+    lower.startsWith("o1") ||
+    lower.startsWith("o3") ||
+    lower.startsWith("o4") ||
+    lower.includes("codex")
+  ) {
+    return "OpenAI/Codex";
+  }
+  if (
+    lower.startsWith("openrouter/") ||
+    lower.startsWith("groq/") ||
+    lower.startsWith("xai/") ||
+    lower.startsWith("deepseek/") ||
+    lower.startsWith("anthropic/") ||
+    lower.startsWith("google/")
+  ) {
+    return "OpenAI-Compatible";
+  }
+
+  return "Other";
+}
+
+function groupModelsByProvider(models: string[]): ModelGroup[] {
+  const grouped = new Map<ProviderName, string[]>();
+
+  for (const model of models) {
+    const provider = detectProvider(model);
+    const existing = grouped.get(provider) ?? [];
+    existing.push(model);
+    grouped.set(provider, existing);
+  }
+
+  for (const providerModels of grouped.values()) {
+    providerModels.sort((a, b) => a.localeCompare(b));
+  }
+
+  return PROVIDER_ORDER.map((provider) => ({
+    provider,
+    models: grouped.get(provider) ?? [],
+  })).filter((group) => group.models.length > 0);
+}
+
 function ModelBadge({
   name,
   model,
   isOverride,
+  showName = true,
   availableModels,
   onSelect,
   extraFields,
@@ -71,6 +142,7 @@ function ModelBadge({
   name: string;
   model: string;
   isOverride: boolean;
+  showName?: boolean;
   availableModels: string[];
   onSelect: (value: string | undefined) => void;
   extraFields?: ExtraFieldConfig;
@@ -115,9 +187,10 @@ function ModelBadge({
     setSearch("");
   };
 
-  const filtered = search
+  const filteredModels = search
     ? availableModels.filter((m) => m.toLowerCase().includes(search.toLowerCase()))
     : availableModels;
+  const groupedFilteredModels = groupModelsByProvider(filteredModels);
 
   return (
     <div className="relative" ref={ref}>
@@ -132,8 +205,12 @@ function ModelBadge({
               : "bg-white/5 border border-white/10 text-white/70"
           }`}
         >
-          <span className="text-pink-300">{name}</span>
-          <span className="text-white/30">&rarr;</span>
+          {showName && (
+            <>
+              <span className="text-pink-300">{name}</span>
+              <span className="text-white/30">&rarr;</span>
+            </>
+          )}
           <span>{model}</span>
           {hasExtraValues && (
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400/80" />
@@ -213,21 +290,26 @@ function ModelBadge({
             >
               Auto (default)
             </button>
-            {filtered.map((m) => {
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => { onSelect(m); setOpen(false); setSearch(""); }}
-                  className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors hover:bg-white/10 flex items-center gap-1.5 ${
-                    isOverride && model === m ? "text-violet-300 bg-violet-500/10" : "text-white/70"
-                  }`}
-                >
-                  <span className="flex-1">{m}</span>
-                </button>
-              );
-            })}
-            {filtered.length === 0 && (
+            {groupedFilteredModels.map((group) => (
+              <div key={group.provider} className="border-t border-white/5 first:border-t-0">
+                <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35">
+                  {group.provider}
+                </div>
+                {group.models.map((providerModel) => (
+                  <button
+                    key={providerModel}
+                    type="button"
+                    onClick={() => { onSelect(providerModel); setOpen(false); setSearch(""); }}
+                    className={`flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs font-mono transition-colors hover:bg-white/10 ${
+                      isOverride && model === providerModel ? "text-violet-300 bg-violet-500/10" : "text-white/70"
+                    }`}
+                  >
+                    <span className="flex-1">{providerModel}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+            {groupedFilteredModels.length === 0 && (
               <div className="px-3 py-2 text-xs text-white/30">No models found</div>
             )}
           </div>
@@ -668,96 +750,163 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     );
   }
 
-  const agentAssignments: { name: string; model: string; isOverride: boolean; config: AgentConfigEntry }[] = [];
+  const agentAssignments: {
+    name: string;
+    model: string;
+    isOverride: boolean;
+    config: AgentConfigEntry;
+    tier: 1 | 2 | 3 | 4;
+    label: string;
+  }[] = [];
   for (const [agent, role] of Object.entries(AGENT_ROLES)) {
     const agentConfig = overrides?.agents?.[agent] ?? {};
     const overrideModel = agentConfig.model;
     if (overrideModel && availableModelIds.includes(overrideModel)) {
-      agentAssignments.push({ name: agent, model: overrideModel, isOverride: true, config: agentConfig });
+      agentAssignments.push({ name: agent, model: overrideModel, isOverride: true, config: agentConfig, tier: role.tier, label: role.label });
     } else {
       const model = pickBestModel(availableModelIds, role.tier);
       if (model) {
-        agentAssignments.push({ name: agent, model, isOverride: !!overrideModel, config: agentConfig });
+        agentAssignments.push({ name: agent, model, isOverride: !!overrideModel, config: agentConfig, tier: role.tier, label: role.label });
       }
     }
   }
+  agentAssignments.sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
 
-  const categoryAssignments: { name: string; model: string; isOverride: boolean; config: CategoryConfigEntry }[] = [];
+  const categoryAssignments: {
+    name: string;
+    model: string;
+    isOverride: boolean;
+    config: CategoryConfigEntry;
+    tier: 1 | 2 | 3 | 4;
+    label: string;
+  }[] = [];
   for (const [category, role] of Object.entries(CATEGORY_ROLES)) {
     const categoryConfig = overrides?.categories?.[category] ?? {};
     const overrideModel = categoryConfig.model;
     if (overrideModel && availableModelIds.includes(overrideModel)) {
-      categoryAssignments.push({ name: category, model: overrideModel, isOverride: true, config: categoryConfig });
+      categoryAssignments.push({ name: category, model: overrideModel, isOverride: true, config: categoryConfig, tier: role.tier, label: role.label });
     } else {
       const model = pickBestModel(availableModelIds, role.tier);
       if (model) {
-        categoryAssignments.push({ name: category, model, isOverride: !!overrideModel, config: categoryConfig });
+        categoryAssignments.push({ name: category, model, isOverride: !!overrideModel, config: categoryConfig, tier: role.tier, label: role.label });
       }
     }
   }
+  categoryAssignments.sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
+  const agentOverrideCount = agentAssignments.filter((item) => item.isOverride).length;
+  const categoryOverrideCount = categoryAssignments.filter((item) => item.isOverride).length;
 
    return (
      <div className="space-y-4">
        <p className="text-sm text-white/70">
-         Click any assignment to change the model. Changes are saved automatically and sync via Config Sync.
+         Assignments are grouped by tier so core agents stay separated from fast and creative workflows.
+         Click any model to override it. Changes save automatically and sync via Config Sync.
          {saving && <span className="ml-2 text-amber-300/70 text-xs">Saving...</span>}
        </p>
 
-       {agentAssignments.length > 0 && (
-         <div className="space-y-1.5">
-           <p className="text-xs font-medium text-white/50 uppercase tracking-wider">
-             Agent Assignments
-           </p>
-           <div className="flex flex-wrap gap-1.5">
-              {agentAssignments.map(({ name, model, isOverride, config }) => (
-                <ModelBadge
-                  key={name}
-                  name={name}
-                  model={model}
-                  isOverride={isOverride}
-                  availableModels={availableModelIds}
-                  onSelect={(value) => handleAgentModelChange(name, value)}
-                 extraFields={{
-                   variant: config.variant,
-                   temperature: config.temperature,
-                   thirdField: config.prompt_append,
-                   thirdFieldKey: "prompt_append",
-                   thirdFieldPlaceholder: "prompt append",
-                 }}
-                 onFieldChange={(field, value) => handleAgentFieldChange(name, field, value)}
-               />
-             ))}
-           </div>
-         </div>
-       )}
+       <div className="grid gap-4 xl:grid-cols-2">
+         {agentAssignments.length > 0 && (
+           <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-3">
+             <div className="flex items-center justify-between">
+               <p className="text-xs font-medium uppercase tracking-wider text-white/50">Agent Assignments</p>
+               <p className="text-[11px] text-white/40">{agentOverrideCount}/{agentAssignments.length} custom</p>
+             </div>
+             {[1, 2, 3, 4].map((tier) => {
+               const tierAssignments = agentAssignments.filter((item) => item.tier === tier);
+               if (tierAssignments.length === 0) {
+                 return null;
+               }
+               const tierMeta = TIER_META[tier as 1 | 2 | 3 | 4];
 
-        {categoryAssignments.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium text-white/50 uppercase tracking-wider">
-              Category Assignments
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {categoryAssignments.map(({ name, model, isOverride, config }) => (
-                <ModelBadge
-                  key={name}
-                  name={name}
-                  model={model}
-                  isOverride={isOverride}
-                  availableModels={availableModelIds}
-                  onSelect={(value) => handleCategoryModelChange(name, value)}
-                  extraFields={{
-                    variant: config.variant,
-                    temperature: config.temperature,
-                    thirdField: config.description,
-                    thirdFieldKey: "description",
-                    thirdFieldPlaceholder: "description",
-                  }}
-                  onFieldChange={(field, value) => handleCategoryFieldChange(name, field, value)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+               return (
+                 <div key={`agent-tier-${tier}`} className="space-y-2">
+                   <div className="flex items-center justify-between">
+                     <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/45">{tierMeta.label}</p>
+                     <p className="text-[11px] text-white/35">{tierMeta.hint}</p>
+                   </div>
+                   <div className="space-y-1.5">
+                     {tierAssignments.map(({ name, model, isOverride, config, label }) => (
+                       <div key={name} className="flex flex-col gap-2 rounded-md border border-white/10 bg-black/15 p-2.5 sm:flex-row sm:items-center sm:justify-between">
+                         <div className="min-w-0">
+                           <p className="truncate text-xs font-semibold text-white/90 font-mono">{name}</p>
+                           <p className="truncate text-[11px] text-white/45">{label}</p>
+                         </div>
+                         <ModelBadge
+                           name={name}
+                           model={model}
+                           isOverride={isOverride}
+                           showName={false}
+                           availableModels={availableModelIds}
+                           onSelect={(value) => handleAgentModelChange(name, value)}
+                           extraFields={{
+                             variant: config.variant,
+                             temperature: config.temperature,
+                             thirdField: config.prompt_append,
+                             thirdFieldKey: "prompt_append",
+                             thirdFieldPlaceholder: "prompt append",
+                           }}
+                           onFieldChange={(field, value) => handleAgentFieldChange(name, field, value)}
+                         />
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               );
+             })}
+           </div>
+         )}
+
+         {categoryAssignments.length > 0 && (
+           <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-3">
+             <div className="flex items-center justify-between">
+               <p className="text-xs font-medium uppercase tracking-wider text-white/50">Category Assignments</p>
+               <p className="text-[11px] text-white/40">{categoryOverrideCount}/{categoryAssignments.length} custom</p>
+             </div>
+             {[1, 2, 3, 4].map((tier) => {
+               const tierAssignments = categoryAssignments.filter((item) => item.tier === tier);
+               if (tierAssignments.length === 0) {
+                 return null;
+               }
+               const tierMeta = TIER_META[tier as 1 | 2 | 3 | 4];
+
+               return (
+                 <div key={`category-tier-${tier}`} className="space-y-2">
+                   <div className="flex items-center justify-between">
+                     <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/45">{tierMeta.label}</p>
+                     <p className="text-[11px] text-white/35">{tierMeta.hint}</p>
+                   </div>
+                   <div className="space-y-1.5">
+                     {tierAssignments.map(({ name, model, isOverride, config, label }) => (
+                       <div key={name} className="flex flex-col gap-2 rounded-md border border-white/10 bg-black/15 p-2.5 sm:flex-row sm:items-center sm:justify-between">
+                         <div className="min-w-0">
+                           <p className="truncate text-xs font-semibold text-white/90 font-mono">{name}</p>
+                           <p className="truncate text-[11px] text-white/45">{label}</p>
+                         </div>
+                         <ModelBadge
+                           name={name}
+                           model={model}
+                           isOverride={isOverride}
+                           showName={false}
+                           availableModels={availableModelIds}
+                           onSelect={(value) => handleCategoryModelChange(name, value)}
+                           extraFields={{
+                             variant: config.variant,
+                             temperature: config.temperature,
+                             thirdField: config.description,
+                             thirdFieldKey: "description",
+                             thirdFieldPlaceholder: "description",
+                           }}
+                           onFieldChange={(field, value) => handleCategoryFieldChange(name, field, value)}
+                         />
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               );
+             })}
+           </div>
+         )}
+       </div>
 
         {/* Dedicated LSP Card */}
          <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/5 p-4 space-y-3">

@@ -115,3 +115,6 @@ backups/
 
 # Infrastructure env (actual secrets)
 infrastructure/.env
+
+# OpenCode (local dev state)
+/.opencode/

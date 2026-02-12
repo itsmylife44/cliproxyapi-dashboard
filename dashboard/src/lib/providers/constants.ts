@@ -21,6 +21,7 @@ export const OAUTH_PROVIDER = {
   ANTIGRAVITY: "antigravity",
   QWEN: "qwen",
   IFLOW: "iflow",
+  KIMI: "kimi",
 } as const;
 
 export type OAuthProvider = (typeof OAUTH_PROVIDER)[keyof typeof OAUTH_PROVIDER];

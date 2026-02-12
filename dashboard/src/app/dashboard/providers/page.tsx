@@ -138,6 +138,13 @@ const OAUTH_PROVIDERS = [
     requiresCallback: true,
   },
   {
+    id: "kimi" as const,
+    name: "Kimi",
+    description: "Moonshot AI Kimi (device OAuth)",
+    authEndpoint: "/api/management/kimi-auth-url?is_webui=true",
+    requiresCallback: false,
+  },
+  {
     id: "qwen" as const,
     name: "Qwen Code",
     description: "Alibaba Qwen Code (device OAuth)",
@@ -1324,8 +1331,15 @@ export default function ProvidersPage() {
             oauthModalStatus === MODAL_STATUS.POLLING ||
             oauthModalStatus === MODAL_STATUS.ERROR) &&
             !selectedOAuthProviderRequiresCallback && (
-            <div className="rounded-xl border-l-4 border-blue-400/60 bg-blue-500/20 p-4 text-sm text-white backdrop-blur-xl">
-              This provider completes OAuth directly in the popup window. No callback URL needs to be pasted here.
+            <div className="rounded-xl border-l-4 border-purple-400/60 bg-white/10 p-4 text-sm backdrop-blur-xl">
+              <div className="font-medium text-white">
+                Device Authorization
+              </div>
+              <ol className="mt-3 list-decimal space-y-2 pl-4 text-white/90">
+                <li>A browser window has opened with the authorization page.</li>
+                <li>Log in and approve the access request.</li>
+                <li>Once approved, this dialog will update automatically.</li>
+              </ol>
             </div>
           )}
 

@@ -36,6 +36,7 @@ const OAUTH_PROVIDER = {
   ANTIGRAVITY: "antigravity",
   QWEN: "qwen",
   IFLOW: "iflow",
+  KIMI: "kimi",
 } as const;
 
 function hashProviderKey(apiKey: string): string {
@@ -280,6 +281,7 @@ async function main() {
         else if (providerType === "antigravity") normalizedProvider = OAUTH_PROVIDER.ANTIGRAVITY;
         else if (providerType === "qwen") normalizedProvider = OAUTH_PROVIDER.QWEN;
         else if (providerType === "iflow") normalizedProvider = OAUTH_PROVIDER.IFLOW;
+        else if (providerType === "kimi") normalizedProvider = OAUTH_PROVIDER.KIMI;
 
         const existing = await prisma.providerOAuthOwnership.findUnique({
           where: { accountName },

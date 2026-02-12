@@ -24,6 +24,7 @@ const NON_ADMIN_OAUTH_PATHS = new Set<string>([
   "codex-auth-url",
   "antigravity-auth-url",
   "iflow-auth-url",
+  "kimi-auth-url",
   "qwen-auth-url",
   "get-auth-status",
 ]);

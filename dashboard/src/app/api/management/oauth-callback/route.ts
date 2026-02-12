@@ -12,6 +12,7 @@ const PROVIDERS = {
   ANTIGRAVITY: "antigravity",
   IFLOW: "iflow",
   QWEN: "qwen",
+  KIMI: "kimi",
 } as const;
 
 type Provider = (typeof PROVIDERS)[keyof typeof PROVIDERS];

@@ -15,7 +15,8 @@ The CLIProxyAPI Dashboard is a comprehensive web management interface that provi
 - **Visual Configuration Management**: Structured forms for managing CLIProxyAPI settings instead of manual YAML editing
 - **Real-time Monitoring**: Live logs, service health status, and container management
 - **API Key Management**: Create, view, and revoke API keys through an intuitive interface
-- **OAuth Provider Management**: Connect and manage Claude, Gemini, and Codex OAuth accounts
+- **OAuth Provider Management**: Connect and manage Claude, Gemini, Codex, Antigravity, iFlow, Kimi, and Qwen OAuth accounts
+- **Quota Monitoring**: Real-time quota and rate-limit tracking per provider account
 - **Usage Analytics**: Track API usage, request patterns, and provider statistics
 - **Service Updates**: One-click updates for CLIProxyAPI from Docker Hub
 - **Dynamic OpenCode Configuration**: Generate OpenCode config snippets for quick integration
@@ -31,9 +32,20 @@ Built with **Next.js 16**, **React 19**, **Tailwind CSS v4**, **Prisma**, and **
 - **API Key Management**: Full lifecycle management for API keys
 - **Multi-Provider Support**: Claude Code, Gemini, OpenAI/Codex, and OpenAI-compatible endpoints
 - **Custom Providers**: Add your own OpenAI-compatible providers (OpenRouter, Ollama, custom endpoints) with model mappings
-- **OAuth Account Management**: Connect and manage OAuth sessions for Claude, Gemini, and Codex
+- **OAuth Account Management**: Connect and manage OAuth sessions for Claude, Gemini, Codex, Antigravity, iFlow, Kimi, and Qwen
 - **Per-User Provider Ownership**: Users contribute their own API keys to the shared pool with ownership tracking
 - **Usage Statistics**: Comprehensive usage tracking and analytics
+
+### Quota Provider Notes
+
+| Provider | Quota Source | Details |
+|----------|-------------|---------|
+| Claude | OAuth Usage API | Rate limits (requests/tokens) with reset times |
+| Codex | Wham Usage API | Daily request/token limits |
+| Antigravity | Model Availability API | Available models and status |
+| Kimi | Verification only | Kimi (Moonshot AI) has no OAuth quota API. Accounts are verified as active but no usage/balance data is available. The `api.kimi.com/coding` endpoint returns neither rate-limit headers nor a balance endpoint for OAuth tokens. |
+| iFlow | — | Not yet implemented |
+| Qwen | — | Not yet implemented |
 - **Config Sync**: Auto-sync OpenCode configs via sync tokens and the `opencode-cliproxyapi-sync` plugin
 - **Config Sharing**: Publishers share their model configurations via share codes, subscribers auto-sync
 - **Dynamic Config Generation**: Auto-generate `opencode.json` and `oh-my-opencode.json` with provider-aware model selection
@@ -439,7 +451,7 @@ Manage dashboard API keys (not CLIProxyAPI API keys):
 ### Provider Management
 
 Manage AI provider connections:
-- **OAuth Accounts**: Connect Claude, Gemini, and Codex OAuth accounts
+- **OAuth Accounts**: Connect Claude, Gemini, Codex, Antigravity, iFlow, Kimi, and Qwen OAuth accounts
 - **API Key Contribution**: Add your own API keys to the shared provider pool
 - **Custom Providers**: Define your own OpenAI-compatible providers:
   - Configure base URL and API key

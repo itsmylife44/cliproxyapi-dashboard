@@ -19,6 +19,9 @@ export const OAUTH_PROVIDER = {
   GEMINI_CLI: "gemini-cli",
   CODEX: "codex",
   ANTIGRAVITY: "antigravity",
+  IFLOW: "iflow",
+  KIMI: "kimi",
+  QWEN: "qwen",
 } as const;
 
 export type OAuthProvider = (typeof OAUTH_PROVIDER)[keyof typeof OAUTH_PROVIDER];

@@ -107,24 +107,49 @@ const OAUTH_PROVIDERS = [
     name: "Claude Code",
     description: "Anthropic Claude (Pro/Max subscription)",
     authEndpoint: "/api/management/anthropic-auth-url?is_webui=true",
+    requiresCallback: true,
   },
   {
     id: "gemini-cli" as const,
     name: "Gemini CLI",
     description: "Google Gemini (via Google OAuth)",
     authEndpoint: "/api/management/gemini-cli-auth-url?project_id=ALL&is_webui=true",
+    requiresCallback: true,
   },
   {
     id: "codex" as const,
     name: "Codex",
     description: "OpenAI Codex (Plus/Pro subscription)",
     authEndpoint: "/api/management/codex-auth-url?is_webui=true",
+    requiresCallback: true,
   },
   {
     id: "antigravity" as const,
     name: "Antigravity",
     description: "Google Antigravity (via Google OAuth)",
     authEndpoint: "/api/management/antigravity-auth-url?is_webui=true",
+    requiresCallback: true,
+  },
+  {
+    id: "iflow" as const,
+    name: "iFlow",
+    description: "iFlow AI (via OAuth)",
+    authEndpoint: "/api/management/iflow-auth-url?is_webui=true",
+    requiresCallback: true,
+  },
+  {
+    id: "kimi" as const,
+    name: "Kimi",
+    description: "Moonshot AI Kimi (Device Authorization)",
+    authEndpoint: "/api/management/kimi-auth-url?is_webui=true",
+    requiresCallback: false,
+  },
+  {
+    id: "qwen" as const,
+    name: "Qwen",
+    description: "Alibaba Qwen (Device Authorization)",
+    authEndpoint: "/api/management/qwen-auth-url?is_webui=true",
+    requiresCallback: false,
   },
 ] as const;
 
@@ -612,8 +637,16 @@ export default function ProvidersPage() {
 
       authStateRef.current = data.state;
       setAuthState(data.state);
-      setOauthModalStatus(MODAL_STATUS.WAITING);
-      showToast("OAuth window opened. Follow the steps below.", "info");
+
+      if (provider.requiresCallback) {
+        setOauthModalStatus(MODAL_STATUS.WAITING);
+        showToast("OAuth window opened. Follow the steps below.", "info");
+      } else {
+        // Device-code flow: go straight to polling, no callback URL needed
+        setOauthModalStatus(MODAL_STATUS.POLLING);
+        showToast("Authorization window opened. Complete login in the popup.", "info");
+      }
+
       pollAuthStatus(data.state);
     } catch {
       setOauthModalStatus(MODAL_STATUS.ERROR);
@@ -1173,7 +1206,8 @@ export default function ProvidersPage() {
           {(oauthModalStatus === MODAL_STATUS.WAITING ||
             oauthModalStatus === MODAL_STATUS.SUBMITTING ||
             oauthModalStatus === MODAL_STATUS.POLLING ||
-            oauthModalStatus === MODAL_STATUS.ERROR) && (
+            oauthModalStatus === MODAL_STATUS.ERROR) &&
+            selectedOAuthProvider?.requiresCallback && (
             <div className="space-y-4">
               <div className="rounded-xl border-l-4 border-purple-400/60 bg-white/10 p-4 text-sm backdrop-blur-xl">
                 <div className="font-medium text-white">
@@ -1224,7 +1258,32 @@ export default function ProvidersPage() {
             </div>
           )}
 
-          {oauthModalStatus === MODAL_STATUS.POLLING && (
+          {(oauthModalStatus === MODAL_STATUS.WAITING ||
+            oauthModalStatus === MODAL_STATUS.POLLING ||
+            oauthModalStatus === MODAL_STATUS.ERROR) &&
+            selectedOAuthProvider &&
+            !selectedOAuthProvider.requiresCallback && (
+            <div className="space-y-4">
+              <div className="rounded-xl border-l-4 border-purple-400/60 bg-white/10 p-4 text-sm backdrop-blur-xl">
+                <div className="font-medium text-white">
+                  Device Authorization
+                </div>
+                <ol className="mt-3 list-decimal space-y-2 pl-4 text-white/90">
+                  <li>A browser window has opened with the authorization page.</li>
+                  <li>Log in and approve the access request.</li>
+                  <li>Once approved, this dialog will update automatically.</li>
+                </ol>
+              </div>
+
+              <div className="rounded-xl border-l-4 border-blue-400/60 bg-blue-500/20 p-4 text-sm text-white backdrop-blur-xl">
+                Waiting for authorization... This will update automatically
+                once you approve the request in the browser.
+              </div>
+            </div>
+          )}
+
+          {oauthModalStatus === MODAL_STATUS.POLLING &&
+            selectedOAuthProvider?.requiresCallback && (
             <div className="mt-4 rounded-xl border-l-4 border-blue-400/60 bg-blue-500/20 p-4 text-sm text-white backdrop-blur-xl">
               Callback submitted. Waiting for CLIProxyAPI to finish token
               exchange...
@@ -1247,7 +1306,8 @@ export default function ProvidersPage() {
           <Button variant="ghost" onClick={handleOAuthModalClose}>
             Close
           </Button>
-          {oauthModalStatus !== MODAL_STATUS.SUCCESS && (
+          {oauthModalStatus !== MODAL_STATUS.SUCCESS &&
+            selectedOAuthProvider?.requiresCallback && (
             <Button
               variant="secondary"
               onClick={handleSubmitCallback}

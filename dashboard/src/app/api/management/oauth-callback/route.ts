@@ -10,6 +10,7 @@ const PROVIDERS = {
   GEMINI_CLI: "gemini-cli",
   CODEX: "codex",
   ANTIGRAVITY: "antigravity",
+  IFLOW: "iflow",
 } as const;
 
 type Provider = (typeof PROVIDERS)[keyof typeof PROVIDERS];
@@ -23,6 +24,7 @@ const CALLBACK_PATHS: Record<Provider, string> = {
   [PROVIDERS.GEMINI_CLI]: `${CLIPROXYAPI_BASE}/google/callback`,
   [PROVIDERS.CODEX]: `${CLIPROXYAPI_BASE}/codex/callback`,
   [PROVIDERS.ANTIGRAVITY]: `${CLIPROXYAPI_BASE}/antigravity/callback`,
+  [PROVIDERS.IFLOW]: `${CLIPROXYAPI_BASE}/iflow/callback`,
 };
 
 interface OAuthCallbackRequestBody {

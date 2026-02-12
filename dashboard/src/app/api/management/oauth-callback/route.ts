@@ -39,6 +39,7 @@ const CALLBACK_PATHS: Partial<Record<Provider, string>> = {
 interface OAuthCallbackRequestBody {
   provider: Provider;
   callbackUrl?: string;
+  state?: string;
 }
 
 interface OAuthCallbackResponse {
@@ -62,11 +63,14 @@ const parseRequestBody = (body: unknown): OAuthCallbackRequestBody | null => {
   if (!isRecord(body)) return null;
   const provider = body.provider;
   const callbackUrl = body.callbackUrl;
+  const state = body.state;
   if (!isProvider(provider)) return null;
   if (callbackUrl !== undefined && typeof callbackUrl !== "string") return null;
+  if (state !== undefined && typeof state !== "string") return null;
   return {
     provider,
     callbackUrl: typeof callbackUrl === "string" ? callbackUrl : undefined,
+    state: typeof state === "string" ? state : undefined,
   };
 };
 
@@ -133,13 +137,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { provider, callbackUrl } = parsedBody;
-
-  const beforeAuthFiles = await fetchAuthFiles();
-  const beforeNames = new Set((beforeAuthFiles || []).map((file) => file.name));
+  const { provider, callbackUrl, state } = parsedBody;
 
   try {
     let responseStatus = 200;
+    let resolvedState = state;
 
     if (PROVIDERS_WITH_CALLBACK.has(provider)) {
       if (!callbackUrl) {
@@ -168,6 +170,7 @@ export async function POST(request: NextRequest) {
       const callbackTarget = new URL(callbackPath);
       callbackTarget.searchParams.set("code", callbackParams.code);
       callbackTarget.searchParams.set("state", callbackParams.state);
+      resolvedState = callbackParams.state;
 
       const response = await fetch(callbackTarget.toString(), { method: "GET" });
       responseStatus = response.status;
@@ -176,10 +179,15 @@ export async function POST(request: NextRequest) {
         const payload: OAuthCallbackResponse = { status: responseStatus };
         return NextResponse.json(payload, { status: responseStatus });
       }
+    } else if (!resolvedState) {
+      return NextResponse.json(
+        { error: "State is required for this provider" },
+        { status: 400 }
+      );
     }
 
     let candidateFiles: AuthFileEntry[] = [];
-    const MAX_RETRIES = provider === PROVIDERS.QWEN ? 80 : 10;
+    const MAX_RETRIES = 10;
     const RETRY_DELAY_MS = 1500;
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -189,10 +197,23 @@ export async function POST(request: NextRequest) {
 
       if (afterAuthFiles) {
         candidateFiles = afterAuthFiles.filter((file) => {
-          const fileProvider = file.provider || file.type;
-          const providerMatches = !fileProvider || fileProvider === provider;
-          const isNew = !beforeNames.has(file.name);
-          return isNew && providerMatches;
+          const fileNameLower = file.name.toLowerCase();
+          const fileProvider = (file.provider || file.type || "").toLowerCase();
+          const providerMatches =
+            fileProvider.length > 0
+              ? fileProvider === provider
+              : fileNameLower.includes(provider);
+
+          if (!providerMatches) {
+            return false;
+          }
+
+          if (!resolvedState) {
+            return true;
+          }
+
+          return file.name.includes(resolvedState) ||
+            fileNameLower.includes(resolvedState.toLowerCase());
         });
       }
 
@@ -202,7 +223,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (candidateFiles.length === 0) {
-      logger.warn("OAuth callback: no new auth files detected after polling");
+      logger.warn(
+        { provider, state: resolvedState || null },
+        "OAuth callback: auth file not yet available, client should retry"
+      );
+      return NextResponse.json({ status: 202 }, { status: 202 });
     }
 
     let claimed = false;

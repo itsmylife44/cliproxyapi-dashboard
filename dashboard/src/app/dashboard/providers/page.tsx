@@ -308,6 +308,8 @@ export default function ProvidersPage() {
   const [oauthErrorMessage, setOauthErrorMessage] = useState<string | null>(null);
   const pollingIntervalRef = useRef<number | null>(null);
   const pollingAttemptsRef = useRef(0);
+  const noCallbackClaimTimeoutRef = useRef<number | null>(null);
+  const noCallbackClaimAttemptsRef = useRef(0);
   const selectedOAuthProviderIdRef = useRef<OAuthProviderId | null>(null);
   const authStateRef = useRef<string | null>(null);
 
@@ -469,6 +471,14 @@ export default function ProvidersPage() {
     pollingAttemptsRef.current = 0;
   }, []);
 
+  const stopNoCallbackClaimPolling = useCallback(() => {
+    if (noCallbackClaimTimeoutRef.current !== null) {
+      window.clearTimeout(noCallbackClaimTimeoutRef.current);
+      noCallbackClaimTimeoutRef.current = null;
+    }
+    noCallbackClaimAttemptsRef.current = 0;
+  }, []);
+
   const loadAccounts = useCallback(async () => {
     setOauthAccountsLoading(true);
     try {
@@ -515,8 +525,9 @@ export default function ProvidersPage() {
     void loadCustomProviders();
     return () => {
       stopPolling();
+      stopNoCallbackClaimPolling();
     };
-  }, [loadAccounts, loadCustomProviders, stopPolling]);
+  }, [loadAccounts, loadCustomProviders, stopPolling, stopNoCallbackClaimPolling]);
 
   const openAuthPopup = (url: string) => {
     // noopener makes window.open() return null — do not add it back
@@ -578,6 +589,7 @@ export default function ProvidersPage() {
 
   const resetOAuthModalState = () => {
     stopPolling();
+    stopNoCallbackClaimPolling();
     setOauthModalStatus(MODAL_STATUS.IDLE);
     selectedOAuthProviderIdRef.current = null;
     setSelectedOAuthProviderId(null);
@@ -594,26 +606,56 @@ export default function ProvidersPage() {
     resetOAuthModalState();
   };
 
-  const claimOAuthWithoutCallback = useCallback(async (providerId: OAuthProviderId) => {
+  const claimOAuthWithoutCallback = useCallback(async (providerId: OAuthProviderId, state: string) => {
     try {
       const res = await fetch("/api/management/oauth-callback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: providerId }),
+        body: JSON.stringify({ provider: providerId, state }),
       });
 
+      const data: OAuthCallbackResponse = await res.json().catch(() => ({}));
+
+      if (res.status === 202 || data.status === 202) {
+        if (noCallbackClaimAttemptsRef.current >= 25) {
+          stopNoCallbackClaimPolling();
+          return;
+        }
+
+        noCallbackClaimAttemptsRef.current += 1;
+        if (noCallbackClaimTimeoutRef.current !== null) {
+          window.clearTimeout(noCallbackClaimTimeoutRef.current);
+        }
+        noCallbackClaimTimeoutRef.current = window.setTimeout(() => {
+          void claimOAuthWithoutCallback(providerId, state);
+        }, 3000);
+        return;
+      }
+
       if (!res.ok) {
-        const data: OAuthCallbackResponse = await res.json().catch(() => ({}));
+        stopNoCallbackClaimPolling();
         stopPolling();
         setOauthModalStatus(MODAL_STATUS.ERROR);
         setOauthErrorMessage(data.error || "Failed to complete OAuth ownership claim.");
+        return;
       }
+
+      stopNoCallbackClaimPolling();
+      void loadAccounts();
     } catch {
-      stopPolling();
-      setOauthModalStatus(MODAL_STATUS.ERROR);
-      setOauthErrorMessage("Network error while completing OAuth ownership claim.");
+      if (noCallbackClaimAttemptsRef.current >= 25) {
+        stopNoCallbackClaimPolling();
+        return;
+      }
+      noCallbackClaimAttemptsRef.current += 1;
+      if (noCallbackClaimTimeoutRef.current !== null) {
+        window.clearTimeout(noCallbackClaimTimeoutRef.current);
+      }
+      noCallbackClaimTimeoutRef.current = window.setTimeout(() => {
+        void claimOAuthWithoutCallback(providerId, state);
+      }, 3000);
     }
-  }, [stopPolling]);
+  }, [loadAccounts, stopNoCallbackClaimPolling, stopPolling]);
 
   const handleOAuthConnect = async (providerId: OAuthProviderId) => {
     const provider = getOAuthProviderById(providerId);
@@ -663,7 +705,8 @@ export default function ProvidersPage() {
         setCallbackValidation(CALLBACK_VALIDATION.VALID);
         setCallbackMessage("No callback URL needed. Complete sign-in in the popup window.");
         showToast("OAuth window opened. Complete sign-in in the popup.", "info");
-        void claimOAuthWithoutCallback(providerId);
+        stopNoCallbackClaimPolling();
+        void claimOAuthWithoutCallback(providerId, data.state);
       }
 
       pollAuthStatus(data.state);

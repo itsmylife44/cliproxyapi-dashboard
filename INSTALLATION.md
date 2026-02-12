@@ -224,7 +224,7 @@ sudo ufw enable
 # Generate secrets (store these values for the .env file)
 JWT_SECRET=$(openssl rand -base64 32)
 MANAGEMENT_API_KEY=$(openssl rand -hex 32)
-POSTGRES_PASSWORD=$(openssl rand -base64 32)
+POSTGRES_PASSWORD=$(openssl rand -hex 32)
 
 echo "JWT_SECRET=$JWT_SECRET"
 echo "MANAGEMENT_API_KEY=$MANAGEMENT_API_KEY"

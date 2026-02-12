@@ -271,7 +271,7 @@ sudo ufw enable
 # Generate secure secrets
 JWT_SECRET=$(openssl rand -base64 32)
 MANAGEMENT_API_KEY=$(openssl rand -hex 32)
-POSTGRES_PASSWORD=$(openssl rand -base64 32)
+POSTGRES_PASSWORD=$(openssl rand -hex 32)
 
 # Display secrets (save these values)
 echo "JWT_SECRET=$JWT_SECRET"

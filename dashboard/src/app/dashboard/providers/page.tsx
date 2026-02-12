@@ -107,24 +107,42 @@ const OAUTH_PROVIDERS = [
     name: "Claude Code",
     description: "Anthropic Claude (Pro/Max subscription)",
     authEndpoint: "/api/management/anthropic-auth-url?is_webui=true",
+    requiresCallback: true,
   },
   {
     id: "gemini-cli" as const,
     name: "Gemini CLI",
     description: "Google Gemini (via Google OAuth)",
     authEndpoint: "/api/management/gemini-cli-auth-url?project_id=ALL&is_webui=true",
+    requiresCallback: true,
   },
   {
     id: "codex" as const,
     name: "Codex",
     description: "OpenAI Codex (Plus/Pro subscription)",
     authEndpoint: "/api/management/codex-auth-url?is_webui=true",
+    requiresCallback: true,
   },
   {
     id: "antigravity" as const,
     name: "Antigravity",
     description: "Google Antigravity (via Google OAuth)",
     authEndpoint: "/api/management/antigravity-auth-url?is_webui=true",
+    requiresCallback: true,
+  },
+  {
+    id: "iflow" as const,
+    name: "iFlow",
+    description: "iFlytek iFlow (via OAuth)",
+    authEndpoint: "/api/management/iflow-auth-url?is_webui=true",
+    requiresCallback: true,
+  },
+  {
+    id: "qwen" as const,
+    name: "Qwen Code",
+    description: "Alibaba Qwen Code (device OAuth)",
+    authEndpoint: "/api/management/qwen-auth-url?is_webui=true",
+    requiresCallback: false,
   },
 ] as const;
 
@@ -299,6 +317,7 @@ export default function ProvidersPage() {
   const [editingCustomProvider, setEditingCustomProvider] = useState<CustomProvider | undefined>(undefined);
 
   const selectedOAuthProvider = getOAuthProviderById(selectedOAuthProviderId);
+  const selectedOAuthProviderRequiresCallback = selectedOAuthProvider?.requiresCallback ?? true;
 
   // ── API Key handlers ───────────────────────────────────────────────────────
 
@@ -575,6 +594,27 @@ export default function ProvidersPage() {
     resetOAuthModalState();
   };
 
+  const claimOAuthWithoutCallback = useCallback(async (providerId: OAuthProviderId) => {
+    try {
+      const res = await fetch("/api/management/oauth-callback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: providerId }),
+      });
+
+      if (!res.ok) {
+        const data: OAuthCallbackResponse = await res.json().catch(() => ({}));
+        stopPolling();
+        setOauthModalStatus(MODAL_STATUS.ERROR);
+        setOauthErrorMessage(data.error || "Failed to complete OAuth ownership claim.");
+      }
+    } catch {
+      stopPolling();
+      setOauthModalStatus(MODAL_STATUS.ERROR);
+      setOauthErrorMessage("Network error while completing OAuth ownership claim.");
+    }
+  }, [stopPolling]);
+
   const handleOAuthConnect = async (providerId: OAuthProviderId) => {
     const provider = getOAuthProviderById(providerId);
     if (!provider) return;
@@ -612,8 +652,20 @@ export default function ProvidersPage() {
 
       authStateRef.current = data.state;
       setAuthState(data.state);
-      setOauthModalStatus(MODAL_STATUS.WAITING);
-      showToast("OAuth window opened. Follow the steps below.", "info");
+
+      if (provider.requiresCallback) {
+        setOauthModalStatus(MODAL_STATUS.WAITING);
+        setCallbackValidation(CALLBACK_VALIDATION.EMPTY);
+        setCallbackMessage("Paste the full URL.");
+        showToast("OAuth window opened. Follow the steps below.", "info");
+      } else {
+        setOauthModalStatus(MODAL_STATUS.POLLING);
+        setCallbackValidation(CALLBACK_VALIDATION.VALID);
+        setCallbackMessage("No callback URL needed. Complete sign-in in the popup window.");
+        showToast("OAuth window opened. Complete sign-in in the popup.", "info");
+        void claimOAuthWithoutCallback(providerId);
+      }
+
       pollAuthStatus(data.state);
     } catch {
       setOauthModalStatus(MODAL_STATUS.ERROR);
@@ -1173,7 +1225,8 @@ export default function ProvidersPage() {
           {(oauthModalStatus === MODAL_STATUS.WAITING ||
             oauthModalStatus === MODAL_STATUS.SUBMITTING ||
             oauthModalStatus === MODAL_STATUS.POLLING ||
-            oauthModalStatus === MODAL_STATUS.ERROR) && (
+            oauthModalStatus === MODAL_STATUS.ERROR) &&
+            selectedOAuthProviderRequiresCallback && (
             <div className="space-y-4">
               <div className="rounded-xl border-l-4 border-purple-400/60 bg-white/10 p-4 text-sm backdrop-blur-xl">
                 <div className="font-medium text-white">
@@ -1224,10 +1277,20 @@ export default function ProvidersPage() {
             </div>
           )}
 
+          {(oauthModalStatus === MODAL_STATUS.WAITING ||
+            oauthModalStatus === MODAL_STATUS.POLLING ||
+            oauthModalStatus === MODAL_STATUS.ERROR) &&
+            !selectedOAuthProviderRequiresCallback && (
+            <div className="rounded-xl border-l-4 border-blue-400/60 bg-blue-500/20 p-4 text-sm text-white backdrop-blur-xl">
+              This provider completes OAuth directly in the popup window. No callback URL needs to be pasted here.
+            </div>
+          )}
+
           {oauthModalStatus === MODAL_STATUS.POLLING && (
             <div className="mt-4 rounded-xl border-l-4 border-blue-400/60 bg-blue-500/20 p-4 text-sm text-white backdrop-blur-xl">
-              Callback submitted. Waiting for CLIProxyAPI to finish token
-              exchange...
+              {selectedOAuthProviderRequiresCallback
+                ? "Callback submitted. Waiting for CLIProxyAPI to finish token exchange..."
+                : "Waiting for CLIProxyAPI to finish OAuth authorization..."}
             </div>
           )}
 
@@ -1247,7 +1310,7 @@ export default function ProvidersPage() {
           <Button variant="ghost" onClick={handleOAuthModalClose}>
             Close
           </Button>
-          {oauthModalStatus !== MODAL_STATUS.SUCCESS && (
+          {oauthModalStatus !== MODAL_STATUS.SUCCESS && selectedOAuthProviderRequiresCallback && (
             <Button
               variant="secondary"
               onClick={handleSubmitCallback}

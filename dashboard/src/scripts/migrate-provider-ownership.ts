@@ -34,6 +34,8 @@ const OAUTH_PROVIDER = {
   GEMINI_CLI: "gemini-cli",
   CODEX: "codex",
   ANTIGRAVITY: "antigravity",
+  QWEN: "qwen",
+  IFLOW: "iflow",
 } as const;
 
 function hashProviderKey(apiKey: string): string {
@@ -276,6 +278,8 @@ async function main() {
         else if (providerType === "gemini-cli" || providerType === "gemini") normalizedProvider = OAUTH_PROVIDER.GEMINI_CLI;
         else if (providerType === "codex") normalizedProvider = OAUTH_PROVIDER.CODEX;
         else if (providerType === "antigravity") normalizedProvider = OAUTH_PROVIDER.ANTIGRAVITY;
+        else if (providerType === "qwen") normalizedProvider = OAUTH_PROVIDER.QWEN;
+        else if (providerType === "iflow") normalizedProvider = OAUTH_PROVIDER.IFLOW;
 
         const existing = await prisma.providerOAuthOwnership.findUnique({
           where: { accountName },

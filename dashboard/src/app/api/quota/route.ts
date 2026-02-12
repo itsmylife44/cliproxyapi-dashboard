@@ -8,9 +8,11 @@ const CLIPROXYAPI_MANAGEMENT_URL =
 const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
 
 interface AuthFile {
-  auth_index: string;
+  auth_index: string | number;
   provider: string;
-  email: string;
+  email?: string;
+  name?: string;
+  label?: string;
   disabled: boolean;
   status: string;
 }
@@ -673,8 +675,18 @@ export async function GET() {
     );
 
     const quotaPromises = activeAccounts.map(async (account) => {
+      const authIndex = String(account.auth_index);
+      const displayEmail =
+        typeof account.email === "string" && account.email.trim() !== ""
+          ? account.email.trim()
+          : typeof account.label === "string" && account.label.trim() !== ""
+            ? account.label.trim()
+            : typeof account.name === "string" && account.name.trim() !== ""
+              ? account.name.trim()
+              : `${account.provider}-${authIndex}`;
+
       if (account.provider === "claude") {
-        const result = await fetchClaudeQuota(account.auth_index);
+        const result = await fetchClaudeQuota(authIndex);
 
         if ("error" in result) {
           const normalizedError = result.error.toLowerCase();
@@ -685,80 +697,80 @@ export async function GET() {
 
           if (needsReauth) {
             return {
-              auth_index: account.auth_index,
+              auth_index: authIndex,
               provider: account.provider,
-              email: account.email,
+              email: displayEmail,
               supported: true,
               error: "Claude OAuth token needs re-authentication (provider returned 401)",
             };
           }
 
           return {
-            auth_index: account.auth_index,
+            auth_index: authIndex,
             provider: account.provider,
-            email: account.email,
+            email: displayEmail,
             supported: true,
             error: result.error,
           };
         }
 
         return {
-          auth_index: account.auth_index,
+          auth_index: authIndex,
           provider: account.provider,
-          email: account.email,
+          email: displayEmail,
           supported: true,
           groups: result,
         };
       }
 
       if (account.provider === "antigravity") {
-        const result = await fetchAntigravityQuota(account.auth_index);
+        const result = await fetchAntigravityQuota(authIndex);
         
         if ("error" in result) {
           return {
-            auth_index: account.auth_index,
+            auth_index: authIndex,
             provider: account.provider,
-            email: account.email,
+            email: displayEmail,
             supported: true,
             error: result.error,
           };
         }
 
         return {
-          auth_index: account.auth_index,
+          auth_index: authIndex,
           provider: account.provider,
-          email: account.email,
+          email: displayEmail,
           supported: true,
           groups: result,
         };
       }
 
       if (account.provider === "codex") {
-        const result = await fetchCodexQuota(account.auth_index);
+        const result = await fetchCodexQuota(authIndex);
         
         if ("error" in result) {
           return {
-            auth_index: account.auth_index,
+            auth_index: authIndex,
             provider: account.provider,
-            email: account.email,
+            email: displayEmail,
             supported: true,
             error: result.error,
           };
         }
 
         return {
-          auth_index: account.auth_index,
+          auth_index: authIndex,
           provider: account.provider,
-          email: account.email,
+          email: displayEmail,
           supported: true,
           groups: result,
         };
       }
 
       return {
-        auth_index: account.auth_index,
+        auth_index: authIndex,
         provider: account.provider,
-        email: account.email,
+        email: displayEmail,
         supported: false,
       };
     });

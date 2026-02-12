@@ -22,7 +22,7 @@ interface QuotaGroup {
 interface QuotaAccount {
   auth_index: string;
   provider: string;
-  email: string;
+  email?: string | null;
   supported: boolean;
   error?: string;
   groups?: QuotaGroup[];
@@ -38,6 +38,7 @@ const PROVIDERS = {
   ANTIGRAVITY: "antigravity",
   CLAUDE: "claude",
   CODEX: "codex",
+  KIMI: "kimi",
 } as const;
 
 type ProviderType = (typeof PROVIDERS)[keyof typeof PROVIDERS];
@@ -51,12 +52,20 @@ function normalizeFraction(value: unknown): number | null {
   return value;
 }
 
-function maskEmail(email: string): string {
-  const parts = email.split("@");
-  if (parts.length !== 2) return email;
-  const [local, domain] = parts;
-  if (local.length <= 3) return `${local}***@${domain}`;
-  return `${local.slice(0, 3)}***@${domain}`;
+function maskEmail(email: unknown): string {
+  if (typeof email !== "string") return "unknown";
+  const trimmed = email.trim();
+  if (trimmed === "") return "unknown";
+
+  const atIndex = trimmed.indexOf("@");
+  if (atIndex <= 0 || atIndex === trimmed.length - 1) {
+    return trimmed;
+  }
+
+  const local = trimmed.slice(0, atIndex);
+  const domain = trimmed.slice(atIndex + 1);
+  const maskedLocal = local.length <= 3 ? `${local}***` : `${local.slice(0, 3)}***`;
+  return `${maskedLocal}@${domain}`;
 }
 
 function formatRelativeTime(isoDate: string | null): string {
@@ -311,6 +320,7 @@ export default function QuotaPage() {
     { key: PROVIDERS.ANTIGRAVITY, label: "Antigravity" },
     { key: PROVIDERS.CLAUDE, label: "Claude" },
     { key: PROVIDERS.CODEX, label: "Codex" },
+    { key: PROVIDERS.KIMI, label: "Kimi" },
   ] as const;
 
   const toggleCard = (accountId: string) => {

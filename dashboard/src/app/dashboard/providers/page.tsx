@@ -133,21 +133,21 @@ const OAUTH_PROVIDERS = [
   {
     id: "iflow" as const,
     name: "iFlow",
-    description: "iFlow AI (via OAuth)",
+    description: "iFlytek iFlow (via OAuth)",
     authEndpoint: "/api/management/iflow-auth-url?is_webui=true",
     requiresCallback: true,
   },
   {
     id: "kimi" as const,
     name: "Kimi",
-    description: "Moonshot AI Kimi (Device Authorization)",
+    description: "Moonshot AI Kimi (device OAuth)",
     authEndpoint: "/api/management/kimi-auth-url?is_webui=true",
     requiresCallback: false,
   },
   {
     id: "qwen" as const,
-    name: "Qwen",
-    description: "Alibaba Qwen (Device Authorization)",
+    name: "Qwen Code",
+    description: "Alibaba Qwen Code (device OAuth)",
     authEndpoint: "/api/management/qwen-auth-url?is_webui=true",
     requiresCallback: false,
   },
@@ -315,6 +315,8 @@ export default function ProvidersPage() {
   const [oauthErrorMessage, setOauthErrorMessage] = useState<string | null>(null);
   const pollingIntervalRef = useRef<number | null>(null);
   const pollingAttemptsRef = useRef(0);
+  const noCallbackClaimTimeoutRef = useRef<number | null>(null);
+  const noCallbackClaimAttemptsRef = useRef(0);
   const selectedOAuthProviderIdRef = useRef<OAuthProviderId | null>(null);
   const authStateRef = useRef<string | null>(null);
 
@@ -324,6 +326,7 @@ export default function ProvidersPage() {
   const [editingCustomProvider, setEditingCustomProvider] = useState<CustomProvider | undefined>(undefined);
 
   const selectedOAuthProvider = getOAuthProviderById(selectedOAuthProviderId);
+  const selectedOAuthProviderRequiresCallback = selectedOAuthProvider?.requiresCallback ?? true;
 
   // ── API Key handlers ───────────────────────────────────────────────────────
 
@@ -475,6 +478,14 @@ export default function ProvidersPage() {
     pollingAttemptsRef.current = 0;
   }, []);
 
+  const stopNoCallbackClaimPolling = useCallback(() => {
+    if (noCallbackClaimTimeoutRef.current !== null) {
+      window.clearTimeout(noCallbackClaimTimeoutRef.current);
+      noCallbackClaimTimeoutRef.current = null;
+    }
+    noCallbackClaimAttemptsRef.current = 0;
+  }, []);
+
   const loadAccounts = useCallback(async () => {
     setOauthAccountsLoading(true);
     try {
@@ -521,8 +532,9 @@ export default function ProvidersPage() {
     void loadCustomProviders();
     return () => {
       stopPolling();
+      stopNoCallbackClaimPolling();
     };
-  }, [loadAccounts, loadCustomProviders, stopPolling]);
+  }, [loadAccounts, loadCustomProviders, stopPolling, stopNoCallbackClaimPolling]);
 
   const openAuthPopup = (url: string) => {
     // noopener makes window.open() return null — do not add it back
@@ -584,6 +596,7 @@ export default function ProvidersPage() {
 
   const resetOAuthModalState = () => {
     stopPolling();
+    stopNoCallbackClaimPolling();
     setOauthModalStatus(MODAL_STATUS.IDLE);
     selectedOAuthProviderIdRef.current = null;
     setSelectedOAuthProviderId(null);
@@ -599,6 +612,57 @@ export default function ProvidersPage() {
     setIsOAuthModalOpen(false);
     resetOAuthModalState();
   };
+
+  const claimOAuthWithoutCallback = useCallback(async (providerId: OAuthProviderId, state: string) => {
+    try {
+      const res = await fetch("/api/management/oauth-callback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: providerId, state }),
+      });
+
+      const data: OAuthCallbackResponse = await res.json().catch(() => ({}));
+
+      if (res.status === 202 || data.status === 202) {
+        if (noCallbackClaimAttemptsRef.current >= 25) {
+          stopNoCallbackClaimPolling();
+          return;
+        }
+
+        noCallbackClaimAttemptsRef.current += 1;
+        if (noCallbackClaimTimeoutRef.current !== null) {
+          window.clearTimeout(noCallbackClaimTimeoutRef.current);
+        }
+        noCallbackClaimTimeoutRef.current = window.setTimeout(() => {
+          void claimOAuthWithoutCallback(providerId, state);
+        }, 3000);
+        return;
+      }
+
+      if (!res.ok) {
+        stopNoCallbackClaimPolling();
+        stopPolling();
+        setOauthModalStatus(MODAL_STATUS.ERROR);
+        setOauthErrorMessage(data.error || "Failed to complete OAuth ownership claim.");
+        return;
+      }
+
+      stopNoCallbackClaimPolling();
+      void loadAccounts();
+    } catch {
+      if (noCallbackClaimAttemptsRef.current >= 25) {
+        stopNoCallbackClaimPolling();
+        return;
+      }
+      noCallbackClaimAttemptsRef.current += 1;
+      if (noCallbackClaimTimeoutRef.current !== null) {
+        window.clearTimeout(noCallbackClaimTimeoutRef.current);
+      }
+      noCallbackClaimTimeoutRef.current = window.setTimeout(() => {
+        void claimOAuthWithoutCallback(providerId, state);
+      }, 3000);
+    }
+  }, [loadAccounts, stopNoCallbackClaimPolling, stopPolling]);
 
   const handleOAuthConnect = async (providerId: OAuthProviderId) => {
     const provider = getOAuthProviderById(providerId);
@@ -640,11 +704,16 @@ export default function ProvidersPage() {
 
       if (provider.requiresCallback) {
         setOauthModalStatus(MODAL_STATUS.WAITING);
+        setCallbackValidation(CALLBACK_VALIDATION.EMPTY);
+        setCallbackMessage("Paste the full URL.");
         showToast("OAuth window opened. Follow the steps below.", "info");
       } else {
-        // Device-code flow: go straight to polling, no callback URL needed
         setOauthModalStatus(MODAL_STATUS.POLLING);
-        showToast("Authorization window opened. Complete login in the popup.", "info");
+        setCallbackValidation(CALLBACK_VALIDATION.VALID);
+        setCallbackMessage("No callback URL needed. Complete sign-in in the popup window.");
+        showToast("OAuth window opened. Complete sign-in in the popup.", "info");
+        stopNoCallbackClaimPolling();
+        void claimOAuthWithoutCallback(providerId, data.state);
       }
 
       pollAuthStatus(data.state);
@@ -1207,7 +1276,7 @@ export default function ProvidersPage() {
             oauthModalStatus === MODAL_STATUS.SUBMITTING ||
             oauthModalStatus === MODAL_STATUS.POLLING ||
             oauthModalStatus === MODAL_STATUS.ERROR) &&
-            selectedOAuthProvider?.requiresCallback && (
+            selectedOAuthProviderRequiresCallback && (
             <div className="space-y-4">
               <div className="rounded-xl border-l-4 border-purple-400/60 bg-white/10 p-4 text-sm backdrop-blur-xl">
                 <div className="font-medium text-white">
@@ -1261,32 +1330,24 @@ export default function ProvidersPage() {
           {(oauthModalStatus === MODAL_STATUS.WAITING ||
             oauthModalStatus === MODAL_STATUS.POLLING ||
             oauthModalStatus === MODAL_STATUS.ERROR) &&
-            selectedOAuthProvider &&
-            !selectedOAuthProvider.requiresCallback && (
-            <div className="space-y-4">
-              <div className="rounded-xl border-l-4 border-purple-400/60 bg-white/10 p-4 text-sm backdrop-blur-xl">
-                <div className="font-medium text-white">
-                  Device Authorization
-                </div>
-                <ol className="mt-3 list-decimal space-y-2 pl-4 text-white/90">
-                  <li>A browser window has opened with the authorization page.</li>
-                  <li>Log in and approve the access request.</li>
-                  <li>Once approved, this dialog will update automatically.</li>
-                </ol>
+            !selectedOAuthProviderRequiresCallback && (
+            <div className="rounded-xl border-l-4 border-purple-400/60 bg-white/10 p-4 text-sm backdrop-blur-xl">
+              <div className="font-medium text-white">
+                Device Authorization
               </div>
-
-              <div className="rounded-xl border-l-4 border-blue-400/60 bg-blue-500/20 p-4 text-sm text-white backdrop-blur-xl">
-                Waiting for authorization... This will update automatically
-                once you approve the request in the browser.
-              </div>
+              <ol className="mt-3 list-decimal space-y-2 pl-4 text-white/90">
+                <li>A browser window has opened with the authorization page.</li>
+                <li>Log in and approve the access request.</li>
+                <li>Once approved, this dialog will update automatically.</li>
+              </ol>
             </div>
           )}
 
-          {oauthModalStatus === MODAL_STATUS.POLLING &&
-            selectedOAuthProvider?.requiresCallback && (
+          {oauthModalStatus === MODAL_STATUS.POLLING && (
             <div className="mt-4 rounded-xl border-l-4 border-blue-400/60 bg-blue-500/20 p-4 text-sm text-white backdrop-blur-xl">
-              Callback submitted. Waiting for CLIProxyAPI to finish token
-              exchange...
+              {selectedOAuthProviderRequiresCallback
+                ? "Callback submitted. Waiting for CLIProxyAPI to finish token exchange..."
+                : "Waiting for CLIProxyAPI to finish OAuth authorization..."}
             </div>
           )}
 
@@ -1306,8 +1367,7 @@ export default function ProvidersPage() {
           <Button variant="ghost" onClick={handleOAuthModalClose}>
             Close
           </Button>
-          {oauthModalStatus !== MODAL_STATUS.SUCCESS &&
-            selectedOAuthProvider?.requiresCallback && (
+          {oauthModalStatus !== MODAL_STATUS.SUCCESS && selectedOAuthProviderRequiresCallback && (
             <Button
               variant="secondary"
               onClick={handleSubmitCallback}

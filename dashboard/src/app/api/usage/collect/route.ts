@@ -8,6 +8,7 @@ const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
   "http://cliproxyapi:8317/v0/management";
 const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
+const COLLECTOR_API_KEY = process.env.COLLECTOR_API_KEY;
 
 const BATCH_SIZE = 500;
 
@@ -118,22 +119,29 @@ interface UsageRecordCandidate {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await verifySession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const authHeader = request.headers.get("authorization");
+  const isCronAuth =
+    COLLECTOR_API_KEY &&
+    authHeader === `Bearer ${COLLECTOR_API_KEY}`;
+
+  if (!isCronAuth) {
+    const session = await verifySession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { isAdmin: true },
+    });
+
+    if (!user?.isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const originError = validateOrigin(request);
+    if (originError) return originError;
   }
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { isAdmin: true },
-  });
-
-  if (!user?.isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const originError = validateOrigin(request);
-  if (originError) return originError;
 
   if (!MANAGEMENT_API_KEY) {
     logger.error("MANAGEMENT_API_KEY is not configured");

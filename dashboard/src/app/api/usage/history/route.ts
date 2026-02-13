@@ -40,14 +40,13 @@ interface ResponseData {
   isAdmin: boolean;
 }
 
-function isValidISODate(dateString: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}/.test(dateString)) return false;
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return false;
-  const [year, month, day] = dateString.split("T")[0].split("-").map(Number);
-  return date.getUTCFullYear() === year
-    && date.getUTCMonth() + 1 === month
-    && date.getUTCDate() === day;
+function isValidDateParam(dateString: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year
+    && date.getMonth() === month - 1
+    && date.getDate() === day;
 }
 
 export async function GET(request: NextRequest) {
@@ -67,15 +66,15 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (!isValidISODate(fromParam) || !isValidISODate(toParam)) {
+  if (!isValidDateParam(fromParam) || !isValidDateParam(toParam)) {
     return NextResponse.json(
-      { error: "Invalid date format. Use ISO 8601 format." },
+      { error: "Invalid date format. Use YYYY-MM-DD." },
       { status: 400 }
     );
   }
 
-  const fromDate = new Date(fromParam);
-  const toDate = new Date(toParam);
+  const fromDate = new Date(fromParam + "T00:00:00.000Z");
+  const toDate = new Date(toParam + "T23:59:59.999Z");
 
   if (fromDate > toDate) {
     return NextResponse.json(

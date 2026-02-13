@@ -153,20 +153,55 @@ export async function POST(request: NextRequest) {
 
   try {
     let usageResponse: Response;
+    let authFilesResponse: Response | null = null;
     try {
-      usageResponse = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/usage`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
-        },
-        signal: AbortSignal.timeout(30_000),
-      });
+      [usageResponse, authFilesResponse] = await Promise.all([
+        fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/usage`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+          signal: AbortSignal.timeout(30_000),
+        }),
+        fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/auth-files`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+          signal: AbortSignal.timeout(30_000),
+        }).catch(() => null),
+      ]);
     } catch (fetchError) {
       logger.error({ err: fetchError }, "Failed to connect to CLIProxyAPI");
       return NextResponse.json(
         { error: "Proxy service unavailable" },
         { status: 503 }
       );
+    }
+
+    interface AuthFileEntry {
+      auth_index: string;
+      file_name?: string;
+      email?: string;
+      provider?: string;
+    }
+
+    const authIndexToFile = new Map<string, { fileName: string; email: string }>();
+    if (authFilesResponse?.ok) {
+      try {
+        const authFilesJson: unknown = await authFilesResponse.json();
+        const entries: AuthFileEntry[] = Array.isArray(authFilesJson)
+          ? authFilesJson
+          : Array.isArray((authFilesJson as Record<string, unknown>)?.auth_files)
+            ? (authFilesJson as Record<string, unknown>).auth_files as AuthFileEntry[]
+            : [];
+        for (const entry of entries) {
+          if (entry.auth_index) {
+            authIndexToFile.set(entry.auth_index, {
+              fileName: entry.file_name ?? "",
+              email: entry.email ?? "",
+            });
+          }
+        }
+      } catch {
+        logger.warn("Failed to parse auth-files response");
+      }
     }
 
     if (!usageResponse.ok) {
@@ -251,18 +286,30 @@ export async function POST(request: NextRequest) {
           let resolvedUserId: string | null = null;
           let resolvedApiKeyId: string | null = null;
 
-          const keyInfo = keyMap.get(authIndex);
-          if (keyInfo) {
-            resolvedUserId = keyInfo.userId;
-            resolvedApiKeyId = keyInfo.apiKeyId;
+          const authFile = authIndexToFile.get(authIndex);
+          if (authFile) {
+            const byFile = sourceToUser.get(authFile.fileName.toLowerCase());
+            if (byFile) {
+              resolvedUserId = byFile;
+            } else if (authFile.email) {
+              resolvedUserId = sourceToUser.get(authFile.email.toLowerCase()) ?? null;
+            }
           }
 
           if (!resolvedUserId && detail.source) {
-            const matchedUserId = sourceToUser.get(detail.source.toLowerCase());
-            if (matchedUserId) {
-              resolvedUserId = matchedUserId;
-              resolvedApiKeyId = userToApiKey.get(matchedUserId) ?? null;
+            resolvedUserId = sourceToUser.get(detail.source.toLowerCase()) ?? null;
+          }
+
+          if (!resolvedUserId) {
+            const keyInfo = keyMap.get(authIndex);
+            if (keyInfo) {
+              resolvedUserId = keyInfo.userId;
+              resolvedApiKeyId = keyInfo.apiKeyId;
             }
+          }
+
+          if (resolvedUserId && !resolvedApiKeyId) {
+            resolvedApiKeyId = userToApiKey.get(resolvedUserId) ?? null;
           }
 
           candidates.push({

@@ -144,6 +144,7 @@ export function QuickStartConfigSection({
               proxyModelIds={availableModels}
               excludedModels={excludedModels}
               agentOverrides={agentOverrides}
+              modelSourceMap={modelSourceMap}
             />
           </div>
         </details>

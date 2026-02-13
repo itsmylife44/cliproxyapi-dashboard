@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import {
+  MODEL_PROVIDER_ORDER,
+  type ModelProviderName,
+  groupModelsByProvider,
+} from "@/lib/providers/model-grouping";
 
 interface ModelSelectorProps {
   availableModels: string[];
@@ -18,81 +23,8 @@ const SAVE_STATUS = {
 
 type SaveStatus = (typeof SAVE_STATUS)[keyof typeof SAVE_STATUS];
 
-const PROVIDER_ORDER = [
-  "Claude",
-  "Gemini",
-  "Antigravity",
-  "OpenAI/Codex",
-  "OpenAI-Compatible",
-  "Other",
-] as const;
-
-type ProviderName = (typeof PROVIDER_ORDER)[number];
-
-interface ModelGroup {
-  provider: ProviderName;
-  models: string[];
-}
-
 function buildExcludedSignature(models: Iterable<string>): string {
   return JSON.stringify(Array.from(models).sort((a, b) => a.localeCompare(b)));
-}
-
-function detectProvider(modelId: string, sourceMap?: Map<string, string>): ProviderName {
-  // Prefer explicit source metadata
-  const source = sourceMap?.get(modelId);
-  if (source && PROVIDER_ORDER.includes(source as ProviderName)) {
-    return source as ProviderName;
-  }
-
-  // Fallback to heuristic detection
-  const lower = modelId.toLowerCase();
-  
-  if (lower.startsWith("claude-")) return "Claude";
-  if (lower.startsWith("gemini-")) return "Gemini";
-  if (
-    lower.startsWith("gpt-") ||
-    lower.startsWith("o1") ||
-    lower.startsWith("o3") ||
-    lower.startsWith("o4") ||
-    lower.includes("codex")
-  ) {
-    return "OpenAI/Codex";
-  }
-  if (
-    lower.startsWith("openrouter/") ||
-    lower.startsWith("groq/") ||
-    lower.startsWith("xai/") ||
-    lower.startsWith("deepseek/") ||
-    lower.startsWith("anthropic/") ||
-    lower.startsWith("google/")
-  ) {
-    return "OpenAI-Compatible";
-  }
-  
-  return "Other";
-}
-
-function groupModelsByProvider(models: string[], sourceMap?: Map<string, string>): ModelGroup[] {
-  const grouped = new Map<ProviderName, string[]>();
-  
-  for (const model of models) {
-    const provider = detectProvider(model, sourceMap);
-    const existing = grouped.get(provider) || [];
-    existing.push(model);
-    grouped.set(provider, existing);
-  }
-  
-  // Sort models within each group alphabetically
-  for (const models of grouped.values()) {
-    models.sort((a, b) => a.localeCompare(b));
-  }
-  
-  // Return in fixed provider order
-  return PROVIDER_ORDER.map((provider) => ({
-    provider,
-    models: grouped.get(provider) || [],
-  })).filter((group) => group.models.length > 0);
 }
 
 export function ModelSelector({
@@ -107,8 +39,8 @@ export function ModelSelector({
   );
   const [isOpen, setIsOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>(SAVE_STATUS.IDLE);
-  const [expandedGroups, setExpandedGroups] = useState<Set<ProviderName>>(
-    () => new Set(PROVIDER_ORDER)
+  const [expandedGroups, setExpandedGroups] = useState<Set<ModelProviderName>>(
+    () => new Set(MODEL_PROVIDER_ORDER)
   );
   const isFirstRender = useRef(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -117,7 +49,7 @@ export function ModelSelector({
 
   const modelGroups = groupModelsByProvider(availableModels, modelSourceMap);
 
-  const toggleGroupExpansion = (provider: ProviderName) => {
+  const toggleGroupExpansion = (provider: ModelProviderName) => {
     setExpandedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(provider)) {
@@ -152,7 +84,7 @@ export function ModelSelector({
   const handleDeselectAll = () => {
     const allModels = new Set(availableModels);
     setExcludedModels(allModels);
-    onSelectionChange(availableModels);
+    onSelectionChange(Array.from(allModels));
   };
 
   const handleGroupSelectAll = (groupModels: string[]) => {

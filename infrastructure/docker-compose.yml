@@ -80,6 +80,7 @@ services:
       DATABASE_URL: postgresql://cliproxyapi:${POSTGRES_PASSWORD}@postgres:5432/cliproxyapi
       CLIPROXYAPI_MANAGEMENT_URL: http://cliproxyapi:8317/v0/management
       MANAGEMENT_API_KEY: ${MANAGEMENT_API_KEY}
+      COLLECTOR_API_KEY: ${COLLECTOR_API_KEY:-}
       JWT_SECRET: ${JWT_SECRET}
       NODE_ENV: production
       API_URL: ${API_URL}

@@ -257,6 +257,51 @@ client.connect()
       ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_userId_fkey"
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- Usage records table (persistent usage tracking)
+    CREATE TABLE IF NOT EXISTS "usage_records" (
+      "id" TEXT NOT NULL,
+      "authIndex" TEXT NOT NULL,
+      "apiKeyId" TEXT,
+      "userId" TEXT,
+      "model" TEXT NOT NULL,
+      "source" TEXT NOT NULL,
+      "timestamp" TIMESTAMP(3) NOT NULL,
+      "inputTokens" INTEGER NOT NULL DEFAULT 0,
+      "outputTokens" INTEGER NOT NULL DEFAULT 0,
+      "reasoningTokens" INTEGER NOT NULL DEFAULT 0,
+      "cachedTokens" INTEGER NOT NULL DEFAULT 0,
+      "totalTokens" INTEGER NOT NULL DEFAULT 0,
+      "failed" BOOLEAN NOT NULL DEFAULT false,
+      "collectedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "usage_records_pkey" PRIMARY KEY ("id")
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS "usage_dedup_key" ON "usage_records"("authIndex", "model", "timestamp", "source", "totalTokens");
+    CREATE INDEX IF NOT EXISTS "usage_records_userId_idx" ON "usage_records"("userId");
+    CREATE INDEX IF NOT EXISTS "usage_records_authIndex_idx" ON "usage_records"("authIndex");
+    CREATE INDEX IF NOT EXISTS "usage_records_timestamp_idx" ON "usage_records"("timestamp");
+    CREATE INDEX IF NOT EXISTS "usage_records_model_idx" ON "usage_records"("model");
+    CREATE INDEX IF NOT EXISTS "usage_records_userId_timestamp_idx" ON "usage_records"("userId", "timestamp");
+    CREATE INDEX IF NOT EXISTS "usage_records_authIndex_timestamp_idx" ON "usage_records"("authIndex", "timestamp");
+    DO $$ BEGIN
+      ALTER TABLE "usage_records" ADD CONSTRAINT "usage_records_userId_fkey"
+        FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE "usage_records" ADD CONSTRAINT "usage_records_apiKeyId_fkey"
+        FOREIGN KEY ("apiKeyId") REFERENCES "user_api_keys"("id") ON DELETE SET NULL;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- Collector state table (tracks last collection timestamp)
+    CREATE TABLE IF NOT EXISTS "collector_state" (
+      "id" TEXT NOT NULL,
+      "lastCollectedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "lastStatus" TEXT NOT NULL DEFAULT 'idle',
+      "recordsStored" INTEGER NOT NULL DEFAULT 0,
+      "errorMessage" TEXT,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "collector_state_pkey" PRIMARY KEY ("id")
+    );
   `))
   .then(() => {
     console.log('[dashboard] Tables ready');

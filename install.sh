@@ -475,6 +475,7 @@ echo ""
 JWT_SECRET=$(openssl rand -base64 32)
 MANAGEMENT_API_KEY=$(openssl rand -hex 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 32)
+COLLECTOR_API_KEY=$(openssl rand -hex 32)
 
 log_success "Secrets generated"
 
@@ -521,6 +522,7 @@ POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 # Dashboard secrets
 JWT_SECRET=$JWT_SECRET
 MANAGEMENT_API_KEY=$MANAGEMENT_API_KEY
+COLLECTOR_API_KEY=$COLLECTOR_API_KEY
 
 # Management API URL
 CLIPROXYAPI_MANAGEMENT_URL=http://cliproxyapi:8317/v0/management
@@ -669,6 +671,34 @@ if [ "$BACKUP_INTERVAL" != "none" ]; then
     
     echo ""
 fi
+
+# ============================================================================
+# USAGE COLLECTOR CRON JOB
+# ============================================================================
+
+log_info "=== Usage Collector Cron Job ==="
+echo ""
+
+log_info "Setting up usage data collection (every 5 minutes)..."
+log_info "This prevents data loss when the proxy restarts."
+
+if [ $EXTERNAL_PROXY -eq 1 ]; then
+    COLLECTOR_URL="http://127.0.0.1:3000"
+else
+    COLLECTOR_URL="https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
+fi
+
+COLLECTOR_CRON_SCHEDULE="*/5 * * * *"
+COLLECTOR_CRON_CMD="curl -sf -X POST ${COLLECTOR_URL}/api/usage/collect -H 'Authorization: Bearer ${COLLECTOR_API_KEY}' -o /dev/null"
+
+if crontab -l 2>/dev/null | grep -q "/api/usage/collect"; then
+    log_warning "Usage collector cron job already exists"
+else
+    (crontab -l 2>/dev/null || true; echo "# CLIProxyAPI usage collector (every 5 minutes)"; echo "$COLLECTOR_CRON_SCHEDULE $COLLECTOR_CRON_CMD") | crontab -
+    log_success "Usage collector cron job installed (every 5 minutes)"
+fi
+
+echo ""
 
 # ============================================================================
 # EXTERNAL PROXY MODE SETUP

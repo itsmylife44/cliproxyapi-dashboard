@@ -29,6 +29,7 @@ model User {
   providerOAuth       ProviderOAuthOwnership[]
   customProviders     CustomProvider[]
   auditLogs           AuditLog[]
+  usageRecords        UsageRecord[]
 
   @@map("users")
 }
@@ -82,7 +83,8 @@ model UserApiKey {
   lastUsedAt DateTime?
   createdAt  DateTime  @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usageRecords UsageRecord[]
 
   @@index([userId])
   @@map("user_api_keys")
@@ -220,4 +222,44 @@ model AuditLog {
   @@index([createdAt])
   @@index([action])
   @@map("audit_logs")
+}
+
+model UsageRecord {
+  id              String   @id @default(cuid())
+  authIndex       String
+  apiKeyId        String?
+  userId          String?
+  model           String
+  source          String
+  timestamp       DateTime
+  inputTokens     Int      @default(0)
+  outputTokens    Int      @default(0)
+  reasoningTokens Int      @default(0)
+  cachedTokens    Int      @default(0)
+  totalTokens     Int      @default(0)
+  failed          Boolean  @default(false)
+  collectedAt     DateTime @default(now())
+
+  user   User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  apiKey UserApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+
+  @@unique([authIndex, model, timestamp, source, totalTokens], name: "usage_dedup_key")
+  @@index([userId])
+  @@index([authIndex])
+  @@index([timestamp])
+  @@index([model])
+  @@index([userId, timestamp])
+  @@index([authIndex, timestamp])
+  @@map("usage_records")
+}
+
+model CollectorState {
+  id              String   @id @default(cuid())
+  lastCollectedAt DateTime @default(now())
+  lastStatus      String   @default("idle")
+  recordsStored   Int      @default(0)
+  errorMessage    String?
+  updatedAt       DateTime @updatedAt
+
+  @@map("collector_state")
 }

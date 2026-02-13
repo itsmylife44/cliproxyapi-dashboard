@@ -41,8 +41,13 @@ interface ResponseData {
 }
 
 function isValidISODate(dateString: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(dateString)) return false;
   const date = new Date(dateString);
-  return !isNaN(date.getTime());
+  if (isNaN(date.getTime())) return false;
+  const [year, month, day] = dateString.split("T")[0].split("-").map(Number);
+  return date.getUTCFullYear() === year
+    && date.getUTCMonth() + 1 === month
+    && date.getUTCDate() === day;
 }
 
 export async function GET(request: NextRequest) {

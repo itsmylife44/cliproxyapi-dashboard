@@ -1,3 +1,9 @@
+/**
+ * DEPRECATED: This endpoint is replaced by /api/usage/history with persistent DB storage.
+ * This live-proxy route will be removed in a future version.
+ * Use /api/usage/history?from=YYYY-MM-DD&to=YYYY-MM-DD instead.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";

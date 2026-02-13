@@ -86,9 +86,23 @@ export async function GET(request: NextRequest) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: session.userId },
-      select: { isAdmin: true },
+      select: { isAdmin: true, username: true },
     });
     const isAdmin = user?.isAdmin ?? false;
+
+    let sourceFilter: string[] = [];
+    if (!isAdmin) {
+      const oauthOwnerships = await prisma.providerOAuthOwnership.findMany({
+        where: { userId: session.userId },
+        select: { accountName: true, accountEmail: true },
+      });
+      sourceFilter = [];
+      if (user?.username) sourceFilter.push(user.username);
+      for (const o of oauthOwnerships) {
+        if (o.accountEmail) sourceFilter.push(o.accountEmail);
+        sourceFilter.push(o.accountName);
+      }
+    }
 
     const usageRecords = await prisma.usageRecord.findMany({
       where: {
@@ -96,7 +110,16 @@ export async function GET(request: NextRequest) {
           gte: fromDate,
           lte: toDate,
         },
-        ...(isAdmin ? {} : { userId: session.userId }),
+        ...(isAdmin
+          ? {}
+          : {
+              OR: [
+                { userId: session.userId },
+                ...(sourceFilter.length > 0
+                  ? [{ source: { in: sourceFilter } }]
+                  : []),
+              ],
+            }),
       },
       include: {
         user: {

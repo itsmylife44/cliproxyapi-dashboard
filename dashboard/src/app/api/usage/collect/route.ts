@@ -200,19 +200,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKeys = await prisma.userApiKey.findMany({
-      select: {
-        id: true,
-        key: true,
-        userId: true,
-      },
-    });
+    const [apiKeys, oauthOwnerships, users] = await Promise.all([
+      prisma.userApiKey.findMany({
+        select: { id: true, key: true, userId: true },
+      }),
+      prisma.providerOAuthOwnership.findMany({
+        select: { accountName: true, accountEmail: true, userId: true },
+      }),
+      prisma.user.findMany({
+        select: { id: true, username: true },
+      }),
+    ]);
+
+    const sourceToUser = new Map<string, string>();
+    for (const o of oauthOwnerships) {
+      if (o.accountEmail) {
+        sourceToUser.set(o.accountEmail.toLowerCase(), o.userId);
+      }
+      sourceToUser.set(o.accountName.toLowerCase(), o.userId);
+    }
+    for (const u of users) {
+      sourceToUser.set(u.username.toLowerCase(), u.id);
+    }
 
     const keyMap = new Map<string, { apiKeyId: string; userId: string }>();
     for (const k of apiKeys) {
       const keyWithoutPrefix = k.key.startsWith("sk-") ? k.key.slice(3) : k.key;
       const prefix16 = keyWithoutPrefix.substring(0, 16);
       keyMap.set(prefix16, { apiKeyId: k.id, userId: k.userId });
+    }
+
+    const userToApiKey = new Map<string, string>();
+    for (const k of apiKeys) {
+      userToApiKey.set(k.userId, k.id);
     }
 
     const candidates: UsageRecordCandidate[] = [];
@@ -228,12 +248,27 @@ export async function POST(request: NextRequest) {
           const authIndex = detail.auth_index;
           if (!authIndex) continue;
 
+          let resolvedUserId: string | null = null;
+          let resolvedApiKeyId: string | null = null;
+
           const keyInfo = keyMap.get(authIndex);
+          if (keyInfo) {
+            resolvedUserId = keyInfo.userId;
+            resolvedApiKeyId = keyInfo.apiKeyId;
+          }
+
+          if (!resolvedUserId && detail.source) {
+            const matchedUserId = sourceToUser.get(detail.source.toLowerCase());
+            if (matchedUserId) {
+              resolvedUserId = matchedUserId;
+              resolvedApiKeyId = userToApiKey.get(matchedUserId) ?? null;
+            }
+          }
 
           candidates.push({
             authIndex,
-            apiKeyId: keyInfo?.apiKeyId ?? null,
-            userId: keyInfo?.userId ?? null,
+            apiKeyId: resolvedApiKeyId,
+            userId: resolvedUserId,
             model: modelName,
             source: detail.source || "",
             timestamp: new Date(detail.timestamp),

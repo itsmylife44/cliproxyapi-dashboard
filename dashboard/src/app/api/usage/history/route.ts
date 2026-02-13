@@ -148,12 +148,13 @@ export async function GET(request: NextRequest) {
     let totalFailureCount = 0;
 
     for (const record of usageRecords) {
-      const authIndex = record.authIndex;
+      const groupKey = record.apiKeyId ?? record.userId ?? record.authIndex;
 
-      if (!keyUsageMap[authIndex]) {
-        const keyName = record.apiKey?.name ?? `Key ${authIndex.slice(0, 6)}`;
+      if (!keyUsageMap[groupKey]) {
+        const keyName = record.apiKey?.name
+          ?? (record.user?.username ? record.user.username : `Key ${record.authIndex.slice(0, 6)}`);
 
-        keyUsageMap[authIndex] = {
+        keyUsageMap[groupKey] = {
           keyName,
           ...(isAdmin && record.user?.username ? { username: record.user.username } : {}),
           ...(isAdmin && record.userId ? { userId: record.userId } : {}),
@@ -169,7 +170,7 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      const keyUsage = keyUsageMap[authIndex];
+      const keyUsage = keyUsageMap[groupKey];
       keyUsage.totalRequests += 1;
       keyUsage.totalTokens += record.totalTokens;
       keyUsage.inputTokens += record.inputTokens;

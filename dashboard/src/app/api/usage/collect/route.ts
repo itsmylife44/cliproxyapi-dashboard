@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
+import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
@@ -235,6 +236,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const syncResult = await syncKeysToCliProxyApi();
+    if (!syncResult.ok) {
+      logger.warn({ error: syncResult.error }, "API key sync failed before collection, continuing anyway");
+    }
+
     const [apiKeys, oauthOwnerships, users] = await Promise.all([
       prisma.userApiKey.findMany({
         select: { id: true, key: true, userId: true },
@@ -258,6 +264,11 @@ export async function POST(request: NextRequest) {
       sourceToUser.set(u.username.toLowerCase(), u.id);
     }
 
+    const fullKeyMap = new Map<string, { apiKeyId: string; userId: string }>();
+    for (const k of apiKeys) {
+      fullKeyMap.set(k.key, { apiKeyId: k.id, userId: k.userId });
+    }
+
     const keyMap = new Map<string, { apiKeyId: string; userId: string }>();
     for (const k of apiKeys) {
       const keyWithoutPrefix = k.key.startsWith("sk-") ? k.key.slice(3) : k.key;
@@ -272,9 +283,13 @@ export async function POST(request: NextRequest) {
 
     const candidates: UsageRecordCandidate[] = [];
 
-    for (const apiEntry of Object.values(rawData.apis)) {
+    for (const [apiGroupKey, apiEntry] of Object.entries(rawData.apis)) {
       const models = apiEntry.models as Record<string, ModelUsage> | undefined;
       if (!models) continue;
+
+      const keyGroupInfo = apiGroupKey.startsWith("sk-")
+        ? fullKeyMap.get(apiGroupKey) ?? null
+        : null;
 
       for (const [modelName, modelData] of Object.entries(models)) {
         if (!modelData.details || !Array.isArray(modelData.details)) continue;
@@ -286,13 +301,21 @@ export async function POST(request: NextRequest) {
           let resolvedUserId: string | null = null;
           let resolvedApiKeyId: string | null = null;
 
-          const authFile = authIndexToFile.get(authIndex);
-          if (authFile) {
-            const byFile = sourceToUser.get(authFile.fileName.toLowerCase());
-            if (byFile) {
-              resolvedUserId = byFile;
-            } else if (authFile.email) {
-              resolvedUserId = sourceToUser.get(authFile.email.toLowerCase()) ?? null;
+          // Resolution priority: 1) API key grouping 2) auth-files 3) source email 4) auth_index prefix
+          if (keyGroupInfo) {
+            resolvedUserId = keyGroupInfo.userId;
+            resolvedApiKeyId = keyGroupInfo.apiKeyId;
+          }
+
+          if (!resolvedUserId) {
+            const authFile = authIndexToFile.get(authIndex);
+            if (authFile) {
+              const byFile = sourceToUser.get(authFile.fileName.toLowerCase());
+              if (byFile) {
+                resolvedUserId = byFile;
+              } else if (authFile.email) {
+                resolvedUserId = sourceToUser.get(authFile.email.toLowerCase()) ?? null;
+              }
             }
           }
 

@@ -12,6 +12,7 @@ import {
   buildOhMyOpenCodeConfig,
   pickBestModel,
 } from "@/lib/config-generators/oh-my-opencode";
+import { groupModelsByProvider } from "@/lib/providers/model-grouping";
 import {
   type OhMyOpenCodeFullConfig,
   type AgentConfigEntry,
@@ -37,6 +38,7 @@ interface OhMyOpenCodeConfigGeneratorProps {
   proxyModelIds?: string[];
   excludedModels?: string[];
   agentOverrides?: OhMyOpenCodeFullConfig;
+  modelSourceMap?: Map<string, string>;
 }
 
 function downloadFile(content: string, filename: string) {
@@ -59,21 +61,6 @@ interface ExtraFieldConfig {
   thirdFieldPlaceholder: string;
 }
 
-const PROVIDER_ORDER = [
-  "Claude",
-  "Gemini",
-  "OpenAI/Codex",
-  "OpenAI-Compatible",
-  "Other",
-] as const;
-
-type ProviderName = (typeof PROVIDER_ORDER)[number];
-
-interface ModelGroup {
-  provider: ProviderName;
-  models: string[];
-}
-
 const TIER_META: Record<1 | 2 | 3 | 4, { label: string; hint: string }> = {
   1: { label: "Tier 1", hint: "Critical reasoning" },
   2: { label: "Tier 2", hint: "Planning and review" },
@@ -81,60 +68,13 @@ const TIER_META: Record<1 | 2 | 3 | 4, { label: string; hint: string }> = {
   4: { label: "Tier 4", hint: "Visual and creative" },
 };
 
-function detectProvider(modelId: string): ProviderName {
-  const lower = modelId.toLowerCase();
-
-  if (lower.startsWith("claude-")) return "Claude";
-  if (lower.startsWith("gemini-")) return "Gemini";
-  if (
-    lower.startsWith("gpt-") ||
-    lower.startsWith("o1") ||
-    lower.startsWith("o3") ||
-    lower.startsWith("o4") ||
-    lower.includes("codex")
-  ) {
-    return "OpenAI/Codex";
-  }
-  if (
-    lower.startsWith("openrouter/") ||
-    lower.startsWith("groq/") ||
-    lower.startsWith("xai/") ||
-    lower.startsWith("deepseek/") ||
-    lower.startsWith("anthropic/") ||
-    lower.startsWith("google/")
-  ) {
-    return "OpenAI-Compatible";
-  }
-
-  return "Other";
-}
-
-function groupModelsByProvider(models: string[]): ModelGroup[] {
-  const grouped = new Map<ProviderName, string[]>();
-
-  for (const model of models) {
-    const provider = detectProvider(model);
-    const existing = grouped.get(provider) ?? [];
-    existing.push(model);
-    grouped.set(provider, existing);
-  }
-
-  for (const providerModels of grouped.values()) {
-    providerModels.sort((a, b) => a.localeCompare(b));
-  }
-
-  return PROVIDER_ORDER.map((provider) => ({
-    provider,
-    models: grouped.get(provider) ?? [],
-  })).filter((group) => group.models.length > 0);
-}
-
 function ModelBadge({
   name,
   model,
   isOverride,
   showName = true,
   availableModels,
+  modelSourceMap,
   onSelect,
   extraFields,
   onFieldChange,
@@ -144,6 +84,7 @@ function ModelBadge({
   isOverride: boolean;
   showName?: boolean;
   availableModels: string[];
+  modelSourceMap?: Map<string, string>;
   onSelect: (value: string | undefined) => void;
   extraFields?: ExtraFieldConfig;
   onFieldChange?: (field: string, value: string | number | undefined) => void;
@@ -190,7 +131,7 @@ function ModelBadge({
   const filteredModels = search
     ? availableModels.filter((m) => m.toLowerCase().includes(search.toLowerCase()))
     : availableModels;
-  const groupedFilteredModels = groupModelsByProvider(filteredModels);
+  const groupedFilteredModels = groupModelsByProvider(filteredModels, modelSourceMap);
 
   return (
     <div className="relative" ref={ref}>
@@ -322,10 +263,11 @@ function ModelBadge({
 export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorProps) {
    const {
      apiKeys,
-     proxyModelIds,
-     excludedModels,
-     agentOverrides: initialOverrides,
-   } = props;
+      proxyModelIds,
+      excludedModels,
+      agentOverrides: initialOverrides,
+      modelSourceMap,
+    } = props;
    const [isExpanded, setIsExpanded] = useState(false);
    const [overrides, setOverrides] = useState<OhMyOpenCodeFullConfig>(initialOverrides ?? { agents: {}, categories: {} });
    const [saving, setSaving] = useState(false);
@@ -831,16 +773,17 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
                            <p className="truncate text-xs font-semibold text-white/90 font-mono">{name}</p>
                            <p className="truncate text-[11px] text-white/45">{label}</p>
                          </div>
-                         <ModelBadge
-                           name={name}
-                           model={model}
-                           isOverride={isOverride}
-                           showName={false}
-                           availableModels={availableModelIds}
-                           onSelect={(value) => handleAgentModelChange(name, value)}
-                           extraFields={{
-                             variant: config.variant,
-                             temperature: config.temperature,
+                          <ModelBadge
+                            name={name}
+                            model={model}
+                            isOverride={isOverride}
+                            showName={false}
+                            availableModels={availableModelIds}
+                            modelSourceMap={modelSourceMap}
+                            onSelect={(value) => handleAgentModelChange(name, value)}
+                            extraFields={{
+                              variant: config.variant,
+                              temperature: config.temperature,
                              thirdField: config.prompt_append,
                              thirdFieldKey: "prompt_append",
                              thirdFieldPlaceholder: "prompt append",
@@ -882,16 +825,17 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
                            <p className="truncate text-xs font-semibold text-white/90 font-mono">{name}</p>
                            <p className="truncate text-[11px] text-white/45">{label}</p>
                          </div>
-                         <ModelBadge
-                           name={name}
-                           model={model}
-                           isOverride={isOverride}
-                           showName={false}
-                           availableModels={availableModelIds}
-                           onSelect={(value) => handleCategoryModelChange(name, value)}
-                           extraFields={{
-                             variant: config.variant,
-                             temperature: config.temperature,
+                          <ModelBadge
+                            name={name}
+                            model={model}
+                            isOverride={isOverride}
+                            showName={false}
+                            availableModels={availableModelIds}
+                            modelSourceMap={modelSourceMap}
+                            onSelect={(value) => handleCategoryModelChange(name, value)}
+                            extraFields={{
+                              variant: config.variant,
+                              temperature: config.temperature,
                              thirdField: config.description,
                              thirdFieldKey: "description",
                              thirdFieldPlaceholder: "description",

@@ -45,18 +45,25 @@ interface UsageResponse {
 
 type DateFilter = "today" | "7d" | "30d" | "all" | "custom";
 
+function toLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function getDateRange(period: DateFilter, customFrom?: string, customTo?: string): { from: string; to: string } {
   const now = new Date();
-  const to = now.toISOString().split("T")[0];
+  const to = toLocalDateString(now);
   switch (period) {
     case "today": return { from: to, to };
     case "7d": {
       const d = new Date(now); d.setDate(d.getDate() - 7);
-      return { from: d.toISOString().split("T")[0], to };
+      return { from: toLocalDateString(d), to };
     }
     case "30d": {
       const d = new Date(now); d.setDate(d.getDate() - 30);
-      return { from: d.toISOString().split("T")[0], to };
+      return { from: toLocalDateString(d), to };
     }
     case "all": return { from: "2020-01-01", to: "2099-12-31" };
     case "custom": return { from: customFrom || to, to: customTo || to };

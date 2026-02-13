@@ -151,6 +151,7 @@ export async function POST(request: NextRequest) {
         headers: {
           Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
         },
+        signal: AbortSignal.timeout(30_000),
       });
     } catch (fetchError) {
       logger.error({ err: fetchError }, "Failed to connect to CLIProxyAPI");
@@ -296,6 +297,7 @@ export async function POST(request: NextRequest) {
         update: {
           lastCollectedAt: new Date(),
           lastStatus: "error",
+          recordsStored: 0,
           errorMessage: "Collection failed",
         },
       });

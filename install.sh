@@ -682,13 +682,14 @@ echo ""
 log_info "Setting up usage data collection (every 5 minutes)..."
 log_info "This prevents data loss when the proxy restarts."
 
-DASHBOARD_INTERNAL_URL="http://127.0.0.1:3000"
 if [ $EXTERNAL_PROXY -eq 1 ]; then
-    DASHBOARD_INTERNAL_URL="http://127.0.0.1:3000"
+    COLLECTOR_URL="http://127.0.0.1:3000"
+else
+    COLLECTOR_URL="https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
 fi
 
 COLLECTOR_CRON_SCHEDULE="*/5 * * * *"
-COLLECTOR_CRON_CMD="curl -sf -X POST ${DASHBOARD_INTERNAL_URL}/api/usage/collect -H 'Authorization: Bearer ${COLLECTOR_API_KEY}' -o /dev/null"
+COLLECTOR_CRON_CMD="curl -sf -X POST ${COLLECTOR_URL}/api/usage/collect -H 'Authorization: Bearer ${COLLECTOR_API_KEY}' -o /dev/null"
 
 if crontab -l 2>/dev/null | grep -q "/api/usage/collect"; then
     log_warning "Usage collector cron job already exists"

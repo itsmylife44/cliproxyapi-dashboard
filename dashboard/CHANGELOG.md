@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.4](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.3...dashboard-v0.1.4) (2026-02-14)
+
+
+### Bug Fixes
+
+* handle dashboard-v prefix in semver parsing for release tags ([d8e4109](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d8e410972a542b64df4e18865bb32a4012625817))
+* include docker-proxy in install script and deploy flow ([d3cdc97](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d3cdc975466ddd25a0abba97b286cf80a16ccfe3))
+* track all repo paths in release-please, not just dashboard/ ([46dbde0](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/46dbde01ad5556318c6e72f2ea92e9d491022694))
+
 ## [0.1.3](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.2...dashboard-v0.1.3) (2026-02-14)
 
 

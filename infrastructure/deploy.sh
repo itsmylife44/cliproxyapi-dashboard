@@ -97,7 +97,16 @@ else
     exit 1
 fi
 
-# Step 3: Docker Up
+# Step 3: Ensure docker-proxy is running
+update_status "proxy" "running" "Ensuring Docker socket proxy is running..."
+if docker compose up -d docker-proxy >> "$LOG_FILE" 2>&1; then
+    update_status "proxy" "completed" "Docker socket proxy is running"
+else
+    update_status "proxy" "failed" "Failed to start Docker socket proxy"
+    exit 1
+fi
+
+# Step 4: Docker Up
 update_status "deploy" "running" "Starting new dashboard container..."
 if docker compose up -d --no-deps dashboard >> "$LOG_FILE" 2>&1; then
     update_status "deploy" "completed" "Container started successfully"
@@ -106,7 +115,7 @@ else
     exit 1
 fi
 
-# Step 4: Health Check
+# Step 5: Health Check
 update_status "health" "running" "Waiting for health check..."
 sleep 5
 

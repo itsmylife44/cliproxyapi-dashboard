@@ -1,11 +1,12 @@
 {
   "packages": {
-    "dashboard": {
+    ".": {
       "release-type": "node",
       "component": "dashboard",
-      "changelog-path": "CHANGELOG.md",
+      "changelog-path": "dashboard/CHANGELOG.md",
       "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": true
+      "bump-patch-for-minor-pre-major": true,
+      "package-name": "dashboard"
     }
   },
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"

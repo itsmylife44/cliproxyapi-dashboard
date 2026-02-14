@@ -23,10 +23,10 @@ function getDismissedVersion(): string | null {
   }
 }
 
-function setDismissedVersion(digest: string): void {
+function setDismissedVersion(version: string): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(DISMISSED_KEY, digest);
+    localStorage.setItem(DISMISSED_KEY, version);
   } catch {
     // localStorage not available
   }
@@ -60,7 +60,7 @@ export function useUpdateCheck() {
       setIsAdmin(true);
 
       // Check for updates
-      const updateRes = await fetch("/api/update/check");
+      const updateRes = await fetch("/api/update/dashboard/check");
       if (!updateRes.ok) return;
       const data: UpdateInfo = await updateRes.json();
       
@@ -103,7 +103,7 @@ export function useUpdateCheck() {
     setIsUpdating(true);
     setUpdateError(null);
     try {
-      const res = await fetch("/api/update", {
+      const res = await fetch("/api/update/dashboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ version, confirm: true }),

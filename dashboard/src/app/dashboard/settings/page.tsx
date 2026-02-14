@@ -6,7 +6,16 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { DeployDashboard } from "@/components/deploy-dashboard";
 
-interface UpdateInfo {
+interface ProxyUpdateInfo {
+  currentVersion: string;
+  currentDigest: string;
+  latestVersion: string;
+  latestDigest: string;
+  updateAvailable: boolean;
+  availableVersions: string[];
+}
+
+interface DashboardUpdateInfo {
   currentVersion: string;
   latestVersion: string;
   updateAvailable: boolean;
@@ -38,9 +47,13 @@ export default function SettingsPage() {
   const [cliProxyVersion, setCliProxyVersion] = useState<string | null>(null);
   const [cliProxyLoading, setCliProxyLoading] = useState(true);
   
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
-  const [updateLoading, setUpdateLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
+  const [proxyUpdateInfo, setProxyUpdateInfo] = useState<ProxyUpdateInfo | null>(null);
+  const [proxyUpdateLoading, setProxyUpdateLoading] = useState(true);
+  const [proxyUpdating, setProxyUpdating] = useState(false);
+
+  const [dashboardUpdateInfo, setDashboardUpdateInfo] = useState<DashboardUpdateInfo | null>(null);
+  const [dashboardUpdateLoading, setDashboardUpdateLoading] = useState(true);
+  const [dashboardUpdating, setDashboardUpdating] = useState(false);
   const [revokingSessions, setRevokingSessions] = useState(false);
   
   const [syncTokens, setSyncTokens] = useState<SyncToken[]>([]);
@@ -52,18 +65,33 @@ export default function SettingsPage() {
   
   const { showToast } = useToast();
 
-  const fetchUpdateInfo = useCallback(async () => {
-    setUpdateLoading(true);
+  const fetchProxyUpdateInfo = useCallback(async () => {
+    setProxyUpdateLoading(true);
     try {
       const res = await fetch("/api/update/check");
       if (res.ok) {
         const data = await res.json();
-        setUpdateInfo(data);
+        setProxyUpdateInfo(data);
       }
     } catch {
       console.error("Failed to fetch update info");
     } finally {
-      setUpdateLoading(false);
+      setProxyUpdateLoading(false);
+    }
+  }, []);
+
+  const fetchDashboardUpdateInfo = useCallback(async () => {
+    setDashboardUpdateLoading(true);
+    try {
+      const res = await fetch("/api/update/dashboard/check");
+      if (res.ok) {
+        const data = await res.json();
+        setDashboardUpdateInfo(data);
+      }
+    } catch {
+      console.error("Failed to fetch dashboard update info");
+    } finally {
+      setDashboardUpdateLoading(false);
     }
   }, []);
 
@@ -107,9 +135,10 @@ export default function SettingsPage() {
     };
 
     fetchVersion();
-    fetchUpdateInfo();
+    fetchProxyUpdateInfo();
+    fetchDashboardUpdateInfo();
     fetchSyncTokens();
-  }, [fetchUpdateInfo, fetchSyncTokens]);
+  }, [fetchProxyUpdateInfo, fetchDashboardUpdateInfo, fetchSyncTokens]);
 
   const handlePasswordChange = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
@@ -151,12 +180,12 @@ export default function SettingsPage() {
     }
   };
 
-  const handleUpdate = async (version: string = "latest") => {
+  const handleProxyUpdate = async (version: string = "latest") => {
     if (!confirm(`Update CLIProxyAPI to ${version}? The service will restart.`)) {
       return;
     }
 
-    setUpdating(true);
+    setProxyUpdating(true);
     try {
       const res = await fetch("/api/update", {
         method: "POST",
@@ -167,7 +196,7 @@ export default function SettingsPage() {
       if (res.ok) {
         showToast(`Updated to ${version}. Service is restarting...`, "success");
         setTimeout(() => {
-          fetchUpdateInfo();
+          fetchProxyUpdateInfo();
         }, 10000);
       } else {
         const data = await res.json();
@@ -176,7 +205,39 @@ export default function SettingsPage() {
     } catch {
       showToast("Network error during update", "error");
     } finally {
-      setUpdating(false);
+      setProxyUpdating(false);
+    }
+  };
+
+  const handleDashboardUpdate = async (version: string = "latest") => {
+    if (!confirm(`Update Dashboard to ${version}? The container will restart.`)) {
+      return;
+    }
+
+    setDashboardUpdating(true);
+    try {
+      const res = await fetch("/api/update/dashboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ version, confirm: true }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (res.ok) {
+        const msg = typeof data?.message === "string" ? data.message : `Updated dashboard to ${version}`;
+        showToast(msg, "success");
+        setTimeout(() => {
+          fetchDashboardUpdateInfo();
+        }, 10000);
+      } else {
+        const errMsg = typeof data?.error === "string" ? data.error : "Update failed";
+        showToast(errMsg, "error");
+      }
+    } catch {
+      showToast("Network error during update", "error");
+    } finally {
+      setDashboardUpdating(false);
     }
   };
 
@@ -546,78 +607,150 @@ export default function SettingsPage() {
 
         <div className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
-                Dashboard Updates
-                {updateInfo?.updateAvailable && (
+                CLIProxyAPI Updates
+                {proxyUpdateInfo?.updateAvailable && (
                   <span className="rounded-sm border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
                     Update Available
                   </span>
                 )}
               </h3>
-             <div className="space-y-4">
-              {updateLoading ? (
-                <div className="text-slate-400">Checking for updates...</div>
-              ) : updateInfo ? (
-                <>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-                      <div className="text-sm font-medium text-slate-400">Current Version</div>
-                      <div className="mt-1 text-lg font-semibold text-slate-100">
-                        {updateInfo.currentVersion}
+              <div className="space-y-4">
+                {proxyUpdateLoading ? (
+                  <div className="text-slate-400">Checking for updates...</div>
+                ) : proxyUpdateInfo ? (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
+                        <div className="text-sm font-medium text-slate-400">Current Version</div>
+                        <div className="mt-1 text-lg font-semibold text-slate-100">
+                          {proxyUpdateInfo.currentVersion}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-400">
+                          Digest: <span className="font-mono text-slate-200">{proxyUpdateInfo.currentDigest}</span>
+                        </div>
+                      </div>
+                      <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
+                        <div className="text-sm font-medium text-slate-400">Latest Version</div>
+                        <div className="mt-1 text-lg font-semibold text-slate-100">
+                          {proxyUpdateInfo.latestVersion}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-400">
+                          Digest: <span className="font-mono text-slate-200">{proxyUpdateInfo.latestDigest}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-                      <div className="text-sm font-medium text-slate-400">Latest Version</div>
-                      <div className="mt-1 text-lg font-semibold text-slate-100">
-                        {updateInfo.latestVersion}
+
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+                      <Button
+                        onClick={() => handleProxyUpdate("latest")}
+                        disabled={proxyUpdating || !proxyUpdateInfo.updateAvailable}
+                      >
+                        {proxyUpdating ? "Updating..." : proxyUpdateInfo.updateAvailable ? "Update to Latest" : "Up to Date"}
+                      </Button>
+                      <Button variant="secondary" onClick={() => fetchProxyUpdateInfo()} disabled={proxyUpdateLoading}>
+                        Refresh
+                      </Button>
+                    </div>
+
+                    {proxyUpdateInfo.availableVersions.length > 0 && (
+                      <div className="border-t border-slate-700/70 pt-4">
+                        <div className="mb-2 text-sm font-medium text-slate-400">Available Versions</div>
+                        <div className="flex flex-wrap gap-2">
+                          {proxyUpdateInfo.availableVersions.slice(0, 5).map((v) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => handleProxyUpdate(v)}
+                              disabled={proxyUpdating}
+                              className="rounded-sm border border-slate-700/70 bg-slate-800/60 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-700/70 disabled:opacity-50"
+                            >
+                              {v}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      {updateInfo.releaseUrl && (
-                        <a
-                          href={updateInfo.releaseUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-0.5 block text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                    )}
+                  </>
+                ) : (
+                  <div className="text-slate-400">Failed to check for updates</div>
+                )}
+              </div>
+
+              <div className="border-t border-slate-700/70 pt-4">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+                  Dashboard Updates
+                  {dashboardUpdateInfo?.updateAvailable && (
+                    <span className="rounded-sm border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
+                      Update Available
+                    </span>
+                  )}
+                </h3>
+                <div className="mt-3 space-y-4">
+                  {dashboardUpdateLoading ? (
+                    <div className="text-slate-400">Checking for updates...</div>
+                  ) : dashboardUpdateInfo ? (
+                    <>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
+                          <div className="text-sm font-medium text-slate-400">Current Version</div>
+                          <div className="mt-1 text-lg font-semibold text-slate-100">
+                            {dashboardUpdateInfo.currentVersion}
+                          </div>
+                        </div>
+                        <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
+                          <div className="text-sm font-medium text-slate-400">Latest Version</div>
+                          <div className="mt-1 text-lg font-semibold text-slate-100">
+                            {dashboardUpdateInfo.latestVersion}
+                          </div>
+                          {dashboardUpdateInfo.releaseUrl && (
+                            <a
+                              href={dashboardUpdateInfo.releaseUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-0.5 block text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                            >
+                              View release notes
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+                        <Button
+                          onClick={() => handleDashboardUpdate("latest")}
+                          disabled={dashboardUpdating || !dashboardUpdateInfo.updateAvailable}
                         >
-                          View release notes
-                        </a>
+                          {dashboardUpdating ? "Updating..." : dashboardUpdateInfo.updateAvailable ? "Update to Latest" : "Up to Date"}
+                        </Button>
+                        <Button variant="secondary" onClick={() => fetchDashboardUpdateInfo()} disabled={dashboardUpdateLoading}>
+                          Refresh
+                        </Button>
+                      </div>
+
+                      {dashboardUpdateInfo.availableVersions.length > 0 && (
+                        <div className="border-t border-slate-700/70 pt-4">
+                          <div className="mb-2 text-sm font-medium text-slate-400">Available Versions</div>
+                          <div className="flex flex-wrap gap-2">
+                            {dashboardUpdateInfo.availableVersions.slice(0, 5).map((v) => (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => handleDashboardUpdate(v)}
+                                disabled={dashboardUpdating}
+                                className="rounded-sm border border-slate-700/70 bg-slate-800/60 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-700/70 disabled:opacity-50"
+                              >
+                                {v}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       )}
-                    </div>
-                 </div>
-
-                 <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-                   <Button
-                     onClick={() => handleUpdate("latest")}
-                     disabled={updating || !updateInfo.updateAvailable}
-                   >
-                     {updating ? "Updating..." : updateInfo.updateAvailable ? "Update to Latest" : "Up to Date"}
-                   </Button>
-                   <Button variant="secondary" onClick={() => fetchUpdateInfo()} disabled={updateLoading}>
-                     Refresh
-                   </Button>
-                 </div>
-
-                  {updateInfo.availableVersions.length > 0 && (
-                    <div className="border-t border-slate-700/70 pt-4">
-                      <div className="mb-2 text-sm font-medium text-slate-400">Available Versions</div>
-                      <div className="flex flex-wrap gap-2">
-                        {updateInfo.availableVersions.slice(0, 5).map((v) => (
-                          <button
-                           key={v}
-                           type="button"
-                           onClick={() => handleUpdate(v)}
-                           disabled={updating}
-                            className="rounded-sm border border-slate-700/70 bg-slate-800/60 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-700/70 disabled:opacity-50"
-                          >
-                            {v}
-                          </button>
-                       ))}
-                     </div>
-                   </div>
-                 )}
-                </>
-              ) : (
-                <div className="text-slate-400">Failed to check for updates</div>
-              )}
-             </div>
+                    </>
+                  ) : (
+                    <div className="text-slate-400">Failed to check for updates</div>
+                  )}
+                </div>
+              </div>
 
           <DeployDashboard />
 
@@ -653,8 +786,8 @@ export default function SettingsPage() {
                <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between text-slate-300">
                     <span>Dashboard Version:</span>
-                     <span className="font-mono">{updateInfo?.currentVersion || "dev"}</span>
-                   </div>
+                    <span className="font-mono">{dashboardUpdateInfo?.currentVersion || "dev"}</span>
+                  </div>
                   <div className="flex items-center justify-between text-slate-300">
                     <span>CLIProxyAPI:</span>
                     <span className="font-mono">

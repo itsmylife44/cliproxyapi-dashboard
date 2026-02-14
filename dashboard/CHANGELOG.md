@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.6](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.5...dashboard-v0.1.6) (2026-02-14)
+
+
+### Features
+
+* use pre-built GHCR images instead of local Docker builds ([0ac6e70](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/0ac6e70c8dce8016cd6c799f29ea88d8933c03ef))
+* use pre-built GHCR images instead of local Docker builds ([514242e](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/514242eeadee16b0c3e453d09b3bad6b4383b8ff))
+
+
+### Bug Fixes
+
+* remove misleading version parameter from dashboard update endpoint ([da32fc2](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/da32fc2fb433e9a4305eed7c8506453e984f1fa8))
+
 ## [0.1.5](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.4...dashboard-v0.1.5) (2026-02-14)
 
 

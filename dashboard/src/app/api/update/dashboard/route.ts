@@ -9,7 +9,6 @@ import { logger } from "@/lib/logger";
 const execFileAsync = promisify(execFile);
 
 const COMPOSE_DIR = process.env.COMPOSE_DIR || "/opt/cliproxyapi/infrastructure";
-const VERSION_PATTERN = /^(latest|\d+\.\d+\.\d+)$/;
 
 function getCommandErrorText(error: unknown): string {
   if (error instanceof Error) {
@@ -73,18 +72,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { version = "latest", confirm } = body;
+    const { confirm } = body;
 
     if (confirm !== true) {
       return NextResponse.json(
         { error: "Confirmation required" },
-        { status: 400 }
-      );
-    }
-
-    if (typeof version !== "string" || !VERSION_PATTERN.test(version)) {
-      return NextResponse.json(
-        { error: "Invalid version format" },
         { status: 400 }
       );
     }
@@ -111,8 +103,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Updated dashboard to ${version}`,
-      version,
+      message: "Dashboard updated to latest. Container is restarting.",
     });
   } catch (error) {
     logger.error({ err: error }, "Update error");

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.1...dashboard-v0.1.2) (2026-02-14)
+
+
+### Bug Fixes
+
+* use no-store cache and versioned user-agent for GitHub API calls ([ac2ea02](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/ac2ea02b4c17161690e41c84d97d40f48acd11f9))
+
 ## [0.1.1](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.0...dashboard-v0.1.1) (2026-02-14)
 
 

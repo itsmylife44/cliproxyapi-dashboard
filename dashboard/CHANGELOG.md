@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.2...dashboard-v0.1.3) (2026-02-14)
+
+
+### Bug Fixes
+
+* restore CLIProxyAPI proxy update routes alongside new dashboard update routes ([12b19b3](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/12b19b37e556ffaa42cb9dc5a759e2f6ebdf9597))
+
 ## [0.1.2](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.1...dashboard-v0.1.2) (2026-02-14)
 
 

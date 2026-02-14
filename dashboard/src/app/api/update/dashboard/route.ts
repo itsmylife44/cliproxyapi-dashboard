@@ -8,11 +8,8 @@ import { logger } from "@/lib/logger";
 
 const execFileAsync = promisify(execFile);
 
-const COMPOSE_FILE = "/opt/cliproxyapi/infrastructure/docker-compose.yml";
-const GITHUB_REPO = process.env.GITHUB_REPO || "itsmylife44/cliproxyapi-dashboard";
-const GHCR_IMAGE = `ghcr.io/${GITHUB_REPO}/dashboard`;
-const LOCAL_IMAGE = "cliproxyapi-dashboard:latest";
-const VERSION_PATTERN = /^(latest|v\d+\.\d+\.\d+)$/;
+const COMPOSE_DIR = process.env.COMPOSE_DIR || "/opt/cliproxyapi/infrastructure";
+const VERSION_PATTERN = /^(latest|\d+\.\d+\.\d+)$/;
 
 function getCommandErrorText(error: unknown): string {
   if (error instanceof Error) {
@@ -22,7 +19,7 @@ function getCommandErrorText(error: unknown): string {
 }
 
 async function runCompose(args: string[]) {
-  return execFileAsync("docker", ["compose", "-f", COMPOSE_FILE, ...args]);
+  return execFileAsync("docker", ["compose", ...args], { cwd: COMPOSE_DIR });
 }
 
 async function isComposeAvailable(): Promise<boolean> {
@@ -92,32 +89,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ghcrTag = `${GHCR_IMAGE}:${version}`;
     composeAvailable = await isComposeAvailable();
 
-    const pullResult = await execFileAsync("docker", ["pull", ghcrTag]);
+    if (!composeAvailable) {
+      return NextResponse.json(
+        { error: "Docker Compose not available in runtime" },
+        { status: 500 }
+      );
+    }
+
+    const pullResult = await runCompose(["pull", "dashboard"]);
     logger.info({ stdout: pullResult.stdout }, "Pull result");
 
-    await execFileAsync("docker", ["tag", ghcrTag, LOCAL_IMAGE]);
-    logger.info({ version }, "Tagged GHCR image as local compose image");
-
-    if (composeAvailable) {
-      await runCompose([
-        "up",
-        "-d",
-        "--no-deps",
-        "--force-recreate",
-        "dashboard",
-      ]);
-    } else {
-      logger.info("Compose unavailable — tagged image locally. Manual restart required.");
-      return NextResponse.json({
-        success: true,
-        message: `Pulled ${version}. Restart the dashboard container manually to apply.`,
-        version,
-        manualRestart: true,
-      });
-    }
+    await runCompose([
+      "up",
+      "-d",
+      "--no-deps",
+      "--force-recreate",
+      "dashboard",
+    ]);
 
     return NextResponse.json({
       success: true,

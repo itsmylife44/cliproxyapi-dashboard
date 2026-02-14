@@ -15,12 +15,8 @@ mkdir -p "$LOG_DIR"
 chmod 755 "$LOG_DIR"
 
 # Parse arguments
-NO_CACHE=""
 FOREGROUND=false
 for arg in "$@"; do
-    if [ "$arg" = "--no-cache" ]; then
-        NO_CACHE="--no-cache"
-    fi
     if [ "$arg" = "--foreground" ]; then
         FOREGROUND=true
     fi
@@ -87,13 +83,13 @@ else
     exit 1
 fi
 
-# Step 2: Docker Build
-update_status "build" "running" "Building dashboard container${NO_CACHE:+ (no cache)}..."
+# Step 2: Pull latest image
+update_status "pull" "running" "Pulling latest dashboard image from GHCR..."
 cd "$INFRA_DIR"
-if docker compose build $NO_CACHE dashboard >> "$LOG_FILE" 2>&1; then
-    update_status "build" "completed" "Docker build successful"
+if docker compose pull dashboard >> "$LOG_FILE" 2>&1; then
+    update_status "pull" "completed" "Image pull successful"
 else
-    update_status "build" "failed" "Docker build failed"
+    update_status "pull" "failed" "Image pull failed"
     exit 1
 fi
 

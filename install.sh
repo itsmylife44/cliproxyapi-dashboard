@@ -60,7 +60,7 @@ check_port_conflict() {
 }
 
 check_container_conflicts() {
-    local container_names=("cliproxyapi-caddy" "cliproxyapi" "cliproxyapi-dashboard" "cliproxyapi-postgres")
+    local container_names=("cliproxyapi-caddy" "cliproxyapi" "cliproxyapi-dashboard" "cliproxyapi-docker-proxy" "cliproxyapi-postgres")
     local conflicts=()
     
     # Only check if Docker is running
@@ -573,7 +573,7 @@ if [ $SKIP_SERVICE -eq 0 ]; then
     log_info "Creating systemd service..."
     
     if [ $EXTERNAL_PROXY -eq 1 ]; then
-        COMPOSE_SERVICES="postgres cliproxyapi dashboard"
+        COMPOSE_SERVICES="postgres cliproxyapi docker-proxy dashboard"
         COMPOSE_DESC="(without Caddy - using external reverse proxy)"
     else
         COMPOSE_SERVICES=""

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.5](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.4...dashboard-v0.1.5) (2026-02-14)
+
+
+### Bug Fixes
+
+* **ci:** reliable Docker build trigger with output fallback and workflow_dispatch ([2e1ae2e](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/2e1ae2ef3e1559040a5f9cad363e6b903a4aa873))
+* **ci:** reliable Docker build trigger with output fallback and workflow_dispatch ([e10b9c5](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/e10b9c5d8f276effd7ef806ae0a15881331fe8fe))
+
 ## [0.1.4](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.3...dashboard-v0.1.4) (2026-02-14)
 
 

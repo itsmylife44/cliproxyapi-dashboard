@@ -65,6 +65,41 @@ services:
       retries: 3
       start_period: 20s
 
+  # Docker Socket Proxy — restricts dashboard Docker access to safe operations only
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: cliproxyapi-docker-proxy
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      # Allow read-only container/image info + pull/restart operations
+      CONTAINERS: 1
+      IMAGES: 1
+      POST: 1
+      # Block dangerous operations
+      NETWORKS: 0
+      VOLUMES: 0
+      EXEC: 0
+      SERVICES: 0
+      SWARM: 0
+      NODES: 0
+      BUILD: 0
+      COMMIT: 0
+      CONFIGS: 0
+      SECRETS: 0
+      PLUGINS: 0
+      SYSTEM: 0
+      TASKS: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:2375/_ping || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
   # Dashboard Service
   dashboard:
     build:
@@ -85,15 +120,18 @@ services:
       NODE_ENV: production
       API_URL: ${API_URL}
       DASHBOARD_URL: ${DASHBOARD_URL}
+      DOCKER_HOST: tcp://docker-proxy:2375
+      GITHUB_REPO: ${GITHUB_REPO:-itsmylife44/cliproxyapi-dashboard}
     env_file:
       - ./.env
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - ${INSTALL_DIR:-.}/infrastructure:/opt/cliproxyapi/infrastructure:ro
     depends_on:
       postgres:
         condition: service_healthy
       cliproxyapi:
+        condition: service_healthy
+      docker-proxy:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]

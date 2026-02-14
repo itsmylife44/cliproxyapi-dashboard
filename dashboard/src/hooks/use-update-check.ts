@@ -4,14 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 
 interface UpdateInfo {
   currentVersion: string;
-  currentDigest: string;
   latestVersion: string;
-  latestDigest: string;
   updateAvailable: boolean;
   availableVersions: string[];
+  releaseUrl: string | null;
+  releaseNotes: string | null;
 }
 
-const DISMISSED_KEY = "cliproxyapi_update_dismissed";
+const DISMISSED_KEY = "dashboard_update_dismissed";
 const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 function getDismissedVersion(): string | null {
@@ -67,9 +67,8 @@ export function useUpdateCheck() {
       setUpdateInfo(data);
 
       if (data.updateAvailable) {
-        const dismissedDigest = getDismissedVersion();
-        // Only show popup if this version's digest hasn't been dismissed
-        if (dismissedDigest !== data.latestDigest) {
+        const dismissedVersion = getDismissedVersion();
+        if (dismissedVersion !== data.latestVersion) {
           setShowPopup(true);
         }
       } else {
@@ -94,8 +93,8 @@ export function useUpdateCheck() {
   }, [checkForUpdate]);
 
   const dismissUpdate = useCallback(() => {
-    if (updateInfo?.latestDigest) {
-      setDismissedVersion(updateInfo.latestDigest);
+    if (updateInfo?.latestVersion) {
+      setDismissedVersion(updateInfo.latestVersion);
     }
     setShowPopup(false);
   }, [updateInfo]);
@@ -115,9 +114,8 @@ export function useUpdateCheck() {
         throw new Error(data.error || "Update failed");
       }
 
-      // Update succeeded - clear dismissed version and close popup
-      if (updateInfo?.latestDigest) {
-        setDismissedVersion(updateInfo.latestDigest);
+      if (updateInfo?.latestVersion) {
+        setDismissedVersion(updateInfo.latestVersion);
       }
       setShowPopup(false);
       setUpdateInfo(null);

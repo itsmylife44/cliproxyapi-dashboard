@@ -22,10 +22,12 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 RUN apk add --no-cache docker-cli
+ARG DASHBOARD_VERSION=dev
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV COMPOSE_DIR=/opt/cliproxyapi/infrastructure
+ENV DASHBOARD_VERSION=${DASHBOARD_VERSION}
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static

@@ -69,21 +69,21 @@ export function UpdateNotification() {
               <p className="text-white font-mono text-sm font-medium">
                 {updateInfo.currentVersion || "unknown"}
               </p>
-              {updateInfo.currentDigest && (
-                <p className="text-white/30 font-mono text-[10px] mt-1 truncate">
-                  {updateInfo.currentDigest.slice(0, 20)}...
-                </p>
-              )}
             </div>
             <div className="rounded-xl bg-purple-500/10 border border-purple-500/20 p-3">
               <p className="text-[11px] uppercase tracking-wider text-purple-400/60 mb-1">Latest</p>
               <p className="text-purple-300 font-mono text-sm font-medium">
                 {updateInfo.latestVersion || "latest"}
               </p>
-              {updateInfo.latestDigest && (
-                <p className="text-purple-400/30 font-mono text-[10px] mt-1 truncate">
-                  {updateInfo.latestDigest.slice(0, 20)}...
-                </p>
+              {updateInfo.releaseUrl && (
+                <a
+                  href={updateInfo.releaseUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-400/60 text-[10px] mt-1 block hover:text-purple-300 transition-colors"
+                >
+                  View release notes
+                </a>
               )}
             </div>
           </div>

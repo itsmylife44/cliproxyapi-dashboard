@@ -49,9 +49,9 @@ async function getGitHubReleases(): Promise<GitHubRelease[]> {
     {
       headers: {
         Accept: "application/vnd.github+json",
-        "User-Agent": "cliproxyapi-dashboard",
+        "User-Agent": `cliproxyapi-dashboard/${DASHBOARD_VERSION}`,
       },
-      next: { revalidate: 300 },
+      cache: "no-store",
     }
   );
 

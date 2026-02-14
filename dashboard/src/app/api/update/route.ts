@@ -8,10 +8,10 @@ import { logger } from "@/lib/logger";
 
 const execFileAsync = promisify(execFile);
 
-const CONTAINER_NAME = "cliproxyapi-dashboard";
 const COMPOSE_FILE = "/opt/cliproxyapi/infrastructure/docker-compose.yml";
 const GITHUB_REPO = process.env.GITHUB_REPO || "itsmylife44/cliproxyapi-dashboard";
-const IMAGE_NAME = `ghcr.io/${GITHUB_REPO}/dashboard`;
+const GHCR_IMAGE = `ghcr.io/${GITHUB_REPO}/dashboard`;
+const LOCAL_IMAGE = "cliproxyapi-dashboard:latest";
 const VERSION_PATTERN = /^(latest|v\d+\.\d+\.\d+)$/;
 
 function getCommandErrorText(error: unknown): string {
@@ -92,16 +92,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const imageTag = `${IMAGE_NAME}:${version}`;
+    const ghcrTag = `${GHCR_IMAGE}:${version}`;
     composeAvailable = await isComposeAvailable();
 
-    const pullResult = await execFileAsync("docker", ["pull", imageTag]);
+    const pullResult = await execFileAsync("docker", ["pull", ghcrTag]);
     logger.info({ stdout: pullResult.stdout }, "Pull result");
 
-    if (composeAvailable && version !== "latest") {
-      await execFileAsync("docker", ["tag", imageTag, `${IMAGE_NAME}:latest`]);
-      logger.info({ version }, "Tagged selected version as latest for compose rollout");
-    }
+    await execFileAsync("docker", ["tag", ghcrTag, LOCAL_IMAGE]);
+    logger.info({ version }, "Tagged GHCR image as local compose image");
 
     if (composeAvailable) {
       await runCompose([
@@ -112,8 +110,7 @@ export async function POST(request: NextRequest) {
         "dashboard",
       ]);
     } else {
-      await execFileAsync("docker", ["pull", imageTag]);
-      logger.info("Compose unavailable — pulled image. Manual restart required.");
+      logger.info("Compose unavailable — tagged image locally. Manual restart required.");
       return NextResponse.json({
         success: true,
         message: `Pulled ${version}. Restart the dashboard container manually to apply.`,

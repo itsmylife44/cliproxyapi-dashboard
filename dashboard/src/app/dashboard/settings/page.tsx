@@ -8,11 +8,11 @@ import { DeployDashboard } from "@/components/deploy-dashboard";
 
 interface UpdateInfo {
   currentVersion: string;
-  currentDigest: string;
   latestVersion: string;
-  latestDigest: string;
   updateAvailable: boolean;
   availableVersions: string[];
+  releaseUrl: string | null;
+  releaseNotes: string | null;
 }
 
 interface SyncToken {
@@ -546,7 +546,7 @@ export default function SettingsPage() {
 
         <div className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
-                CLIProxyAPI Updates
+                Dashboard Updates
                 {updateInfo?.updateAvailable && (
                   <span className="rounded-sm border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
                     Update Available
@@ -564,18 +564,22 @@ export default function SettingsPage() {
                       <div className="mt-1 text-lg font-semibold text-slate-100">
                         {updateInfo.currentVersion}
                       </div>
-                      <div className="mt-0.5 truncate text-xs text-slate-500">
-                        Digest: {updateInfo.currentDigest}
-                      </div>
                     </div>
                     <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
                       <div className="text-sm font-medium text-slate-400">Latest Version</div>
                       <div className="mt-1 text-lg font-semibold text-slate-100">
                         {updateInfo.latestVersion}
                       </div>
-                      <div className="mt-0.5 truncate text-xs text-slate-500">
-                        Digest: {updateInfo.latestDigest}
-                      </div>
+                      {updateInfo.releaseUrl && (
+                        <a
+                          href={updateInfo.releaseUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-0.5 block text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          View release notes
+                        </a>
+                      )}
                     </div>
                  </div>
 
@@ -647,10 +651,10 @@ export default function SettingsPage() {
              <div className="mt-4 border-t border-slate-700/70 pt-4">
                <h3 className="mb-3 text-sm font-medium text-slate-400">Version Details</h3>
                <div className="space-y-2 text-sm">
-                 <div className="flex items-center justify-between text-slate-300">
-                   <span>Dashboard Version:</span>
-                    <span className="font-mono">1.0.0</span>
-                  </div>
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span>Dashboard Version:</span>
+                     <span className="font-mono">{updateInfo?.currentVersion || "dev"}</span>
+                   </div>
                   <div className="flex items-center justify-between text-slate-300">
                     <span>CLIProxyAPI:</span>
                     <span className="font-mono">

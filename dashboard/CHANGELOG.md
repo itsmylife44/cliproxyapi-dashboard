@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.7](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.6...dashboard-v0.1.7) (2026-02-14)
+
+
+### Bug Fixes
+
+* use webhook for dashboard self-update instead of docker compose ([bf8333f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/bf8333f978c0e2edea91da7896a0541557147acd))
+* use webhook for dashboard self-update instead of docker compose ([0d87236](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/0d87236412ca83e5b5f0788acc884b24500ee9e4))
+
 ## [0.1.6](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.5...dashboard-v0.1.6) (2026-02-14)
 
 

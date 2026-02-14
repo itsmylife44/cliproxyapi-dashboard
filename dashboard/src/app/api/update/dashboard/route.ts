@@ -2,44 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
-import { execFile } from "child_process";
-import { promisify } from "util";
 import { logger } from "@/lib/logger";
 
-const execFileAsync = promisify(execFile);
-
-const COMPOSE_DIR = process.env.COMPOSE_DIR || "/opt/cliproxyapi/infrastructure";
-
-function getCommandErrorText(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
-}
-
-async function runCompose(args: string[]) {
-  return execFileAsync("docker", ["compose", ...args], { cwd: COMPOSE_DIR });
-}
-
-async function isComposeAvailable(): Promise<boolean> {
-  try {
-    await execFileAsync("docker", ["compose", "version"]);
-    return true;
-  } catch (error) {
-    const errorText = getCommandErrorText(error);
-    const composeMissing =
-      errorText.includes("unknown command: docker compose") ||
-      errorText.includes("unknown shorthand flag: 'f' in -f");
-
-    if (composeMissing) {
-      logger.info("Docker compose not available in runtime");
-    } else {
-      logger.warn({ err: error }, "Compose availability check failed");
-    }
-
-    return false;
-  }
-}
+const WEBHOOK_HOST = process.env.WEBHOOK_HOST || "http://localhost:9000";
+const DEPLOY_SECRET = process.env.DEPLOY_SECRET || "";
 
 export async function POST(request: NextRequest) {
   const session = await verifySession();
@@ -68,8 +34,6 @@ export async function POST(request: NextRequest) {
     return originError;
   }
 
-  let composeAvailable = false;
-
   try {
     const body = await request.json();
     const { confirm } = body;
@@ -81,44 +45,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    composeAvailable = await isComposeAvailable();
-
-    if (!composeAvailable) {
+    if (!DEPLOY_SECRET) {
       return NextResponse.json(
-        { error: "Docker Compose not available in runtime" },
+        { error: "DEPLOY_SECRET not configured. Set up the webhook deploy service first." },
         { status: 500 }
       );
     }
 
-    const pullResult = await runCompose(["pull", "dashboard"]);
-    logger.info({ stdout: pullResult.stdout }, "Pull result");
+    const response = await fetch(`${WEBHOOK_HOST}/hooks/deploy-dashboard`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Deploy-Token": DEPLOY_SECRET,
+      },
+      body: JSON.stringify({}),
+    });
 
-    await runCompose([
-      "up",
-      "-d",
-      "--no-deps",
-      "--force-recreate",
-      "dashboard",
-    ]);
+    if (!response.ok) {
+      const text = await response.text();
+      logger.error({ status: response.status, body: text }, "Webhook trigger failed");
+      return NextResponse.json(
+        { error: "Failed to trigger update. Check webhook service." },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      message: "Dashboard updated to latest. Container is restarting.",
+      message: "Dashboard update triggered. The container will restart shortly.",
     });
   } catch (error) {
-    logger.error({ err: error }, "Update error");
-
-    try {
-      if (composeAvailable) {
-        await runCompose(["up", "-d", "--no-deps", "dashboard"]);
-        logger.info("Recovery: compose ensured dashboard service is up");
-      }
-    } catch (restartError) {
-      logger.error({ err: restartError }, "Recovery failed");
-    }
-
+    logger.error({ err: error }, "Dashboard update error");
     return NextResponse.json(
-      { error: "Update failed. Container may need manual restart." },
+      { error: "Failed to reach webhook service. Is it running?" },
       { status: 500 }
     );
   }

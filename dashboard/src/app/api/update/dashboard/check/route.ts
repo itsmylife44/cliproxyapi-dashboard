@@ -26,7 +26,7 @@ interface VersionInfo {
 }
 
 function parseVersion(tag: string): number[] | null {
-  const match = tag.replace(/^v/, "").match(/^(\d+)\.(\d+)\.(\d+)/);
+  const match = tag.replace(/^.*v/, "").match(/^(\d+)\.(\d+)\.(\d+)/);
   if (!match) return null;
   return [Number(match[1]), Number(match[2]), Number(match[3])];
 }

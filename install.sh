@@ -897,7 +897,7 @@ echo ""
 log_info "=== Dashboard Deploy Webhook (Optional) ==="
 echo ""
 log_info "The webhook service enables one-click dashboard updates from the admin panel."
-log_info "It runs a lightweight HTTP server that triggers git pull + docker compose build."
+log_info "It runs a lightweight HTTP server that triggers git pull + image pull + restart."
 echo ""
 
 read -p "Install webhook deploy service? [y/N]: " INSTALL_WEBHOOK

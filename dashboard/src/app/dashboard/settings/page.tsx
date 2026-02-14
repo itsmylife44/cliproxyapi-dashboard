@@ -209,8 +209,8 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDashboardUpdate = async (version: string = "latest") => {
-    if (!confirm(`Update Dashboard to ${version}? The container will restart.`)) {
+  const handleDashboardUpdate = async () => {
+    if (!confirm("Update Dashboard to latest version? The container will restart.")) {
       return;
     }
 
@@ -219,13 +219,13 @@ export default function SettingsPage() {
       const res = await fetch("/api/update/dashboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ version, confirm: true }),
+        body: JSON.stringify({ confirm: true }),
       });
 
       const data = await res.json().catch(() => null);
 
       if (res.ok) {
-        const msg = typeof data?.message === "string" ? data.message : `Updated dashboard to ${version}`;
+        const msg = typeof data?.message === "string" ? data.message : "Dashboard updated. Restarting...";
         showToast(msg, "success");
         setTimeout(() => {
           fetchDashboardUpdateInfo();
@@ -717,7 +717,7 @@ export default function SettingsPage() {
 
                       <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                         <Button
-                          onClick={() => handleDashboardUpdate("latest")}
+                          onClick={() => handleDashboardUpdate()}
                           disabled={dashboardUpdating || !dashboardUpdateInfo.updateAvailable}
                         >
                           {dashboardUpdating ? "Updating..." : dashboardUpdateInfo.updateAvailable ? "Update to Latest" : "Up to Date"}
@@ -726,25 +726,6 @@ export default function SettingsPage() {
                           Refresh
                         </Button>
                       </div>
-
-                      {dashboardUpdateInfo.availableVersions.length > 0 && (
-                        <div className="border-t border-slate-700/70 pt-4">
-                          <div className="mb-2 text-sm font-medium text-slate-400">Available Versions</div>
-                          <div className="flex flex-wrap gap-2">
-                            {dashboardUpdateInfo.availableVersions.slice(0, 5).map((v) => (
-                              <button
-                                key={v}
-                                type="button"
-                                onClick={() => handleDashboardUpdate(v)}
-                                disabled={dashboardUpdating}
-                                className="rounded-sm border border-slate-700/70 bg-slate-800/60 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-700/70 disabled:opacity-50"
-                              >
-                                {v}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </>
                   ) : (
                     <div className="text-slate-400">Failed to check for updates</div>

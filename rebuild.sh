@@ -1,22 +1,16 @@
 #!/bin/bash
-# Rebuild and restart all CLIProxyAPI Dashboard services
-# Usage: ./rebuild.sh [--no-cache]
+# Pull latest GHCR images and restart CLIProxyAPI Dashboard services
+# Usage: ./rebuild.sh
 
 set -e
 
 cd "$(dirname "$0")/infrastructure"
 
-echo "=== CLIProxyAPI Dashboard Rebuild ==="
+echo "=== CLIProxyAPI Dashboard Update ==="
 echo ""
 
-# Check for --no-cache flag
-if [ "$1" = "--no-cache" ]; then
-    echo "[1/3] Building all images (no cache)..."
-    docker compose build --no-cache
-else
-    echo "[1/3] Building all images..."
-    docker compose build
-fi
+echo "[1/3] Pulling latest images..."
+docker compose pull dashboard
 
 echo ""
 echo "[2/3] Stopping and removing old containers..."

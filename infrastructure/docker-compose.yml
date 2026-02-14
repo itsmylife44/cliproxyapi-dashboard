@@ -102,10 +102,7 @@ services:
 
   # Dashboard Service
   dashboard:
-    build:
-      context: ../dashboard
-      dockerfile: Dockerfile
-    image: cliproxyapi-dashboard:latest
+    image: ghcr.io/itsmylife44/cliproxyapi-dashboard/dashboard:latest
     container_name: cliproxyapi-dashboard
     restart: unless-stopped
     networks:

@@ -18,7 +18,7 @@ The CLIProxyAPI Dashboard is a comprehensive web management interface that provi
 - **OAuth Provider Management**: Connect and manage Claude, Gemini, Codex, Antigravity, iFlow, Kimi, and Qwen OAuth accounts
 - **Quota Monitoring**: Real-time quota and rate-limit tracking per provider account
 - **Usage Analytics**: Track API usage, request patterns, and provider statistics
-- **Service Updates**: One-click updates for CLIProxyAPI from Docker Hub
+- **Service Updates**: One-click updates for both CLIProxyAPI (Docker Hub) and Dashboard (GHCR) from the admin panel
 - **Dynamic OpenCode Configuration**: Generate OpenCode config snippets for quick integration
 - **Config Sync**: Automatically sync OpenCode and Oh-My-OpenCode configurations to your machine via the companion plugin
 
@@ -60,7 +60,8 @@ Built with **Next.js 16**, **React 19**, **Tailwind CSS v4**, **Prisma**, and **
 
 ### Technical Features
 - **Secure Authentication**: JWT-based authentication with bcrypt password hashing
-- **Docker Integration**: Direct Docker socket access for container management
+- **Docker Integration**: Secure Docker access via socket proxy for container management
+- **Automated Releases**: CI/CD pipeline with Release-Please, GHCR Docker images, and in-dashboard self-update
 - **Automatic TLS**: Let's Encrypt certificate provisioning via Caddy
 - **Database Persistence**: PostgreSQL for session storage and user management
 - **Responsive Design**: Mobile-first, glassmorphic dark-themed UI
@@ -125,9 +126,10 @@ The installer will:
 2. Install Docker and Docker Compose (if not already installed)
 3. Configure UFW firewall with required ports
 4. Generate secure secrets (JWT_SECRET, MANAGEMENT_API_KEY, POSTGRES_PASSWORD)
-5. Create `infrastructure/.env` with all required configuration
-6. Create a systemd service for automatic startup on boot
-7. Optionally set up automated daily or weekly backups
+5. Pull the pre-built dashboard image from GHCR
+6. Create `infrastructure/.env` with all required configuration
+7. Create a systemd service for automatic startup on boot
+8. Optionally set up automated daily or weekly backups
 
 > **Note**: The installer generates `infrastructure/.env` automatically. This file must not be empty or missing for the stack to start.
 
@@ -485,6 +487,8 @@ Comprehensive usage analytics:
 
 System settings and administration:
 - **User Management**: Change admin password
+- **Dashboard Updates**: Check for and install dashboard updates from GHCR
+- **CLIProxyAPI Updates**: Check for and install proxy updates from Docker Hub
 - **Config Sync**: Generate and manage sync tokens for automatic config synchronization with the `opencode-cliproxyapi-sync` OpenCode plugin
 - **System Configuration**: Update dashboard settings
 - **Backup/Restore**: Manage backups (if automated backups enabled)
@@ -492,7 +496,7 @@ System settings and administration:
 
 ## Architecture
 
-The CLIProxyAPI Dashboard stack consists of four Docker containers:
+The CLIProxyAPI Dashboard stack consists of five Docker containers:
 
 ```
                                    Internet
@@ -503,6 +507,8 @@ The CLIProxyAPI Dashboard stack consists of four Docker containers:
                     +----------------+------------------+
                     |                                   |
             [Dashboard:3000]                    [CLIProxyAPI:8317]
+                    |                                   |
+              [Docker Proxy]                            |
                     |                                   |
                     +----------------+------------------+
                                      |
@@ -520,7 +526,9 @@ The CLIProxyAPI Dashboard stack consists of four Docker containers:
   - Provides management UI
   - Authenticates users with JWT
   - Proxies management API calls to CLIProxyAPI
-  - Has Docker socket access for container management
+  - Accesses Docker via socket proxy for secure container management
+
+- **Docker Socket Proxy** (tecnativa/docker-socket-proxy): Restricts Docker API access to safe operations (containers, images). No direct socket mount on dashboard.
 
 - **CLIProxyAPI**: AI proxy server
   - Wraps OAuth CLI tools as OpenAI-compatible APIs
@@ -601,7 +609,7 @@ npm run dev
 - **Database ORM**: Prisma 7
 - **Database**: PostgreSQL 16
 - **Authentication**: JWT (jose) + bcrypt
-- **Container Management**: Docker SDK via socket
+- **Container Management**: Docker CLI via socket proxy
 
 ### Project Structure
 
@@ -613,8 +621,7 @@ cliproxyapi_dashboard/
 │   │   ├── components/       # React components
 │   │   ├── lib/              # Utility functions
 │   │   │   └── config-generators/  # OpenCode & Oh-My-OpenCode config logic
-│   │   ├── actions/          # Server actions
-│   │   └── generated/        # Prisma client
+│   │   └── generated/        # Prisma client (DO NOT EDIT)
 │   ├── prisma/               # Database schema & migrations
 │   ├── public/               # Static assets
 │   └── Dockerfile            # Production build
@@ -774,6 +781,8 @@ Then visit `/setup` again to create a new admin account.
    docker compose pull
    docker compose up -d
    ```
+   
+   Dashboard updates can also be applied from the Settings page in the admin panel.
 
 6. **Monitor Logs**:
    ```bash
@@ -822,6 +831,8 @@ Or add manually to your `opencode.json`:
   ]
 }
 ```
+
+The plugin supports OCX profiles — each profile can have its own sync config.
 
 For full plugin documentation, see [opencode-cliproxyapi-sync](https://github.com/itsmylife44/opencode-cliproxyapi-sync).
 
@@ -943,13 +954,16 @@ Contributions are welcome! To contribute:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) — Release-Please generates releases from commit messages.
 
 ### Development Guidelines
 
 - Follow existing code style and conventions
+- Use conventional commit messages (feat:, fix:, chore:, etc.)
 - Test changes locally before submitting PR
 - Update documentation for new features
 - Write clear commit messages

@@ -1,65 +1,62 @@
 import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import { logger } from "@/lib/logger";
 
-const GITHUB_REPO = process.env.GITHUB_REPO || "itsmylife44/cliproxyapi-dashboard";
-const DASHBOARD_VERSION = process.env.DASHBOARD_VERSION || "dev";
+const execFileAsync = promisify(execFile);
 
-interface GitHubRelease {
-  tag_name: string;
+interface DockerHubTag {
   name: string;
-  published_at: string;
-  html_url: string;
-  body: string;
-  prerelease: boolean;
-  draft: boolean;
+  last_updated: string;
+  digest: string;
 }
 
 interface VersionInfo {
   currentVersion: string;
+  currentDigest: string;
   latestVersion: string;
+  latestDigest: string;
   updateAvailable: boolean;
   availableVersions: string[];
-  releaseUrl: string | null;
-  releaseNotes: string | null;
 }
 
-function parseVersion(tag: string): number[] | null {
-  const match = tag.replace(/^v/, "").match(/^(\d+)\.(\d+)\.(\d+)/);
-  if (!match) return null;
-  return [Number(match[1]), Number(match[2]), Number(match[3])];
-}
-
-function isNewerVersion(current: string, latest: string): boolean {
-  const cur = parseVersion(current);
-  const lat = parseVersion(latest);
-  if (!cur || !lat) return false;
-
-  for (let i = 0; i < 3; i++) {
-    if (lat[i] > cur[i]) return true;
-    if (lat[i] < cur[i]) return false;
-  }
-  return false;
-}
-
-async function getGitHubReleases(): Promise<GitHubRelease[]> {
+async function getDockerHubTags(): Promise<DockerHubTag[]> {
   const response = await fetch(
-    `https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=20`,
-    {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "User-Agent": `cliproxyapi-dashboard/${DASHBOARD_VERSION}`,
-      },
-      cache: "no-store",
-    }
+    "https://hub.docker.com/v2/repositories/eceasy/cli-proxy-api/tags?page_size=20",
+    { cache: "no-store" }
   );
-
+  
   if (!response.ok) {
-    throw new Error(`GitHub API error: ${response.status}`);
+    throw new Error("Failed to fetch Docker Hub tags");
   }
+  
+  const data = await response.json();
+  return data.results || [];
+}
 
-  return response.json();
+async function getCurrentImageDigest(): Promise<{ version: string; digest: string; fullDigest: string }> {
+  try {
+    const { stdout } = await execFileAsync("docker", [
+      "inspect",
+      "cliproxyapi",
+      "--format",
+      "{{.Config.Image}} {{.Image}}",
+    ]);
+    
+    const [image, fullDigest] = stdout.trim().split(" ");
+    const tagVersion = image.includes(":") ? image.split(":")[1] : "latest";
+    const cleanDigest = fullDigest.replace("sha256:", "");
+    
+    return { 
+      version: tagVersion, 
+      digest: cleanDigest.substring(0, 12),
+      fullDigest: cleanDigest 
+    };
+  } catch {
+    return { version: "unknown", digest: "unknown", fullDigest: "unknown" };
+  }
 }
 
 export async function GET() {
@@ -85,33 +82,54 @@ export async function GET() {
   }
 
   try {
-    const releases = await getGitHubReleases();
+    const [tags, current] = await Promise.all([
+      getDockerHubTags(),
+      getCurrentImageDigest(),
+    ]);
 
-    const stableReleases = releases.filter((r) => !r.prerelease && !r.draft);
+    const latestTag = tags.find((t) => t.name === "latest");
+    const latestDigest = latestTag 
+      ? latestTag.digest.replace("sha256:", "").substring(0, 12)
+      : "unknown";
 
-    const sortedReleases = stableReleases
-      .filter((r) => parseVersion(r.tag_name) !== null)
+    const versionedTags = tags
+      .filter((t) => t.name !== "latest" && t.name.startsWith("v"))
+      .map((t) => ({ name: t.name, digest: t.digest.replace("sha256:", "") }))
       .sort((a, b) => {
-        const aParts = parseVersion(a.tag_name)!;
-        const bParts = parseVersion(b.tag_name)!;
+        const aParts = a.name.replace("v", "").split(".").map(Number);
+        const bParts = b.name.replace("v", "").split(".").map(Number);
         for (let i = 0; i < 3; i++) {
-          if (bParts[i] !== aParts[i]) return bParts[i] - aParts[i];
+          if ((bParts[i] || 0) !== (aParts[i] || 0)) {
+            return (bParts[i] || 0) - (aParts[i] || 0);
+          }
         }
         return 0;
       });
 
-    const latestRelease = sortedReleases[0] ?? null;
-    const latestVersion = latestRelease?.tag_name ?? DASHBOARD_VERSION;
+    let resolvedCurrentVersion = current.version;
+    if (current.version === "latest" && current.fullDigest !== "unknown") {
+      const matchingTag = versionedTags.find((t) => 
+        t.digest.startsWith(current.fullDigest.substring(0, 12)) ||
+        current.fullDigest.startsWith(t.digest.substring(0, 12))
+      );
+      if (matchingTag) {
+        resolvedCurrentVersion = matchingTag.name;
+      }
+    }
+
+    const versionNames = versionedTags.map((t) => t.name);
+
+    const updateAvailable = latestDigest !== "unknown" && 
+      current.digest !== "unknown" && 
+      latestDigest !== current.digest;
 
     const versionInfo: VersionInfo = {
-      currentVersion: DASHBOARD_VERSION,
-      latestVersion,
-      updateAvailable: latestRelease
-        ? isNewerVersion(DASHBOARD_VERSION, latestRelease.tag_name)
-        : false,
-      availableVersions: sortedReleases.slice(0, 10).map((r) => r.tag_name),
-      releaseUrl: latestRelease?.html_url ?? null,
-      releaseNotes: latestRelease?.body?.slice(0, 2000) ?? null,
+      currentVersion: resolvedCurrentVersion,
+      currentDigest: current.digest,
+      latestVersion: versionNames[0] || "latest",
+      latestDigest,
+      updateAvailable,
+      availableVersions: versionNames.slice(0, 10),
     };
 
     return NextResponse.json(versionInfo);

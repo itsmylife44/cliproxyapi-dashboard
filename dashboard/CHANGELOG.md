@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.14](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.13...dashboard-v0.1.14) (2026-02-15)
+
+
+### Bug Fixes
+
+* correct all repo directory references (underscore -&gt; hyphen) ([a0b1287](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a0b12875ac0ed0147570053698b6e695fa13a2f3))
+* correct repo URL in README (underscore -&gt; hyphen) ([80b38b6](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/80b38b6271350a318e73a8f4b2eb083eac9b5a2a))
+
 ## [0.1.13](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.12...dashboard-v0.1.13) (2026-02-15)
 
 

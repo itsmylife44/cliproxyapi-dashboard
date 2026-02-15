@@ -95,16 +95,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = FetchModelsSchema.parse(body);
 
-    // Normalize baseUrl: strip trailing slash and /v1 suffix
-    let normalizedBaseUrl = validated.baseUrl.replace(/\/+$/, "");
-    if (normalizedBaseUrl.endsWith("/v1")) {
-      normalizedBaseUrl = normalizedBaseUrl.slice(0, -3);
-    }
+    const normalizedBaseUrl = validated.baseUrl.replace(/\/+$/, "");
 
     // SSRF protection: block private/localhost hosts
     let parsedUrl: URL;
     try {
-      parsedUrl = new URL(`${normalizedBaseUrl}/v1/models`);
+      parsedUrl = new URL(`${normalizedBaseUrl}/models`);
     } catch {
       return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
     }

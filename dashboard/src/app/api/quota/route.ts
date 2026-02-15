@@ -357,6 +357,50 @@ async function fetchCodexQuota(
   }
 }
 
+interface KimiUsageDetail {
+  limit?: string;
+  used?: string;
+  remaining?: string;
+  resetTime?: string;
+}
+
+interface KimiUsagesResponse {
+  user?: {
+    userId?: string;
+    region?: string;
+    membership?: { level?: string };
+  };
+  usage?: KimiUsageDetail;
+  limits?: Array<{
+    window?: { duration?: number; timeUnit?: string };
+    detail?: KimiUsageDetail;
+  }>;
+}
+
+function formatKimiWindowLabel(duration: number, timeUnit: string): string {
+  if (timeUnit.includes("MINUTE")) {
+    if (duration >= 60 && duration % 60 === 0) return `${duration / 60}h Rate Limit`;
+    return `${duration}m Rate Limit`;
+  }
+  if (timeUnit.includes("HOUR")) return `${duration}h Rate Limit`;
+  if (timeUnit.includes("DAY")) return `${duration}d Rate Limit`;
+  return `${duration}s Rate Limit`;
+}
+
+function parseKimiUsageDetail(detail: KimiUsageDetail): {
+  remainingFraction: number;
+  resetTime: string | null;
+} {
+  const limit = Number(detail.limit ?? 0);
+  const remaining = Number(detail.remaining ?? 0);
+  const remainingFraction =
+    limit > 0 ? Math.max(0, Math.min(1, remaining / limit)) : 0;
+  return {
+    remainingFraction,
+    resetTime: detail.resetTime ?? null,
+  };
+}
+
 async function fetchKimiQuota(
   authIndex: string
 ): Promise<QuotaGroup[] | { error: string }> {
@@ -369,20 +413,11 @@ async function fetchKimiQuota(
       },
       body: JSON.stringify({
         auth_index: authIndex,
-        method: "POST",
-        url: "https://api.kimi.com/coding/v1/chat/completions",
+        method: "GET",
+        url: "https://api.kimi.com/coding/v1/usages",
         header: {
           Authorization: "Bearer $TOKEN$",
-          "Content-Type": "application/json",
-          "User-Agent": "KimiCLI/1.10.6",
-          "X-Msh-Platform": "kimi_cli",
-          "X-Msh-Version": "1.10.6",
         },
-        data: JSON.stringify({
-          model: "kimi-k2",
-          max_tokens: 1,
-          messages: [{ role: "user", content: "1" }],
-        }),
       }),
     });
 
@@ -397,43 +432,72 @@ async function fetchKimiQuota(
       return { error: `Provider API failed: ${statusCode}` };
     }
 
-    // Kimi has no rate-limit headers or quota API — a successful response means the account is active
-    const body = parseApiCallBody(apiCallResult);
-    const usage = (body as Record<string, unknown>)?.usage as
-      | { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
-      | undefined;
+    const body = parseApiCallBody(apiCallResult) as KimiUsagesResponse;
 
-    const groups: QuotaGroup[] = [
-      {
-        id: "kimi-status",
-        label: "Account Status",
-        remainingFraction: 1,
-        resetTime: null,
+    if (!body || typeof body !== "object") {
+      return { error: "Invalid Kimi usage response" };
+    }
+
+    const groups: QuotaGroup[] = [];
+
+    // Weekly/main quota
+    if (body.usage) {
+      const { remainingFraction, resetTime } = parseKimiUsageDetail(body.usage);
+      const limit = Number(body.usage.limit ?? 0);
+      const used = Number(body.usage.used ?? 0);
+
+      groups.push({
+        id: "kimi-weekly",
+        label: `Weekly Quota (${used}/${limit})`,
+        remainingFraction,
+        resetTime,
         models: [
           {
-            id: "kimi-k2",
-            displayName: "Kimi K2",
-            remainingFraction: 1,
-            resetTime: null,
-          },
-          {
-            id: "kimi-k2-thinking",
-            displayName: "Kimi K2 Thinking",
-            remainingFraction: 1,
-            resetTime: null,
-          },
-          {
-            id: "kimi-k2.5",
-            displayName: "Kimi K2.5",
-            remainingFraction: 1,
-            resetTime: null,
+            id: "kimi-weekly",
+            displayName: `Weekly Quota (${used}/${limit})`,
+            remainingFraction,
+            resetTime,
           },
         ],
-      },
-    ];
+      });
+    }
 
-    if (usage?.total_tokens !== undefined) {
-      logger.info({ usage }, "Kimi account verified with usage data");
+    // Rate limit windows (e.g. 5h sliding window)
+    if (Array.isArray(body.limits)) {
+      for (const entry of body.limits) {
+        const detail = entry.detail;
+        if (!detail) continue;
+
+        const { remainingFraction, resetTime } = parseKimiUsageDetail(detail);
+        const duration = entry.window?.duration ?? 0;
+        const timeUnit = entry.window?.timeUnit ?? "";
+        const label = duration > 0
+          ? formatKimiWindowLabel(duration, timeUnit)
+          : "Rate Limit";
+        const used = Number(detail.used ?? 0);
+        const limit = Number(detail.limit ?? 0);
+        const displayLabel = `${label} (${used}/${limit})`;
+        const id = `kimi-limit-${duration}${timeUnit}`.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+        groups.push({
+          id,
+          label: displayLabel,
+          remainingFraction,
+          resetTime,
+          models: [
+            {
+              id,
+              displayName: displayLabel,
+              remainingFraction,
+              resetTime,
+            },
+          ],
+        });
+      }
+    }
+
+    if (groups.length === 0) {
+      return { error: "No Kimi usage data available" };
     }
 
     return groups;

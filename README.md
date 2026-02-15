@@ -119,7 +119,7 @@ The fastest way to get started is using the automated installer:
 ```bash
 # Clone the repository
 git clone https://github.com/itsmylife44/cliproxyapi-dashboard.git
-cd cliproxyapi_dashboard
+cd cliproxyapi-dashboard
 
 # Run the installer (Ubuntu/Debian with root access)
 sudo ./install.sh
@@ -187,7 +187,7 @@ Run the full stack locally using Docker Desktop — no server, domain, or TLS re
 
 ```bash
 git clone https://github.com/itsmylife44/cliproxyapi-dashboard.git
-cd cliproxyapi_dashboard
+cd cliproxyapi-dashboard
 
 # Start the stack
 ./setup-local.sh
@@ -203,7 +203,7 @@ cd cliproxyapi_dashboard
 
 ```powershell
 git clone https://github.com/itsmylife44/cliproxyapi-dashboard.git
-cd cliproxyapi_dashboard
+cd cliproxyapi-dashboard
 
 # Start the stack
 .\setup-local.ps1
@@ -668,7 +668,7 @@ npm run dev
 ### Project Structure
 
 ```
-cliproxyapi_dashboard/
+cliproxyapi-dashboard/
 ├── dashboard/
 │   ├── src/
 │   │   ├── app/              # Next.js app router pages

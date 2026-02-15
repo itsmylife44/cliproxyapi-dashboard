@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.13](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.12...dashboard-v0.1.13) (2026-02-15)
+
+
+### Bug Fixes
+
+* add CLIProxyAPI config.yaml generation and auth-dir for local setup ([9dea7a6](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/9dea7a667cc27889c9f2821a7e273765208ce002))
+
 ## [0.1.12](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.11...dashboard-v0.1.12) (2026-02-15)
 
 

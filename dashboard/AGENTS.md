@@ -4,7 +4,7 @@
 
 ## OVERVIEW
 
-Primary web application. Next.js 16 App Router with Server Components, Prisma ORM, Tailwind v4 styling.
+Primary web application. Next.js 16 App Router with Server Components, Prisma ORM, Tailwind v4 styling. Manages CLIProxyAPI proxy via Management API.
 
 ## STRUCTURE
 
@@ -66,6 +66,8 @@ export function ClientComponent({ data }: Props) { ... }
 - **NEVER** import from `src/generated/prisma` directly → use `@/lib/db`
 - **NEVER** skip `entrypoint.sh` update for new tables
 - **NEVER** use Server Actions → use API routes only (project convention)
+- **NEVER** embed upstream provider base-urls or API keys in generated opencode config
+- **NEVER** allow user-provided URLs to reach private/localhost hosts (SSRF)
 
 ## KEY FILES
 

@@ -146,6 +146,7 @@ Available: `Errors.unauthorized()`, `.forbidden()`, `.notFound()`, `.validation(
 - Prisma calls in route handlers -- abstract into `src/lib/` functions
 - Skip `validateOrigin()` on POST/PATCH/DELETE -- always call it
 - Expose internal errors to client -- log + return generic message
+- Embed upstream provider credentials in opencode config -- custom provider models route through CLIProxyAPI proxy only
 
 ## GIT & CI/CD WORKFLOW
 
@@ -185,12 +186,16 @@ This project uses [Release-Please](https://github.com/googleapis/release-please)
 - **Docker Socket Proxy**: Dashboard uses `tcp://docker-proxy:2375` (tecnativa/docker-socket-proxy). No direct socket mount.
 - **Self-Update**: Dashboard checks for updates via GitHub Releases API (`/api/update/dashboard/check`), pulls from GHCR, tags as local compose image name, recreates container.
 - **Proxy Update**: CLIProxyAPI updates via Docker Hub digest comparison (`/api/update/check`).
+- **Restart Policy**: All containers use `unless-stopped`. Docker is systemd-enabled. Server survives reboot.
 
 ## ARCHITECTURE
 
 - **Dual-Write**: Provider keys in BOTH PostgreSQL + CLIProxyAPI config.yaml. `lib/providers/dual-write.ts` uses AsyncMutex. Never bypass.
-- **Config Sync**: User prefs -> `generate-bundle.ts` -> JSON -> CLI plugin fetches via `/api/config-sync/bundle`.
-- **Hotspots**: `oh-my-opencode-config-generator.tsx` (1344 lines), `providers/page.tsx` (1305), `dual-write.ts` (778), `generate-bundle.ts` (400).
+- **Config Sync**: User prefs -> `generate-bundle.ts` -> JSON -> CLI plugin fetches via `/api/config-sync/bundle`. Custom provider models come from proxy `/v1/models` — NEVER embed upstream base-urls or API keys in opencode config.
+- **Custom Provider Flow**: DB -> `PUT /v0/management/openai-compatibility` -> proxy routes requests -> models in `/v1/models` -> `buildAvailableModelsFromProxy()` includes them. Fetch Models UI helper queries provider `/models` endpoint for discovery only.
+- **Quota System**: OAuth-based only (Claude, Antigravity, Codex, Kimi). Uses CLIProxyAPI `/api-call` to proxy quota checks. Not extensible to custom API-key providers — no standard usage endpoint exists.
+- **SSRF Protection**: `fetch-models` route validates hostnames against private/localhost ranges including IPv4-mapped IPv6 (`::ffff:`).
+- **Hotspots**: `oh-my-opencode-config-generator.tsx` (1344 lines), `providers/page.tsx` (1305), `dual-write.ts` (778), `quota/route.ts` (980), `generate-bundle.ts` (400).
 
 ## CHILD AGENTS.md
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.8](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.7...dashboard-v0.1.8) (2026-02-15)
+
+
+### Features
+
+* add real Kimi quota tracking via /v1/usages endpoint ([1f3dde0](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/1f3dde0e717e4a5376a04fec25ef0cc6c2f68ded))
+* add real Kimi quota tracking via /v1/usages endpoint ([7ca9aaf](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/7ca9aaf19695c7a3df78bb31c2aeecf3305d877a))
+
 ## [0.1.7](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.6...dashboard-v0.1.7) (2026-02-14)
 
 

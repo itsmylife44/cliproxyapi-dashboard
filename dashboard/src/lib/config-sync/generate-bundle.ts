@@ -158,28 +158,6 @@ function extractCustomProviders(data: unknown): CustomProviderEntry[] {
   );
 }
 
-function buildCustomProviderModels(
-  customProviders: CustomProviderEntry[]
-): Record<string, ModelDefinition> {
-  const models: Record<string, ModelDefinition> = {};
-  
-  for (const provider of customProviders) {
-    for (const model of provider.models) {
-      const modelId = `${provider.name}/${model.alias}`;
-      models[modelId] = {
-        name: model.alias,
-        context: 200000,
-        output: 64000,
-        attachment: true,
-        reasoning: false,
-        modalities: { input: ["text", "image"], output: ["text"] },
-      };
-    }
-  }
-  
-  return models;
-}
-
 interface ConfigBundle {
   version: string;
   opencode: Record<string, unknown>;
@@ -310,7 +288,6 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
    const allModels: Record<string, ModelDefinition> = {
      ...buildAvailableModelsFromProxy(proxyModels),
      ...extractOAuthModelAliases(managementConfig as ConfigData | null, oauthAccounts),
-     ...buildCustomProviderModels(customProviders),
    };
 
    const filteredModels = Object.fromEntries(
@@ -356,30 +333,6 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
        models: modelEntries,
      },
    };
-
-   if (customProviders.length > 0) {
-     const openaiCompatibilityProviders: CustomProviderEntry[] = [];
-     for (const provider of customProviders) {
-       if (provider["api-key-entries"] && provider["api-key-entries"].length > 0) {
-         openaiCompatibilityProviders.push(provider);
-       }
-     }
-
-     if (openaiCompatibilityProviders.length > 0) {
-       providers.cliproxyapi = {
-         ...providers.cliproxyapi,
-         "openai-compatibility": openaiCompatibilityProviders.map((cp) => ({
-           name: cp.name,
-           prefix: cp.prefix,
-           "base-url": cp["base-url"],
-           "api-key-entries": cp["api-key-entries"],
-           models: cp.models,
-           ...(cp["excluded-models"] ? { "excluded-models": cp["excluded-models"] } : {}),
-           ...(cp.headers ? { headers: cp.headers } : {}),
-         })),
-       };
-     }
-   }
 
    const opencodeConfig: Record<string, unknown> = {
      $schema: "https://opencode.ai/config.json",

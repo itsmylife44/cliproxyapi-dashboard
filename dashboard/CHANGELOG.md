@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.12](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.11...dashboard-v0.1.12) (2026-02-15)
+
+
+### Features
+
+* add local setup for macOS/Windows/Linux via Docker Desktop ([#36](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/36)) ([030f663](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/030f663f65c1a526d40b54ef1d28b20f83399b11))
+
 ## [0.1.11](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.10...dashboard-v0.1.11) (2026-02-15)
 
 

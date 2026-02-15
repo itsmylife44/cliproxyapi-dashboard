@@ -25,30 +25,47 @@ interface OpenAIModelsResponse {
 /**
  * Block SSRF: reject URLs that resolve to localhost, private, or link-local addresses.
  */
+function isPrivateIPv4(a: number, b: number): boolean {
+  if (a === 10) return true;                          // 10.0.0.0/8
+  if (a === 172 && b >= 16 && b <= 31) return true;   // 172.16.0.0/12
+  if (a === 192 && b === 168) return true;             // 192.168.0.0/16
+  if (a === 169 && b === 254) return true;             // 169.254.0.0/16 (link-local / cloud metadata)
+  if (a === 127) return true;                          // 127.0.0.0/8
+  if (a === 0) return true;                            // 0.0.0.0/8
+  return false;
+}
+
+/**
+ * Block SSRF: reject localhost, private, link-local, and IPv4-mapped IPv6 addresses.
+ */
 function isPrivateHost(hostname: string): boolean {
   const lower = hostname.toLowerCase();
 
-  // Localhost variants
   if (lower === "localhost" || lower === "127.0.0.1" || lower === "[::1]" || lower === "0.0.0.0") {
     return true;
   }
 
-  // IPv4 private/reserved ranges
+  // IPv4 literal
   const ipv4Match = lower.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (ipv4Match) {
-    const [, a, b] = ipv4Match.map(Number);
-    if (a === 10) return true;                          // 10.0.0.0/8
-    if (a === 172 && b >= 16 && b <= 31) return true;   // 172.16.0.0/12
-    if (a === 192 && b === 168) return true;             // 192.168.0.0/16
-    if (a === 169 && b === 254) return true;             // 169.254.0.0/16 (link-local / cloud metadata)
-    if (a === 127) return true;                          // 127.0.0.0/8
-    if (a === 0) return true;                            // 0.0.0.0/8
+    return isPrivateIPv4(Number(ipv4Match[1]), Number(ipv4Match[2]));
   }
 
-  // IPv6 loopback and link-local (bracket-wrapped or bare)
+  // IPv6 (strip brackets for URL-style [::1])
   const ipv6 = lower.replace(/^\[|\]$/g, "");
   if (ipv6 === "::1" || ipv6.startsWith("fe80:") || ipv6.startsWith("fc") || ipv6.startsWith("fd")) {
     return true;
+  }
+
+  // IPv4-mapped IPv6: ::ffff:A.B.C.D (dotted) or ::ffff:AABB:CCDD (hex)
+  const dottedMatch = ipv6.match(/^::ffff:(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (dottedMatch) {
+    return isPrivateIPv4(Number(dottedMatch[1]), Number(dottedMatch[2]));
+  }
+  const hexMatch = ipv6.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hexMatch) {
+    const hi = parseInt(hexMatch[1], 16);
+    return isPrivateIPv4((hi >> 8) & 0xff, hi & 0xff);
   }
 
   return false;

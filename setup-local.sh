@@ -87,9 +87,7 @@ compose_down() {
 
 compose_reset() {
     docker compose -f "$COMPOSE_FILE" down -v
-    if [ -f "$ENV_FILE" ]; then
-        rm -f "$ENV_FILE"
-    fi
+    rm -f "$ENV_FILE" "${SCRIPT_DIR}/config.local.yaml"
 }
 
 generate_env_file() {
@@ -126,6 +124,35 @@ POSTGRES_PASSWORD=${postgres_password}
 EOF
 
     log_success "Created .env in project root"
+}
+
+generate_config_yaml() {
+    local config_file="${SCRIPT_DIR}/config.local.yaml"
+    if [ -f "$config_file" ]; then
+        return 0
+    fi
+
+    local api_key
+    api_key="sk-local-$(openssl rand -hex 16)"
+
+    cat > "$config_file" <<EOF
+host: ""
+port: 8317
+auth-dir: "/root/.cli-proxy-api"
+remote-management:
+  allow-remote: true
+  secret-key: "${MANAGEMENT_API_KEY:-$(grep MANAGEMENT_API_KEY "$ENV_FILE" 2>/dev/null | cut -d= -f2)}"
+api-keys:
+  - "${api_key}"
+request-retry: 3
+quota-exceeded:
+  switch-project: true
+  switch-preview-model: true
+routing:
+  strategy: "round-robin"
+EOF
+
+    log_success "Created config.local.yaml (API key: ${api_key})"
 }
 
 wait_for_health() {
@@ -195,6 +222,7 @@ main() {
     esac
 
     generate_env_file
+    generate_config_yaml
 
     log_info "Starting local stack..."
     docker compose -f "$COMPOSE_FILE" up -d

@@ -1,0 +1,130 @@
+# Local setup for macOS / Windows (Docker Desktop)
+# No Caddy, no TLS, no systemd — everything on localhost
+# Usage: docker compose -f docker-compose.local.yml up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cliproxyapi-postgres
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      POSTGRES_DB: cliproxyapi
+      POSTGRES_USER: cliproxyapi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cliproxyapi -d cliproxyapi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  cliproxyapi:
+    image: eceasy/cli-proxy-api:latest
+    container_name: cliproxyapi
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    environment:
+      MANAGEMENT_PASSWORD: ${MANAGEMENT_API_KEY}
+      DEPLOY: production
+    ports:
+      - "127.0.0.1:8317:8317"
+      - "127.0.0.1:8085:8085"
+      - "127.0.0.1:1455:1455"
+      - "127.0.0.1:54545:54545"
+      - "127.0.0.1:51121:51121"
+      - "127.0.0.1:11451:11451"
+    volumes:
+      - cliproxyapi_auths:/root/.cli-proxy-api
+      - cliproxyapi_logs:/CLIProxyAPI/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "-O", "/dev/null", "http://localhost:8317/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: cliproxyapi-docker-proxy
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      CONTAINERS: 1
+      IMAGES: 1
+      POST: 1
+      NETWORKS: 0
+      VOLUMES: 0
+      EXEC: 0
+      SERVICES: 0
+      SWARM: 0
+      NODES: 0
+      BUILD: 0
+      COMMIT: 0
+      CONFIGS: 0
+      SECRETS: 0
+      PLUGINS: 0
+      SYSTEM: 0
+      TASKS: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:2375/_ping || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  dashboard:
+    image: ghcr.io/itsmylife44/cliproxyapi-dashboard/dashboard:latest
+    container_name: cliproxyapi-dashboard
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_URL: postgresql://cliproxyapi:${POSTGRES_PASSWORD}@postgres:5432/cliproxyapi
+      CLIPROXYAPI_MANAGEMENT_URL: http://cliproxyapi:8317/v0/management
+      MANAGEMENT_API_KEY: ${MANAGEMENT_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      NODE_ENV: production
+      DOCKER_HOST: tcp://docker-proxy:2375
+      DASHBOARD_URL: http://localhost:3000
+      API_URL: http://localhost:8317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      cliproxyapi:
+        condition: service_healthy
+      docker-proxy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  postgres_data:
+  cliproxyapi_auths:
+  cliproxyapi_logs:
+
+networks:
+  frontend:
+    driver: bridge
+    name: cliproxyapi_frontend
+  backend:
+    driver: bridge
+    name: cliproxyapi_backend

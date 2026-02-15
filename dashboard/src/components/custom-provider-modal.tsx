@@ -35,6 +35,11 @@ interface HeaderEntry {
   value: string;
 }
 
+interface FetchedModel {
+  id: string;
+  selected: boolean;
+}
+
 function generateProviderId(name: string): string {
   return name.toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
@@ -57,6 +62,9 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
   const [models, setModels] = useState<ModelMapping[]>([{ upstreamName: "", alias: "" }]);
   const [excludedModels, setExcludedModels] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [fetchingModels, setFetchingModels] = useState(false);
+  const [fetchedModels, setFetchedModels] = useState<FetchedModel[]>([]);
+  const [showFetchedModels, setShowFetchedModels] = useState(false);
 
   const [errors, setErrors] = useState({
     name: "",
@@ -93,6 +101,9 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     setModels([{ upstreamName: "", alias: "" }]);
     setExcludedModels([]);
     setErrors({ name: "", providerId: "", baseUrl: "", apiKey: "", models: "" });
+    setFetchingModels(false);
+    setFetchedModels([]);
+    setShowFetchedModels(false);
   };
 
   const handleNameChange = (value: string) => {
@@ -205,6 +216,83 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     const updated = [...excludedModels];
     updated[index] = value;
     setExcludedModels(updated);
+  };
+
+  const fetchModels = async () => {
+    if (!baseUrl.startsWith("https://") || apiKey.length === 0) {
+      showToast("Please enter a valid Base URL (https) and API Key first", "error");
+      return;
+    }
+
+    setFetchingModels(true);
+    setFetchedModels([]);
+    setShowFetchedModels(false);
+
+    try {
+      const response = await fetch("/api/custom-providers/fetch-models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ baseUrl, apiKey })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const existingModelIds = new Set(models.filter(m => m.upstreamName).map(m => m.upstreamName));
+        
+        const fetchedList: FetchedModel[] = data.models.map((model: { id: string }) => ({
+          id: model.id,
+          selected: existingModelIds.has(model.id)
+        }));
+
+        setFetchedModels(fetchedList);
+        setShowFetchedModels(true);
+        showToast(`Found ${fetchedList.length} models`, "success");
+      } else {
+        const error = await response.json();
+        showToast(error.error || "Failed to fetch models", "error");
+      }
+    } catch (error) {
+      console.error("Fetch models error:", error);
+      showToast("Network error", "error");
+    } finally {
+      setFetchingModels(false);
+    }
+  };
+
+  const toggleFetchedModel = (id: string) => {
+    setFetchedModels(prev => 
+      prev.map(model => 
+        model.id === id ? { ...model, selected: !model.selected } : model
+      )
+    );
+  };
+
+  const toggleAllFetchedModels = () => {
+    const allSelected = fetchedModels.every(m => m.selected);
+    setFetchedModels(prev => prev.map(model => ({ ...model, selected: !allSelected })));
+  };
+
+  const addSelectedModels = () => {
+    const selectedModels = fetchedModels.filter(m => m.selected);
+    const existingModelIds = new Set(models.filter(m => m.upstreamName).map(m => m.upstreamName));
+    
+    const newModels = selectedModels
+      .filter(model => !existingModelIds.has(model.id))
+      .map(model => ({
+        upstreamName: model.id,
+        alias: model.id
+      }));
+
+    if (newModels.length > 0) {
+      setModels(prev => {
+        const filtered = prev.filter(m => m.upstreamName && m.alias);
+        return [...filtered, ...newModels];
+      });
+      showToast(`Added ${newModels.length} model${newModels.length !== 1 ? 's' : ''}`, "success");
+    }
+
+    setShowFetchedModels(false);
+    setFetchedModels([]);
   };
 
   return (
@@ -354,6 +442,69 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Fetch Models */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-sm font-semibold text-white">Auto-Discover Models</span>
+              <Button 
+                variant="secondary" 
+                onClick={fetchModels} 
+                disabled={!baseUrl.startsWith("https://") || apiKey.length === 0 || fetchingModels || saving}
+                className="px-3 py-1.5 text-xs"
+              >
+                {fetchingModels ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Fetching...
+                  </span>
+                ) : "Fetch Models"}
+              </Button>
+            </div>
+            {showFetchedModels && fetchedModels.length > 0 && (
+              <div className="bg-white/5 border border-white/10 rounded-lg p-3 mb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-white">Available Models ({fetchedModels.length})</span>
+                    <span className="text-xs text-white/70 bg-white/10 px-2 py-0.5 rounded">
+                      {fetchedModels.filter(m => m.selected).length} selected
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={toggleAllFetchedModels}
+                    className="text-xs text-white/70 hover:text-white transition-colors"
+                  >
+                    {fetchedModels.every(m => m.selected) ? "Deselect All" : "Select All"}
+                  </button>
+                </div>
+                <div className="max-h-48 overflow-y-auto space-y-1.5 mb-3">
+                  {fetchedModels.map((model) => (
+                    <label key={model.id} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 rounded px-2 py-1.5 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={model.selected}
+                        onChange={() => toggleFetchedModel(model.id)}
+                        className="w-4 h-4 rounded border-white/20 bg-white/5 checked:bg-blue-500 focus:ring-2 focus:ring-blue-500/50"
+                      />
+                      <span className="text-sm text-white/70">{model.id}</span>
+                    </label>
+                  ))}
+                </div>
+                <Button 
+                  onClick={addSelectedModels}
+                  disabled={fetchedModels.filter(m => m.selected).length === 0}
+                  className="w-full"
+                >
+                  Add Selected ({fetchedModels.filter(m => m.selected).length})
+                </Button>
+              </div>
+            )}
+            <p className="text-xs text-white/50 mb-2">Or manually add model mappings below</p>
           </div>
 
           {/* Model Mappings */}

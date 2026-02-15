@@ -24,8 +24,8 @@ lib/
 | Directory | Purpose | Key Export |
 |-----------|---------|------------|
 | `auth/` | JWT sessions, password hashing, CSRF | `verifySession()`, `validateOrigin()` |
-| `config-generators/` | Build opencode.json configs | `buildAvailableModelsFromProxy()` |
-| `config-sync/` | Merge all user data into bundle | `generateConfigBundle()` |
+| `config-generators/` | Build opencode.json configs | `buildAvailableModelsFromProxy()`, `fetchProxyModels()` |
+| `config-sync/` | Merge all user data into bundle | `generateConfigBundle()` — models from proxy only, no upstream credentials |
 | `providers/` | Sync keys to DB + CLIProxyAPI | `contributeKey()`, `removeKey()` |
 | `api-keys/` | Dashboard access tokens | `generateApiKey()`, `syncKeysToCliProxyApi()` |
 
@@ -88,9 +88,16 @@ await contributeKey(userId, provider, apiKey, keyName);
 // Writes to: 1) Prisma DB  2) CLIProxyAPI Management API
 ```
 
+## KEY ARCHITECTURE DECISIONS
+
+- **Config bundle never contains upstream credentials**: Custom provider models come from CLIProxyAPI's `/v1/models` via `buildAvailableModelsFromProxy()`. The `generate-bundle.ts` must NOT embed `base-url` or `api-key-entries` from custom providers into the opencode config output.
+- **Proxy models cache**: `fetchProxyModelsCached()` in `config-sync/generate-bundle.ts` caches `/v1/models` responses for 60s. Invalidated via `invalidateProxyModelsCache()` after provider sync.
+- **Custom provider excluded-models**: Still extracted from management API config to feed into the model filter — this is the only remaining use of `extractCustomProviders()` in generate-bundle.
+
 ## ANTI-PATTERNS
 
 - **NEVER** call Prisma directly in routes → use lib functions
 - **NEVER** skip `validateOrigin()` on POST/PATCH/DELETE
 - **NEVER** modify `config-sync/` without testing bundle output
 - **NEVER** bypass the mutex in `dual-write.ts`
+- **NEVER** add upstream provider URLs or API keys to generated config bundles

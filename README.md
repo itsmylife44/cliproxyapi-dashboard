@@ -118,7 +118,7 @@ The fastest way to get started is using the automated installer:
 
 ```bash
 # Clone the repository
-git clone https://github.com/itsmylife44/cliproxyapi_dashboard.git
+git clone https://github.com/itsmylife44/cliproxyapi-dashboard.git
 cd cliproxyapi_dashboard
 
 # Run the installer (Ubuntu/Debian with root access)
@@ -186,7 +186,7 @@ Run the full stack locally using Docker Desktop — no server, domain, or TLS re
 ### macOS / Linux
 
 ```bash
-git clone https://github.com/itsmylife44/cliproxyapi_dashboard.git
+git clone https://github.com/itsmylife44/cliproxyapi-dashboard.git
 cd cliproxyapi_dashboard
 
 # Start the stack
@@ -202,7 +202,7 @@ cd cliproxyapi_dashboard
 ### Windows (PowerShell)
 
 ```powershell
-git clone https://github.com/itsmylife44/cliproxyapi_dashboard.git
+git clone https://github.com/itsmylife44/cliproxyapi-dashboard.git
 cd cliproxyapi_dashboard
 
 # Start the stack

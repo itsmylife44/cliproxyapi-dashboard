@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.10](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.9...dashboard-v0.1.10) (2026-02-15)
+
+
+### Bug Fixes
+
+* use base URL directly for /models instead of hardcoding /v1 prefix ([b09349d](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/b09349d4ac4e15284c7721c3829deb9c0cad3d23))
+
 ## [0.1.9](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.8...dashboard-v0.1.9) (2026-02-15)
 
 

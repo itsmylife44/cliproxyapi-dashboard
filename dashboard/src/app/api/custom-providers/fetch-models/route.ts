@@ -22,6 +22,38 @@ interface OpenAIModelsResponse {
   models?: OpenAIModel[];
 }
 
+/**
+ * Block SSRF: reject URLs that resolve to localhost, private, or link-local addresses.
+ */
+function isPrivateHost(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+
+  // Localhost variants
+  if (lower === "localhost" || lower === "127.0.0.1" || lower === "[::1]" || lower === "0.0.0.0") {
+    return true;
+  }
+
+  // IPv4 private/reserved ranges
+  const ipv4Match = lower.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4Match) {
+    const [, a, b] = ipv4Match.map(Number);
+    if (a === 10) return true;                          // 10.0.0.0/8
+    if (a === 172 && b >= 16 && b <= 31) return true;   // 172.16.0.0/12
+    if (a === 192 && b === 168) return true;             // 192.168.0.0/16
+    if (a === 169 && b === 254) return true;             // 169.254.0.0/16 (link-local / cloud metadata)
+    if (a === 127) return true;                          // 127.0.0.0/8
+    if (a === 0) return true;                            // 0.0.0.0/8
+  }
+
+  // IPv6 loopback and link-local (bracket-wrapped or bare)
+  const ipv6 = lower.replace(/^\[|\]$/g, "");
+  if (ipv6 === "::1" || ipv6.startsWith("fe80:") || ipv6.startsWith("fc") || ipv6.startsWith("fd")) {
+    return true;
+  }
+
+  return false;
+}
+
 export async function POST(request: NextRequest) {
   const rateLimit = checkRateLimitWithPreset(request, "custom-providers-fetch-models", "CUSTOM_PROVIDERS");
   if (!rateLimit.allowed) {
@@ -52,7 +84,23 @@ export async function POST(request: NextRequest) {
       normalizedBaseUrl = normalizedBaseUrl.slice(0, -3);
     }
 
-    const modelsEndpoint = `${normalizedBaseUrl}/v1/models`;
+    // SSRF protection: block private/localhost hosts
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(`${normalizedBaseUrl}/v1/models`);
+    } catch {
+      return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+    }
+
+    if (isPrivateHost(parsedUrl.hostname)) {
+      logger.warn({ hostname: parsedUrl.hostname }, "Blocked SSRF attempt to private host");
+      return NextResponse.json(
+        { error: "Cannot connect to private or localhost addresses" },
+        { status: 400 }
+      );
+    }
+
+    const modelsEndpoint = parsedUrl.toString();
 
     // Create abort controller for timeout
     const controller = new AbortController();

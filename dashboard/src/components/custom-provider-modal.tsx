@@ -285,8 +285,9 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
 
     if (newModels.length > 0) {
       setModels(prev => {
-        const filtered = prev.filter(m => m.upstreamName && m.alias);
-        return [...filtered, ...newModels];
+        // Keep all existing rows (including partially filled ones) — only drop fully empty rows
+        const existing = prev.filter(m => m.upstreamName || m.alias);
+        return [...existing, ...newModels];
       });
       showToast(`Added ${newModels.length} model${newModels.length !== 1 ? 's' : ''}`, "success");
     }

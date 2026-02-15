@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.11](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.10...dashboard-v0.1.11) (2026-02-15)
+
+
+### Bug Fixes
+
+* remove custom provider credentials and redundant models from opencode config ([f736a3a](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/f736a3a41dc0dda545b2c3e68d7133ce731edc20))
+
 ## [0.1.10](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.9...dashboard-v0.1.10) (2026-02-15)
 
 

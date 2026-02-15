@@ -37,6 +37,7 @@ lerna-debug.log*
 .env*.local
 .env.production
 .env.development
+config.local.yaml
 secrets/
 *.key
 *.crt

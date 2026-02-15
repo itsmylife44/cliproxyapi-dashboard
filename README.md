@@ -43,7 +43,7 @@ Built with **Next.js 16**, **React 19**, **Tailwind CSS v4**, **Prisma**, and **
 | Claude | OAuth Usage API | Rate limits (requests/tokens) with reset times |
 | Codex | Wham Usage API | Daily request/token limits |
 | Antigravity | Model Availability API | Available models and status |
-| Kimi | Verification only | Kimi (Moonshot AI) has no OAuth quota API. Accounts are verified as active but no usage/balance data is available. The `api.kimi.com/coding` endpoint returns neither rate-limit headers nor a balance endpoint for OAuth tokens. |
+| Kimi | Coding Usage API | Weekly quota and 5-hour rate limit via `api.kimi.com/coding/v1/usages` |
 | iFlow | — | Not yet implemented |
 | Qwen | — | Not yet implemented |
 - **Config Sync**: Auto-sync OpenCode configs via sync tokens and the `opencode-cliproxyapi-sync` plugin

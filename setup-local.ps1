@@ -92,7 +92,7 @@ function Ensure-EnvFile {
         "POSTGRES_PASSWORD=$pg"
     ) -join "`n"
 
-    Set-Content -Path $EnvFile -Value $content -Encoding UTF8
+    [System.IO.File]::WriteAllText($EnvFile, $content, [System.Text.UTF8Encoding]::new($false))
     Write-Success "Created .env in project root"
 }
 

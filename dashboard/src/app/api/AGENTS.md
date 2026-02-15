@@ -4,7 +4,7 @@
 
 ## OVERVIEW
 
-35+ API routes handling auth, providers, config sync, container management, and monitoring. Three auth layers: Session (users), Sync Token (CLI), Admin (privileged).
+35+ API routes handling auth, providers, config sync, container management, quota monitoring, and custom provider management. Three auth layers: Session (users), Sync Token (CLI), Admin (privileged). Fourth layer: Collector Auth (internal key for `/usage/collect`).
 
 ## STRUCTURE
 
@@ -128,6 +128,25 @@ return NextResponse.json({ error: "Not found" }, { status: 404 });
 return NextResponse.json({ error: "Internal error" }, { status: 500 });
 ```
 
+## RATE LIMITING
+
+Sliding window, in-memory Map (`@/lib/auth/rate-limit.ts`). Use `checkRateLimitWithPreset()`.
+
+| Preset | Limit | Window |
+|--------|-------|--------|
+| `LOGIN` | 10 | 15 min |
+| `CHANGE_PASSWORD` | 5 | 15 min |
+| `API_KEYS` | 10 | 1 min |
+| `CUSTOM_PROVIDERS` | 10 | 1 min |
+| `CONFIG_SYNC_TOKENS` | 5 | 1 min |
+
+## SSRF PROTECTION
+
+Routes accepting user-provided URLs (`/custom-providers/fetch-models`) MUST validate hostnames via `isPrivateHost()`:
+- Blocks: localhost, `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`
+- Blocks IPv4-mapped IPv6: `::ffff:` prefix (both dotted and hex forms)
+- Blocks IPv6 loopback/link-local: `::1`, `fe80:`, `fc`, `fd`
+
 ## ANTI-PATTERNS
 
 - **NEVER** skip `verifySession()` on protected routes
@@ -135,6 +154,8 @@ return NextResponse.json({ error: "Internal error" }, { status: 500 });
 - **NEVER** expose internal error details → log + generic message
 - **NEVER** trust client input → validate with Zod or manual checks
 - **NEVER** use Server Actions → API routes only (project convention)
+- **NEVER** fetch user-provided URLs without SSRF validation
+- **NEVER** embed upstream provider credentials in config output
 
 ## KEY ROUTES
 
@@ -144,3 +165,6 @@ return NextResponse.json({ error: "Internal error" }, { status: 500 });
 | `/config-sync/bundle` | GET | CRITICAL | CLI config delivery |
 | `/providers/keys` | POST | HIGH | Key contribution |
 | `/management/[...path]` | ALL | HIGH | CLIProxyAPI proxy |
+| `/custom-providers` | POST | HIGH | Create + sync to proxy |
+| `/custom-providers/fetch-models` | POST | MEDIUM | Discovery from upstream |
+| `/quota` | GET | MEDIUM | OAuth quota monitoring |

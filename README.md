@@ -77,6 +77,10 @@ Built with **Next.js 16**, **React 19**, **Tailwind CSS v4**, **Prisma**, and **
 
 Before installing, ensure you have:
 
+> **Local use (macOS/Windows/Linux)**: Only Docker Desktop is required. See [Local Setup](#local-setup-macos--windows--linux).
+
+**For server deployment:**
+
 - **Operating System**: Ubuntu 20.04+ or Debian 11+ (other Linux distributions should work with minor adjustments)
 - **Root Access**: Required for Docker and firewall configuration
 - **Domain Name**: A registered domain with DNS control
@@ -170,6 +174,56 @@ Access the dashboard at:
 > **Security**: Complete the setup wizard immediately after installation to secure your dashboard. Consider restricting access to port 443 via firewall until setup is complete.
 
 > **TLS Certificates**: Caddy automatically requests Let's Encrypt certificates on first startup. DNS records must be correctly configured and propagated before starting the stack.
+
+## Local Setup (macOS / Windows / Linux)
+
+Run the full stack locally using Docker Desktop — no server, domain, or TLS required.
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+
+### macOS / Linux
+
+```bash
+git clone https://github.com/itsmylife44/cliproxyapi_dashboard.git
+cd cliproxyapi_dashboard
+
+# Start the stack
+./setup-local.sh
+
+# Stop
+./setup-local.sh --down
+
+# Reset (removes all data)
+./setup-local.sh --reset
+```
+
+### Windows (PowerShell)
+
+```powershell
+git clone https://github.com/itsmylife44/cliproxyapi_dashboard.git
+cd cliproxyapi_dashboard
+
+# Start the stack
+.\setup-local.ps1
+
+# Stop
+.\setup-local.ps1 -Down
+
+# Reset (removes all data)
+.\setup-local.ps1 -Reset
+```
+
+### After Setup
+
+1. Open **http://localhost:3000** in your browser
+2. Create your admin account on the setup page
+3. Configure API keys and providers through the dashboard
+
+Dashboard runs on `localhost:3000`, CLIProxyAPI proxy on `localhost:11451`.
+
+> **Note**: The local setup uses a simplified Docker Compose without Caddy/TLS. For production deployments with HTTPS and custom domains, use the [server installation](#quick-start-docker-compose) instead.
 
 ## Installation
 

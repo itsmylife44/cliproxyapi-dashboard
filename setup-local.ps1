@@ -62,9 +62,9 @@ function Invoke-ComposeDown {
 
 function Invoke-ComposeReset {
     docker compose -f $ComposeFile down -v 2>&1 | Write-Host
-    if (Test-Path $EnvFile) {
-        Remove-Item -Force $EnvFile
-    }
+    $configFile = Join-Path $ScriptDir "config.local.yaml"
+    Remove-Item -Force $EnvFile -ErrorAction SilentlyContinue
+    Remove-Item -Force $configFile -ErrorAction SilentlyContinue
 }
 
 function Ensure-EnvFile {
@@ -94,6 +94,44 @@ function Ensure-EnvFile {
 
     [System.IO.File]::WriteAllText($EnvFile, $content, [System.Text.UTF8Encoding]::new($false))
     Write-Success "Created .env in project root"
+}
+
+function Ensure-ConfigYaml {
+    $configFile = Join-Path $ScriptDir "config.local.yaml"
+    if (Test-Path $configFile) {
+        return
+    }
+
+    $mgmtKey = ""
+    if (Test-Path $EnvFile) {
+        foreach ($line in Get-Content $EnvFile) {
+            if ($line -match "^MANAGEMENT_API_KEY=(.+)$") {
+                $mgmtKey = $Matches[1]
+            }
+        }
+    }
+
+    $apiKey = "sk-local-$(New-RandomHex 16)"
+
+    $yaml = @"
+host: ""
+port: 8317
+auth-dir: "/root/.cli-proxy-api"
+remote-management:
+  allow-remote: true
+  secret-key: "$mgmtKey"
+api-keys:
+  - "$apiKey"
+request-retry: 3
+quota-exceeded:
+  switch-project: true
+  switch-preview-model: true
+routing:
+  strategy: "round-robin"
+"@
+
+    [System.IO.File]::WriteAllText($configFile, $yaml, [System.Text.UTF8Encoding]::new($false))
+    Write-Success "Created config.local.yaml (API key: $apiKey)"
 }
 
 function Wait-ForHealth {
@@ -157,6 +195,7 @@ if ($Down) {
 }
 
 Ensure-EnvFile
+Ensure-ConfigYaml
 
 Write-Info "Starting local stack..."
 docker compose -f $ComposeFile up -d 2>&1 | Write-Host

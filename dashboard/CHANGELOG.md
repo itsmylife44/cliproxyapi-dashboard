@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.8...dashboard-v0.1.9) (2026-02-15)
+
+
+### Features
+
+* add model auto-discovery for custom providers ([#32](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/32)) ([7eea262](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/7eea26210d1f43c457e65e48e93e9553a5dfdd2f))
+
 ## [0.1.8](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.7...dashboard-v0.1.8) (2026-02-15)
 
 

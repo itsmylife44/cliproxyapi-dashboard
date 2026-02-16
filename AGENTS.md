@@ -1,20 +1,20 @@
 # PROJECT KNOWLEDGE BASE
 
-Self-hosted AI proxy management dashboard. Next.js 16 + React 19 + TypeScript strict + Tailwind v4 + Prisma 7 + PostgreSQL. Controls CLIProxyAPI service via Docker socket.
+Self-hosted AI proxy management dashboard. Next.js 16 + React 19 + TypeScript strict + Tailwind v4 + Prisma 7 + PostgreSQL. Controls CLIProxyAPI service via Docker socket proxy.
 
 ## STRUCTURE
 
 ```
 cliproxyapi_dashboard/
 ├── dashboard/          # Main Next.js app (ALL dev work here)
-│   ├── src/app/        # App Router: pages + API routes
-│   ├── src/components/ # UI primitives (ui/) + feature components
+│   ├── src/app/        # App Router: pages + API routes (~45 routes)
+│   ├── src/components/ # UI primitives (ui/) + feature components (15 files)
 │   ├── src/lib/        # Business logic (auth, providers, config-sync, errors)
 │   └── prisma/         # Schema + migrations
 ├── plugin/             # OpenCode sync plugin (TS, Bun)
-├── infrastructure/     # Docker Compose, Caddy, systemd
+├── infrastructure/     # Docker Compose, Caddy, systemd, deploy (see infrastructure/AGENTS.md)
 ├── scripts/            # Backup/restore scripts
-└── install.sh          # Production installer
+└── install.sh          # Production installer (Ubuntu/Debian)
 ```
 
 ## COMMANDS
@@ -51,6 +51,7 @@ Plugin (from `plugin/`): `bun install && bun build src/index.ts --outdir dist --
 | DB schema | `prisma/schema.prisma` (then: migrate + generate + update entrypoint.sh) |
 | Env vars | `src/lib/env.ts` (Zod-validated) |
 | CSS / theme | `src/app/globals.css` (glassmorphic utility classes) |
+| Deployment | `infrastructure/` (Docker Compose, Caddy, webhook, systemd) |
 
 ## CODE STYLE
 
@@ -61,6 +62,7 @@ Order: (1) external libs, (2) `@/` internal, (3) type imports. Path alias `@/*` 
 ```typescript
 import { NextRequest, NextResponse } from "next/server";    // External
 import { verifySession } from "@/lib/auth/session";          // Internal
+import { Errors } from "@/lib/errors";                       // Error factories
 import type { User } from "@/generated/prisma/client";       // Type import
 ```
 
@@ -104,6 +106,10 @@ Always use `@/` paths, never relative `../` across module boundaries.
 **API Routes** -- use `Errors.*` factories from `@/lib/errors`. Always wrap in try-catch:
 
 ```typescript
+import { Errors } from "@/lib/errors";
+import { verifySession } from "@/lib/auth/session";
+import { validateOrigin } from "@/lib/auth/origin";
+
 // Route pattern (see full template in dashboard/src/app/api/AGENTS.md)
 const session = await verifySession();
 if (!session) return Errors.unauthorized();
@@ -119,15 +125,18 @@ try {
 
 Available: `Errors.unauthorized()`, `.forbidden()`, `.notFound()`, `.validation()`, `.missingFields()`, `.zodValidation()`, `.conflict()`, `.rateLimited()`, `.internal()`, `.database()`.
 
+**NEVER use `console.error` in API routes** -- `Errors.internal()` handles logging via Pino.
+
 **Client Components** -- `try/catch` + `showToast()`. Never expose raw errors.
 
 **Logging** -- server-only Pino (`@/lib/logger`): `logger.error({ err, context }, "message")`.
 
-### Auth (Three Layers)
+### Auth (Four Layers)
 
 1. **Session**: `verifySession()` -- most routes (JWT cookie)
 2. **Admin**: `session.user.isAdmin` check -- privileged ops
 3. **Sync Token**: `validateSyncTokenFromHeader(request)` -- CLI plugin routes
+4. **Collector Key**: `process.env.COLLECTOR_API_KEY` -- internal cron (`/api/usage/collect`)
 
 ### Database
 
@@ -137,6 +146,7 @@ Available: `Errors.unauthorized()`, `.forbidden()`, `.notFound()`, `.validation(
 ## ANTI-PATTERNS (FORBIDDEN)
 
 - `any`, `@ts-ignore`, `as any` -- use `unknown` + type guard
+- `console.error` in API routes -- use `Errors.internal()` or `logger.error()`
 - `useMemo`/`useCallback`/`forwardRef` -- React 19 Compiler handles memoization; ref is a prop
 - Server Actions -- use API routes only (project convention)
 - Import from `src/generated/prisma` directly -- use `@/lib/db`
@@ -179,7 +189,7 @@ This project uses [Release-Please](https://github.com/googleapis/release-please)
 - **Workflow**: `.github/workflows/release.yml` (release-please + Docker build)
 - **Flow**: Conventional commits on `main` → Release-Please opens a release PR → merge PR → GitHub Release created → Docker image built and pushed to GHCR (`ghcr.io/itsmylife44/cliproxyapi_dashboard`)
 - **Tags**: Format `dashboard-vX.Y.Z` (component prefix)
-- **GHCR image**: Built automatically on release, tagged with version
+- **GHCR image**: Built automatically on release, tagged with version + multi-arch (`linux/amd64`, `linux/arm64`)
 
 ### Docker & Deployment
 
@@ -187,6 +197,7 @@ This project uses [Release-Please](https://github.com/googleapis/release-please)
 - **Self-Update**: Dashboard checks for updates via GitHub Releases API (`/api/update/dashboard/check`), pulls from GHCR, tags as local compose image name, recreates container.
 - **Proxy Update**: CLIProxyAPI updates via Docker Hub digest comparison (`/api/update/check`).
 - **Restart Policy**: All containers use `unless-stopped`. Docker is systemd-enabled. Server survives reboot.
+- **Webhook Deploy**: `infrastructure/webhook.yaml` triggers `deploy.sh` on push — pulls latest image and recreates containers.
 
 ## ARCHITECTURE
 
@@ -196,11 +207,14 @@ This project uses [Release-Please](https://github.com/googleapis/release-please)
 - **Custom Provider Flow**: DB -> `PUT /v0/management/openai-compatibility` -> proxy routes requests -> models in `/v1/models` -> `buildAvailableModelsFromProxy()` includes them. Fetch Models UI helper queries provider `/models` endpoint for discovery only.
 - **Quota System**: OAuth-based only (Claude, Antigravity, Codex, Kimi). Uses CLIProxyAPI `/api-call` to proxy quota checks. Not extensible to custom API-key providers — no standard usage endpoint exists.
 - **SSRF Protection**: `fetch-models` route validates hostnames against private/localhost ranges including IPv4-mapped IPv6 (`::ffff:`).
-- **Hotspots**: `oh-my-opencode-config-generator.tsx` (1344 lines), `providers/page.tsx` (1305), `dual-write.ts` (778), `quota/route.ts` (980), `generate-bundle.ts` (400).
+- **Caching**: LRU caches in `lib/cache.ts` — proxy models (5 min TTL), usage (30s TTL). Invalidated after provider sync.
+- **Rate Limiting**: In-memory sliding window (`lib/auth/rate-limit.ts`). Resets on container restart. Acceptable for single-instance.
+- **Hotspots**: `oh-my-opencode-config-generator.tsx` (1438L), `providers/page.tsx` (1453L), `dual-write.ts` (961L), `quota/route.ts` (985L), `generate-bundle.ts` (394L).
 
 ## CHILD AGENTS.md
 
 Subdirectory-specific conventions (don't repeat what's here):
 - `dashboard/AGENTS.md` -- App Router structure, file naming, page patterns
-- `dashboard/src/lib/AGENTS.md` -- Module map, dependency flow, auth/CSRF patterns
+- `dashboard/src/lib/AGENTS.md` -- Module map, dependency flow, cache architecture
 - `dashboard/src/app/api/AGENTS.md` -- Route template, auth layers, response format
+- `infrastructure/AGENTS.md` -- Deployment topology, Docker Compose, Caddy, webhook

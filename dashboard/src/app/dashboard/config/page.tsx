@@ -283,7 +283,7 @@ export default function ConfigPage() {
   return (
     <div className="space-y-4">
       <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
-        <div className="flex flex-col items-start justify-between gap-3">
+        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-slate-100">Configuration</h1>
             <p className="mt-1 text-sm text-slate-400">

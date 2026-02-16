@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { DeployDashboard } from "@/components/deploy-dashboard";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ProxyUpdateInfo {
   currentVersion: string;
@@ -62,6 +63,13 @@ export default function SettingsPage() {
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
   const [availableApiKeys, setAvailableApiKeys] = useState<AvailableApiKey[]>([]);
+
+  const [showConfirmProxyUpdate, setShowConfirmProxyUpdate] = useState(false);
+  const [pendingProxyVersion, setPendingProxyVersion] = useState<string>("latest");
+  const [showConfirmDashboardUpdate, setShowConfirmDashboardUpdate] = useState(false);
+  const [showConfirmRevokeToken, setShowConfirmRevokeToken] = useState(false);
+  const [pendingRevokeTokenId, setPendingRevokeTokenId] = useState<string | null>(null);
+  const [showConfirmRevokeSessions, setShowConfirmRevokeSessions] = useState(false);
   
   const { showToast } = useToast();
 
@@ -180,11 +188,13 @@ export default function SettingsPage() {
     }
   };
 
-  const handleProxyUpdate = async (version: string = "latest") => {
-    if (!confirm(`Update CLIProxyAPI to ${version}? The service will restart.`)) {
-      return;
-    }
+  const confirmProxyUpdate = (version: string = "latest") => {
+    setPendingProxyVersion(version);
+    setShowConfirmProxyUpdate(true);
+  };
 
+  const handleProxyUpdate = async () => {
+    const version = pendingProxyVersion;
     setProxyUpdating(true);
     try {
       const res = await fetch("/api/update", {
@@ -209,11 +219,11 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDashboardUpdate = async () => {
-    if (!confirm("Update Dashboard to latest version? The container will restart.")) {
-      return;
-    }
+  const confirmDashboardUpdate = () => {
+    setShowConfirmDashboardUpdate(true);
+  };
 
+  const handleDashboardUpdate = async () => {
     setDashboardUpdating(true);
     try {
       const res = await fetch("/api/update/dashboard", {
@@ -267,8 +277,14 @@ export default function SettingsPage() {
     }
   };
 
-  const handleRevokeToken = async (id: string) => {
-    if (!confirm("Are you sure you want to revoke this token?")) return;
+  const confirmRevokeToken = (id: string) => {
+    setPendingRevokeTokenId(id);
+    setShowConfirmRevokeToken(true);
+  };
+
+  const handleRevokeToken = async () => {
+    if (!pendingRevokeTokenId) return;
+    const id = pendingRevokeTokenId;
 
     try {
       const res = await fetch(`/api/config-sync/tokens/${id}`, {
@@ -320,11 +336,11 @@ export default function SettingsPage() {
     }
   };
 
-  const handleRevokeAllSessions = async () => {
-    if (!confirm("Force logout all users from all devices? This action cannot be undone.")) {
-      return;
-    }
+  const confirmRevokeSessions = () => {
+    setShowConfirmRevokeSessions(true);
+  };
 
+  const handleRevokeAllSessions = async () => {
     setRevokingSessions(true);
     try {
       const res = await fetch("/api/admin/revoke-sessions", {
@@ -496,7 +512,7 @@ export default function SettingsPage() {
                          {!token.isRevoked && (
                            <Button
                              variant="danger"
-                             onClick={() => handleRevokeToken(token.id)}
+                             onClick={() => confirmRevokeToken(token.id)}
                            >
                              Revoke
                            </Button>
@@ -642,7 +658,7 @@ export default function SettingsPage() {
 
                     <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                       <Button
-                        onClick={() => handleProxyUpdate("latest")}
+                        onClick={() => confirmProxyUpdate("latest")}
                         disabled={proxyUpdating || !proxyUpdateInfo.updateAvailable}
                       >
                         {proxyUpdating ? "Updating..." : proxyUpdateInfo.updateAvailable ? "Update to Latest" : "Up to Date"}
@@ -660,7 +676,7 @@ export default function SettingsPage() {
                             <button
                               key={v}
                               type="button"
-                              onClick={() => handleProxyUpdate(v)}
+                              onClick={() => confirmProxyUpdate(v)}
                               disabled={proxyUpdating}
                               className="rounded-sm border border-slate-700/70 bg-slate-800/60 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-700/70 disabled:opacity-50"
                             >
@@ -717,7 +733,7 @@ export default function SettingsPage() {
 
                       <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                         <Button
-                          onClick={() => handleDashboardUpdate()}
+                          onClick={() => confirmDashboardUpdate()}
                           disabled={dashboardUpdating || !dashboardUpdateInfo.updateAvailable}
                         >
                           {dashboardUpdating ? "Updating..." : dashboardUpdateInfo.updateAvailable ? "Update to Latest" : "Up to Date"}
@@ -740,7 +756,7 @@ export default function SettingsPage() {
               <p className="text-sm text-slate-400">
                 Immediately revoke all active user sessions across all devices.
               </p>
-              <Button variant="danger" onClick={handleRevokeAllSessions} disabled={revokingSessions}>
+              <Button variant="danger" onClick={confirmRevokeSessions} disabled={revokingSessions}>
                 {revokingSessions ? "Revoking..." : "Force Logout All Users"}
               </Button>
             </div>
@@ -780,6 +796,56 @@ export default function SettingsPage() {
             </div>
         </div>
       </section>
+
+      <ConfirmDialog
+        isOpen={showConfirmProxyUpdate}
+        onClose={() => {
+          setShowConfirmProxyUpdate(false);
+          setPendingProxyVersion("latest");
+        }}
+        onConfirm={handleProxyUpdate}
+        title="Update CLIProxyAPI"
+        message={`Update CLIProxyAPI to ${pendingProxyVersion}? The service will restart.`}
+        confirmLabel="Update"
+        cancelLabel="Cancel"
+        variant="warning"
+      />
+
+      <ConfirmDialog
+        isOpen={showConfirmDashboardUpdate}
+        onClose={() => setShowConfirmDashboardUpdate(false)}
+        onConfirm={handleDashboardUpdate}
+        title="Update Dashboard"
+        message="Update Dashboard to latest version? The container will restart."
+        confirmLabel="Update"
+        cancelLabel="Cancel"
+        variant="warning"
+      />
+
+      <ConfirmDialog
+        isOpen={showConfirmRevokeToken}
+        onClose={() => {
+          setShowConfirmRevokeToken(false);
+          setPendingRevokeTokenId(null);
+        }}
+        onConfirm={handleRevokeToken}
+        title="Revoke Token"
+        message="Are you sure you want to revoke this token?"
+        confirmLabel="Revoke"
+        cancelLabel="Cancel"
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={showConfirmRevokeSessions}
+        onClose={() => setShowConfirmRevokeSessions(false)}
+        onConfirm={handleRevokeAllSessions}
+        title="Force Logout All Users"
+        message="Force logout all users from all devices? This action cannot be undone."
+        confirmLabel="Force Logout"
+        cancelLabel="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

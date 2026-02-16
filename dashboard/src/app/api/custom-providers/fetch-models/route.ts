@@ -4,11 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { z } from "zod";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { logger } from "@/lib/logger";
-
-const FetchModelsSchema = z.object({
-  baseUrl: z.string().startsWith("https://", "Base URL must start with https://"),
-  apiKey: z.string().min(1)
-});
+import { FetchModelsSchema } from "@/lib/validation/schemas";
 
 interface OpenAIModel {
   id: string;

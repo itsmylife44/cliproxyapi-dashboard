@@ -6,6 +6,7 @@ import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
 import { prisma } from "@/lib/db";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { logger } from "@/lib/logger";
+import { z } from "zod";
 
 interface ApiKeyResponse {
   id: string;
@@ -15,9 +16,9 @@ interface ApiKeyResponse {
   lastUsedAt: string | null;
 }
 
-interface CreateApiKeyRequest {
-  name?: string;
-}
+const CreateApiKeyRequestSchema = z.object({
+  name: z.string().optional()
+});
 
 interface CreateApiKeyResponse {
   id: string;
@@ -33,16 +34,6 @@ function maskApiKey(key: string): string {
   const prefix = key.slice(0, 7);
   const suffix = key.slice(-4);
   return `${prefix}...${suffix}`;
-}
-
-function isCreateApiKeyRequest(body: unknown): body is CreateApiKeyRequest {
-  if (!body || typeof body !== "object" || Array.isArray(body)) return true;
-  
-  const obj = body as Record<string, unknown>;
-  
-  if (obj.name !== undefined && typeof obj.name !== "string") return false;
-  
-  return true;
 }
 
 export async function GET() {
@@ -106,8 +97,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    
-    if (!isCreateApiKeyRequest(body)) {
+    const parsed = CreateApiKeyRequestSchema.safeParse(body);
+
+    if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid request body" },
         { status: 400 }
@@ -115,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     const key = generateApiKey();
-    const name = body.name && body.name.trim() ? body.name.trim() : "Default";
+    const name = parsed.data.name && parsed.data.name.trim() ? parsed.data.name.trim() : "Default";
 
     const apiKey = await prisma.userApiKey.create({
       data: {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.14](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.13...dashboard-v0.1.14) (2026-02-16)
+
+
+### Bug Fixes
+
+* block SSRF redirect bypass in fetch-models endpoint ([#40](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/40)) ([0e7f5ff](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/0e7f5ff73a300d444e45a89f073d1bce483a4b8e))
+
 ## [0.1.13](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.12...dashboard-v0.1.13) (2026-02-15)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.18](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.17...dashboard-v0.1.18) (2026-02-16)
+
+
+### Bug Fixes
+
+* memory leaks, unbounded queries, error disclosure, and performance improvements ([#49](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/49)) ([d0d1970](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d0d1970d9a3b7016f0c0bb9d4c6f91142dd803fe))
+
 ## [0.1.17](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.16...dashboard-v0.1.17) (2026-02-16)
 
 

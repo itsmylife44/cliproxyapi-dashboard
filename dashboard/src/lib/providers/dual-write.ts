@@ -8,10 +8,21 @@ import { PROVIDER, PROVIDER_ENDPOINT, type Provider, type OAuthProvider } from "
 import { getMaxProviderKeysPerUser } from "./settings";
 import { invalidateUsageCaches, invalidateProxyModelsCache } from "@/lib/cache";
 
-// Per-provider async mutex to serialize GET-modify-PUT sequences.
-// Prevents race conditions where concurrent requests read the same state,
-// modify independently, and the last write overwrites the first.
-// In-process only — sufficient because dashboard runs as a single Node.js process.
+/**
+ * SINGLE-INSTANCE CONSTRAINT WARNING
+ *
+ * This AsyncMutex is IN-PROCESS ONLY and does NOT work across multiple dashboard instances.
+ * It only synchronizes concurrent requests within a single Node.js process.
+ *
+ * Current deployment: Single-instance (sufficient for current architecture)
+ * If multi-instance deployment is needed in the future: Replace with Postgres advisory locks
+ * or a distributed locking mechanism (Redis Redlock, etc.)
+ *
+ * Per-provider async mutex to serialize GET-modify-PUT sequences.
+ * Prevents race conditions where concurrent requests read the same state,
+ * modify independently, and the last write overwrites the first.
+ * In-process only — sufficient because dashboard runs as a single Node.js process.
+ */
 class AsyncMutex {
   private locks = new Map<string, Promise<void>>();
 

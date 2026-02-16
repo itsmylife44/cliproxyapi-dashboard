@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 const WEBHOOK_HOST = process.env.WEBHOOK_HOST || "http://localhost:9000";
 const DEPLOY_SECRET = process.env.DEPLOY_SECRET || "";
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const text = await response.text();
-      console.error("Webhook error:", text);
+      logger.error({ status: response.status, response: text }, "Webhook error");
       return NextResponse.json(
         { error: "Failed to trigger deployment" },
         { status: response.status }
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
       message: noCache ? "Full rebuild started" : "Quick update started",
     });
   } catch (error) {
-    console.error("Deploy error:", error);
+    logger.error({ err: error }, "Deploy error");
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Deploy failed" },
       { status: 500 }
@@ -129,7 +130,7 @@ export async function GET(request: Request) {
       });
     }
   } catch (error) {
-    console.error("Deploy status error:", error);
+    logger.error({ err: error }, "Deploy status error");
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to get status" },
       { status: 500 }

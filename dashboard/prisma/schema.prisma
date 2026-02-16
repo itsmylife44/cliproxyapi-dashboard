@@ -250,6 +250,7 @@ model UsageRecord {
   @@index([model])
   @@index([userId, timestamp])
   @@index([authIndex, timestamp])
+  @@index([collectedAt])
   @@map("usage_records")
 }
 

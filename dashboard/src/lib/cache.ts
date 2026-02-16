@@ -85,11 +85,11 @@ export class LRUCache<T> {
 }
 
 export const usageCache = new LRUCache<unknown>(50);
-export const proxyModelsCache = new LRUCache<unknown>(10);
+export const proxyModelsCache = new LRUCache<unknown>(50);
 
 export const CACHE_TTL = {
   USAGE: 30_000,
-  PROXY_MODELS: 60_000,
+  PROXY_MODELS: 300_000,
 } as const;
 
 export const CACHE_KEYS = {

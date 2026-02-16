@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface StatusResponse {
   running: boolean;
@@ -95,6 +96,7 @@ export default function MonitoringPage() {
   const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [restarting, setRestarting] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const logsContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -282,11 +284,11 @@ export default function MonitoringPage() {
     recheckLogging();
   };
 
-  const handleRestart = async () => {
-    if (!confirm("Are you sure you want to restart the CLIProxyAPI service?")) {
-      return;
-    }
+  const confirmRestart = () => {
+    setShowConfirm(true);
+  };
 
+  const handleRestart = async () => {
     setRestarting(true);
     try {
       const res = await fetch("/api/restart", {
@@ -371,7 +373,7 @@ export default function MonitoringPage() {
             <div className="flex gap-3 pt-2">
               <Button
                 variant="primary"
-                onClick={handleRestart}
+                onClick={confirmRestart}
                 disabled={restarting}
                 className="flex-1 py-2 text-sm"
               >
@@ -380,6 +382,17 @@ export default function MonitoringPage() {
             </div>
           </div>
       </section>
+
+      <ConfirmDialog
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleRestart}
+        title="Restart Service"
+        message="Are you sure you want to restart the CLIProxyAPI service?"
+        confirmLabel="Restart"
+        cancelLabel="Cancel"
+        variant="warning"
+      />
 
       <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
         <h2 className="mb-3 text-sm font-semibold text-slate-100">Usage Statistics</h2>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ApiKey {
   id: string;
@@ -64,6 +65,8 @@ export default function ApiKeysPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newKeyValue, setNewKeyValue] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const { showToast } = useToast();
   const { copiedKey, copy } = useCopyToClipboard();
 
@@ -120,8 +123,14 @@ export default function ApiKeysPage() {
     }
   };
 
-  const handleDeleteKey = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this API key?")) return;
+  const confirmDelete = (id: string) => {
+    setPendingDeleteId(id);
+    setShowConfirm(true);
+  };
+
+  const handleDeleteKey = async () => {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
 
     try {
       const res = await fetch(
@@ -165,17 +174,34 @@ export default function ApiKeysPage() {
       {loading ? (
         <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">Loading...</div>
       ) : apiKeys.length === 0 ? (
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4 text-sm text-slate-400">
-          No API keys configured. Create one to get started.
+        <div className="rounded-md border border-white/10 bg-white/5 p-8 backdrop-blur-md">
+          <div className="flex flex-col items-center justify-center gap-4 text-center">
+            <div className="flex size-14 items-center justify-center rounded-full border border-white/10 bg-white/5">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400" aria-hidden="true">
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
+                <circle cx="12" cy="11" r="2" />
+                <path d="M12 13a4 4 0 014 4h-8a4 4 0 014-4z" />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-slate-100">No API keys created yet</h3>
+              <p className="text-xs text-slate-400">Create your first API key to access the dashboard programmatically</p>
+            </div>
+            <Button onClick={() => { setKeyNameInput(""); setIsCreateModalOpen(true); }} disabled={creating} className="px-3 py-1.5 text-xs">
+              Create API Key
+            </Button>
+          </div>
         </div>
       ) : (
-        <section className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
-          <div className="grid grid-cols-[minmax(0,1fr)_180px_160px_110px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-            <span>Name</span>
-            <span>Created</span>
-            <span>Last Used</span>
-            <span>Actions</span>
-          </div>
+        <div className="overflow-x-auto">
+          <section className="min-w-[600px] overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+            <div className="grid grid-cols-[minmax(0,1fr)_180px_160px_110px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+              <span>Name</span>
+              <span>Created</span>
+              <span>Last Used</span>
+              <span>Actions</span>
+            </div>
           {apiKeys.map((apiKey) => (
             <div key={apiKey.id} className="grid grid-cols-[minmax(0,1fr)_180px_160px_110px] items-center border-b border-slate-700/60 px-3 py-2 last:border-b-0">
               <div className="min-w-0">
@@ -185,13 +211,14 @@ export default function ApiKeysPage() {
               <span className="text-xs text-slate-400">{new Date(apiKey.createdAt).toLocaleDateString()}</span>
               <span className="text-xs text-slate-400">{apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleDateString() : "Never"}</span>
               <div className="flex justify-end">
-                <Button variant="danger" onClick={() => handleDeleteKey(apiKey.id)} className="px-2.5 py-1 text-xs">
+                <Button variant="danger" onClick={() => confirmDelete(apiKey.id)} className="px-2.5 py-1 text-xs">
                   Delete
                 </Button>
               </div>
             </div>
           ))}
-        </section>
+          </section>
+        </div>
       )}
 
       {/* ── Create Key Modal ── */}
@@ -263,6 +290,20 @@ export default function ApiKeysPage() {
           <Button onClick={handleCloseModal}>I have saved it</Button>
         </ModalFooter>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={showConfirm}
+        onClose={() => {
+          setShowConfirm(false);
+          setPendingDeleteId(null);
+        }}
+        onConfirm={handleDeleteKey}
+        title="Delete API Key"
+        message="Are you sure you want to delete this API key?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

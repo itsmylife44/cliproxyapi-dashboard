@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface LogEntry {
   level: number;
@@ -73,6 +74,7 @@ export default function AdminLogsPage() {
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("all");
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { showToast } = useToast();
@@ -141,11 +143,11 @@ export default function AdminLogsPage() {
     };
   }, [autoRefresh, fetchLogs]);
 
-  const handleClearLogs = async () => {
-    if (!confirm("Are you sure you want to clear all logs?")) {
-      return;
-    }
+  const confirmClear = () => {
+    setShowConfirm(true);
+  };
 
+  const handleClearLogs = async () => {
     setClearing(true);
     try {
       const res = await fetch("/api/admin/logs", { method: "DELETE" });
@@ -226,7 +228,7 @@ export default function AdminLogsPage() {
             Refresh
           </Button>
 
-          <Button onClick={handleClearLogs} variant="danger" disabled={clearing}>
+          <Button onClick={confirmClear} variant="danger" disabled={clearing}>
             {clearing ? "Clearing..." : "Clear Logs"}
           </Button>
         </div>
@@ -335,6 +337,17 @@ export default function AdminLogsPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleClearLogs}
+        title="Clear All Logs"
+        message="Are you sure you want to clear all logs?"
+        confirmLabel="Clear"
+        cancelLabel="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

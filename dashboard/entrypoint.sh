@@ -253,6 +253,7 @@ client.connect()
     CREATE INDEX IF NOT EXISTS "audit_logs_userId_idx" ON "audit_logs"("userId");
     CREATE INDEX IF NOT EXISTS "audit_logs_createdAt_idx" ON "audit_logs"("createdAt");
     CREATE INDEX IF NOT EXISTS "audit_logs_action_idx" ON "audit_logs"("action");
+    CREATE INDEX IF NOT EXISTS "audit_logs_target_idx" ON "audit_logs"("target");
     DO $$ BEGIN
       ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_userId_fkey"
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
@@ -281,6 +282,7 @@ client.connect()
     CREATE INDEX IF NOT EXISTS "usage_records_authIndex_idx" ON "usage_records"("authIndex");
     CREATE INDEX IF NOT EXISTS "usage_records_timestamp_idx" ON "usage_records"("timestamp");
     CREATE INDEX IF NOT EXISTS "usage_records_model_idx" ON "usage_records"("model");
+    CREATE INDEX IF NOT EXISTS "usage_records_source_idx" ON "usage_records"("source");
     CREATE INDEX IF NOT EXISTS "usage_records_userId_timestamp_idx" ON "usage_records"("userId", "timestamp");
     CREATE INDEX IF NOT EXISTS "usage_records_authIndex_timestamp_idx" ON "usage_records"("authIndex", "timestamp");
     CREATE INDEX IF NOT EXISTS "usage_records_collectedAt_idx" ON "usage_records"("collectedAt");

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.17](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.16...dashboard-v0.1.17) (2026-02-16)
+
+
+### Bug Fixes
+
+* usage aggregation, race conditions, data loss, and client cleanup ([#46](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/46)) ([ba74774](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/ba747742e6640e4f5a56368f4a0c7e08d91bd5d6))
+
 ## [0.1.16](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.15...dashboard-v0.1.16) (2026-02-16)
 
 

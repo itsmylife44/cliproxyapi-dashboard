@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.16](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.15...dashboard-v0.1.16) (2026-02-16)
+
+
+### Bug Fixes
+
+* update API key lastUsedAt on config sync and fix mobile responsive ([#44](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/44)) ([18568e9](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/18568e944c464f22ebc0c73c42a5057cfda998c2))
+
 ## [0.1.15](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.14...dashboard-v0.1.15) (2026-02-16)
 
 

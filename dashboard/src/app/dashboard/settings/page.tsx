@@ -518,36 +518,36 @@ export default function SettingsPage() {
                            </Button>
                          )}
                        </div>
-                       {!token.isRevoked && (
-                          <div className="flex items-center gap-3 border-t border-slate-700/70 pt-1">
-                            <label htmlFor={`sync-api-key-${token.id}`} className="whitespace-nowrap text-xs font-medium text-slate-500">
-                              Sync API Key
-                            </label>
-                            <select
-                              id={`sync-api-key-${token.id}`}
-                              value={token.syncApiKeyId || ""}
-                              onChange={(e) => handleUpdateTokenApiKey(token.id, e.target.value)}
-                              className="flex-1 rounded-sm border border-slate-700/70 bg-slate-900/50 px-3 py-1.5 font-mono text-xs text-slate-200 transition-colors focus:border-blue-400/50 focus:outline-none"
-                            >
-                              {availableApiKeys.length > 0 ? (
-                                <>
-                                  <option value="" className="bg-[#0f172a] text-slate-100">
-                                    Auto (first available)
-                                  </option>
-                                  {availableApiKeys.map((apiKey) => (
-                                    <option key={apiKey.id} value={apiKey.id} className="bg-[#0f172a] text-slate-100">
-                                      {apiKey.name}
-                                    </option>
-                                  ))}
-                                </>
-                              ) : (
-                                <option value="" className="bg-[#0f172a] text-slate-100">
-                                  No API keys — create one first
-                                </option>
-                              )}
-                           </select>
-                         </div>
-                       )}
+                        {!token.isRevoked && (
+                           <div className="flex flex-col gap-2 border-t border-slate-700/70 pt-2 sm:flex-row sm:items-center sm:gap-3 sm:pt-1">
+                             <label htmlFor={`sync-api-key-${token.id}`} className="whitespace-nowrap text-xs font-medium text-slate-500">
+                               Sync API Key
+                             </label>
+                             <select
+                               id={`sync-api-key-${token.id}`}
+                               value={token.syncApiKeyId || ""}
+                               onChange={(e) => handleUpdateTokenApiKey(token.id, e.target.value)}
+                               className="flex-1 rounded-sm border border-slate-700/70 bg-slate-900/50 px-3 py-1.5 font-mono text-xs text-slate-200 transition-colors focus:border-blue-400/50 focus:outline-none"
+                             >
+                               {availableApiKeys.length > 0 ? (
+                                 <>
+                                   <option value="" className="bg-[#0f172a] text-slate-100">
+                                     Auto (first available)
+                                   </option>
+                                   {availableApiKeys.map((apiKey) => (
+                                     <option key={apiKey.id} value={apiKey.id} className="bg-[#0f172a] text-slate-100">
+                                       {apiKey.name}
+                                     </option>
+                                   ))}
+                                 </>
+                               ) : (
+                                 <option value="" className="bg-[#0f172a] text-slate-100">
+                                   No API keys — create one first
+                                 </option>
+                               )}
+                            </select>
+                          </div>
+                        )}
                      </div>
                    ))}
                  </div>
@@ -635,26 +635,26 @@ export default function SettingsPage() {
                   <div className="text-slate-400">Checking for updates...</div>
                 ) : proxyUpdateInfo ? (
                   <>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-                        <div className="text-sm font-medium text-slate-400">Current Version</div>
-                        <div className="mt-1 text-lg font-semibold text-slate-100">
-                          {proxyUpdateInfo.currentVersion}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-400">
-                          Digest: <span className="font-mono text-slate-200">{proxyUpdateInfo.currentDigest}</span>
-                        </div>
-                      </div>
-                      <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-                        <div className="text-sm font-medium text-slate-400">Latest Version</div>
-                        <div className="mt-1 text-lg font-semibold text-slate-100">
-                          {proxyUpdateInfo.latestVersion}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-400">
-                          Digest: <span className="font-mono text-slate-200">{proxyUpdateInfo.latestDigest}</span>
-                        </div>
-                      </div>
-                    </div>
+                     <div className="grid gap-4 sm:grid-cols-2">
+                       <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
+                         <div className="text-sm font-medium text-slate-400">Current Version</div>
+                         <div className="mt-1 break-all text-lg font-semibold text-slate-100">
+                           {proxyUpdateInfo.currentVersion}
+                         </div>
+                         <div className="mt-1 break-all text-xs text-slate-400">
+                           Digest: <span className="font-mono text-slate-200">{proxyUpdateInfo.currentDigest}</span>
+                         </div>
+                       </div>
+                       <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
+                         <div className="text-sm font-medium text-slate-400">Latest Version</div>
+                         <div className="mt-1 break-all text-lg font-semibold text-slate-100">
+                           {proxyUpdateInfo.latestVersion}
+                         </div>
+                         <div className="mt-1 break-all text-xs text-slate-400">
+                           Digest: <span className="font-mono text-slate-200">{proxyUpdateInfo.latestDigest}</span>
+                         </div>
+                       </div>
+                     </div>
 
                     <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                       <Button
@@ -701,35 +701,35 @@ export default function SettingsPage() {
                     </span>
                   )}
                 </h3>
-                <div className="mt-3 space-y-4">
-                  {dashboardUpdateLoading ? (
-                    <div className="text-slate-400">Checking for updates...</div>
-                  ) : dashboardUpdateInfo ? (
-                    <>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-                          <div className="text-sm font-medium text-slate-400">Current Version</div>
-                          <div className="mt-1 text-lg font-semibold text-slate-100">
-                            {dashboardUpdateInfo.currentVersion}
-                          </div>
-                        </div>
-                        <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-                          <div className="text-sm font-medium text-slate-400">Latest Version</div>
-                          <div className="mt-1 text-lg font-semibold text-slate-100">
-                            {dashboardUpdateInfo.latestVersion}
-                          </div>
-                          {dashboardUpdateInfo.releaseUrl && (
-                            <a
-                              href={dashboardUpdateInfo.releaseUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="mt-0.5 block text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                            >
-                              View release notes
-                            </a>
-                          )}
-                        </div>
-                      </div>
+                 <div className="mt-3 space-y-4">
+                   {dashboardUpdateLoading ? (
+                     <div className="text-slate-400">Checking for updates...</div>
+                   ) : dashboardUpdateInfo ? (
+                     <>
+                       <div className="grid gap-4 sm:grid-cols-2">
+                         <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
+                           <div className="text-sm font-medium text-slate-400">Current Version</div>
+                           <div className="mt-1 break-all text-lg font-semibold text-slate-100">
+                             {dashboardUpdateInfo.currentVersion}
+                           </div>
+                         </div>
+                         <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
+                           <div className="text-sm font-medium text-slate-400">Latest Version</div>
+                           <div className="mt-1 break-all text-lg font-semibold text-slate-100">
+                             {dashboardUpdateInfo.latestVersion}
+                           </div>
+                           {dashboardUpdateInfo.releaseUrl && (
+                             <a
+                               href={dashboardUpdateInfo.releaseUrl}
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               className="mt-0.5 block break-all text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                             >
+                               View release notes
+                             </a>
+                           )}
+                         </div>
+                       </div>
 
                       <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                         <Button
@@ -761,22 +761,22 @@ export default function SettingsPage() {
               </Button>
             </div>
 
-          <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-100">System Information</h3>
-             <div className="grid gap-3 text-sm md:grid-cols-3">
-               <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
-                 <div className="font-medium text-slate-400">Environment</div>
-                 <div className="mt-1 text-slate-100">{process.env.NODE_ENV || "production"}</div>
-               </div>
-               <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
-                 <div className="font-medium text-slate-400">Next.js</div>
-                 <div className="mt-1 text-slate-100">16.1.6</div>
-               </div>
-               <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
-                 <div className="font-medium text-slate-400">React</div>
-                 <div className="mt-1 text-slate-100">19.2.3</div>
-               </div>
-             </div>
+             <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
+               <h3 className="mb-3 text-sm font-semibold text-slate-100">System Information</h3>
+              <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
+                  <div className="font-medium text-slate-400">Environment</div>
+                  <div className="mt-1 text-slate-100">{process.env.NODE_ENV || "production"}</div>
+                </div>
+                <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
+                  <div className="font-medium text-slate-400">Next.js</div>
+                  <div className="mt-1 text-slate-100">16.1.6</div>
+                </div>
+                <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
+                  <div className="font-medium text-slate-400">React</div>
+                  <div className="mt-1 text-slate-100">19.2.3</div>
+                </div>
+              </div>
 
              <div className="mt-4 border-t border-slate-700/70 pt-4">
                <h3 className="mb-3 text-sm font-medium text-slate-400">Version Details</h3>

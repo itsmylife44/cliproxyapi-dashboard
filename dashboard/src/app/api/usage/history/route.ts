@@ -37,12 +37,6 @@ interface ResponseData {
     period: { from: string; to: string };
     collectorStatus: { lastCollectedAt: string; lastStatus: string };
   };
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
   isAdmin: boolean;
 }
 
@@ -64,25 +58,6 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
-  const pageParam = searchParams.get("page");
-  const limitParam = searchParams.get("limit");
-
-  const page = pageParam ? parseInt(pageParam, 10) : 1;
-  const limit = limitParam ? parseInt(limitParam, 10) : 100;
-
-  if (isNaN(page) || page < 1) {
-    return NextResponse.json(
-      { error: "Invalid page parameter. Must be a positive integer." },
-      { status: 400 }
-    );
-  }
-
-  if (isNaN(limit) || limit < 1 || limit > 1000) {
-    return NextResponse.json(
-      { error: "Invalid limit parameter. Must be between 1 and 1000." },
-      { status: 400 }
-    );
-  }
 
   if (!fromParam || !toParam) {
     return NextResponse.json(
@@ -146,43 +121,34 @@ export async function GET(request: NextRequest) {
           }),
     };
 
-    const skip = (page - 1) * limit;
-
-    const [usageRecords, totalRecords] = await Promise.all([
-      prisma.usageRecord.findMany({
-        where: whereClause,
-        select: {
-          apiKeyId: true,
-          userId: true,
-          authIndex: true,
-          model: true,
-          totalTokens: true,
-          inputTokens: true,
-          outputTokens: true,
-          reasoningTokens: true,
-          cachedTokens: true,
-          failed: true,
-          user: {
-            select: {
-              username: true,
-            },
-          },
-          apiKey: {
-            select: {
-              name: true,
-            },
+    const usageRecords = await prisma.usageRecord.findMany({
+      where: whereClause,
+      select: {
+        apiKeyId: true,
+        userId: true,
+        authIndex: true,
+        model: true,
+        totalTokens: true,
+        inputTokens: true,
+        outputTokens: true,
+        reasoningTokens: true,
+        cachedTokens: true,
+        failed: true,
+        user: {
+          select: {
+            username: true,
           },
         },
-        skip,
-        take: limit,
-        orderBy: {
-          timestamp: 'desc',
+        apiKey: {
+          select: {
+            name: true,
+          },
         },
-      }),
-      prisma.usageRecord.count({
-        where: whereClause,
-      }),
-    ]);
+      },
+      orderBy: {
+        timestamp: 'desc',
+      },
+    });
 
     const collectorState = await prisma.collectorState.findFirst({
       orderBy: { updatedAt: "desc" },
@@ -258,9 +224,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const totalPages = Math.ceil(totalRecords / limit);
-
-    const responseData: ResponseData = {
+    const responseData = {
       data: {
         keys: keyUsageMap,
         totals: {
@@ -279,12 +243,6 @@ export async function GET(request: NextRequest) {
           lastCollectedAt: collectorState?.lastCollectedAt?.toISOString() ?? "",
           lastStatus: collectorState?.lastStatus ?? "unknown",
         },
-      },
-      pagination: {
-        page,
-        limit,
-        total: totalRecords,
-        totalPages,
       },
       isAdmin,
     };

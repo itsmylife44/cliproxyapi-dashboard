@@ -63,9 +63,7 @@ export function DeployDashboard() {
           }
         }
       }
-    } catch {
-      console.error("Failed to fetch deploy status");
-    }
+    } catch {}
   }, []);
 
   useEffect(() => {

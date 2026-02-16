@@ -276,9 +276,7 @@ const loadProvidersData = async (): Promise<Record<ProviderId, ProviderState>> =
           newConfigs[provider.id] = { keys };
         }
       }
-    } catch (error) {
-      console.error(`Failed to load keys for ${provider.id}:`, error);
-    }
+    } catch {}
   }
 
   return newConfigs;
@@ -343,9 +341,7 @@ export default function ProvidersPage() {
         const data = await res.json();
         setCurrentUser({ id: data.id, username: data.username, isAdmin: data.isAdmin });
       }
-    } catch (error) {
-      console.error("Failed to load current user:", error);
-    }
+    } catch {}
   }, []);
 
   const loadMaxKeysPerUser = useCallback(async () => {
@@ -362,9 +358,7 @@ export default function ProvidersPage() {
           }
         }
       }
-    } catch (error) {
-      console.error("Failed to load max keys per user:", error);
-    }
+    } catch {}
   }, [currentUser]);
 
   const refreshProviders = async () => {
@@ -447,8 +441,7 @@ export default function ProvidersPage() {
       showToast("Provider key added successfully", "success");
       closeModal();
       await refreshProviders();
-    } catch (error) {
-      console.error("Add key error:", error);
+    } catch {
       showToast("Network error", "error");
     } finally {
       setSaving(false);
@@ -475,8 +468,7 @@ export default function ProvidersPage() {
       }
       showToast("Provider key deleted", "success");
       await refreshProviders();
-    } catch (error) {
-      console.error("Delete key error:", error);
+    } catch {
       showToast("Network error", "error");
     }
   };
@@ -512,8 +504,7 @@ export default function ProvidersPage() {
       const data = await res.json();
       setAccounts(Array.isArray(data.accounts) ? data.accounts : []);
       setOauthAccountsLoading(false);
-    } catch (error) {
-      console.error("Load accounts error:", error);
+    } catch {
       setOauthAccountsLoading(false);
       showToast("Network error", "error");
       setOauthErrorMessage("Network error while loading accounts.");
@@ -533,8 +524,7 @@ export default function ProvidersPage() {
       const data = await res.json();
       setCustomProviders(Array.isArray(data.providers) ? data.providers : []);
       setCustomProvidersLoading(false);
-    } catch (error) {
-      console.error("Load custom providers error:", error);
+    } catch {
       setCustomProvidersLoading(false);
       showToast("Network error", "error");
     }
@@ -814,8 +804,7 @@ export default function ProvidersPage() {
       }
       showToast("OAuth account removed", "success");
       void loadAccounts();
-    } catch (error) {
-      console.error("Delete OAuth error:", error);
+    } catch {
       showToast("Network error", "error");
     }
   };
@@ -837,8 +826,7 @@ export default function ProvidersPage() {
       }
       showToast("Custom provider deleted", "success");
       void loadCustomProviders();
-    } catch (error) {
-      console.error("Delete custom provider error:", error);
+    } catch {
       showToast("Network error", "error");
     }
   };
@@ -1237,9 +1225,8 @@ export default function ProvidersPage() {
                              const data = await res.json();
                              showToast(data.error || "Failed to update setting", "error");
                            }
-                         } catch (error) {
-                           console.error("Update setting error:", error);
-                           showToast("Network error", "error");
+                          } catch {
+                            showToast("Network error", "error");
                          }
                        }}
                       >

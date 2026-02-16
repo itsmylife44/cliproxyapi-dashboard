@@ -283,14 +283,14 @@ export default function ConfigPage() {
   return (
     <div className="space-y-4">
       <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
-        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-start sm:gap-4">
+        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-slate-100">Configuration</h1>
             <p className="mt-1 text-sm text-slate-400">
               Configure system settings, streaming, retry behavior, and logging.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
           {hasUnsavedChanges && (
             <>
               <span className="flex items-center gap-2 rounded-sm border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
@@ -319,7 +319,7 @@ export default function ConfigPage() {
       {/* General Settings */}
       <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
         <SectionHeader title="General Settings" />
-           <div className="grid gap-4 md:grid-cols-2">
+           <div className="grid gap-4 sm:grid-cols-2">
               <ConfigField
                 label="Upstream Proxy"
                description="Optional SOCKS5/HTTP/HTTPS proxy for outbound requests to AI providers. Leave empty for direct connection."
@@ -379,7 +379,7 @@ export default function ConfigPage() {
       {/* Streaming Settings */}
       <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
         <SectionHeader title="Streaming" />
-           <div className="grid gap-4 md:grid-cols-2">
+           <div className="grid gap-4 sm:grid-cols-2">
              <ConfigField
                label="Keepalive Seconds"
               description="SSE keepalive interval in seconds"
@@ -430,7 +430,7 @@ export default function ConfigPage() {
       {/* Retry & Resilience */}
       <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
         <SectionHeader title="Retry & Resilience" />
-           <div className="grid gap-4 md:grid-cols-2">
+           <div className="grid gap-4 sm:grid-cols-2">
              <ConfigField
                label="Request Retry Attempts"
               description="Maximum number of retry attempts for failed requests"
@@ -501,7 +501,7 @@ export default function ConfigPage() {
       {/* Logging */}
       <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
         <SectionHeader title="Logging" />
-           <div className="grid gap-4 md:grid-cols-2">
+           <div className="grid gap-4 sm:grid-cols-2">
              <ConfigField
                label="Logging to File"
               description="Enable persistent file-based logging"
@@ -552,7 +552,7 @@ export default function ConfigPage() {
 
       {/* Advanced: Raw JSON Editor */}
       <section className="space-y-3 rounded-md border border-rose-500/40 bg-rose-500/5 p-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
               <SectionHeader title="Advanced: Raw JSON Editor" />
               <Button
                 variant="ghost"

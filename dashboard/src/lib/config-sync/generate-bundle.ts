@@ -180,7 +180,7 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
     prisma.userApiKey.findFirst({
       where: { userId },
       orderBy: { createdAt: "asc" },
-      select: { key: true },
+      select: { id: true, key: true },
     }),
     prisma.configSubscription.findUnique({
       where: { userId },
@@ -280,6 +280,14 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
     }
 
    const apiKey = resolvedSyncApiKey || userApiKey?.key || (apiKeyStrings.length > 0 ? apiKeyStrings[0] : "no-api-key-create-one-in-dashboard");
+
+   const usedApiKeyId = resolvedSyncApiKey ? syncApiKey : userApiKey?.id;
+   if (usedApiKeyId) {
+     prisma.userApiKey.update({
+       where: { id: usedApiKeyId },
+       data: { lastUsedAt: new Date() },
+     }).catch(() => {});
+   }
 
    const externalProxyUrl = getProxyUrl();
    const internalProxyUrl = getInternalProxyUrl();

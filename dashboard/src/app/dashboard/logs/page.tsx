@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const LOG_LEVEL = {
   INFO: "info",
@@ -97,6 +98,7 @@ export default function LogsPage() {
   const [logs, setLogs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [latestTimestamp, setLatestTimestamp] = useState<number | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
   const { showToast } = useToast();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const logsRef = useRef<string[]>([]);
@@ -158,9 +160,11 @@ export default function LogsPage() {
     });
   };
 
+  const confirmClear = () => {
+    setShowConfirm(true);
+  };
+
   const handleClearLogs = async () => {
-    const confirmed = window.confirm("Clear all logs? This cannot be undone.");
-    if (!confirmed) return;
     setLoading(true);
     try {
       const res = await fetch("/api/management/logs", { method: "DELETE" });
@@ -188,12 +192,23 @@ export default function LogsPage() {
           <Button onClick={handleRefresh} disabled={loading} className="px-2.5 py-1 text-xs">
             Refresh
           </Button>
-          <Button onClick={handleClearLogs} disabled={loading} className="px-2.5 py-1 text-xs">
+          <Button onClick={confirmClear} disabled={loading} className="px-2.5 py-1 text-xs">
             Clear Logs
           </Button>
         </div>
       </div>
       </section>
+
+      <ConfirmDialog
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleClearLogs}
+        title="Clear All Logs"
+        message="Clear all logs? This cannot be undone."
+        confirmLabel="Clear"
+        cancelLabel="Cancel"
+        variant="danger"
+      />
 
       <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
         <h2 className="mb-3 text-sm font-semibold text-slate-100">Recent Logs</h2>

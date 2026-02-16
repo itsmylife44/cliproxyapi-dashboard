@@ -3,6 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 
 interface ContainerInfo {
   name: string;
@@ -44,7 +46,10 @@ export default function ContainersPage() {
   const [selectedContainer, setSelectedContainer] = useState<string | null>(null);
   const [logLines, setLogLines] = useState<LogEntry[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ containerName: string; displayName: string; action: string } | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (logsEndRef.current && logLines.length > 0) {
@@ -81,10 +86,15 @@ export default function ContainersPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleAction = async (containerName: string, displayName: string, action: string) => {
-    if (!confirm(`Are you sure you want to ${action} ${displayName}?`)) {
-      return;
-    }
+  const confirmAction = (containerName: string, displayName: string, action: string) => {
+    setPendingAction({ containerName, displayName, action });
+    setShowConfirm(true);
+  };
+
+  const handleAction = async () => {
+    if (!pendingAction) return;
+
+    const { containerName, displayName, action } = pendingAction;
 
     setActionLoading((prev) => ({ ...prev, [containerName]: true }));
     try {
@@ -95,7 +105,7 @@ export default function ContainersPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        alert(data.error || "Action failed");
+        showToast(data.error || "Action failed", "error");
       }
       const refreshRes = await fetch("/api/containers/list");
       if (refreshRes.ok) {
@@ -111,7 +121,7 @@ export default function ContainersPage() {
         setFetchError(message);
       }
     } catch {
-      alert("Network error");
+      showToast("Network error", "error");
     } finally {
       setActionLoading((prev) => ({ ...prev, [containerName]: false }));
     }
@@ -189,14 +199,31 @@ export default function ContainersPage() {
             <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">{fetchError}</div>
           )}
 
-          <div className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
-            <div className="grid grid-cols-[minmax(0,1.2fr)_100px_120px_120px_220px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-              <span>Container</span>
-              <span>State</span>
-              <span>Uptime</span>
-              <span>Resources</span>
-              <span>Actions</span>
+          {containers.length === 0 && !fetchError ? (
+            <div className="rounded-md border border-white/10 bg-white/5 p-8 backdrop-blur-md">
+              <div className="flex flex-col items-center justify-center gap-4 text-center">
+                <div className="flex size-14 items-center justify-center rounded-full border border-white/10 bg-white/5">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400" aria-hidden="true">
+                    <rect x="2" y="6" width="20" height="12" rx="2" />
+                    <path d="M6 12h.01M10 12h.01M14 12h.01" />
+                  </svg>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-slate-100">No containers found</h3>
+                  <p className="text-xs text-slate-400">No Docker containers are currently running or available</p>
+                </div>
+              </div>
             </div>
+          ) : (
+          <div className="overflow-x-auto">
+            <div className="min-w-[600px] overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+              <div className="grid grid-cols-[minmax(0,1.2fr)_100px_120px_120px_220px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                <span>Container</span>
+                <span>State</span>
+                <span>Uptime</span>
+                <span>Resources</span>
+                <span>Actions</span>
+              </div>
             {containers.map((container) => {
               const isActionLoading = actionLoading[container.name] || false;
 
@@ -220,7 +247,7 @@ export default function ContainersPage() {
                           <Button
                             key={action}
                             variant={getActionVariant(action)}
-                            onClick={() => handleAction(container.name, container.displayName, action)}
+                            onClick={() => confirmAction(container.name, container.displayName, action)}
                             disabled={isActionLoading}
                             className="px-2.5 py-1 text-xs"
                           >
@@ -239,7 +266,9 @@ export default function ContainersPage() {
                 </div>
               );
             })}
+            </div>
           </div>
+          )}
 
           {selectedContainer && (
             <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
@@ -281,6 +310,20 @@ export default function ContainersPage() {
           )}
         </>
       )}
+
+      <ConfirmDialog
+        isOpen={showConfirm}
+        onClose={() => {
+          setShowConfirm(false);
+          setPendingAction(null);
+        }}
+        onConfirm={handleAction}
+        title={`${pendingAction?.action} Container`}
+        message={`Are you sure you want to ${pendingAction?.action} ${pendingAction?.displayName}?`}
+        confirmLabel={pendingAction?.action || "Confirm"}
+        cancelLabel="Cancel"
+        variant={pendingAction?.action.toLowerCase() === "stop" ? "danger" : "warning"}
+      />
     </div>
   );
 }

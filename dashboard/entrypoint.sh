@@ -283,6 +283,7 @@ client.connect()
     CREATE INDEX IF NOT EXISTS "usage_records_model_idx" ON "usage_records"("model");
     CREATE INDEX IF NOT EXISTS "usage_records_userId_timestamp_idx" ON "usage_records"("userId", "timestamp");
     CREATE INDEX IF NOT EXISTS "usage_records_authIndex_timestamp_idx" ON "usage_records"("authIndex", "timestamp");
+    CREATE INDEX IF NOT EXISTS "usage_records_collectedAt_idx" ON "usage_records"("collectedAt");
     DO $$ BEGIN
       ALTER TABLE "usage_records" ADD CONSTRAINT "usage_records_userId_fkey"
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL;

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { CopyBlock } from "@/components/copy-block";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface PublishStatus {
   id: string;
@@ -23,6 +24,7 @@ export function ConfigPublisher() {
   const [templateName, setTemplateName] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const { showToast } = useToast();
 
   const fetchStatus = useCallback(async () => {
@@ -130,10 +132,11 @@ export function ConfigPublisher() {
     }
   };
 
+  const confirmUnpublish = () => {
+    setShowConfirm(true);
+  };
+
   const handleUnpublish = async () => {
-    if (!confirm("Are you sure you want to unpublish? All subscribers will lose access.")) {
-      return;
-    }
     setActionLoading(true);
     try {
       const res = await fetch("/api/config-sharing/publish", {
@@ -318,7 +321,7 @@ export function ConfigPublisher() {
               {actionLoading ? "Updating..." : status.isActive ? "Deactivate" : "Activate"}
             </Button>
             <Button
-              onClick={handleUnpublish}
+              onClick={confirmUnpublish}
               disabled={actionLoading}
               variant="danger"
               className="flex-1"
@@ -328,6 +331,17 @@ export function ConfigPublisher() {
           </div>
         </div>
       </CardContent>
+
+      <ConfirmDialog
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleUnpublish}
+        title="Unpublish Configuration"
+        message="Are you sure you want to unpublish? All subscribers will lose access."
+        confirmLabel="Unpublish"
+        cancelLabel="Cancel"
+        variant="danger"
+      />
     </Card>
   );
 }

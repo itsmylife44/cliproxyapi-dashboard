@@ -5,24 +5,10 @@ import { prisma } from "@/lib/db";
 import { hashProviderKey } from "@/lib/providers/hash";
 import { z } from "zod";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
-import { invalidateProxyModelsCache } from "@/lib/cache";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { logger } from "@/lib/logger";
-
-const CreateCustomProviderSchema = z.object({
-  name: z.string().min(1).max(100),
-  providerId: z.string().regex(/^[a-z0-9-]+$/, "Provider ID must be lowercase alphanumeric with hyphens"),
-  baseUrl: z.string().url().startsWith("https://", "Base URL must start with https://"),
-  apiKey: z.string().min(1),
-  prefix: z.string().optional(),
-  proxyUrl: z.string().optional(),
-  headers: z.record(z.string(), z.string()).optional(),
-  models: z.array(z.object({
-    upstreamName: z.string().min(1),
-    alias: z.string().min(1)
-  })).min(1, "At least one model mapping is required"),
-  excludedModels: z.array(z.string()).optional()
-});
+import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
+import { CreateCustomProviderSchema } from "@/lib/validation/schemas";
 
 export async function GET() {
   const session = await verifySession();
@@ -130,9 +116,6 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
-    const secretKey = process.env.MANAGEMENT_API_KEY;
-
     logAuditAsync({
       userId: session.userId,
       action: AUDIT_ACTION.CUSTOM_PROVIDER_CREATED,
@@ -146,64 +129,16 @@ export async function POST(request: NextRequest) {
       ipAddress: extractIpAddress(request),
     });
 
-    let syncStatus: "ok" | "failed" = "ok";
-    let syncMessage: string | undefined;
-
-    if (secretKey) {
-      try {
-        const getRes = await fetch(`${managementUrl}/openai-compatibility`, {
-          headers: { "Authorization": `Bearer ${secretKey}` }
-        });
-        
-        if (getRes.ok) {
-          const configData = await getRes.json();
-          const currentList = configData["openai-compatibility"] || [];
-
-          const newEntry = {
-            name: validated.providerId,
-            prefix: validated.prefix,
-            "base-url": validated.baseUrl,
-            "api-key-entries": [{ 
-              "api-key": validated.apiKey,
-              ...(validated.proxyUrl ? { "proxy-url": validated.proxyUrl } : {})
-            }],
-            models: validated.models.map(m => ({ name: m.upstreamName, alias: m.alias })),
-            "excluded-models": validated.excludedModels || [],
-            ...(validated.headers ? { headers: validated.headers } : {})
-          };
-
-          const newList = [...currentList, newEntry];
-
-          const putRes = await fetch(`${managementUrl}/openai-compatibility`, {
-            method: "PUT",
-            headers: { 
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${secretKey}` 
-            },
-            body: JSON.stringify(newList)
-          });
-
-          if (!putRes.ok) {
-            syncStatus = "failed";
-            syncMessage = "Backend sync failed - provider created but may not work immediately";
-            logger.error({ status: putRes.status }, "Failed to sync custom provider to Management API");
-          } else {
-            invalidateProxyModelsCache();
-          }
-        } else {
-          syncStatus = "failed";
-          syncMessage = "Backend sync failed - provider created but may not work immediately";
-          logger.error({ status: getRes.status }, "Failed to fetch current config from Management API");
-        }
-      } catch (syncError) {
-        syncStatus = "failed";
-        syncMessage = "Backend sync failed - provider created but may not work immediately";
-        logger.error({ err: syncError }, "Failed to sync custom provider to Management API");
-      }
-    } else {
-      syncStatus = "failed";
-      syncMessage = "Backend sync unavailable - management API key not configured";
-    }
+    const { syncStatus, syncMessage } = await syncCustomProviderToProxy({
+      providerId: provider.providerId,
+      prefix: provider.prefix,
+      baseUrl: provider.baseUrl,
+      apiKey: validated.apiKey,
+      proxyUrl: provider.proxyUrl,
+      headers: provider.headers as Record<string, string> | null,
+      models: provider.models,
+      excludedModels: provider.excludedModels
+    }, "create");
 
     return NextResponse.json({ provider, syncStatus, syncMessage }, { status: 201 });
 

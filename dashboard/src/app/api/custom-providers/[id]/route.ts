@@ -134,6 +134,7 @@ export async function PATCH(
     });
 
     let resolvedApiKey = validated.apiKey;
+    let prefetchedConfig: ManagementProviderEntry[] | undefined;
 
     if (!resolvedApiKey) {
       const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
@@ -152,6 +153,8 @@ export async function PATCH(
               ? openAiCompatibility.filter(isManagementProviderEntry)
               : [];
             
+            prefetchedConfig = currentList;
+
             const currentEntry = currentList.find((entry) => entry.name === provider.providerId);
             const apiKeyEntries = currentEntry?.["api-key-entries"];
             if (Array.isArray(apiKeyEntries) && apiKeyEntries.length > 0) {
@@ -180,7 +183,7 @@ export async function PATCH(
         headers: provider.headers as Record<string, string> | null,
         models: provider.models,
         excludedModels: provider.excludedModels
-      }, "update");
+      }, "update", prefetchedConfig);
 
       syncStatus = syncResult.syncStatus;
       syncMessage = syncResult.syncMessage;

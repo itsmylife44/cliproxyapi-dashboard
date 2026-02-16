@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -24,15 +24,18 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   variant = "warning"
 }: ConfirmDialogProps) {
+  const previousOverflowRef = useRef<string>("");
+
   useEffect(() => {
     if (isOpen) {
+      previousOverflowRef.current = document.body.style.overflow;
       document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = "unset";
+      document.body.style.overflow = previousOverflowRef.current;
     }
 
     return () => {
-      document.body.style.overflow = "unset";
+      document.body.style.overflow = previousOverflowRef.current;
     };
   }, [isOpen]);
 

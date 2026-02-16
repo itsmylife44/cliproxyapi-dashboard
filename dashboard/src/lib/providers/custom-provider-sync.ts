@@ -52,7 +52,8 @@ function isManagementProviderEntry(value: unknown): value is ManagementProviderE
  */
 export async function syncCustomProviderToProxy(
   providerData: SyncProviderData,
-  operation: "create" | "update"
+  operation: "create" | "update",
+  prefetchedConfig?: ManagementProviderEntry[]
 ): Promise<SyncResult> {
   const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
   const secretKey = env.MANAGEMENT_API_KEY;
@@ -65,23 +66,29 @@ export async function syncCustomProviderToProxy(
   }
 
   try {
-    const getRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
-      headers: { "Authorization": `Bearer ${secretKey}` }
-    });
-    
-    if (!getRes.ok) {
-      logger.error({ status: getRes.status }, "Failed to fetch current config from Management API");
-      return {
-        syncStatus: "failed",
-        syncMessage: `Backend sync failed - provider ${operation === "create" ? "created" : "updated"} but may not work immediately`
-      };
-    }
+    let currentList: ManagementProviderEntry[];
 
-    const configData = await getRes.json() as Record<string, unknown>;
-    const openAiCompatibility = configData["openai-compatibility"];
-    const currentList: ManagementProviderEntry[] = Array.isArray(openAiCompatibility)
-      ? openAiCompatibility.filter(isManagementProviderEntry)
-      : [];
+    if (prefetchedConfig) {
+      currentList = prefetchedConfig;
+    } else {
+      const getRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
+        headers: { "Authorization": `Bearer ${secretKey}` }
+      });
+
+      if (!getRes.ok) {
+        logger.error({ status: getRes.status }, "Failed to fetch current config from Management API");
+        return {
+          syncStatus: "failed",
+          syncMessage: `Backend sync failed - provider ${operation === "create" ? "created" : "updated"} but may not work immediately`
+        };
+      }
+
+      const configData = await getRes.json() as Record<string, unknown>;
+      const openAiCompatibility = configData["openai-compatibility"];
+      currentList = Array.isArray(openAiCompatibility)
+        ? openAiCompatibility.filter(isManagementProviderEntry)
+        : [];
+    }
 
     const newEntry = {
       name: providerData.providerId,

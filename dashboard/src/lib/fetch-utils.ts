@@ -85,7 +85,13 @@ function fetchWithTimeout(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-  return fetch(url, { ...options, signal: controller.signal }).finally(() => {
+  // Combine caller's signal (if any) with our timeout signal
+  const { signal: callerSignal, ...rest } = options;
+  const combinedSignal = callerSignal
+    ? AbortSignal.any([controller.signal, callerSignal])
+    : controller.signal;
+
+  return fetch(url, { ...rest, signal: combinedSignal }).finally(() => {
     clearTimeout(timeout);
   });
 }

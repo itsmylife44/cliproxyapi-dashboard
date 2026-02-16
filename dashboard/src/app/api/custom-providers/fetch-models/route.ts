@@ -126,7 +126,8 @@ export async function POST(request: NextRequest) {
           "Authorization": `Bearer ${validated.apiKey}`,
           "Content-Type": "application/json"
         },
-        signal: controller.signal
+        signal: controller.signal,
+        redirect: "error"
       });
 
       clearTimeout(timeoutId);

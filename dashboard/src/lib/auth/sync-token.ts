@@ -88,6 +88,7 @@ export async function validateSyncTokenFromHeader(
         userId: true,
         syncApiKey: true,
         createdAt: true,
+        lastUsedAt: true,
       },
     });
 
@@ -99,10 +100,16 @@ export async function validateSyncTokenFromHeader(
       return { ok: false, reason: "expired" };
     }
 
-    await prisma.syncToken.update({
-      where: { id: syncToken.id },
-      data: { lastUsedAt: new Date() },
-    });
+    const LAST_USED_THROTTLE_MS = 60 * 60 * 1000;
+    const shouldUpdate = !syncToken.lastUsedAt ||
+      Date.now() - syncToken.lastUsedAt.getTime() > LAST_USED_THROTTLE_MS;
+
+    if (shouldUpdate) {
+      prisma.syncToken.update({
+        where: { id: syncToken.id },
+        data: { lastUsedAt: new Date() },
+      }).catch(() => {});
+    }
 
     return { ok: true, userId: syncToken.userId, syncApiKey: syncToken.syncApiKey };
   } catch {

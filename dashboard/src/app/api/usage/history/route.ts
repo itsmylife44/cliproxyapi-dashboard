@@ -121,6 +121,8 @@ export async function GET(request: NextRequest) {
           }),
     };
 
+    const USAGE_RECORD_LIMIT = 50_000;
+
     const usageRecords = await prisma.usageRecord.findMany({
       where: whereClause,
       select: {
@@ -148,6 +150,7 @@ export async function GET(request: NextRequest) {
       orderBy: {
         timestamp: 'desc',
       },
+      take: USAGE_RECORD_LIMIT,
     });
 
     const collectorState = await prisma.collectorState.findFirst({
@@ -243,6 +246,7 @@ export async function GET(request: NextRequest) {
           lastCollectedAt: collectorState?.lastCollectedAt?.toISOString() ?? "",
           lastStatus: collectorState?.lastStatus ?? "unknown",
         },
+        truncated: usageRecords.length >= USAGE_RECORD_LIMIT,
       },
       isAdmin,
     };

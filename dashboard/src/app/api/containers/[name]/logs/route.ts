@@ -80,10 +80,9 @@ export async function GET(
       containerName: config.displayName,
     });
   } catch (error) {
-    logger.error({ err: error }, `Container logs error for ${name}:`);
-    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error({ err: error, containerName: name }, "Container logs error");
     return NextResponse.json(
-      { error: `Failed to fetch logs: ${message}` },
+      { error: "Failed to fetch container logs" },
       { status: 500 }
     );
   }

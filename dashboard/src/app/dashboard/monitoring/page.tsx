@@ -68,6 +68,8 @@ function formatUptime(seconds: number): string {
   return parts.join(" ");
 }
 
+let logIdCounter = 0;
+
 function parseLogLine(line: string, index: number): LogLine {
   const logRegex = /^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(info|error|warn|debug)\s+(.+)$/i;
   const match = line.match(logRegex);
@@ -83,7 +85,7 @@ function parseLogLine(line: string, index: number): LogLine {
   }
 
   return {
-    id: `${Date.now()}-${index}`,
+    id: `raw-${++logIdCounter}-${index}`,
     timestamp: "",
     level: "info",
     message: line,
@@ -104,12 +106,22 @@ export default function MonitoringPage() {
   const [loggingError, setLoggingError] = useState<string | null>(null);
   const [enablingLogging, setEnablingLogging] = useState(false);
   const logsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (autoScroll && logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [autoScroll]);
+
+  useEffect(() => {
+    return () => {
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -293,7 +305,8 @@ export default function MonitoringPage() {
       });
 
       if (res.ok) {
-        setTimeout(() => {
+        restartTimeoutRef.current = setTimeout(() => {
+          restartTimeoutRef.current = null;
           setRestarting(false);
         }, 5000);
       } else {

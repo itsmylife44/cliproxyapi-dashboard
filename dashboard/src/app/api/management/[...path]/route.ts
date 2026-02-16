@@ -4,6 +4,7 @@ import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { fetchWithRetry } from "@/lib/fetch-utils";
 
 const BACKEND_API_URL = env.CLIPROXYAPI_MANAGEMENT_URL;
 const MANAGEMENT_API_KEY = env.MANAGEMENT_API_KEY;
@@ -218,20 +219,24 @@ async function proxyRequest(
       }
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
     let response: Response;
     try {
-      response = await fetch(targetUrl.toString(), {
+      response = await fetchWithRetry(targetUrl.toString(), {
         method,
         headers,
         body,
-        signal: controller.signal,
         cache: "no-store",
+        timeout: FETCH_TIMEOUT_MS,
       });
-    } finally {
-      clearTimeout(timeoutId);
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        logger.error({ err: error, path: normalizedPath, timeoutMs: FETCH_TIMEOUT_MS }, "Proxy request timeout");
+        return NextResponse.json(
+          { error: "Request timeout" },
+          { status: 504 }
+        );
+      }
+      throw error;
     }
 
     const responseContentType = response.headers.get("content-type");
@@ -244,13 +249,6 @@ async function proxyRequest(
       },
     });
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      logger.error({ err: error, path: normalizedPath, timeoutMs: FETCH_TIMEOUT_MS }, "Proxy request timeout");
-      return NextResponse.json(
-        { error: "Request timeout" },
-        { status: 504 }
-      );
-    }
     logger.error({ err: error }, "Proxy request error");
     return NextResponse.json(
       { error: "Failed to proxy request" },

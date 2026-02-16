@@ -6,6 +6,7 @@ import { fetchProxyModels, type ProxyModel } from "@/lib/config-generators/share
 import { validateFullConfig, type OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import type { ConfigData, OAuthAccount } from "@/lib/config-generators/shared";
 import { proxyModelsCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";
+import { fetchWithRetry } from "@/lib/fetch-utils";
 
 async function fetchProxyModelsCached(proxyUrl: string, apiKey: string): Promise<ProxyModel[]> {
   const cacheKey = CACHE_KEYS.proxyModels(proxyUrl, apiKey);
@@ -85,11 +86,13 @@ async function fetchManagementJson({ path }: ManagementFetchParams) {
     const baseUrl =
       process.env.CLIPROXYAPI_MANAGEMENT_URL ||
       "http://cliproxyapi:8317/v0/management";
-    const res = await fetch(`${baseUrl}/${path}`, {
+    const res = await fetchWithRetry(`${baseUrl}/${path}`, {
+      method: "GET",
       headers: {
         Authorization: `Bearer ${process.env.MANAGEMENT_API_KEY}`,
       },
       cache: "no-store",
+      timeout: 10000,
     });
     if (!res.ok) return null;
     return await res.json();
@@ -165,35 +168,30 @@ interface ConfigBundle {
 }
 
 export async function generateConfigBundle(userId: string, syncApiKey?: string | null): Promise<ConfigBundle> {
-  // 1. Fetch management config
-  const managementConfig = await fetchManagementJson({ path: "config" });
+  // Phase 1: Fetch management config, auth-files, api-keys, and Prisma data in parallel
+  const [managementConfig, authFilesData, apiKeysData, modelPreference, agentOverride, userApiKey, subscription] = await Promise.all([
+    // Management API calls
+    fetchManagementJson({ path: "config" }),
+    fetchManagementJson({ path: "auth-files" }),
+    fetchManagementJson({ path: "api-keys" }),
+    // Prisma queries
+    prisma.modelPreference.findUnique({ where: { userId } }),
+    prisma.agentModelOverride.findUnique({ where: { userId } }),
+    prisma.userApiKey.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+      select: { key: true },
+    }),
+    prisma.configSubscription.findUnique({
+      where: { userId },
+      include: { template: true },
+    }),
+  ]);
 
-  // 2. Fetch auth-files from management API (for OAuth accounts)
-  const authFilesData = await fetchManagementJson({ path: "auth-files" });
+  // Extract data from management API responses
   const oauthAccounts = extractOAuthAccounts(authFilesData);
-
-   // 3. Fetch api-keys from management API
-   const apiKeysData = await fetchManagementJson({ path: "api-keys" });
-   const apiKeyStrings = extractApiKeyStrings(apiKeysData);
-
-   // 4. Fetch custom providers from management API (contains API keys)
-   const customProvidersData = await fetchManagementJson({ path: "config" });
-   const customProviders = extractCustomProviders(customProvidersData);
-
-   // 5. Fetch user's ModelPreference, AgentModelOverride, UserApiKey, and ConfigSubscription from Prisma
-   const [modelPreference, agentOverride, userApiKey, subscription] = await Promise.all([
-     prisma.modelPreference.findUnique({ where: { userId } }),
-     prisma.agentModelOverride.findUnique({ where: { userId } }),
-     prisma.userApiKey.findFirst({
-       where: { userId },
-       orderBy: { createdAt: "asc" },
-       select: { key: true },
-     }),
-     prisma.configSubscription.findUnique({
-       where: { userId },
-       include: { template: true },
-     }),
-   ]);
+  const apiKeyStrings = extractApiKeyStrings(apiKeysData);
+  const customProviders = extractCustomProviders(managementConfig);
 
   // 6. Parse frozen config if subscription exists
   const frozenExcludedModels = subscription?.frozenConfig 
@@ -269,14 +267,17 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
      }
    }
 
-   let resolvedSyncApiKey: string | null = null;
-   if (syncApiKey) {
-     const syncKeyRecord = await prisma.userApiKey.findUnique({
-       where: { id: syncApiKey },
-       select: { key: true },
-     });
-     resolvedSyncApiKey = syncKeyRecord?.key || null;
-   }
+    let resolvedSyncApiKey: string | null = null;
+    if (syncApiKey) {
+      const syncKeyRecord = await prisma.userApiKey.findUnique({
+        where: { id: syncApiKey },
+        select: { key: true },
+      });
+      if (!syncKeyRecord) {
+        throw new Error("The API key assigned to this sync token has been deleted. Please update the sync token.");
+      }
+      resolvedSyncApiKey = syncKeyRecord.key;
+    }
 
    const apiKey = resolvedSyncApiKey || userApiKey?.key || (apiKeyStrings.length > 0 ? apiKeyStrings[0] : "no-api-key-create-one-in-dashboard");
 
@@ -313,7 +314,7 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
      modelEntries[id] = entry;
    }
 
-   const firstModelId = sortedFilteredIds[0] ?? "gemini-2.5-flash";
+    const firstModelId = sortedFilteredIds[0] ?? null;
 
    const mcpEntries: McpEntry[] = agentOverrides?.mcpServers ?? [];
    const customPlugins = agentOverrides?.customPlugins ?? [];
@@ -334,12 +335,14 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
      },
    };
 
-   const opencodeConfig: Record<string, unknown> = {
-     $schema: "https://opencode.ai/config.json",
-     plugin: plugins,
-     provider: providers,
-     model: `cliproxyapi/${firstModelId}`,
-   };
+    const opencodeConfig: Record<string, unknown> = {
+      $schema: "https://opencode.ai/config.json",
+      plugin: plugins,
+      provider: providers,
+    };
+    if (firstModelId) {
+      opencodeConfig.model = `cliproxyapi/${firstModelId}`;
+    }
 
    if (mcpEntries.length > 0) {
     const mcpServers: Record<string, Record<string, unknown>> = {};

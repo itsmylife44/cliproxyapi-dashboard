@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface SubscriptionStatus {
   templateName: string;
@@ -24,6 +25,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
   const [loading, setLoading] = useState(true);
   const [shareCode, setShareCode] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const { showToast } = useToast();
 
   const fetchStatus = useCallback(async () => {
@@ -117,10 +119,11 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
     }
   };
 
+  const confirmUnsubscribe = () => {
+    setShowConfirm(true);
+  };
+
   const handleUnsubscribe = async () => {
-    if (!confirm("Are you sure you want to unsubscribe? Your previous config settings will be restored.")) {
-      return;
-    }
     setActionLoading(true);
     try {
       const res = await fetch("/api/config-sharing/subscribe", {
@@ -270,7 +273,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
               {actionLoading ? "Updating..." : status.isActive ? "Pause Subscription" : "Activate Subscription"}
             </Button>
             <Button
-              onClick={handleUnsubscribe}
+              onClick={confirmUnsubscribe}
               disabled={actionLoading}
               variant="danger"
               className="flex-1"
@@ -280,6 +283,17 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
           </div>
         </div>
       </CardContent>
+
+      <ConfirmDialog
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleUnsubscribe}
+        title="Unsubscribe from Config"
+        message="Are you sure you want to unsubscribe? Your previous config settings will be restored."
+        confirmLabel="Unsubscribe"
+        cancelLabel="Cancel"
+        variant="warning"
+      />
     </Card>
   );
 }

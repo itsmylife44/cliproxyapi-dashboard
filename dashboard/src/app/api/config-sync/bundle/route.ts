@@ -30,9 +30,11 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     logger.error({ err: error }, "Config sync bundle error");
+    const isSyncTokenError =
+      error instanceof Error && error.message.includes("sync token");
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { error: isSyncTokenError ? error.message : "Internal server error" },
+      { status: isSyncTokenError ? 400 : 500 }
     );
   }
 }

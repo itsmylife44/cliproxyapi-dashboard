@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface DeployStatus {
   status: "idle" | "running" | "success" | "error" | "completed" | "failed";
@@ -31,6 +32,8 @@ export function DeployDashboard() {
   const [showLog, setShowLog] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [webhookConfigured, setWebhookConfigured] = useState<boolean | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingDeploy, setPendingDeploy] = useState<{ noCache: boolean } | null>(null);
   const logRef = useRef<HTMLPreElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const { showToast } = useToast();
@@ -87,11 +90,16 @@ export function DeployDashboard() {
     pollingRef.current = setInterval(fetchStatus, 2000);
   };
 
-  const handleDeploy = async (noCache: boolean) => {
+  const handleDeploy = (noCache: boolean) => {
+    setPendingDeploy({ noCache });
+    setShowConfirm(true);
+  };
+
+  const executeDeploy = async () => {
+    if (!pendingDeploy) return;
+
+    const { noCache } = pendingDeploy;
     const mode = noCache ? "Full Rebuild" : "Quick Update";
-    if (!confirm(`Start ${mode}? The dashboard will restart after deployment.`)) {
-      return;
-    }
 
     setDeploying(true);
     setShowLog(true);
@@ -273,6 +281,20 @@ export function DeployDashboard() {
           </div>
         )}
       </CardContent>
+
+      <ConfirmDialog
+        isOpen={showConfirm}
+        onClose={() => {
+          setShowConfirm(false);
+          setPendingDeploy(null);
+        }}
+        onConfirm={executeDeploy}
+        title={pendingDeploy?.noCache ? "Full Rebuild" : "Quick Update"}
+        message={`Start ${pendingDeploy?.noCache ? "Full Rebuild" : "Quick Update"}? The dashboard will restart after deployment.`}
+        confirmLabel="Deploy"
+        cancelLabel="Cancel"
+        variant="warning"
+      />
     </Card>
   );
 }

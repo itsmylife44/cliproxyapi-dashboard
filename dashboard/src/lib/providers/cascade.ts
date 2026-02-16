@@ -37,22 +37,26 @@ export async function cascadeDeleteUserProviders(
       select: { keyHash: true, provider: true },
     });
 
-    for (const key of ownedKeys) {
-      try {
+    const keyResults = await Promise.allSettled(
+      ownedKeys.map(async (key) => {
         const removeResult = await removeKey(userId, key.keyHash, isAdmin);
-        if (removeResult.ok) {
-          result.keysRemoved++;
-        } else {
-          result.keysFailedToRemove++;
-          const errorMsg = `Failed to remove ${key.provider} key ${key.keyHash}: ${removeResult.error}`;
-          result.errors.push(errorMsg);
-          logger.error({ provider: key.provider, keyHash: key.keyHash, error: removeResult.error }, "Failed to remove provider key");
+        if (!removeResult.ok) {
+          throw new Error(`Failed to remove ${key.provider} key ${key.keyHash}: ${removeResult.error}`);
         }
-      } catch (error) {
+        return key;
+      })
+    );
+
+    for (let i = 0; i < keyResults.length; i++) {
+      const settled = keyResults[i];
+      if (settled.status === "fulfilled") {
+        result.keysRemoved++;
+      } else {
         result.keysFailedToRemove++;
-        const errorMsg = `Exception removing ${key.provider} key ${key.keyHash}: ${error instanceof Error ? error.message : "Unknown error"}`;
+        const key = ownedKeys[i];
+        const errorMsg = settled.reason instanceof Error ? settled.reason.message : `Failed to remove ${key.provider} key ${key.keyHash}`;
         result.errors.push(errorMsg);
-        logger.error({ err: error, provider: key.provider, keyHash: key.keyHash }, "Exception removing provider key");
+        logger.error({ provider: key.provider, keyHash: key.keyHash, error: errorMsg }, "Failed to remove provider key");
       }
     }
 
@@ -61,22 +65,26 @@ export async function cascadeDeleteUserProviders(
       select: { accountName: true, provider: true },
     });
 
-    for (const oauth of ownedOAuth) {
-      try {
+    const oauthResults = await Promise.allSettled(
+      ownedOAuth.map(async (oauth) => {
         const removeResult = await removeOAuthAccount(userId, oauth.accountName, isAdmin);
-        if (removeResult.ok) {
-          result.oauthRemoved++;
-        } else {
-          result.oauthFailedToRemove++;
-          const errorMsg = `Failed to remove ${oauth.provider} OAuth account ${oauth.accountName}: ${removeResult.error}`;
-          result.errors.push(errorMsg);
-          logger.error({ provider: oauth.provider, accountName: oauth.accountName, error: removeResult.error }, "Failed to remove OAuth account");
+        if (!removeResult.ok) {
+          throw new Error(`Failed to remove ${oauth.provider} OAuth account ${oauth.accountName}: ${removeResult.error}`);
         }
-      } catch (error) {
+        return oauth;
+      })
+    );
+
+    for (let i = 0; i < oauthResults.length; i++) {
+      const settled = oauthResults[i];
+      if (settled.status === "fulfilled") {
+        result.oauthRemoved++;
+      } else {
         result.oauthFailedToRemove++;
-        const errorMsg = `Exception removing ${oauth.provider} OAuth account ${oauth.accountName}: ${error instanceof Error ? error.message : "Unknown error"}`;
+        const oauth = ownedOAuth[i];
+        const errorMsg = settled.reason instanceof Error ? settled.reason.message : `Failed to remove ${oauth.provider} OAuth account ${oauth.accountName}`;
         result.errors.push(errorMsg);
-        logger.error({ err: error, provider: oauth.provider, accountName: oauth.accountName }, "Exception removing OAuth account");
+        logger.error({ provider: oauth.provider, accountName: oauth.accountName, error: errorMsg }, "Failed to remove OAuth account");
       }
     }
 

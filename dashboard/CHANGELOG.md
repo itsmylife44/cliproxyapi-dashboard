@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.15](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.14...dashboard-v0.1.15) (2026-02-16)
+
+
+### Bug Fixes
+
+* improve resilience and UX across dashboard ([bb52170](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/bb5217092a30a1aadcb5fefb70e355bcbb2cbe0b))
+
 ## [0.1.14](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.13...dashboard-v0.1.14) (2026-02-16)
 
 

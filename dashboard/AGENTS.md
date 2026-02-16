@@ -4,21 +4,21 @@
 
 ## OVERVIEW
 
-Primary web application. Next.js 16 App Router with Server Components, Prisma ORM, Tailwind v4 styling. Manages CLIProxyAPI proxy via Management API.
+Primary web application. Next.js 16 App Router with Server Components, Prisma ORM, Tailwind v4 styling. Manages CLIProxyAPI proxy via Management API + Docker socket proxy.
 
 ## STRUCTURE
 
 ```
 dashboard/
 ├── src/
-│   ├── app/           # App Router (pages + API routes)
-│   ├── components/    # React components (13 files)
+│   ├── app/           # App Router (pages + API routes, ~45 routes)
+│   ├── components/    # React components (15 files)
 │   ├── lib/           # Core business logic (see lib/AGENTS.md)
 │   └── generated/     # Prisma client (DO NOT EDIT)
 ├── prisma/
 │   ├── schema.prisma  # Database models
 │   └── migrations/    # SQL migrations
-├── entrypoint.sh      # Docker startup (creates tables)
+├── entrypoint.sh      # Docker startup (raw SQL table bootstrap, ~300 lines)
 └── dev-local.sh       # Local development script
 ```
 
@@ -43,15 +43,17 @@ dashboard/
 
 ### Page Structure
 ```typescript
-// Server Component (default)
+// Server Component (default) — only for data fetching
 export default async function Page() {
-  const data = await prisma.model.findMany();
-  return <ClientComponent data={data} />;
+  return <ClientComponent />;
 }
 
 // Client Component (when needed)
 "use client";
-export function ClientComponent({ data }: Props) { ... }
+export function ClientComponent() {
+  // Fetch data via API routes, not direct Prisma
+  // Use Errors.* pattern on API side
+}
 ```
 
 ### Database Changes
@@ -68,22 +70,28 @@ export function ClientComponent({ data }: Props) { ... }
 - **NEVER** use Server Actions → use API routes only (project convention)
 - **NEVER** embed upstream provider base-urls or API keys in generated opencode config
 - **NEVER** allow user-provided URLs to reach private/localhost hosts (SSRF)
+- **NEVER** use `console.error` in API routes → use `Errors.internal()` from `@/lib/errors`
 
 ## KEY FILES
 
 | File | Purpose |
 |------|---------|
 | `src/app/layout.tsx` | Root layout, providers, global styles |
+| `src/app/dashboard/layout.tsx` | Dashboard layout, sidebar, `min-w-0` on main |
 | `src/app/dashboard/page.tsx` | Main dashboard entry |
 | `src/lib/db.ts` | Prisma client singleton |
-| `entrypoint.sh` | Docker table bootstrap |
+| `src/lib/errors.ts` | `Errors.*` response factories (401L) |
+| `entrypoint.sh` | Docker table bootstrap (raw SQL) |
 | `next.config.ts` | CSP headers, standalone mode |
+| `Dockerfile` | Multi-stage build (deps → builder → runner) |
 
 ## COMMANDS
 
 ```bash
 npm run dev           # Dev server with Turbopack
 npm run build         # Production build (standalone)
+npm run lint          # ESLint flat config
 ./dev-local.sh        # Start local Docker env
 ./dev-local.sh --reset  # Reset database
+./dev-local.sh --down   # Stop dev containers
 ```

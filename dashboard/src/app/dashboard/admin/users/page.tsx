@@ -20,6 +20,7 @@ const EMPTY_USERS: User[] = [];
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>(EMPTY_USERS);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   
@@ -33,6 +34,7 @@ export default function AdminUsersPage() {
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
+    setFetchError(false);
     try {
       const res = await fetch("/api/admin/users");
       
@@ -48,7 +50,7 @@ export default function AdminUsersPage() {
       }
       
       if (!res.ok) {
-        showToast("Failed to load users", "error");
+        setFetchError(true);
         setLoading(false);
         return;
       }
@@ -58,7 +60,7 @@ export default function AdminUsersPage() {
       setUsers(userList);
       setLoading(false);
     } catch {
-      showToast("Network error", "error");
+      setFetchError(true);
       setLoading(false);
     }
   }, [showToast, router]);
@@ -147,6 +149,13 @@ export default function AdminUsersPage() {
 
       {loading ? (
         <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">Loading...</div>
+      ) : fetchError ? (
+        <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-4 text-center text-sm text-rose-200">
+          Failed to load users.
+          <button type="button" onClick={() => void fetchUsers()} className="ml-2 font-medium text-rose-100 underline underline-offset-2 hover:text-white">
+            Retry
+          </button>
+        </div>
       ) : users.length === 0 ? (
         <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4 text-sm text-slate-400">
           No users found. Create one to get started.

@@ -58,6 +58,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingDataRef = useRef<{ mcps: McpEntry[]; plugins: string[] } | null>(null);
 
   // Load persisted config on mount
   useEffect(() => {
@@ -65,8 +66,8 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
       try {
         const response = await fetch("/api/user/config");
         if (!response.ok) {
-          if (response.status !== 401) {
-            console.error("Failed to load config:", response.status);
+          if (response.status === 401) {
+            return;
           }
           return;
         }
@@ -82,8 +83,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
         } else {
           setPlugins(DEFAULT_PLUGINS);
         }
-      } catch (error) {
-        console.error("Failed to load config:", error);
+      } catch {
       } finally {
         setIsLoading(false);
       }
@@ -95,11 +95,14 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   useEffect(() => {
     if (isLoading) return;
 
+    pendingDataRef.current = { mcps, plugins };
+
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
     saveTimeoutRef.current = setTimeout(async () => {
+      pendingDataRef.current = null;
       try {
         setSaveError(null);
         const response = await fetch("/api/user/config", {
@@ -114,9 +117,8 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           const errorData = await response.json();
           setSaveError(errorData.error || "Failed to save config");
         }
-      } catch (error) {
+      } catch {
         setSaveError("Network error while saving config");
-        console.error("Failed to save config:", error);
       }
     }, 300);
 
@@ -126,6 +128,21 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
       }
     };
   }, [mcps, plugins, isLoading]);
+
+  // Flush pending save on unmount to prevent data loss
+  useEffect(() => {
+    return () => {
+      if (pendingDataRef.current) {
+        const { mcps: m, plugins: p } = pendingDataRef.current;
+        fetch("/api/user/config", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mcpServers: m, customPlugins: p }),
+          keepalive: true,
+        }).catch(() => {});
+      }
+    };
+  }, []);
 
   const availableModels = excludedModels
     ? Object.fromEntries(

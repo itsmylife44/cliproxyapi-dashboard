@@ -276,11 +276,8 @@ export default function QuotaPage() {
         if (res.ok) {
           const data = await res.json();
           setQuotaData(data);
-        } else {
-          console.error("Failed to fetch quota data");
         }
-      } catch (error) {
-        console.error("Network error:", error);
+      } catch {
       } finally {
         setLoading(false);
       }
@@ -334,11 +331,8 @@ export default function QuotaPage() {
       if (res.ok) {
         const data = await res.json();
         setQuotaData(data);
-      } else {
-        console.error("Failed to fetch quota data");
       }
-    } catch (error) {
-      console.error("Network error:", error);
+    } catch {
     } finally {
       setLoading(false);
     }

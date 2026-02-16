@@ -73,8 +73,7 @@ export default function ContainersPage() {
               : `Failed to load containers (${res.status})`;
           setFetchError(message);
         }
-      } catch (error) {
-        console.error("Failed to fetch containers:", error);
+      } catch {
         setFetchError("Network error while loading containers.");
       } finally {
         setLoading(false);

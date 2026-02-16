@@ -94,6 +94,7 @@ function getStatusColor(isoString: string): string {
 export default function UsagePage() {
   const [usageData, setUsageData] = useState<UsageData | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const isAdminRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState<DateFilter>("7d");
@@ -104,22 +105,24 @@ export default function UsagePage() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    const abortController = new AbortController();
+
     async function collectAndFetch(showLoading: boolean) {
       if (showLoading) {
         setLoading(true);
       }
 
       try {
-        if (isAdmin) {
+        if (isAdminRef.current) {
           try {
-            await fetch("/api/usage/collect", { method: "POST" });
+            await fetch("/api/usage/collect", { method: "POST", signal: abortController.signal });
           } catch {
-            /* Silently continue if collector is unreachable */
+            if (abortController.signal.aborted) return;
           }
         }
 
         const { from, to } = getDateRange(activeFilter, customFrom, customTo);
-        const res = await fetch(`/api/usage/history?from=${from}&to=${to}`);
+        const res = await fetch(`/api/usage/history?from=${from}&to=${to}`, { signal: abortController.signal });
 
         if (!res.ok) {
           showToast("Failed to load usage data", "error");
@@ -128,10 +131,13 @@ export default function UsagePage() {
         }
 
         const json: UsageResponse = await res.json();
+        if (abortController.signal.aborted) return;
         setUsageData(json.data);
+        isAdminRef.current = json.isAdmin;
         setIsAdmin(json.isAdmin);
         setLoading(false);
       } catch {
+        if (abortController.signal.aborted) return;
         showToast("Network error", "error");
         setLoading(false);
       }
@@ -147,11 +153,12 @@ export default function UsagePage() {
     }, 300000);
 
     return () => {
+      abortController.abort();
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [activeFilter, customFrom, customTo, isAdmin, showToast]);
+  }, [activeFilter, customFrom, customTo, showToast]);
 
   const handleFilterChange = (filter: DateFilter) => {
     setActiveFilter(filter);

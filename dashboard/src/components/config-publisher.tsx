@@ -45,7 +45,6 @@ export function ConfigPublisher() {
       setStatus(data);
       setTemplateName(data.name || "");
     } catch {
-      console.error("Failed to fetch publish status");
       setStatus(null);
     } finally {
       setLoading(false);

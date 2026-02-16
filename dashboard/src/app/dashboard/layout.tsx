@@ -23,7 +23,7 @@ export default async function DashboardLayout({
          <MobileTopBar />
          <div className="flex min-h-screen">
            <DashboardNav />
-            <main className="flex-1 px-3 pb-4 pt-16 lg:px-6 lg:pb-6 lg:pt-6">
+            <main className="min-w-0 flex-1 px-3 pb-4 pt-16 lg:px-6 lg:pb-6 lg:pt-6">
               <div className="mx-auto w-full max-w-[1320px]">{children}</div>
             </main>
           </div>

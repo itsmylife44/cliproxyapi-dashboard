@@ -136,7 +136,7 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-4">
       <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-slate-100">User Management</h1>
             <p className="mt-1 text-xs text-slate-400">Manage dashboard users and roles.</p>
@@ -153,7 +153,7 @@ export default function AdminUsersPage() {
         </div>
       ) : (
         <section className="overflow-x-auto rounded-md border border-slate-700/70 bg-slate-900/25">
-          <table className="w-full text-sm">
+          <table className="min-w-[600px] w-full text-sm">
             <thead>
               <tr className="border-b border-slate-700/70 bg-slate-900/60">
                 <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Username</th>

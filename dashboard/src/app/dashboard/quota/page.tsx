@@ -347,12 +347,12 @@ export default function QuotaPage() {
   return (
     <div className="space-y-4">
       <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-3">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-slate-100">Quota</h1>
             <p className="mt-1 text-sm text-slate-400">Monitor OAuth account quotas and usage windows.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="flex flex-wrap gap-1">
               {providerFilters.map((filter) => (
                 <Button
@@ -400,7 +400,8 @@ export default function QuotaPage() {
           {providerSummaries.length > 0 && (
             <section className="space-y-2">
               <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Provider Capacity</h2>
-              <div className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+              <div className="overflow-x-auto rounded-md border border-slate-700/70 bg-slate-900/25">
+                <div className="min-w-[600px]">
                 <div className="grid grid-cols-[minmax(0,1fr)_160px_160px_120px_100px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
                   <span>Provider</span>
                   <span>Long-Term</span>
@@ -448,13 +449,15 @@ export default function QuotaPage() {
                     </div>
                   );
                 })}
+                </div>
               </div>
             </section>
           )}
 
           <section className="space-y-2">
             <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Accounts</h2>
-            <div className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+            <div className="overflow-x-auto rounded-md border border-slate-700/70 bg-slate-900/25">
+              <div className="min-w-[650px]">
               <div className="grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
                 <span></span>
                 <span>Account</span>
@@ -508,38 +511,41 @@ export default function QuotaPage() {
                           <span className="text-xs text-slate-500">-</span>
                         )}
                       </div>
-                    </button>
+                     </button>
 
-                    {isRowExpanded && (
-                      <div className="border-t border-slate-700/60 bg-slate-900/30 px-4 py-3">
-                        {account.error && (
-                          <p className="mb-2 text-xs text-rose-300">{account.error}</p>
-                        )}
-                        {!account.supported && !account.error && (
-                          <p className="mb-2 text-xs text-amber-300">Quota monitoring not available for this provider.</p>
-                        )}
+                      {isRowExpanded && (
+                        <div className="border-t border-slate-700/60 bg-slate-900/30 px-4 py-3">
+                          {account.error && (
+                            <p className="mb-2 break-all text-xs text-rose-300">{account.error}</p>
+                          )}
+                          {!account.supported && !account.error && (
+                            <p className="mb-2 text-xs text-amber-300">Quota monitoring not available for this provider.</p>
+                          )}
 
-                        {account.groups && account.groups.length > 0 && (
-                          <div className="overflow-hidden rounded-sm border border-slate-700/70">
-                            {account.groups.map((group) => {
-                              const fraction = normalizeFraction(group.remainingFraction);
-                              const pct = fraction === null ? null : Math.round(fraction * 100);
-                              return (
-                                <div key={group.id} className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-slate-700/60 bg-slate-900/20 px-3 py-2 last:border-b-0">
-                                  <span className="truncate text-xs text-slate-200">{group.label}</span>
-                                  <span className="text-xs text-slate-300">{pct === null ? "-" : `${pct}%`}</span>
-                                  <span className="truncate text-xs text-slate-500">{formatRelativeTime(group.resetTime)}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                          {account.groups && account.groups.length > 0 && (
+                            <div className="overflow-x-auto rounded-sm border border-slate-700/70">
+                              <div className="min-w-[400px]">
+                              {account.groups.map((group) => {
+                                const fraction = normalizeFraction(group.remainingFraction);
+                                const pct = fraction === null ? null : Math.round(fraction * 100);
+                                return (
+                                  <div key={group.id} className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-slate-700/60 bg-slate-900/20 px-3 py-2 last:border-b-0">
+                                    <span className="truncate text-xs text-slate-200">{group.label}</span>
+                                    <span className="text-xs text-slate-300">{pct === null ? "-" : `${pct}%`}</span>
+                                    <span className="truncate text-xs text-slate-500">{formatRelativeTime(group.resetTime)}</span>
+                                  </div>
+                                );
+                              })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                   </div>
+                 );
+                })}
+              </div>
+              </div>
 
             {filteredAccounts.length === 0 && !loading && (
               <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">

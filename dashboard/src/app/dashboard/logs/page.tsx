@@ -186,9 +186,9 @@ export default function LogsPage() {
   return (
     <div className="space-y-4">
       <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold tracking-tight text-slate-100">Logs</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Button onClick={handleRefresh} disabled={loading} className="px-2.5 py-1 text-xs">
             Refresh
           </Button>
@@ -228,7 +228,7 @@ export default function LogsPage() {
                 {logs.map((line, index) => {
                   const level = getLogLevel(line);
                   return (
-                    <div key={`${index}-${line}`} className={getLevelColor(level)}>
+                    <div key={`${index}-${line}`} className={`${getLevelColor(level)} break-all`}>
                       {line}
                     </div>
                   );

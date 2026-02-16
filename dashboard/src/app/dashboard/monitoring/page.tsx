@@ -370,16 +370,16 @@ export default function MonitoringPage() {
               </div>
             )}
 
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="primary"
-                onClick={confirmRestart}
-                disabled={restarting}
-                className="flex-1 py-2 text-sm"
-              >
-                {restarting ? "Restarting..." : "Restart Service"}
-              </Button>
-            </div>
+             <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+               <Button
+                 variant="primary"
+                 onClick={confirmRestart}
+                 disabled={restarting}
+                 className="flex-1 py-2 text-sm"
+               >
+                 {restarting ? "Restarting..." : "Restart Service"}
+               </Button>
+             </div>
           </div>
       </section>
 
@@ -432,11 +432,11 @@ export default function MonitoringPage() {
                     {modelStats.map((stat) => (
                       <div
                         key={stat.model}
-                        className="grid grid-cols-[minmax(0,1fr)_120px_120px] items-center border-b border-slate-700/60 px-3 py-2 last:border-b-0"
+                        className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 border-b border-slate-700/60 px-3 py-2 last:border-b-0"
                       >
                         <span className="truncate text-xs text-slate-200">{stat.model}</span>
-                        <span className="text-xs text-slate-400">{stat.tokens.toLocaleString()} tokens</span>
-                        <span className="text-right text-xs text-slate-300">{stat.requests.toLocaleString()}</span>
+                        <span className="whitespace-nowrap text-xs text-slate-400">{stat.tokens.toLocaleString()} tokens</span>
+                        <span className="whitespace-nowrap text-right text-xs text-slate-300">{stat.requests.toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
@@ -451,20 +451,20 @@ export default function MonitoringPage() {
                       const maxCount = Math.max(...hourlyData.map((d) => d.count));
                       const widthPercent = (item.count / maxCount) * 100;
 
-                      return (
-                        <div key={item.hour} className="grid grid-cols-[80px_minmax(0,1fr)_64px] items-center gap-3 border-b border-slate-700/60 px-3 py-2 last:border-b-0">
-                          <span className="text-xs text-slate-400">
-                            {item.hour}
-                          </span>
-                          <div className="h-2 overflow-hidden rounded-full bg-slate-700/60">
-                            <div
-                              className="h-full bg-blue-500/70"
-                              style={{ width: `${widthPercent}%` }}
-                            />
-                          </div>
-                          <span className="text-right text-xs text-slate-300">{item.count}</span>
-                        </div>
-                      );
+                       return (
+                         <div key={item.hour} className="grid grid-cols-[60px_minmax(0,1fr)_auto] items-center gap-2 border-b border-slate-700/60 px-3 py-2 last:border-b-0 sm:grid-cols-[80px_minmax(0,1fr)_64px] sm:gap-3">
+                           <span className="text-xs text-slate-400">
+                             {item.hour}
+                           </span>
+                           <div className="h-2 overflow-hidden rounded-full bg-slate-700/60">
+                             <div
+                               className="h-full bg-blue-500/70"
+                               style={{ width: `${widthPercent}%` }}
+                             />
+                           </div>
+                           <span className="whitespace-nowrap text-right text-xs text-slate-300">{item.count}</span>
+                         </div>
+                       );
                     })}
                   </div>
                 </div>

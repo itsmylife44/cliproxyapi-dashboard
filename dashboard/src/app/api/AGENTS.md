@@ -4,24 +4,25 @@
 
 ## OVERVIEW
 
-35+ API routes handling auth, providers, config sync, container management, quota monitoring, and custom provider management. Three auth layers: Session (users), Sync Token (CLI), Admin (privileged). Fourth layer: Collector Auth (internal key for `/usage/collect`).
+~45 API routes handling auth, providers, config sync, container management, quota monitoring, and custom provider management. Four auth layers: Session (users), Admin (privileged), Sync Token (CLI), Collector Key (internal cron).
 
 ## STRUCTURE
 
 ```
 api/
 ├── auth/           # login, logout, me, change-password
-├── admin/          # users, settings, migrate-api-keys
+├── admin/          # users, settings, logs, migrate-api-keys
 ├── providers/      # keys, oauth (contribute/remove)
 ├── custom-providers/  # user-defined OpenAI-compatible
 ├── config-sync/    # tokens, bundle, version
 ├── config-sharing/ # publish, subscribe
 ├── containers/     # list, [name]/action, [name]/logs
 ├── management/     # [...path] proxy to CLIProxyAPI
-├── quota/          # usage limits
-├── usage/          # analytics
+├── quota/          # OAuth usage limits
+├── usage/          # analytics (history, collect)
 ├── health/         # liveness check
 ├── setup/          # initial admin creation
+├── agent-config/   # config generation for agents
 └── restart/, update/  # service control
 ```
 
@@ -35,6 +36,7 @@ api/
 | `/config-sync/bundle` | Sync Token | CLI plugin access |
 | `/containers/*` | Session + isAdmin | Docker control |
 | `/management/*` | Session | Proxy to CLIProxyAPI |
+| `/usage/collect` | Collector Key OR Session+Admin | Internal cron |
 
 ## ROUTE TEMPLATE
 
@@ -42,13 +44,12 @@ api/
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
+import { Errors } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 
 export async function GET(_request: NextRequest) {
   const session = await verifySession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!session) return Errors.unauthorized();
 
   try {
     const data = await prisma.model.findMany({
@@ -56,47 +57,43 @@ export async function GET(_request: NextRequest) {
     });
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Route error:", error);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return Errors.internal("fetch items", error);
   }
 }
 
 export async function POST(request: NextRequest) {
   const session = await verifySession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!session) return Errors.unauthorized();
 
   const originError = validateOrigin(request);
   if (originError) return originError;
 
   try {
     const body = await request.json();
-    // Validate body...
+    // Validate body with Zod or manual checks...
     // Create/update...
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
-    console.error("Route error:", error);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return Errors.internal("create item", error);
   }
 }
 ```
+
+**NEVER use `console.error` in routes** -- `Errors.internal()` logs via Pino and returns a generic 500.
 
 ## AUTH PATTERNS
 
 ### Session Auth (Dashboard Users)
 ```typescript
 const session = await verifySession();
-if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+if (!session) return Errors.unauthorized();
 const { userId, username } = session;
 ```
 
 ### Admin Auth
 ```typescript
 const session = await verifySession();
-if (!session?.user?.isAdmin) {
-  return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-}
+if (!session?.user?.isAdmin) return Errors.forbidden();
 ```
 
 ### Sync Token Auth (CLI Plugin)
@@ -113,19 +110,26 @@ const { userId, syncApiKey } = authResult;
 
 ## RESPONSE PATTERNS
 
+Use `Errors.*` factories for error responses:
+
 ```typescript
 // Success
 return NextResponse.json(data);
 return NextResponse.json({ success: true }, { status: 201 });
 
-// Client error
-return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-return NextResponse.json({ error: "Not found" }, { status: 404 });
+// Client errors (use Errors.* helpers)
+return Errors.unauthorized();           // 401
+return Errors.forbidden();              // 403
+return Errors.notFound("Resource");     // 404
+return Errors.validation("message");    // 400
+return Errors.missingFields(["name"]);  // 400
+return Errors.zodValidation(zodError);  // 400
+return Errors.conflict("message");      // 409
+return Errors.rateLimited();            // 429
 
-// Server error
-return NextResponse.json({ error: "Internal error" }, { status: 500 });
+// Server errors
+return Errors.internal("context", error);  // 500 (logs via Pino)
+return Errors.database("context", error);  // 500
 ```
 
 ## RATE LIMITING
@@ -149,9 +153,10 @@ Routes accepting user-provided URLs (`/custom-providers/fetch-models`) MUST vali
 
 ## ANTI-PATTERNS
 
+- **NEVER** use `console.error` → use `Errors.internal()` or `logger.error()`
 - **NEVER** skip `verifySession()` on protected routes
 - **NEVER** skip `validateOrigin()` on POST/PATCH/DELETE
-- **NEVER** expose internal error details → log + generic message
+- **NEVER** expose internal error details → `Errors.*` returns generic messages
 - **NEVER** trust client input → validate with Zod or manual checks
 - **NEVER** use Server Actions → API routes only (project convention)
 - **NEVER** fetch user-provided URLs without SSRF validation
@@ -164,7 +169,15 @@ Routes accepting user-provided URLs (`/custom-providers/fetch-models`) MUST vali
 | `/auth/login` | POST | HIGH | Session creation |
 | `/config-sync/bundle` | GET | CRITICAL | CLI config delivery |
 | `/providers/keys` | POST | HIGH | Key contribution |
-| `/management/[...path]` | ALL | HIGH | CLIProxyAPI proxy |
+| `/management/[...path]` | ALL | HIGH | CLIProxyAPI proxy (strict path whitelist) |
 | `/custom-providers` | POST | HIGH | Create + sync to proxy |
-| `/custom-providers/fetch-models` | POST | MEDIUM | Discovery from upstream |
-| `/quota` | GET | MEDIUM | OAuth quota monitoring |
+| `/custom-providers/fetch-models` | POST | MEDIUM | Discovery from upstream (SSRF protected) |
+| `/quota` | GET | MEDIUM | OAuth quota monitoring (30s fetch timeout) |
+| `/usage/history` | GET | MEDIUM | Aggregated usage analytics |
+| `/usage/collect` | POST | MEDIUM | Cron-triggered data persistence |
+
+## DEPRECATED
+
+| Route | Replaced By | Status |
+|-------|-------------|--------|
+| `/usage` (GET) | `/usage/history` | Still exists, will be removed |

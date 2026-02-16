@@ -312,11 +312,11 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
      }
    }, [initialOverrides]);
 
-   const overridesBeforeSaveRef = useRef<OhMyOpenCodeFullConfig>(overrides);
+   const latestSaveRef = useRef<OhMyOpenCodeFullConfig>(overrides);
 
    const saveOverrides = useCallback(async (newOverrides: OhMyOpenCodeFullConfig) => {
-     const previous = overridesBeforeSaveRef.current;
-     overridesBeforeSaveRef.current = newOverrides;
+     const previous = latestSaveRef.current;
+     latestSaveRef.current = newOverrides;
      setSaving(true);
      try {
        const res = await fetch("/api/agent-config", {
@@ -325,15 +325,19 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
          body: JSON.stringify({ overrides: newOverrides }),
        });
        if (!res.ok) {
-         overridesBeforeSaveRef.current = previous;
-         setOverrides(previous);
+         if (latestSaveRef.current === newOverrides) {
+           latestSaveRef.current = previous;
+           setOverrides(previous);
+         }
          showToast("Failed to save — reverted", "error");
          return;
        }
        showToast("Assignment saved", "success");
      } catch {
-       overridesBeforeSaveRef.current = previous;
-       setOverrides(previous);
+       if (latestSaveRef.current === newOverrides) {
+         latestSaveRef.current = previous;
+         setOverrides(previous);
+       }
        showToast("Network error — reverted", "error");
      } finally {
        setSaving(false);

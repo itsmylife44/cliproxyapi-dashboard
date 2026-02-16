@@ -49,7 +49,6 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
         setStatus(data);
       }
     } catch {
-      console.error("Failed to fetch subscription status");
       setStatus(null);
     } finally {
       setLoading(false);

@@ -82,7 +82,6 @@ export default function SettingsPage() {
         setProxyUpdateInfo(data);
       }
     } catch {
-      console.error("Failed to fetch update info");
     } finally {
       setProxyUpdateLoading(false);
     }
@@ -97,7 +96,6 @@ export default function SettingsPage() {
         setDashboardUpdateInfo(data);
       }
     } catch {
-      console.error("Failed to fetch dashboard update info");
     } finally {
       setDashboardUpdateLoading(false);
     }
@@ -115,7 +113,6 @@ export default function SettingsPage() {
         }
       }
     } catch {
-      console.error("Failed to fetch sync tokens");
     } finally {
       setSyncTokensLoading(false);
     }

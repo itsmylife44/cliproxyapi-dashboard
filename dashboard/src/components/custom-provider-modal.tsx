@@ -168,8 +168,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
         const error = await response.json();
         showToast(error.error || "Failed to save provider", "error");
       }
-    } catch (error) {
-      console.error("Save provider error:", error);
+    } catch {
       showToast("Network error", "error");
     } finally {
       setSaving(false);
@@ -251,8 +250,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
         const error = await response.json();
         showToast(error.error || "Failed to fetch models", "error");
       }
-    } catch (error) {
-      console.error("Fetch models error:", error);
+    } catch {
       showToast("Network error", "error");
     } finally {
       setFetchingModels(false);

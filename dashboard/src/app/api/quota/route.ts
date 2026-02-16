@@ -176,6 +176,7 @@ async function fetchAntigravityQuota(
         Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(30_000),
       body: JSON.stringify({
         auth_index: authIndex,
         method: "POST",
@@ -299,6 +300,7 @@ async function fetchCodexQuota(
         Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(30_000),
       body: JSON.stringify({
         auth_index: authIndex,
         method: "GET",
@@ -411,6 +413,7 @@ async function fetchKimiQuota(
         Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(30_000),
       body: JSON.stringify({
         auth_index: authIndex,
         method: "GET",
@@ -561,6 +564,7 @@ async function fetchClaudeQuota(
         Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(30_000),
       body: JSON.stringify({
         auth_index: authIndex,
         method: "GET",
@@ -663,6 +667,7 @@ async function fetchClaudeQuota(
         Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(30_000),
       body: JSON.stringify({
         auth_index: authIndex,
         method: "POST",
@@ -804,6 +809,7 @@ export async function GET() {
         headers: {
           Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
         },
+        signal: AbortSignal.timeout(30_000),
       }
     );
 

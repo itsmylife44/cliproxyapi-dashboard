@@ -119,9 +119,7 @@ export default function MonitoringPage() {
           const data = await res.json();
           setStatus(data);
         }
-      } catch (error) {
-        console.error("Failed to fetch status:", error);
-      }
+      } catch {}
     };
 
     fetchStatus();
@@ -138,9 +136,7 @@ export default function MonitoringPage() {
           const data = await res.json();
           setUsage(data);
         }
-      } catch (error) {
-        console.error("Failed to fetch usage:", error);
-      }
+      } catch {}
     };
 
     fetchUsage();
@@ -209,8 +205,7 @@ export default function MonitoringPage() {
             logsIntervalRef.current = null;
           }
         }
-      } catch (error) {
-        console.error("Failed to fetch logs:", error);
+      } catch {
         setLoggingState(LOGGING_STATE.ERROR);
         setLoggingError("Network error while fetching logs");
         if (logsIntervalRef.current) {
@@ -304,8 +299,7 @@ export default function MonitoringPage() {
       } else {
         setRestarting(false);
       }
-    } catch (error) {
-      console.error("Restart failed:", error);
+    } catch {
       setRestarting(false);
     }
   };

@@ -191,6 +191,7 @@ This project uses [Release-Please](https://github.com/googleapis/release-please)
 ## ARCHITECTURE
 
 - **Dual-Write**: Provider keys in BOTH PostgreSQL + CLIProxyAPI config.yaml. `lib/providers/dual-write.ts` uses AsyncMutex. Never bypass.
+- **AsyncMutex Single-Instance Constraint**: The AsyncMutex in `dual-write.ts` is in-process only and does NOT work across multiple dashboard instances. Current deployment is single-instance. If multi-instance is needed, replace with Postgres advisory locks (e.g., `SELECT pg_advisory_lock(id)`).
 - **Config Sync**: User prefs -> `generate-bundle.ts` -> JSON -> CLI plugin fetches via `/api/config-sync/bundle`. Custom provider models come from proxy `/v1/models` — NEVER embed upstream base-urls or API keys in opencode config.
 - **Custom Provider Flow**: DB -> `PUT /v0/management/openai-compatibility` -> proxy routes requests -> models in `/v1/models` -> `buildAvailableModelsFromProxy()` includes them. Fetch Models UI helper queries provider `/models` endpoint for discovery only.
 - **Quota System**: OAuth-based only (Claude, Antigravity, Codex, Kimi). Uses CLIProxyAPI `/api-call` to proxy quota checks. Not extensible to custom API-key providers — no standard usage endpoint exists.

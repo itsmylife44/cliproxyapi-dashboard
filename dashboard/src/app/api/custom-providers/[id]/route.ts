@@ -8,6 +8,7 @@ import { invalidateProxyModelsCache } from "@/lib/cache";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -132,90 +133,64 @@ export async function PATCH(
       });
     });
 
-    const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
-    const secretKey = env.MANAGEMENT_API_KEY;
+    let resolvedApiKey = validated.apiKey;
+    let prefetchedConfig: ManagementProviderEntry[] | undefined;
 
-    let syncStatus: "ok" | "failed" = "ok";
-    let syncMessage: string | undefined;
+    if (!resolvedApiKey) {
+      const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
+      const secretKey = env.MANAGEMENT_API_KEY;
 
-    if (secretKey) {
-      try {
-        const getRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
-          headers: { "Authorization": `Bearer ${secretKey}` }
-        });
-        
-        if (getRes.ok) {
-          const configData = (await getRes.json()) as Record<string, unknown>;
-          const openAiCompatibility = configData["openai-compatibility"];
-          const currentList: ManagementProviderEntry[] = Array.isArray(openAiCompatibility)
-            ? openAiCompatibility.filter(isManagementProviderEntry)
-            : [];
+      if (secretKey) {
+        try {
+          const getRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
+            headers: { "Authorization": `Bearer ${secretKey}` }
+          });
           
-          let existingKey = validated.apiKey;
+          if (getRes.ok) {
+            const configData = (await getRes.json()) as Record<string, unknown>;
+            const openAiCompatibility = configData["openai-compatibility"];
+            const currentList: ManagementProviderEntry[] = Array.isArray(openAiCompatibility)
+              ? openAiCompatibility.filter(isManagementProviderEntry)
+              : [];
+            
+            prefetchedConfig = currentList;
 
-          if (!existingKey) {
             const currentEntry = currentList.find((entry) => entry.name === provider.providerId);
             const apiKeyEntries = currentEntry?.["api-key-entries"];
             if (Array.isArray(apiKeyEntries) && apiKeyEntries.length > 0) {
               const firstEntry = apiKeyEntries[0];
               if (firstEntry && typeof firstEntry["api-key"] === "string") {
-                existingKey = firstEntry["api-key"];
+                resolvedApiKey = firstEntry["api-key"];
               }
             }
           }
-
-          if (existingKey) {
-            const updatedEntry = {
-              name: provider.providerId,
-              prefix: provider.prefix,
-              "base-url": provider.baseUrl,
-              "api-key-entries": [{ 
-                "api-key": existingKey,
-                ...(provider.proxyUrl ? { "proxy-url": provider.proxyUrl } : {})
-              }],
-              models: provider.models.map((m: { upstreamName: string; alias: string }) => ({ name: m.upstreamName, alias: m.alias })),
-              "excluded-models": provider.excludedModels.map((e: { pattern: string }) => e.pattern),
-              ...(provider.headers ? { headers: provider.headers } : {})
-            };
-
-            const newList = currentList.map((entry) => 
-              entry.name === provider.providerId ? updatedEntry : entry
-            );
-
-            const putRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
-              method: "PUT",
-              headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${secretKey}` 
-              },
-              body: JSON.stringify(newList)
-            });
-
-            if (!putRes.ok) {
-              syncStatus = "failed";
-              syncMessage = "Backend sync failed - provider updated but changes may not apply immediately";
-              logger.error({ statusCode: putRes.status }, "Failed to sync updated custom provider to Management API");
-            } else {
-              invalidateProxyModelsCache();
-            }
-          } else {
-            syncStatus = "failed";
-            syncMessage = "Backend sync failed - could not retrieve API key for update";
-            logger.error("Failed to sync updated custom provider: no API key available");
-          }
-        } else {
-          syncStatus = "failed";
-          syncMessage = "Backend sync failed - provider updated but changes may not apply immediately";
-          logger.error({ statusCode: getRes.status }, "Failed to fetch current config from Management API");
+        } catch (err) {
+          logger.error({ err }, "Failed to retrieve existing API key for update");
         }
-      } catch (syncError) {
-        syncStatus = "failed";
-        syncMessage = "Backend sync failed - provider updated but changes may not apply immediately";
-        logger.error({ err: syncError }, "Failed to sync updated custom provider to Management API");
       }
+    }
+
+    let syncStatus: "ok" | "failed" = "ok";
+    let syncMessage: string | undefined;
+
+    if (resolvedApiKey) {
+      const syncResult = await syncCustomProviderToProxy({
+        providerId: provider.providerId,
+        prefix: provider.prefix,
+        baseUrl: provider.baseUrl,
+        apiKey: resolvedApiKey,
+        proxyUrl: provider.proxyUrl,
+        headers: provider.headers as Record<string, string> | null,
+        models: provider.models,
+        excludedModels: provider.excludedModels
+      }, "update", prefetchedConfig);
+
+      syncStatus = syncResult.syncStatus;
+      syncMessage = syncResult.syncMessage;
     } else {
       syncStatus = "failed";
-      syncMessage = "Backend sync unavailable - management API key not configured";
+      syncMessage = "Backend sync failed - could not retrieve API key for update";
+      logger.error("Failed to sync updated custom provider: no API key available");
     }
 
     logAuditAsync({

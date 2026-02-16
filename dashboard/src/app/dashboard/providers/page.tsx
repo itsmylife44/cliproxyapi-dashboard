@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { CustomProviderModal } from "@/components/custom-provider-modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 // ── Types & Constants ──────────────────────────────────────────────────────────
@@ -325,6 +326,11 @@ export default function ProvidersPage() {
   const [showCustomProviderModal, setShowCustomProviderModal] = useState(false);
   const [editingCustomProvider, setEditingCustomProvider] = useState<CustomProvider | undefined>(undefined);
 
+  const [showConfirmKeyDelete, setShowConfirmKeyDelete] = useState(false);
+  const [pendingKeyDelete, setPendingKeyDelete] = useState<{ keyHash: string; provider: string } | null>(null);
+  const [showConfirmOAuthDelete, setShowConfirmOAuthDelete] = useState(false);
+  const [pendingOAuthDelete, setPendingOAuthDelete] = useState<{ accountId: string; accountName: string } | null>(null);
+
   const selectedOAuthProvider = getOAuthProviderById(selectedOAuthProviderId);
   const selectedOAuthProviderRequiresCallback = selectedOAuthProvider?.requiresCallback ?? true;
 
@@ -449,8 +455,15 @@ export default function ProvidersPage() {
     }
   };
 
-  const handleDeleteKey = async (keyHash: string, provider: string) => {
-    if (!confirm("Are you sure you want to remove this key?")) return;
+  const confirmDeleteKey = (keyHash: string, provider: string) => {
+    setPendingKeyDelete({ keyHash, provider });
+    setShowConfirmKeyDelete(true);
+  };
+
+  const handleDeleteKey = async () => {
+    if (!pendingKeyDelete) return;
+    const { keyHash, provider } = pendingKeyDelete;
+
     try {
       const res = await fetch(`/api/providers/keys/${keyHash}?provider=${provider}`, {
         method: "DELETE",
@@ -779,10 +792,17 @@ export default function ProvidersPage() {
     }
   };
 
-  const handleOAuthDelete = async (accountId: string) => {
+  const confirmDeleteOAuth = (accountId: string) => {
     const account = accounts.find((a) => a.id === accountId);
     if (!account) return;
-    if (!confirm(`Remove OAuth account ${account.accountName}?`)) return;
+    setPendingOAuthDelete({ accountId, accountName: account.accountName });
+    setShowConfirmOAuthDelete(true);
+  };
+
+  const handleOAuthDelete = async () => {
+    if (!pendingOAuthDelete) return;
+    const { accountId } = pendingOAuthDelete;
+
     try {
       const res = await fetch(`/api/providers/oauth/${accountId}`, {
         method: "DELETE",
@@ -906,13 +926,14 @@ export default function ProvidersPage() {
               <span className="text-xs font-medium text-slate-400">{totalApiKeys} keys total</span>
             </div>
 
-            <div className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/20">
-              <div className="grid grid-cols-[minmax(0,1.6fr)_96px_120px_128px] items-center border-b border-slate-700/70 bg-slate-900/60 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                <span>Provider</span>
-                <span>Status</span>
-                <span>Keys</span>
-                <span>Actions</span>
-              </div>
+            <div className="overflow-x-auto">
+              <div className="min-w-[600px] overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/20">
+                <div className="grid grid-cols-[minmax(0,1.6fr)_96px_120px_128px] items-center border-b border-slate-700/70 bg-slate-900/60 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  <span>Provider</span>
+                  <span>Status</span>
+                  <span>Keys</span>
+                  <span>Actions</span>
+                </div>
               {API_KEY_PROVIDERS.map((provider) => {
                 const config = configs[provider.id];
                 const userKeyCount = currentUser ? config.keys.filter((k) => k.isOwn).length : 0;
@@ -967,7 +988,7 @@ export default function ProvidersPage() {
                                   <Button
                                     variant="danger"
                                     className="px-2 py-1 text-[11px]"
-                                    onClick={() => handleDeleteKey(keyInfo.keyHash, provider.id)}
+                                    onClick={() => confirmDeleteKey(keyInfo.keyHash, provider.id)}
                                   >
                                     Remove
                                   </Button>
@@ -979,8 +1000,9 @@ export default function ProvidersPage() {
                       )}
                     </div>
                   </div>
-                );
+                 );
               })}
+              </div>
             </div>
           </section>
 
@@ -1032,7 +1054,7 @@ export default function ProvidersPage() {
                             <Button
                               variant="danger"
                               className="px-2.5 py-1 text-xs"
-                              onClick={() => handleOAuthDelete(account.id)}
+                              onClick={() => confirmDeleteOAuth(account.id)}
                             >
                               Disconnect
                             </Button>
@@ -1101,19 +1123,33 @@ export default function ProvidersPage() {
                   </div>
                 </div>
               ) : customProviders.length === 0 ? (
-                <div className="rounded-md border border-slate-700/70 bg-slate-900/30 p-4">
-                  <div className="rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 text-xs text-slate-400">
-                    No custom providers yet. Add one to get started.
+                <div className="rounded-md border border-white/10 bg-white/5 p-8 backdrop-blur-md">
+                  <div className="flex flex-col items-center justify-center gap-4 text-center">
+                    <div className="flex size-14 items-center justify-center rounded-full border border-white/10 bg-white/5">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-slate-100">No custom providers configured</h3>
+                      <p className="text-xs text-slate-400">Add an OpenAI-compatible provider to extend your AI capabilities</p>
+                    </div>
+                    <Button onClick={() => setShowCustomProviderModal(true)} className="px-3 py-1.5 text-xs">
+                      Add Custom Provider
+                    </Button>
                   </div>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-sm border border-slate-700/70 bg-slate-900/30">
-                  <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px_120px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                    <span>Name</span>
-                    <span>Endpoint</span>
-                    <span>Models</span>
-                    <span>Actions</span>
-                  </div>
+                <div className="overflow-x-auto">
+                  <div className="min-w-[600px] overflow-hidden rounded-sm border border-slate-700/70 bg-slate-900/30">
+                    <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px_120px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                      <span>Name</span>
+                      <span>Endpoint</span>
+                      <span>Models</span>
+                      <span>Actions</span>
+                    </div>
                   {customProviders.map((provider) => (
                     <div
                       key={provider.id}
@@ -1141,8 +1177,9 @@ export default function ProvidersPage() {
                           Delete
                         </Button>
                       </div>
-                    </div>
+                     </div>
                   ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1394,6 +1431,35 @@ export default function ProvidersPage() {
         onClose={handleCustomProviderModalClose}
         provider={editingCustomProvider}
         onSuccess={handleCustomProviderSuccess}
+      />
+
+      {/* ── Confirm Dialogs ──────────────────────────────────────────────── */}
+      <ConfirmDialog
+        isOpen={showConfirmKeyDelete}
+        onClose={() => {
+          setShowConfirmKeyDelete(false);
+          setPendingKeyDelete(null);
+        }}
+        onConfirm={handleDeleteKey}
+        title="Remove API Key"
+        message="Are you sure you want to remove this key?"
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={showConfirmOAuthDelete}
+        onClose={() => {
+          setShowConfirmOAuthDelete(false);
+          setPendingOAuthDelete(null);
+        }}
+        onConfirm={handleOAuthDelete}
+        title="Remove OAuth Account"
+        message={`Remove OAuth account ${pendingOAuthDelete?.accountName}?`}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="danger"
       />
     </div>
   );

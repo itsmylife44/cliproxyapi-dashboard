@@ -329,8 +329,9 @@ export default function UsagePage() {
           ) : (
             <section className="space-y-2">
               <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Usage by API Key</h2>
-              <div className="overflow-x-auto rounded-md border border-slate-700/70 bg-slate-900/25">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+                <div className="min-w-[600px] rounded-md border border-slate-700/70 bg-slate-900/25">
+                  <table className="w-full text-sm">
                   <thead className="border-b border-slate-700/70 bg-slate-900/60">
                     <tr>
                       <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 w-8"></th>
@@ -419,6 +420,7 @@ export default function UsagePage() {
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
             </section>
           )}

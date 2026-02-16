@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ModelMapping {
   upstreamName: string;
@@ -28,12 +29,7 @@ interface CustomProviderCardProps {
 
 export function CustomProviderCard({ provider, onEdit, onDelete }: CustomProviderCardProps) {
   const [showFullUrl, setShowFullUrl] = useState(false);
-
-  const handleDelete = () => {
-    if (confirm(`Delete custom provider "${provider.name}"?`)) {
-      onDelete();
-    }
-  };
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const truncateUrl = (url: string) => {
     if (url.length <= 40) return url;
@@ -61,12 +57,23 @@ export function CustomProviderCard({ provider, onEdit, onDelete }: CustomProvide
             <Button
               variant="danger"
               className="px-3 py-1.5 text-xs opacity-0 transition-opacity group-hover:opacity-100"
-              onClick={handleDelete}
+              onClick={() => setShowConfirm(true)}
             >
               Delete
             </Button>
           </div>
         </div>
+
+        <ConfirmDialog
+          isOpen={showConfirm}
+          onClose={() => setShowConfirm(false)}
+          onConfirm={onDelete}
+          title="Delete Custom Provider"
+          message={`Delete custom provider "${provider.name}"?`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          variant="danger"
+        />
 
         <button 
           type="button"

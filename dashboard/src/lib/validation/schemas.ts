@@ -121,6 +121,52 @@ export const AgentConfigSchema = z.object({
 export type AgentConfigInput = z.infer<typeof AgentConfigSchema>;
 
 // ============================================================================
+// CUSTOM PROVIDERS
+// ============================================================================
+
+export const FetchModelsSchema = z.object({
+  baseUrl: z.string().startsWith("https://", "Base URL must start with https://"),
+  apiKey: z.string().min(1)
+});
+
+export type FetchModelsInput = z.infer<typeof FetchModelsSchema>;
+
+export const CreateCustomProviderSchema = z.object({
+  name: z.string().min(1).max(100),
+  providerId: z.string().regex(/^[a-z0-9-]+$/, "Provider ID must be lowercase alphanumeric with hyphens"),
+  baseUrl: z.string().url().startsWith("https://", "Base URL must start with https://"),
+  apiKey: z.string().min(1),
+  prefix: z.string().optional(),
+  proxyUrl: z.string().optional(),
+  headers: z.record(z.string(), z.string()).optional(),
+  models: z.array(z.object({
+    upstreamName: z.string().min(1),
+    alias: z.string().min(1)
+  })).min(1, "At least one model mapping is required"),
+  excludedModels: z.array(z.string()).optional()
+});
+
+export type CreateCustomProviderInput = z.infer<typeof CreateCustomProviderSchema>;
+
+// ============================================================================
+// AUTH
+// ============================================================================
+
+export const LoginSchema = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1)
+});
+
+export type LoginInput = z.infer<typeof LoginSchema>;
+
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(1)
+});
+
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
+
+// ============================================================================
 // ERROR RESPONSE HELPER
 // ============================================================================
 

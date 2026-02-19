@@ -71,7 +71,7 @@ async function getCurrentImageDigest(): Promise<{ version: string; digest: strin
 async function checkGitHubBuildStatus(): Promise<boolean> {
   try {
     const response = await fetch(
-      "https://api.github.com/repos/router-for-me/CLIProxyAPI/actions/runs?status=in_progress&per_page=5",
+      "https://api.github.com/repos/router-for-me/CLIProxyAPI/actions/runs?per_page=10",
       {
         cache: "no-store",
         headers: {

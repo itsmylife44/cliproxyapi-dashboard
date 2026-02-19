@@ -27,7 +27,7 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/40"
+      className="animate-modal-overlay fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/60"
       onClick={onClose}
       onKeyDown={(e) => e.key === "Escape" && onClose()}
       role="dialog"
@@ -35,7 +35,7 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
     >
       <div
         className={cn(
-          "relative max-h-[90vh] w-full max-w-2xl overflow-y-auto backdrop-blur-2xl bg-white/15 border border-white/20 rounded-xl p-5 shadow-2xl",
+          "animate-modal-card relative max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-slate-900 border border-slate-700/70 rounded-xl p-5 shadow-2xl",
           className
         )}
         onClick={(e) => e.stopPropagation()}
@@ -63,7 +63,7 @@ interface ModalHeaderProps {
 
 export function ModalHeader({ children, className }: ModalHeaderProps) {
   return (
-    <div className={cn("mb-4 border-b border-white/20 pb-3", className)}>
+    <div className={cn("mb-4 border-b border-slate-700/70 pb-3", className)}>
       {children}
     </div>
   );
@@ -98,7 +98,7 @@ interface ModalFooterProps {
 
 export function ModalFooter({ children, className }: ModalFooterProps) {
   return (
-    <div className={cn("flex justify-end gap-4 border-t border-white/20 pt-4", className)}>
+    <div className={cn("flex justify-end gap-4 border-t border-slate-700/70 pt-4", className)}>
       {children}
     </div>
   );

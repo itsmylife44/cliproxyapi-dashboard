@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -191,51 +190,54 @@ export default function AdminLogsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-          Application Logs
-        </h1>
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <label htmlFor="level-filter" className="text-sm text-white/70">
-              Level:
-            </label>
-            <select
-              id="level-filter"
-              value={levelFilter}
-              onChange={(e) => setLevelFilter(e.target.value as LevelFilter)}
-              className="rounded-lg px-3 py-1.5 text-sm bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              {LEVEL_FILTERS.map((level) => (
-                <option key={level} value={level} className="bg-gray-900">
-                  {level.charAt(0).toUpperCase() + level.slice(1)}
-                </option>
-              ))}
-            </select>
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-100">Application Logs</h1>
+            <p className="mt-1 text-xs text-slate-400">Dashboard application event log.</p>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
+              <label htmlFor="level-filter" className="text-xs text-slate-400">
+                Level:
+              </label>
+              <select
+                id="level-filter"
+                value={levelFilter}
+                onChange={(e) => setLevelFilter(e.target.value as LevelFilter)}
+                className="rounded-sm border border-slate-700/70 bg-slate-900/50 px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-blue-400/50 transition-colors"
+              >
+                {LEVEL_FILTERS.map((level) => (
+                  <option key={level} value={level} className="bg-slate-900">
+                    {level.charAt(0).toUpperCase() + level.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={autoRefresh}
-              onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="size-4 rounded border-white/20 bg-white/5 text-purple-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-0"
-            />
-            <span className="text-sm text-white/70">Auto-refresh (5s)</span>
-          </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="size-4 rounded border-slate-600/70 bg-slate-900/40 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+              />
+              <span className="text-xs text-slate-400">Auto-refresh (5s)</span>
+            </label>
 
-          <Button onClick={() => void fetchLogs()} variant="secondary">
-            Refresh
-          </Button>
+            <Button onClick={() => void fetchLogs()} variant="secondary" className="px-2.5 py-1 text-xs">
+              Refresh
+            </Button>
 
-          <Button onClick={confirmClear} variant="danger" disabled={clearing}>
-            {clearing ? "Clearing..." : "Clear Logs"}
-          </Button>
+            <Button onClick={confirmClear} variant="danger" disabled={clearing} className="px-2.5 py-1 text-xs">
+              {clearing ? "Clearing..." : "Clear Logs"}
+            </Button>
+          </div>
         </div>
-      </div>
+      </section>
 
       {stats && (
-        <div className="flex flex-wrap gap-4 text-xs text-white/60">
+        <div className="flex flex-wrap gap-4 text-xs text-slate-400">
           <span className="flex items-center gap-1.5">
             <span className={`size-2 rounded-full ${stats.persistent ? "bg-green-500" : "bg-yellow-500"}`} />
             Persistent storage {stats.persistent ? "enabled" : "disabled"}
@@ -246,97 +248,96 @@ export default function AdminLogsPage() {
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Log Entries</CardTitle>
-            <span className="text-xs text-white/50">
-              Showing {logs.length} of {total} logs
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="p-4 text-center text-white">Loading...</div>
-          ) : logs.length === 0 ? (
-            <div className="border-l-4 border-white/30 backdrop-blur-xl bg-white/5 p-4 text-sm text-white/80 rounded-r-xl">
+      <section className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+        <div className="flex items-center justify-between border-b border-slate-700/70 bg-slate-900/60 px-3 py-2">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Log Entries</span>
+          <span className="text-xs text-slate-400">
+            Showing {logs.length} of {total} logs
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="p-6 text-center text-sm text-slate-400">Loading...</div>
+        ) : logs.length === 0 ? (
+          <div className="p-4">
+            <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4 text-sm text-slate-400">
               No logs found. Logs will appear here when application events occur.
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left py-3 px-4 font-medium text-white/70 w-36">
-                      Time
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-white/70 w-20">
-                      Level
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-white/70">
-                      Message
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-white/70 w-20">
-                      Details
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log, index) => (
-                    <React.Fragment key={`log-${log.time}-${index}`}>
-                      <tr
-                        className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
-                        onClick={() => toggleRowExpansion(index)}
-                      >
-                        <td className="py-3 px-4">
-                          <div className="flex flex-col">
-                            <span className="text-white/90 text-xs">
-                              {formatRelativeTime(log.time)}
-                            </span>
-                            <span className="text-white/50 text-[10px]">
-                              {formatTimestamp(log.time)}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${getLevelBadgeClass(log.levelLabel)}`}
-                          >
-                            {log.levelLabel.toUpperCase()}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-700/70 bg-slate-900/60">
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 w-36">
+                    Time
+                  </th>
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 w-20">
+                    Level
+                  </th>
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                    Message
+                  </th>
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 w-20">
+                    Details
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((log, index) => (
+                  <React.Fragment key={`log-${log.time}-${index}`}>
+                    <tr
+                      className="border-b border-slate-700/60 last:border-b-0 hover:bg-slate-800/30 transition-colors cursor-pointer"
+                      onClick={() => toggleRowExpansion(index)}
+                    >
+                      <td className="px-3 py-2">
+                        <div className="flex flex-col">
+                          <span className="text-xs text-slate-200">
+                            {formatRelativeTime(log.time)}
                           </span>
-                        </td>
-                        <td className="py-3 px-4 text-white/80 font-mono text-xs break-all max-w-md">
-                          {log.msg}
-                        </td>
-                        <td className="py-3 px-4">
-                          <button
-                            type="button"
-                            className="text-purple-400 hover:text-purple-300 text-xs underline"
-                          >
-                            {expandedRow === index ? "Hide" : "Show"}
-                          </button>
+                          <span className="text-[10px] text-slate-400">
+                            {formatTimestamp(log.time)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${getLevelBadgeClass(log.levelLabel)}`}
+                        >
+                          {log.levelLabel.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-slate-200 font-mono break-all max-w-md">
+                        {log.msg}
+                      </td>
+                      <td className="px-3 py-2">
+                        <button
+                          type="button"
+                          className="text-blue-400 hover:text-blue-300 text-xs underline"
+                        >
+                          {expandedRow === index ? "Hide" : "Show"}
+                        </button>
+                      </td>
+                    </tr>
+                    {expandedRow === index && (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="px-3 py-3 bg-slate-900/30 border-b border-slate-700/60"
+                        >
+                          <pre className="text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64">
+                            {renderLogDetails(log)}
+                          </pre>
                         </td>
                       </tr>
-                      {expandedRow === index && (
-                        <tr>
-                          <td
-                            colSpan={4}
-                            className="py-3 px-4 bg-black/20 border-b border-white/5"
-                          >
-                            <pre className="text-xs text-white/70 font-mono whitespace-pre-wrap overflow-auto max-h-64">
-                              {renderLogDetails(log)}
-                            </pre>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <ConfirmDialog
         isOpen={showConfirm}

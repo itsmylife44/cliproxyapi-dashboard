@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.20](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.19...dashboard-v0.1.20) (2026-02-19)
+
+
+### Bug Fixes
+
+* suppress update popups while github actions build is in progress ([#52](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/52)) ([3d546b2](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/3d546b231a4f489b93f1fc1c0f345e36a435a33c))
+
 ## [0.1.19](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.18...dashboard-v0.1.19) (2026-02-19)
 
 

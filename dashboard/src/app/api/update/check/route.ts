@@ -19,7 +19,16 @@ interface VersionInfo {
   latestVersion: string;
   latestDigest: string;
   updateAvailable: boolean;
+  buildInProgress: boolean;
   availableVersions: string[];
+}
+
+interface GitHubWorkflowRun {
+  status?: string;
+}
+
+interface GitHubRunsResponse {
+  workflow_runs?: GitHubWorkflowRun[];
 }
 
 async function getDockerHubTags(): Promise<DockerHubTag[]> {
@@ -59,6 +68,31 @@ async function getCurrentImageDigest(): Promise<{ version: string; digest: strin
   }
 }
 
+async function checkGitHubBuildStatus(): Promise<boolean> {
+  try {
+    const response = await fetch(
+      "https://api.github.com/repos/router-for-me/CLIProxyAPI/actions/runs?status=in_progress&per_page=5",
+      {
+        cache: "no-store",
+        headers: {
+          Accept: "application/vnd.github+json",
+          "User-Agent": "cliproxyapi-dashboard/update-check",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const data: GitHubRunsResponse = await response.json();
+    const runs = data.workflow_runs || [];
+    return runs.some((run) => run.status === "in_progress" || run.status === "queued");
+  } catch {
+    return false;
+  }
+}
+
 export async function GET() {
   const session = await verifySession();
 
@@ -82,9 +116,10 @@ export async function GET() {
   }
 
   try {
-    const [tags, current] = await Promise.all([
+    const [tags, current, buildInProgress] = await Promise.all([
       getDockerHubTags(),
       getCurrentImageDigest(),
+      checkGitHubBuildStatus(),
     ]);
 
     const latestTag = tags.find((t) => t.name === "latest");
@@ -128,7 +163,8 @@ export async function GET() {
       currentDigest: current.digest,
       latestVersion: versionNames[0] || "latest",
       latestDigest,
-      updateAvailable,
+      updateAvailable: buildInProgress ? false : updateAvailable,
+      buildInProgress,
       availableVersions: versionNames.slice(0, 10),
     };
 

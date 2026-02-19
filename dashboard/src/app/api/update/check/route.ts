@@ -19,7 +19,12 @@ interface VersionInfo {
   latestVersion: string;
   latestDigest: string;
   updateAvailable: boolean;
+  buildInProgress: boolean;
   availableVersions: string[];
+}
+
+interface GitHubRunsResponse {
+  total_count?: number;
 }
 
 async function getDockerHubTags(): Promise<DockerHubTag[]> {
@@ -59,6 +64,30 @@ async function getCurrentImageDigest(): Promise<{ version: string; digest: strin
   }
 }
 
+async function checkGitHubBuildStatus(): Promise<boolean> {
+  try {
+    const headers = {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "cliproxyapi-dashboard/update-check",
+    };
+    const base = "https://api.github.com/repos/router-for-me/CLIProxyAPI/actions/runs?per_page=1";
+
+    const [inProgressRes, queuedRes] = await Promise.all([
+      fetch(`${base}&status=in_progress`, { cache: "no-store", headers }),
+      fetch(`${base}&status=queued`, { cache: "no-store", headers }),
+    ]);
+
+    const [inProgressData, queuedData]: GitHubRunsResponse[] = await Promise.all([
+      inProgressRes.ok ? inProgressRes.json() : Promise.resolve({}),
+      queuedRes.ok ? queuedRes.json() : Promise.resolve({}),
+    ]);
+
+    return (inProgressData.total_count ?? 0) > 0 || (queuedData.total_count ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET() {
   const session = await verifySession();
 
@@ -82,9 +111,10 @@ export async function GET() {
   }
 
   try {
-    const [tags, current] = await Promise.all([
+    const [tags, current, buildInProgress] = await Promise.all([
       getDockerHubTags(),
       getCurrentImageDigest(),
+      checkGitHubBuildStatus(),
     ]);
 
     const latestTag = tags.find((t) => t.name === "latest");
@@ -128,7 +158,8 @@ export async function GET() {
       currentDigest: current.digest,
       latestVersion: versionNames[0] || "latest",
       latestDigest,
-      updateAvailable,
+      updateAvailable: buildInProgress ? false : updateAvailable,
+      buildInProgress,
       availableVersions: versionNames.slice(0, 10),
     };
 

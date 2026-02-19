@@ -8,6 +8,7 @@ interface ProxyVersionInfo {
   latestVersion: string;
   latestDigest: string;
   updateAvailable: boolean;
+  buildInProgress: boolean;
   availableVersions: string[];
 }
 
@@ -65,6 +66,11 @@ export function useProxyUpdateCheck() {
       const data: ProxyVersionInfo = await updateRes.json();
 
       setUpdateInfo(data);
+
+      if (data.buildInProgress) {
+        setShowPopup(false);
+        return;
+      }
 
       if (data.updateAvailable) {
         const dismissedVersion = getDismissedVersion();

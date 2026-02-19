@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.19](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.18...dashboard-v0.1.19) (2026-02-19)
+
+
+### Features
+
+* add client-side pagination to logs page ([a1d50b6](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a1d50b632c8dfa4c851b96fb0c0c519608684ad5))
+* add separate proxy update notification component ([9601286](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/96012864b27a387ce5f32b64da0fa426383320a2))
+
+
+### Bug Fixes
+
+* containers page responsive table layout ([da381e2](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/da381e2294bef5004e4976e83a26562ab549064d))
+* dashboard UI consistency - remove glassmorphism, standardize to blue/slate theme ([df23e6b](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/df23e6b575721c0cd75af005bde3fe830b33171c))
+* modal styling and animation - replace glassmorphism with solid dark background, add keyframe animations ([a7b80be](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a7b80be0ef6beda80a536a18cdacced5aa08e5de))
+
 ## [0.1.18](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.17...dashboard-v0.1.18) (2026-02-16)
 
 

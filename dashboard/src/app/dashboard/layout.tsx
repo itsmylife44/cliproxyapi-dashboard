@@ -5,6 +5,7 @@ import { ToastProvider } from "@/components/ui/toast";
 import { MobileSidebarProvider } from "@/components/mobile-sidebar-context";
 import { MobileTopBar } from "@/components/mobile-top-bar";
 import { UpdateNotification } from "@/components/update-notification";
+import { ProxyUpdateNotification } from "@/components/proxy-update-notification";
 
 export default async function DashboardLayout({
   children,
@@ -28,6 +29,7 @@ export default async function DashboardLayout({
             </main>
           </div>
           <UpdateNotification />
+          <ProxyUpdateNotification />
         </MobileSidebarProvider>
     </ToastProvider>
   );

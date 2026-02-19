@@ -20,9 +20,18 @@ interface VersionInfo {
   currentVersion: string;
   latestVersion: string;
   updateAvailable: boolean;
+  buildInProgress: boolean;
   availableVersions: string[];
   releaseUrl: string | null;
   releaseNotes: string | null;
+}
+
+interface GitHubWorkflowRun {
+  status?: string;
+}
+
+interface GitHubRunsResponse {
+  workflow_runs?: GitHubWorkflowRun[];
 }
 
 function parseVersion(tag: string): number[] | null {
@@ -62,6 +71,31 @@ async function getGitHubReleases(): Promise<GitHubRelease[]> {
   return response.json();
 }
 
+async function checkGitHubBuildStatus(): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${GITHUB_REPO}/actions/runs?status=in_progress&per_page=5`,
+      {
+        cache: "no-store",
+        headers: {
+          Accept: "application/vnd.github+json",
+          "User-Agent": `cliproxyapi-dashboard/${DASHBOARD_VERSION}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const data: GitHubRunsResponse = await response.json();
+    const runs = data.workflow_runs || [];
+    return runs.some((run) => run.status === "in_progress" || run.status === "queued");
+  } catch {
+    return false;
+  }
+}
+
 export async function GET() {
   const session = await verifySession();
 
@@ -85,7 +119,10 @@ export async function GET() {
   }
 
   try {
-    const releases = await getGitHubReleases();
+    const [releases, buildInProgress] = await Promise.all([
+      getGitHubReleases(),
+      checkGitHubBuildStatus(),
+    ]);
 
     const stableReleases = releases.filter((r) => !r.prerelease && !r.draft);
 
@@ -103,12 +140,15 @@ export async function GET() {
     const latestRelease = sortedReleases[0] ?? null;
     const latestVersion = latestRelease?.tag_name ?? DASHBOARD_VERSION;
 
+    const updateAvailable = latestRelease
+      ? isNewerVersion(DASHBOARD_VERSION, latestRelease.tag_name)
+      : false;
+
     const versionInfo: VersionInfo = {
       currentVersion: DASHBOARD_VERSION,
       latestVersion,
-      updateAvailable: latestRelease
-        ? isNewerVersion(DASHBOARD_VERSION, latestRelease.tag_name)
-        : false,
+      updateAvailable: buildInProgress ? false : updateAvailable,
+      buildInProgress,
       availableVersions: sortedReleases.slice(0, 10).map((r) => r.tag_name),
       releaseUrl: latestRelease?.html_url ?? null,
       releaseNotes: latestRelease?.body?.slice(0, 2000) ?? null,

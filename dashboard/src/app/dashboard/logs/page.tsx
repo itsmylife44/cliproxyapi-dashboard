@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
+const LOGS_PER_PAGE = 50;
+
 const LOG_LEVEL = {
   INFO: "info",
   WARN: "warn",
@@ -99,25 +101,21 @@ export default function LogsPage() {
   const [loading, setLoading] = useState(true);
   const [latestTimestamp, setLatestTimestamp] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const { showToast } = useToast();
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const logsRef = useRef<string[]>([]);
   const latestTimestampRef = useRef<number | null>(null);
   const loadingRef = useRef<boolean>(true);
 
+  const totalPages = Math.ceil(logs.length / LOGS_PER_PAGE);
+  const pagedLogs = logs.slice(
+    (currentPage - 1) * LOGS_PER_PAGE,
+    currentPage * LOGS_PER_PAGE
+  );
+
   useEffect(() => {
     void fetchLogs({ setLogs, setLatestTimestamp, setLoading, showToast });
   }, [showToast]);
-
-  const logsCount = logs.length;
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    if (logsCount >= 0) {
-      container.scrollTop = container.scrollHeight;
-    }
-  }, [logsCount]);
 
   useEffect(() => {
     logsRef.current = logs;
@@ -149,6 +147,7 @@ export default function LogsPage() {
   }, [showToast]);
 
   const handleRefresh = () => {
+    setCurrentPage(1);
     void fetchLogs({
       setLogs,
       setLatestTimestamp,
@@ -175,6 +174,7 @@ export default function LogsPage() {
       }
       setLogs([]);
       setLatestTimestamp(null);
+      setCurrentPage(1);
       setLoading(false);
       showToast("Logs cleared", "success");
     } catch {
@@ -221,19 +221,41 @@ export default function LogsPage() {
               </div>
           ) : (
             <div
-              ref={containerRef}
               className="max-h-[520px] overflow-y-auto rounded-sm border border-slate-700/70 bg-black/50 p-4 font-mono text-xs text-zinc-200"
             >
               <div className="space-y-1">
-                {logs.map((line, index) => {
+                {pagedLogs.map((line, index) => {
                   const level = getLogLevel(line);
                   return (
-                    <div key={`${index}-${line}`} className={`${getLevelColor(level)} break-all`}>
+                    <div key={`${(currentPage - 1) * LOGS_PER_PAGE + index}-${line}`} className={`${getLevelColor(level)} break-all`}>
                       {line}
                     </div>
                   );
                 })}
               </div>
+            </div>
+          )}
+          {totalPages > 1 && (
+            <div className="mt-3 flex items-center justify-between">
+              <Button
+                variant="ghost"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-2.5 py-1 text-xs"
+              >
+                ← Previous
+              </Button>
+              <span className="text-xs text-slate-400">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-2.5 py-1 text-xs"
+              >
+                Next →
+              </Button>
             </div>
           )}
       </section>

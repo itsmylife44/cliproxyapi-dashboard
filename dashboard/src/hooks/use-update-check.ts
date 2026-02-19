@@ -6,6 +6,7 @@ interface UpdateInfo {
   currentVersion: string;
   latestVersion: string;
   updateAvailable: boolean;
+  buildInProgress: boolean;
   availableVersions: string[];
   releaseUrl: string | null;
   releaseNotes: string | null;
@@ -65,6 +66,11 @@ export function useUpdateCheck() {
       const data: UpdateInfo = await updateRes.json();
       
       setUpdateInfo(data);
+
+      if (data.buildInProgress) {
+        setShowPopup(false);
+        return;
+      }
 
       if (data.updateAvailable) {
         const dismissedVersion = getDismissedVersion();

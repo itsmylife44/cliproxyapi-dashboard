@@ -52,7 +52,7 @@ export function UpdateNotification() {
                 />
               </svg>
             </span>
-            Update Available
+            Dashboard Update Available
           </span>
         </ModalTitle>
       </ModalHeader>
@@ -60,7 +60,7 @@ export function UpdateNotification() {
       <ModalContent>
         <div className="space-y-4">
           <p className="text-white/70 text-sm leading-relaxed">
-            A new version of CLIProxyAPI is available. Would you like to update now?
+            A new version of the Dashboard is available. Would you like to update now?
           </p>
 
           <div className="grid grid-cols-2 gap-3">

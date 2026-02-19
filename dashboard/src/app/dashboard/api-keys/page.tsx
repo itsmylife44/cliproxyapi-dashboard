@@ -174,9 +174,9 @@ export default function ApiKeysPage() {
       {loading ? (
         <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">Loading...</div>
       ) : apiKeys.length === 0 ? (
-        <div className="rounded-md border border-white/10 bg-white/5 p-8 backdrop-blur-md">
+        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-8">
           <div className="flex flex-col items-center justify-center gap-4 text-center">
-            <div className="flex size-14 items-center justify-center rounded-full border border-white/10 bg-white/5">
+            <div className="flex size-14 items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/30">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400" aria-hidden="true">
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
                 <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />

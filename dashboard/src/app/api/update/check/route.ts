@@ -23,12 +23,8 @@ interface VersionInfo {
   availableVersions: string[];
 }
 
-interface GitHubWorkflowRun {
-  status?: string;
-}
-
 interface GitHubRunsResponse {
-  workflow_runs?: GitHubWorkflowRun[];
+  total_count?: number;
 }
 
 async function getDockerHubTags(): Promise<DockerHubTag[]> {
@@ -70,24 +66,23 @@ async function getCurrentImageDigest(): Promise<{ version: string; digest: strin
 
 async function checkGitHubBuildStatus(): Promise<boolean> {
   try {
-    const response = await fetch(
-      "https://api.github.com/repos/router-for-me/CLIProxyAPI/actions/runs?per_page=10",
-      {
-        cache: "no-store",
-        headers: {
-          Accept: "application/vnd.github+json",
-          "User-Agent": "cliproxyapi-dashboard/update-check",
-        },
-      }
-    );
+    const headers = {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "cliproxyapi-dashboard/update-check",
+    };
+    const base = "https://api.github.com/repos/router-for-me/CLIProxyAPI/actions/runs?per_page=1";
 
-    if (!response.ok) {
-      return false;
-    }
+    const [inProgressRes, queuedRes] = await Promise.all([
+      fetch(`${base}&status=in_progress`, { cache: "no-store", headers }),
+      fetch(`${base}&status=queued`, { cache: "no-store", headers }),
+    ]);
 
-    const data: GitHubRunsResponse = await response.json();
-    const runs = data.workflow_runs || [];
-    return runs.some((run) => run.status === "in_progress" || run.status === "queued");
+    const [inProgressData, queuedData]: GitHubRunsResponse[] = await Promise.all([
+      inProgressRes.ok ? inProgressRes.json() : Promise.resolve({}),
+      queuedRes.ok ? queuedRes.json() : Promise.resolve({}),
+    ]);
+
+    return (inProgressData.total_count ?? 0) > 0 || (queuedData.total_count ?? 0) > 0;
   } catch {
     return false;
   }

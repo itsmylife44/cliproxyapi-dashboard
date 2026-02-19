@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { type ReactNode, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -77,7 +78,7 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/40 animate-in fade-in duration-200"
+      className="animate-modal-overlay fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/60"
       onClick={handleBackdropClick}
       onKeyDown={handleBackdropKeyDown}
       role="dialog"
@@ -87,10 +88,7 @@ export function ConfirmDialog({
       tabIndex={-1}
     >
       <div
-        className={cn(
-          "relative w-full max-w-md backdrop-blur-2xl bg-white/15 border border-white/20 rounded-xl p-6 shadow-2xl",
-          "animate-in zoom-in-95 duration-200"
-        )}
+        className="animate-modal-card relative w-full max-w-md bg-slate-900 border border-slate-700/70 rounded-xl p-6 shadow-2xl"
         onClick={handleContentClick}
         onKeyDown={handleContentKeyDown}
         role="document"
@@ -137,17 +135,9 @@ export function ConfirmDialog({
         </div>
 
         <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className={cn(
-              "flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200",
-              "bg-white/10 hover:bg-white/15 text-white border border-white/20",
-              "focus:outline-none focus:ring-2 focus:ring-white/50"
-            )}
-          >
+          <Button variant="ghost" onClick={onClose} className="flex-1">
             {cancelLabel}
-          </button>
+          </Button>
           <button
             type="button"
             onClick={handleConfirm}

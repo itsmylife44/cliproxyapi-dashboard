@@ -897,7 +897,7 @@ export default function ProvidersPage() {
         <div className="rounded-md border border-slate-700/70 bg-slate-900/30 p-6">
           <div className="flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
-              <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-purple-500"></div>
+              <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-blue-500"></div>
               <p className="text-white/80">Loading providers...</p>
             </div>
           </div>
@@ -1105,15 +1105,15 @@ export default function ProvidersPage() {
                 <div className="rounded-md border border-slate-700/70 bg-slate-900/30 p-8">
                   <div className="flex items-center justify-center">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-purple-500"></div>
+                      <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-blue-500"></div>
                       <p className="text-sm text-white/70">Loading custom providers...</p>
                     </div>
                   </div>
                 </div>
               ) : customProviders.length === 0 ? (
-                <div className="rounded-md border border-white/10 bg-white/5 p-8 backdrop-blur-md">
+                <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-8">
                   <div className="flex flex-col items-center justify-center gap-4 text-center">
-                    <div className="flex size-14 items-center justify-center rounded-full border border-white/10 bg-white/5">
+                    <div className="flex size-14 items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/30">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400" aria-hidden="true">
                         <circle cx="12" cy="12" r="10" />
                         <line x1="12" y1="8" x2="12" y2="12" />
@@ -1264,7 +1264,7 @@ export default function ProvidersPage() {
               <p className="mt-1.5 text-xs text-white/50">Your API key will be stored securely and associated with your account</p>
             </div>
             {currentUser && (
-              <div className="rounded-xl border-l-4 border-blue-400/60 bg-blue-500/10 p-3 text-sm backdrop-blur-xl">
+              <div className="rounded-sm border-l-4 border-blue-400/60 bg-blue-500/10 p-3 text-sm">
                 <p className="text-white/90">
                   <strong>Usage:</strong> You have contributed {currentUser ? configs[PROVIDER_IDS.CLAUDE].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.GEMINI].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.CODEX].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.OPENAI].keys.filter((k) => k.isOwn).length : 0} / {maxKeysPerUser} keys total
                 </p>

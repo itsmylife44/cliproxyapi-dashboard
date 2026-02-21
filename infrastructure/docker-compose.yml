@@ -102,7 +102,7 @@ services:
 
   # Perplexity Pro Sidecar — OpenAI-compatible wrapper for Perplexity Pro subscription
   perplexity-sidecar:
-    build: ${INSTALL_DIR:-.}/../perplexity-sidecar
+    build: ${INSTALL_DIR:-.}/perplexity-sidecar
     container_name: cliproxyapi-perplexity-sidecar
     restart: unless-stopped
     networks:

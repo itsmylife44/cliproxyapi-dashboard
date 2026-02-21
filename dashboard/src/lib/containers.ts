@@ -11,10 +11,12 @@ const isDevMode = apiContainer.includes("-dev-");
 const postgresContainer = isDevMode ? "cliproxyapi-dev-postgres" : "cliproxyapi-postgres";
 const caddyContainer = "cliproxyapi-caddy";
 const dashboardContainer = isDevMode ? "cliproxyapi-dashboard" : "cliproxyapi-dashboard";
+const perplexitySidecarContainer = "cliproxyapi-perplexity-sidecar";
 
 export const CONTAINER_CONFIG: Record<string, ContainerPermissions> = {
   [apiContainer]: { displayName: "CLIProxyAPI", allowStart: true, allowStop: true, allowRestart: true },
   [postgresContainer]: { displayName: "PostgreSQL", allowStart: false, allowStop: false, allowRestart: false },
+  [perplexitySidecarContainer]: { displayName: "Perplexity Sidecar", allowStart: true, allowStop: true, allowRestart: true },
   ...(isDevMode ? {} : {
     [caddyContainer]: { displayName: "Caddy", allowStart: false, allowStop: false, allowRestart: true },
     [dashboardContainer]: { displayName: "Dashboard", allowStart: false, allowStop: false, allowRestart: false },

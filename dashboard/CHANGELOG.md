@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.24](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.23...dashboard-v0.1.24) (2026-02-21)
+
+
+### Features
+
+* rewrite perplexity sidecar with auto model discovery and auto-update ([eeaabfb](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/eeaabfbac38f9cfa17c2e99ea03f2e81aab06d44))
+
 ## [0.1.23](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.22...dashboard-v0.1.23) (2026-02-21)
 
 

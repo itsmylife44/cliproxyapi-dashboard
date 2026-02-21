@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.26](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.25...dashboard-v0.1.26) (2026-02-21)
+
+
+### Bug Fixes
+
+* **health:** use GET instead of HEAD for proxy healthcheck ([#63](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/63)) ([88fdacf](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/88fdacf11d839eab05209b3eb6ad79d8ac7abf60))
+
 ## [0.1.25](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.24...dashboard-v0.1.25) (2026-02-21)
 
 

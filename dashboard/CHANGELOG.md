@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.25](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.24...dashboard-v0.1.25) (2026-02-21)
+
+
+### Bug Fixes
+
+* **health:** use proxy root endpoint instead of /v0/management for healthcheck ([#61](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/61)) ([be41d4d](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/be41d4deef453fb2d01e93469191756fbc0dd137))
+
 ## [0.1.24](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.23...dashboard-v0.1.24) (2026-02-21)
 
 

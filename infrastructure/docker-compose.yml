@@ -100,6 +100,28 @@ services:
       retries: 3
       start_period: 5s
 
+  # Perplexity Pro Sidecar — OpenAI-compatible wrapper for Perplexity Pro subscription
+  perplexity-sidecar:
+    build: ${INSTALL_DIR:-.}/../perplexity-sidecar
+    container_name: cliproxyapi-perplexity-sidecar
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    environment:
+      PERPLEXITY_COOKIES: ${PERPLEXITY_COOKIES:-}
+      DASHBOARD_URL: http://dashboard:3000
+      PORT: "8766"
+      TZ: ${TZ}
+    env_file:
+      - ./.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8766/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   # Dashboard Service
   dashboard:
     image: ghcr.io/itsmylife44/cliproxyapi-dashboard/dashboard:latest

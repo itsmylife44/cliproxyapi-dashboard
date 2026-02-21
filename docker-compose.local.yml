@@ -85,6 +85,26 @@ services:
       retries: 3
       start_period: 5s
 
+  perplexity-sidecar:
+    build: ./perplexity-sidecar
+    container_name: cliproxyapi-perplexity-sidecar
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    environment:
+      PERPLEXITY_COOKIES: ${PERPLEXITY_COOKIES:-}
+      PERPLEXITY_SIDECAR_SECRET: ${PERPLEXITY_SIDECAR_SECRET:-}
+      MANAGEMENT_API_KEY: ${MANAGEMENT_API_KEY}
+      DASHBOARD_URL: http://dashboard:3000
+      PORT: "8766"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8766/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   dashboard:
     image: ghcr.io/itsmylife44/cliproxyapi-dashboard/dashboard:latest
     container_name: cliproxyapi-dashboard

@@ -28,6 +28,7 @@ model User {
   providerKeys        ProviderKeyOwnership[]
   providerOAuth       ProviderOAuthOwnership[]
   customProviders     CustomProvider[]
+  perplexityCookies   PerplexityCookie[]
   auditLogs           AuditLog[]
   usageRecords        UsageRecord[]
 
@@ -254,6 +255,23 @@ model UsageRecord {
   @@index([authIndex, timestamp])
   @@index([collectedAt])
   @@map("usage_records")
+}
+
+model PerplexityCookie {
+  id         String   @id @default(cuid())
+  userId     String
+  cookieData String
+  label      String   @default("Default")
+  isActive   Boolean  @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
+  @@map("perplexity_cookies")
 }
 
 model CollectorState {

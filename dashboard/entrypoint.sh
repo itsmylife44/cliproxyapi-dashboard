@@ -295,6 +295,25 @@ client.connect()
         FOREIGN KEY ("apiKeyId") REFERENCES "user_api_keys"("id") ON DELETE SET NULL;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+    -- Perplexity cookies table (stores session cookies for Perplexity Pro sidecar)
+    CREATE TABLE IF NOT EXISTS "perplexity_cookies" (
+      "id" TEXT NOT NULL,
+      "userId" TEXT NOT NULL,
+      "cookieData" TEXT NOT NULL,
+      "label" TEXT NOT NULL DEFAULT 'Default',
+      "isActive" BOOLEAN NOT NULL DEFAULT true,
+      "lastUsedAt" TIMESTAMP(3),
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "perplexity_cookies_pkey" PRIMARY KEY ("id")
+    );
+    CREATE INDEX IF NOT EXISTS "perplexity_cookies_userId_idx" ON "perplexity_cookies"("userId");
+    CREATE INDEX IF NOT EXISTS "perplexity_cookies_isActive_idx" ON "perplexity_cookies"("isActive");
+    DO $$ BEGIN
+      ALTER TABLE "perplexity_cookies" ADD CONSTRAINT "perplexity_cookies_userId_fkey"
+        FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
     -- Collector state table (tracks last collection timestamp)
     CREATE TABLE IF NOT EXISTS "collector_state" (
       "id" TEXT NOT NULL,

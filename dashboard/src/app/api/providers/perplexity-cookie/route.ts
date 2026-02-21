@@ -74,6 +74,10 @@ async function syncPerplexityProvider(
     return { created: true, modelsUpdated: models.length };
   }
 
+  if (existingProvider.userId !== userId) {
+    return { created: false, modelsUpdated: 0 };
+  }
+
   const existingNames = new Set(existingProvider.models.map((m) => m.upstreamName));
   const sidecarNames = new Set(models.map((m) => m.upstreamName));
   const hasChanges =

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.22](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.21...dashboard-v0.1.22) (2026-02-21)
+
+
+### Bug Fixes
+
+* **providers:** allowlist Docker service hostnames in SSRF check ([#57](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/57)) ([6364aaf](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6364aaf9f51235b259de032730d7a7e97afe7b13))
+
 ## [0.1.21](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.20...dashboard-v0.1.21) (2026-02-21)
 
 

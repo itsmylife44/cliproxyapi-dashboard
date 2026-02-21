@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.27](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.26...dashboard-v0.1.27) (2026-02-21)
+
+
+### Bug Fixes
+
+* eliminate fetch response leaks and clear dashboard lint blockers ([#65](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/65)) ([bef630a](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/bef630abd245f200e55ac0ec223cd8a9213d2af4))
+
 ## [0.1.26](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.25...dashboard-v0.1.26) (2026-02-21)
 
 

@@ -82,13 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingProvider.userId !== session.userId) {
-      return NextResponse.json({
-        synced: true,
-        created: false,
-        modelCount: existingProvider.models.length,
-        models: existingProvider.models.map((m) => m.upstreamName),
-        message: "Provider managed by another user",
-      });
+      return Errors.forbidden();
     }
 
     const existingNames = new Set(existingProvider.models.map((m) => m.upstreamName));

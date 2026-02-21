@@ -111,16 +111,18 @@ generate_env_file() {
 
     ensure_openssl
 
-    local jwt_secret management_api_key postgres_password
+    local jwt_secret management_api_key postgres_password perplexity_sidecar_secret
     jwt_secret="$(openssl rand -base64 32)"
     management_api_key="$(openssl rand -hex 32)"
     postgres_password="$(openssl rand -hex 32)"
+    perplexity_sidecar_secret="$(openssl rand -hex 32)"
 
     umask 077
     cat > "$ENV_FILE" <<EOF
 JWT_SECRET=${jwt_secret}
 MANAGEMENT_API_KEY=${management_api_key}
 POSTGRES_PASSWORD=${postgres_password}
+PERPLEXITY_SIDECAR_SECRET=${perplexity_sidecar_secret}
 EOF
 
     log_success "Created .env in project root"

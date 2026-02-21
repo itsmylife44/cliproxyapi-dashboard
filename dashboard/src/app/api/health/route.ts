@@ -33,7 +33,7 @@ async function checkProxy(): Promise<boolean> {
     // and produces 404 warn spam in cliproxyapi logs every healthcheck interval
     const proxyRoot = env.CLIPROXYAPI_MANAGEMENT_URL.replace(/\/v0\/management\/?$/, "/");
     const response = await fetch(proxyRoot, {
-      method: "HEAD",
+      method: "GET",
       signal: controller.signal,
     });
 

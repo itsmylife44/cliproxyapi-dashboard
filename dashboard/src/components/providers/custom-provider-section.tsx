@@ -90,7 +90,13 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
   };
 
   useEffect(() => {
-    void loadCustomProviders();
+    const timeoutId = window.setTimeout(() => {
+      void loadCustomProviders();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [loadCustomProviders]);
 
   return (

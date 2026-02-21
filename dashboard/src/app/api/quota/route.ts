@@ -191,6 +191,7 @@ async function fetchAntigravityQuota(
     });
 
     if (!response.ok) {
+      await response.body?.cancel();
       return { error: `API call failed: ${response.status}` };
     }
 
@@ -313,6 +314,7 @@ async function fetchCodexQuota(
     });
 
     if (!response.ok) {
+      await response.body?.cancel();
       return { error: `API call failed: ${response.status}` };
     }
 
@@ -425,6 +427,7 @@ async function fetchKimiQuota(
     });
 
     if (!response.ok) {
+      await response.body?.cancel();
       return { error: `API call failed: ${response.status}` };
     }
 
@@ -580,6 +583,7 @@ async function fetchClaudeQuota(
     });
 
     if (!usageResponse.ok) {
+      await usageResponse.body?.cancel();
       return { error: `API call failed: ${usageResponse.status}` };
     }
 
@@ -702,6 +706,7 @@ async function fetchClaudeQuota(
     });
 
     if (!response.ok) {
+      await response.body?.cancel();
       return { error: `API call failed: ${response.status}` };
     }
 
@@ -814,6 +819,7 @@ export async function GET() {
     );
 
     if (!authFilesResponse.ok) {
+      await authFilesResponse.body?.cancel();
       logger.error(
         { status: authFilesResponse.status },
         "Failed to fetch auth files"

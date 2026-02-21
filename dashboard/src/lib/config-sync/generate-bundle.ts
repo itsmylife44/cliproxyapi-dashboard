@@ -94,7 +94,10 @@ async function fetchManagementJson({ path }: ManagementFetchParams) {
       cache: "no-store",
       timeout: 10000,
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      await res.body?.cancel();
+      return null;
+    }
     return await res.json();
   } catch {
     return null;

@@ -60,18 +60,21 @@ export default function ProvidersPage() {
   const [customProviderCount, setCustomProviderCount] = useState(0);
   const { showToast } = useToast();
 
-  const loadCurrentUser = useCallback(async () => {
+  const loadCurrentUser = useCallback(async (): Promise<CurrentUser | null> => {
     try {
       const res = await fetch("/api/auth/me");
       if (res.ok) {
         const data = await res.json();
-        setCurrentUser({ id: data.id, username: data.username, isAdmin: data.isAdmin });
+        const user = { id: data.id, username: data.username, isAdmin: data.isAdmin };
+        setCurrentUser(user);
+        return user;
       }
     } catch {}
+    return null;
   }, []);
 
-  const loadMaxKeysPerUser = useCallback(async () => {
-    if (!currentUser?.isAdmin) return;
+  const loadMaxKeysPerUser = useCallback(async (isAdminUser: boolean) => {
+    if (!isAdminUser) return;
     try {
       const res = await fetch("/api/admin/settings");
       if (res.ok) {
@@ -85,7 +88,7 @@ export default function ProvidersPage() {
         }
       }
     } catch {}
-  }, [currentUser]);
+  }, []);
 
   const refreshProviders = async () => {
     setLoading(true);
@@ -97,24 +100,24 @@ export default function ProvidersPage() {
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
-      await loadCurrentUser();
+      const user = await loadCurrentUser();
       const newConfigs = await loadProvidersData();
       if (!isMounted) return;
       setConfigs(newConfigs);
       setLoading(false);
+
+      if (user?.isAdmin) {
+        await loadMaxKeysPerUser(true);
+      }
     };
-    setLoading(true);
-    void load();
+    const timeoutId = window.setTimeout(() => {
+      void load();
+    }, 0);
     return () => {
+      window.clearTimeout(timeoutId);
       isMounted = false;
     };
-  }, [loadCurrentUser]);
-
-  useEffect(() => {
-    if (currentUser?.isAdmin) {
-      void loadMaxKeysPerUser();
-    }
-  }, [currentUser, loadMaxKeysPerUser]);
+  }, [loadCurrentUser, loadMaxKeysPerUser]);
 
   const providerStats = API_KEY_PROVIDERS.map((provider) => ({
     id: provider.id,

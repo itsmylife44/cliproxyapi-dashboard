@@ -59,6 +59,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await response.body?.cancel();
+
     return NextResponse.json({
       success: true,
       message: noCache ? "Full rebuild started" : "Quick update started",
@@ -105,10 +107,12 @@ export async function GET(request: Request) {
 
     if (!response.ok) {
       if (response.status === 404) {
+        await response.body?.cancel();
         return NextResponse.json({
           status: { status: "idle", message: "No deployment in progress" },
         });
       }
+      await response.body?.cancel();
       return NextResponse.json(
         { error: "Failed to get deploy status" },
         { status: response.status }

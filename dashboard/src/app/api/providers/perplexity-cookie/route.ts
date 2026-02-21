@@ -4,13 +4,30 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { Errors } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 
-function isValidCookieJson(raw: string): boolean {
+const REQUIRED_COOKIE_KEYS = ["next-auth.session-token"];
+
+function isValidCookieJson(raw: string): { valid: boolean; error?: string } {
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed);
+    parsed = JSON.parse(raw);
   } catch {
-    return false;
+    return { valid: false, error: "Invalid JSON" };
   }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return { valid: false, error: "Must be a JSON object" };
+  }
+
+  const obj = parsed as Record<string, unknown>;
+  const missing = REQUIRED_COOKIE_KEYS.filter(
+    (key) => typeof obj[key] !== "string" || !(obj[key] as string).trim()
+  );
+
+  if (missing.length > 0) {
+    return { valid: false, error: `Missing required keys: ${missing.join(", ")}` };
+  }
+
+  return { valid: true };
 }
 
 export async function GET() {
@@ -57,8 +74,9 @@ export async function POST(request: NextRequest) {
       return Errors.missingFields(["cookieData"]);
     }
 
-    if (!isValidCookieJson(cookieData)) {
-      return Errors.validation("cookieData must be a valid JSON object");
+    const cookieValidation = isValidCookieJson(cookieData);
+    if (!cookieValidation.valid) {
+      return Errors.validation(`Invalid cookie data: ${cookieValidation.error}`);
     }
 
     await prisma.perplexityCookie.updateMany({

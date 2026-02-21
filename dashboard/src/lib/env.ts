@@ -42,6 +42,12 @@ const envSchema = z.object({
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .default("info")
     .describe("Pino log level"),
+
+  PERPLEXITY_SIDECAR_SECRET: z
+    .string()
+    .min(16, "PERPLEXITY_SIDECAR_SECRET must be at least 16 characters")
+    .optional()
+    .describe("Shared secret for perplexity sidecar authentication"),
 });
 
 function parseEnv() {

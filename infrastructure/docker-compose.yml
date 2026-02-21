@@ -110,6 +110,8 @@ services:
       - backend
     environment:
       PERPLEXITY_COOKIES: ${PERPLEXITY_COOKIES:-}
+      PERPLEXITY_SIDECAR_SECRET: ${PERPLEXITY_SIDECAR_SECRET:-}
+      MANAGEMENT_API_KEY: ${MANAGEMENT_API_KEY}
       DASHBOARD_URL: http://dashboard:3000
       PORT: "8766"
       TZ: ${TZ}

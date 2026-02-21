@@ -3,14 +3,20 @@ import { prisma } from "@/lib/db";
 import { Errors } from "@/lib/errors";
 import { env } from "@/lib/env";
 
-const SIDECAR_SECRET = "perplexity-sidecar-internal";
-
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization") ?? "";
   const token = authHeader.replace("Bearer ", "");
 
-  const isInternalCall = token === env.MANAGEMENT_API_KEY || token === SIDECAR_SECRET;
-  if (!isInternalCall) {
+  if (!token) {
+    return Errors.unauthorized();
+  }
+
+  const validTokens = [env.MANAGEMENT_API_KEY];
+  if (env.PERPLEXITY_SIDECAR_SECRET) {
+    validTokens.push(env.PERPLEXITY_SIDECAR_SECRET);
+  }
+
+  if (!validTokens.includes(token)) {
     return Errors.unauthorized();
   }
 

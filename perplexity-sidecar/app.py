@@ -203,7 +203,9 @@ def extract_answer(chunk: dict) -> str:
 app = FastAPI(title="Perplexity Pro Sidecar", version="1.0.0")
 
 DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "http://dashboard:3000")
-SIDECAR_SECRET = os.environ.get("SIDECAR_SECRET", "perplexity-sidecar-internal")
+SIDECAR_SECRET = os.environ.get("PERPLEXITY_SIDECAR_SECRET") or os.environ.get(
+    "MANAGEMENT_API_KEY", ""
+)
 
 _session: PerplexitySession | None = None
 _session_cookie_hash: str = ""

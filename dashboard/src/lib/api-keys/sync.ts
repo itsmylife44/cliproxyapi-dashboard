@@ -191,6 +191,7 @@ export async function reconcileKeys(userId: string): Promise<SyncResult> {
     });
 
     if (!response.ok) {
+      await response.body?.cancel();
       return {
         ok: false,
         error: `Failed to fetch CLIProxyAPI keys: HTTP ${response.status}`,

@@ -297,7 +297,7 @@ export function OAuthSection({
     resetOAuthModalState();
   };
 
-  const claimOAuthWithoutCallback = useCallback(async (providerId: OAuthProviderId, state: string) => {
+  async function claimOAuthWithoutCallback(providerId: OAuthProviderId, state: string) {
     try {
       const res = await fetch("/api/management/oauth-callback", {
         method: "POST",
@@ -346,7 +346,7 @@ export function OAuthSection({
         void claimOAuthWithoutCallback(providerId, state);
       }, 3000);
     }
-  }, [loadAccounts, stopNoCallbackClaimPolling, stopPolling]);
+  }
 
   const handleOAuthConnect = async (providerId: OAuthProviderId) => {
     const provider = getOAuthProviderById(providerId);
@@ -492,8 +492,12 @@ export function OAuthSection({
   };
 
   useEffect(() => {
-    void loadAccounts();
+    const timeoutId = window.setTimeout(() => {
+      void loadAccounts();
+    }, 0);
+
     return () => {
+      window.clearTimeout(timeoutId);
       stopPolling();
       stopNoCallbackClaimPolling();
     };

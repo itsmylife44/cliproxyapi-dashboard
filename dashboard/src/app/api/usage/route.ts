@@ -4,7 +4,7 @@
  * Use /api/usage/history?from=YYYY-MM-DD&to=YYYY-MM-DD instead.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { usageCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";
@@ -110,77 +110,6 @@ function isRawUsageResponse(value: unknown): value is RawUsageResponse {
   }
 
   return true;
-}
-
-// Aggregate input_tokens and output_tokens from model details
-function aggregateTokensFromModels(models: Record<string, ModelUsage> | undefined): { inputTokens: number; outputTokens: number; reasoningTokens: number; cachedTokens: number } {
-  let inputTokens = 0;
-  let outputTokens = 0;
-  let reasoningTokens = 0;
-  let cachedTokens = 0;
-
-  if (!models) return { inputTokens, outputTokens, reasoningTokens, cachedTokens };
-
-  for (const modelData of Object.values(models)) {
-    if (modelData.details && Array.isArray(modelData.details)) {
-      for (const detail of modelData.details) {
-        if (detail.tokens) {
-          inputTokens += detail.tokens.input_tokens || 0;
-          outputTokens += detail.tokens.output_tokens || 0;
-          reasoningTokens += detail.tokens.reasoning_tokens || 0;
-          cachedTokens += detail.tokens.cached_tokens || 0;
-        }
-      }
-    }
-  }
-
-  return { inputTokens, outputTokens, reasoningTokens, cachedTokens };
-}
-
-// Enrich API entry with aggregated token breakdown from model details
-function enrichApiEntryWithTokenBreakdown(entry: ApiUsageEntry): ApiUsageEntry {
-  const models = entry.models as Record<string, ModelUsage> | undefined;
-  const aggregated = aggregateTokensFromModels(models);
-  
-  // Also enrich each model with its own input/output tokens
-  const enrichedModels: Record<string, ModelUsage & { input_tokens?: number; output_tokens?: number; reasoning_tokens?: number; cached_tokens?: number }> = {};
-  
-  if (models) {
-    for (const [modelName, modelData] of Object.entries(models)) {
-      let modelInput = 0;
-      let modelOutput = 0;
-      let modelReasoning = 0;
-      let modelCached = 0;
-      
-      if (modelData.details && Array.isArray(modelData.details)) {
-        for (const detail of modelData.details) {
-          if (detail.tokens) {
-            modelInput += detail.tokens.input_tokens || 0;
-            modelOutput += detail.tokens.output_tokens || 0;
-            modelReasoning += detail.tokens.reasoning_tokens || 0;
-            modelCached += detail.tokens.cached_tokens || 0;
-          }
-        }
-      }
-      
-      enrichedModels[modelName] = {
-        ...modelData,
-        input_tokens: modelInput,
-        output_tokens: modelOutput,
-        reasoning_tokens: modelReasoning,
-        cached_tokens: modelCached,
-      };
-    }
-  }
-  
-  return {
-    ...entry,
-    input_tokens: aggregated.inputTokens,
-    output_tokens: aggregated.outputTokens,
-    reasoning_tokens: aggregated.reasoningTokens,
-    cached_tokens: aggregated.cachedTokens,
-    models: Object.keys(enrichedModels).length > 0 ? enrichedModels : entry.models,
-  };
 }
 
 // Aggregated usage per API key (auth_index)
@@ -317,7 +246,7 @@ function filterAndLabelApis(
 
     // For admin: show key name if known, otherwise show truncated auth_index
     // For user: show key name if known, otherwise "My Key"
-    let baseLabel = keyName ? keyName : (isAdmin ? `Key ${authIndex}` : `My Key ${authIndex.slice(0, 6)}`);
+    const baseLabel = keyName ? keyName : (isAdmin ? `Key ${authIndex}` : `My Key ${authIndex.slice(0, 6)}`);
     
     // Ensure unique labels
     let label = baseLabel;
@@ -415,7 +344,7 @@ function filterAndLabelApis(
   };
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const session = await verifySession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -478,6 +407,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!usageResponse.ok) {
+      await usageResponse.body?.cancel();
       logger.error(
         { status: usageResponse.status, statusText: usageResponse.statusText },
         "CLIProxyAPI usage endpoint returned error"

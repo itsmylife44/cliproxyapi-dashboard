@@ -120,7 +120,13 @@ export default function AdminLogsPage() {
   }, [levelFilter, router, showToast]);
 
   useEffect(() => {
-    void fetchLogs();
+    const timeoutId = window.setTimeout(() => {
+      void fetchLogs();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [fetchLogs]);
 
   useEffect(() => {

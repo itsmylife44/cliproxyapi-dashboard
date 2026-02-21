@@ -23,23 +23,6 @@ interface KeyUsage {
   }>;
 }
 
-interface ResponseData {
-  data: {
-    keys: Record<string, KeyUsage>;
-    totals: {
-      totalRequests: number;
-      totalTokens: number;
-      inputTokens: number;
-      outputTokens: number;
-      successCount: number;
-      failureCount: number;
-    };
-    period: { from: string; to: string };
-    collectorStatus: { lastCollectedAt: string; lastStatus: string };
-  };
-  isAdmin: boolean;
-}
-
 function isValidDateParam(dateString: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
   const [year, month, day] = dateString.split("-").map(Number);

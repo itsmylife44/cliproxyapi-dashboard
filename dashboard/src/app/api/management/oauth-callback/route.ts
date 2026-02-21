@@ -99,7 +99,10 @@ const fetchAuthFiles = async (): Promise<AuthFileEntry[] | null> => {
       headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      await response.body?.cancel();
+      return null;
+    }
 
     const data: unknown = await response.json();
     if (!isRecord(data) || !Array.isArray(data.files)) return null;
@@ -177,6 +180,7 @@ export async function POST(request: NextRequest) {
       responseStatus = response.status;
 
       if (!response.ok) {
+        await response.body?.cancel();
         const payload: OAuthCallbackResponse = { status: responseStatus };
         return NextResponse.json(payload, { status: responseStatus });
       }

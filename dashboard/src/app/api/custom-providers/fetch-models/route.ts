@@ -142,6 +142,7 @@ export async function POST(request: NextRequest) {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        await response.body?.cancel();
         if (response.status === 401 || response.status === 403) {
           return NextResponse.json(
             { error: "Authentication failed. Check your API key." },

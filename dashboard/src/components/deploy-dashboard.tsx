@@ -36,6 +36,7 @@ export function DeployDashboard() {
   const [pendingDeploy, setPendingDeploy] = useState<{ noCache: boolean } | null>(null);
   const logRef = useRef<HTMLPreElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const fetchStatusRef = useRef<(shouldStartPolling?: boolean) => Promise<void>>(async () => {});
   const { showToast } = useToast();
 
   const fetchStatus = useCallback(async (shouldStartPolling = false) => {
@@ -53,7 +54,9 @@ export function DeployDashboard() {
           setDeploying(true);
           setShowLog(true);
           if (shouldStartPolling && !pollingRef.current) {
-            pollingRef.current = setInterval(() => fetchStatus(false), 2000);
+            pollingRef.current = setInterval(() => {
+              void fetchStatusRef.current(false);
+            }, 2000);
           }
         } else if (s === "success" || s === "error" || s === "completed" || s === "failed") {
           setDeploying(false);
@@ -67,8 +70,16 @@ export function DeployDashboard() {
   }, []);
 
   useEffect(() => {
-    fetchStatus(true);
+    fetchStatusRef.current = fetchStatus;
+  }, [fetchStatus]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchStatus(true);
+    }, 0);
+
     return () => {
+      window.clearTimeout(timeoutId);
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
       }

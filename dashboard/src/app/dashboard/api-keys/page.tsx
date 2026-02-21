@@ -91,7 +91,13 @@ export default function ApiKeysPage() {
   }, [showToast]);
 
   useEffect(() => {
-    void fetchApiKeys();
+    const timeoutId = window.setTimeout(() => {
+      void fetchApiKeys();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [fetchApiKeys]);
 
   const handleCreateKey = async () => {

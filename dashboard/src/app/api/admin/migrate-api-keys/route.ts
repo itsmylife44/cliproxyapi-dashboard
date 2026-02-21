@@ -87,6 +87,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     if (!response.ok) {
+      await response.body?.cancel();
       logger.error(
         { status: response.status },
         "Failed to fetch existing API keys"

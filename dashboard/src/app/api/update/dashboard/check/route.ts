@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { updateCheckCache, CACHE_TTL } from "@/lib/cache";
 
 const GITHUB_REPO = process.env.GITHUB_REPO || "itsmylife44/cliproxyapi-dashboard";
 const DASHBOARD_VERSION = process.env.DASHBOARD_VERSION || "dev";
@@ -49,6 +50,10 @@ function isNewerVersion(current: string, latest: string): boolean {
 }
 
 async function getGitHubReleases(): Promise<GitHubRelease[]> {
+  const cacheKey = `github-releases:${GITHUB_REPO}`;
+  const cached = updateCheckCache.get(cacheKey) as GitHubRelease[] | null;
+  if (cached) return cached;
+
   const response = await fetch(
     `https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=20`,
     {
@@ -64,10 +69,16 @@ async function getGitHubReleases(): Promise<GitHubRelease[]> {
     throw new Error(`GitHub API error: ${response.status}`);
   }
 
-  return response.json();
+  const releases: GitHubRelease[] = await response.json();
+  updateCheckCache.set(cacheKey, releases, CACHE_TTL.GITHUB_RELEASES);
+  return releases;
 }
 
 async function checkGitHubBuildStatus(): Promise<boolean> {
+  const cacheKey = `github-build-status:${GITHUB_REPO}`;
+  const cached = updateCheckCache.get(cacheKey) as boolean | null;
+  if (cached !== null) return cached;
+
   try {
     const headers = {
       Accept: "application/vnd.github+json",
@@ -85,7 +96,9 @@ async function checkGitHubBuildStatus(): Promise<boolean> {
       queuedRes.ok ? queuedRes.json() : Promise.resolve({}),
     ]);
 
-    return (inProgressData.total_count ?? 0) > 0 || (queuedData.total_count ?? 0) > 0;
+    const isBuilding = (inProgressData.total_count ?? 0) > 0 || (queuedData.total_count ?? 0) > 0;
+    updateCheckCache.set(cacheKey, isBuilding, CACHE_TTL.GITHUB_BUILD_STATUS);
+    return isBuilding;
   } catch {
     return false;
   }

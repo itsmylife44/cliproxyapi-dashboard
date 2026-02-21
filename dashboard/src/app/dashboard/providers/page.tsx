@@ -282,6 +282,15 @@ const loadProvidersData = async (): Promise<Record<ProviderId, ProviderState>> =
   return newConfigs;
 };
 
+interface PerplexityCookie {
+  id: string;
+  label: string;
+  isActive: boolean;
+  lastUsedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function ProvidersPage() {
@@ -328,6 +337,13 @@ export default function ProvidersPage() {
   const [pendingKeyDelete, setPendingKeyDelete] = useState<{ keyHash: string; provider: string } | null>(null);
   const [showConfirmOAuthDelete, setShowConfirmOAuthDelete] = useState(false);
   const [pendingOAuthDelete, setPendingOAuthDelete] = useState<{ accountId: string; accountName: string } | null>(null);
+
+  const [perplexityCookies, setPerplexityCookies] = useState<PerplexityCookie[]>([]);
+  const [perplexityCookiesLoading, setPerplexityCookiesLoading] = useState(true);
+  const [perplexityCookieInput, setPerplexityCookieInput] = useState("");
+  const [perplexityCookieLabel, setPerplexityCookieLabel] = useState("");
+  const [perplexityCookieSaving, setPerplexityCookieSaving] = useState(false);
+  const [perplexityCookieJsonError, setPerplexityCookieJsonError] = useState<string | null>(null);
 
   const selectedOAuthProvider = getOAuthProviderById(selectedOAuthProviderId);
   const selectedOAuthProviderRequiresCallback = selectedOAuthProvider?.requiresCallback ?? true;
@@ -840,6 +856,89 @@ export default function ProvidersPage() {
     setEditingCustomProvider(undefined);
   };
 
+  // ── Perplexity Cookie handlers ─────────────────────────────────────────────
+
+  const loadPerplexityCookies = useCallback(async () => {
+    setPerplexityCookiesLoading(true);
+    try {
+      const res = await fetch("/api/providers/perplexity-cookie");
+      if (!res.ok) {
+        showToast("Failed to load Perplexity cookies", "error");
+        setPerplexityCookiesLoading(false);
+        return;
+      }
+      const data = await res.json();
+      setPerplexityCookies(Array.isArray(data.cookies) ? data.cookies : []);
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setPerplexityCookiesLoading(false);
+    }
+  }, [showToast]);
+
+  const handlePerplexityCookieSave = async () => {
+    const trimmed = perplexityCookieInput.trim();
+    if (!trimmed) {
+      showToast("Cookie JSON is required", "error");
+      return;
+    }
+    try {
+      JSON.parse(trimmed);
+      setPerplexityCookieJsonError(null);
+    } catch {
+      setPerplexityCookieJsonError("Invalid JSON. Check your formatting and try again.");
+      return;
+    }
+    setPerplexityCookieSaving(true);
+    try {
+      const res = await fetch("/api/providers/perplexity-cookie", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cookieData: trimmed,
+          label: perplexityCookieLabel.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error?.message ?? data.error ?? "Failed to save cookie", "error");
+        return;
+      }
+      showToast("Perplexity cookie saved", "success");
+      setPerplexityCookieInput("");
+      setPerplexityCookieLabel("");
+      setPerplexityCookieJsonError(null);
+      void loadPerplexityCookies();
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setPerplexityCookieSaving(false);
+    }
+  };
+
+  const handlePerplexityCookieDelete = async (id: string) => {
+    try {
+      const res = await fetch("/api/providers/perplexity-cookie", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        showToast(data.error?.message ?? data.error ?? "Failed to delete cookie", "error");
+        return;
+      }
+      showToast("Perplexity cookie removed", "success");
+      void loadPerplexityCookies();
+    } catch {
+      showToast("Network error", "error");
+    }
+  };
+
+  useEffect(() => {
+    void loadPerplexityCookies();
+  }, [loadPerplexityCookies]);
+
   const isOAuthSubmitDisabled =
     oauthModalStatus === MODAL_STATUS.LOADING ||
     oauthModalStatus === MODAL_STATUS.SUBMITTING ||
@@ -1170,6 +1269,126 @@ export default function ProvidersPage() {
                   </div>
                 </div>
               )}
+            </div>
+          </section>
+
+          {/* ── Perplexity Pro ───────────────────────────────────────────────── */}
+          <section id="provider-perplexity" className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-100">Perplexity Pro</h2>
+                <p className="text-xs text-slate-400">Browser session cookies for Perplexity Pro access</p>
+              </div>
+              <span className="text-xs font-medium text-slate-400">{perplexityCookies.length} configured</span>
+            </div>
+
+            <div className="space-y-3">
+              <div className="rounded-sm border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200/80">
+                <strong className="text-amber-100">How to get your cookies:</strong>
+                <ol className="mt-1.5 list-decimal space-y-1 pl-4">
+                  <li>Go to <span className="font-mono text-amber-100">perplexity.ai</span> and sign in to your Pro account</li>
+                  <li>Open DevTools (<span className="font-mono text-amber-100">F12</span>) → Application → Cookies → <span className="font-mono text-amber-100">https://www.perplexity.ai</span></li>
+                  <li>Copy the values of <span className="font-mono text-amber-100">next-auth.session-token</span> and <span className="font-mono text-amber-100">next-auth.csrf-token</span></li>
+                  <li>Paste as JSON in the form below, e.g. <span className="font-mono text-amber-100">{"{"}&quot;next-auth.session-token&quot;: &quot;…&quot;, &quot;next-auth.csrf-token&quot;: &quot;…&quot;{"}"}</span></li>
+                </ol>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Saved Cookies</h3>
+              </div>
+              {perplexityCookiesLoading ? (
+                <div className="flex items-center justify-center rounded-md border border-slate-700/70 bg-slate-900/25 p-6">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="size-6 animate-spin rounded-full border-4 border-white/20 border-t-blue-500"></div>
+                    <p className="text-xs text-slate-400">Loading cookies...</p>
+                  </div>
+                </div>
+              ) : perplexityCookies.length === 0 ? (
+                <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3 text-xs text-slate-400">
+                  No Perplexity cookies configured yet.
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-700/70 rounded-md border border-slate-700/70 bg-slate-900/25">
+                  {perplexityCookies.map((cookie) => (
+                    <div key={cookie.id} className="flex items-center justify-between gap-3 p-3">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-slate-100">{cookie.label || "Unnamed"}</span>
+                          <span className={cn(
+                            "inline-flex items-center rounded-sm px-2 py-0.5 text-[11px] font-medium",
+                            cookie.isActive
+                              ? "border border-emerald-400/50 bg-emerald-500/10 text-emerald-300"
+                              : "border border-slate-600/70 bg-slate-800/60 text-slate-400"
+                          )}>
+                            {cookie.isActive ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          Added {new Date(cookie.createdAt).toLocaleDateString()}
+                          {cookie.lastUsedAt && (
+                            <> · Last used {new Date(cookie.lastUsedAt).toLocaleDateString()}</>
+                          )}
+                        </p>
+                      </div>
+                      <Button
+                        variant="danger"
+                        className="shrink-0 px-2.5 py-1 text-xs"
+                        onClick={() => handlePerplexityCookieDelete(cookie.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Add Cookie</h3>
+              </div>
+              <div className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
+                <div>
+                  <label htmlFor="perplexity-label" className="mb-1.5 block text-xs font-medium text-slate-300">
+                    Label <span className="text-slate-500">(optional)</span>
+                  </label>
+                  <input
+                    id="perplexity-label"
+                    type="text"
+                    value={perplexityCookieLabel}
+                    onChange={(e) => setPerplexityCookieLabel(e.target.value)}
+                    placeholder="My Perplexity Pro account"
+                    disabled={perplexityCookieSaving}
+                    className="glass-input w-full rounded-md px-3 py-1.5 text-sm placeholder:text-slate-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="perplexity-cookie" className="mb-1.5 block text-xs font-medium text-slate-300">
+                    Cookie JSON <span className="text-red-400">*</span>
+                  </label>
+                  <textarea
+                    id="perplexity-cookie"
+                    value={perplexityCookieInput}
+                    onChange={(e) => {
+                      setPerplexityCookieInput(e.target.value);
+                      setPerplexityCookieJsonError(null);
+                    }}
+                    placeholder={`{\n  "next-auth.session-token": "your-session-token-here",\n  "next-auth.csrf-token": "your-csrf-token-here"\n}`}
+                    disabled={perplexityCookieSaving}
+                    rows={5}
+                    className="glass-input w-full rounded-md px-3 py-2 font-mono text-xs placeholder:text-slate-600 focus:outline-none resize-none"
+                  />
+                  {perplexityCookieJsonError && (
+                    <p className="mt-1.5 text-xs text-red-400">{perplexityCookieJsonError}</p>
+                  )}
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handlePerplexityCookieSave}
+                    disabled={perplexityCookieSaving || !perplexityCookieInput.trim()}
+                  >
+                    {perplexityCookieSaving ? "Saving…" : "Save Cookie"}
+                  </Button>
+                </div>
+              </div>
             </div>
           </section>
 

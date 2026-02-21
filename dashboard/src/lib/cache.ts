@@ -86,10 +86,14 @@ export class LRUCache<T> {
 
 export const usageCache = new LRUCache<unknown>(50);
 export const proxyModelsCache = new LRUCache<unknown>(50);
+export const updateCheckCache = new LRUCache<unknown>(10);
 
 export const CACHE_TTL = {
   USAGE: 30_000,
   PROXY_MODELS: 300_000,
+  GITHUB_RELEASES: 900_000,
+  GITHUB_BUILD_STATUS: 120_000,
+  DOCKER_HUB_TAGS: 900_000,
 } as const;
 
 export const CACHE_KEYS = {

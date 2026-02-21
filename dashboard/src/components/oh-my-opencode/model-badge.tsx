@@ -174,7 +174,10 @@ export function ModelBadge({
             type="text"
             placeholder={extraFields?.thirdFieldPlaceholder ?? ""}
             value={extraFields?.thirdField ?? ""}
-            onChange={(e) => onFieldChange(extraFields?.thirdFieldKey ?? "", e.target.value || undefined)}
+            onChange={(e) => {
+              const key = extraFields?.thirdFieldKey;
+              if (key) onFieldChange(key, e.target.value || undefined);
+            }}
             className="flex-1 min-w-0 w-24 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
           />
         </div>

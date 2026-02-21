@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
   try {
     const models = await fetchSidecarModels();
 
-    const existingProvider = await prisma.customProvider.findFirst({
-      where: { userId: session.userId, providerId: "perplexity-pro" },
+    const existingProvider = await prisma.customProvider.findUnique({
+      where: { providerId: "perplexity-pro" },
       include: { models: true },
     });
 

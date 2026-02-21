@@ -39,8 +39,8 @@ async function syncPerplexityProvider(
 ): Promise<{ created: boolean; modelsUpdated: number }> {
   const models = await fetchSidecarModels();
 
-  const existingProvider = await prisma.customProvider.findFirst({
-    where: { userId, providerId: "perplexity-pro" },
+  const existingProvider = await prisma.customProvider.findUnique({
+    where: { providerId: "perplexity-pro" },
     include: { models: true },
   });
 

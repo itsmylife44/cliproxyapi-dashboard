@@ -203,9 +203,12 @@ export async function POST(request: NextRequest) {
       } catch {
         logger.warn("Failed to parse auth-files response");
       }
+    } else if (authFilesResponse) {
+      await authFilesResponse.body?.cancel();
     }
 
     if (!usageResponse.ok) {
+      await usageResponse.body?.cancel();
       logger.error(
         { status: usageResponse.status, statusText: usageResponse.statusText },
         "CLIProxyAPI usage endpoint returned error"

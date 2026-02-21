@@ -169,7 +169,13 @@ export default function ConfigPage() {
   }, [showToast]);
 
   useEffect(() => {
-    void fetchConfig();
+    const timeoutId = window.setTimeout(() => {
+      void fetchConfig();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [fetchConfig]);
 
   const handleSave = async () => {

@@ -67,7 +67,10 @@ export async function fetchProxyModels(proxyUrl: string, apiKey: string): Promis
 
     clearTimeout(timeoutId);
 
-    if (!res.ok) return [];
+    if (!res.ok) {
+      await res.body?.cancel();
+      return [];
+    }
     const data = await res.json();
     if (!data?.data || !Array.isArray(data.data)) return [];
     return data.data.filter(

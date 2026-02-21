@@ -38,6 +38,7 @@ async function checkProxy(): Promise<boolean> {
     });
 
     clearTimeout(timeoutId);
+    await response.text(); // Consume body to prevent memory leak
     return response.ok || response.status < 500;
   } catch {
     return false;

@@ -210,6 +210,7 @@ export async function contributeKey(
     }
 
     if (!getRes.ok) {
+      await getRes.body?.cancel();
       await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
       return { ok: false, error: `Failed to fetch existing keys: HTTP ${getRes.status}` };
     }
@@ -276,6 +277,7 @@ export async function contributeKey(
     }
 
     if (!putRes.ok) {
+      await putRes.body?.cancel();
       await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
       return { ok: false, error: `Failed to add key to Management API: HTTP ${putRes.status}` };
     }
@@ -356,9 +358,10 @@ export async function removeKey(
        throw fetchError;
      }
 
-     if (!getRes.ok) {
-       return { ok: false, error: `Failed to fetch existing keys: HTTP ${getRes.status}` };
-     }
+      if (!getRes.ok) {
+        await getRes.body?.cancel();
+        return { ok: false, error: `Failed to fetch existing keys: HTTP ${getRes.status}` };
+      }
 
     const getData = await getRes.json();
     const responseKey =
@@ -432,6 +435,7 @@ export async function removeKey(
      }
 
      if (!deleteRes.ok) {
+       await deleteRes.body?.cancel();
        return { ok: false, error: `Failed to delete key from Management API: HTTP ${deleteRes.status}` };
      }
 
@@ -486,9 +490,10 @@ export async function removeKeyByAdmin(
        throw fetchError;
      }
 
-     if (!getRes.ok) {
-       return { ok: false, error: `Failed to fetch existing keys: HTTP ${getRes.status}` };
-     }
+      if (!getRes.ok) {
+        await getRes.body?.cancel();
+        return { ok: false, error: `Failed to fetch existing keys: HTTP ${getRes.status}` };
+      }
 
      const getData = await getRes.json();
      const responseKey =
@@ -559,9 +564,10 @@ export async function removeKeyByAdmin(
        throw fetchError;
      }
 
-     if (!deleteRes.ok) {
-       return { ok: false, error: `Failed to delete key from Management API: HTTP ${deleteRes.status}` };
-     }
+      if (!deleteRes.ok) {
+        await deleteRes.body?.cancel();
+        return { ok: false, error: `Failed to delete key from Management API: HTTP ${deleteRes.status}` };
+      }
 
      invalidateUsageCaches();
      invalidateProxyModelsCache();
@@ -608,9 +614,10 @@ export async function listKeysWithOwnership(
        throw fetchError;
      }
 
-     if (!getRes.ok) {
-       return { ok: false, error: `Failed to fetch keys: HTTP ${getRes.status}` };
-     }
+      if (!getRes.ok) {
+        await getRes.body?.cancel();
+        return { ok: false, error: `Failed to fetch keys: HTTP ${getRes.status}` };
+      }
 
      const getData = await getRes.json();
      const responseKey =
@@ -748,9 +755,10 @@ export async function listOAuthWithOwnership(
        throw fetchError;
      }
 
-     if (!getRes.ok) {
-       return { ok: false, error: `Failed to fetch OAuth accounts: HTTP ${getRes.status}` };
-     }
+      if (!getRes.ok) {
+        await getRes.body?.cancel();
+        return { ok: false, error: `Failed to fetch OAuth accounts: HTTP ${getRes.status}` };
+      }
 
      const getData = await getRes.json();
 
@@ -868,9 +876,10 @@ export async function removeOAuthAccount(
        throw fetchError;
      }
 
-     if (!deleteRes.ok) {
-       return { ok: false, error: `Failed to remove OAuth account: HTTP ${deleteRes.status}` };
-     }
+      if (!deleteRes.ok) {
+        await deleteRes.body?.cancel();
+        return { ok: false, error: `Failed to remove OAuth account: HTTP ${deleteRes.status}` };
+      }
 
     if (ownership) {
       await prisma.providerOAuthOwnership.delete({ where: { accountName } });
@@ -935,9 +944,10 @@ export async function removeOAuthAccountByIdOrName(
        throw fetchError;
      }
 
-     if (!deleteRes.ok) {
-       return { ok: false, error: `Failed to remove OAuth account: HTTP ${deleteRes.status}` };
-     }
+      if (!deleteRes.ok) {
+        await deleteRes.body?.cancel();
+        return { ok: false, error: `Failed to remove OAuth account: HTTP ${deleteRes.status}` };
+      }
 
     // Clean up DB record if it exists
     if (resolved.ownership) {

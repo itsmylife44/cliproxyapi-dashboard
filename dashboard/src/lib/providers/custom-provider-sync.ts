@@ -76,6 +76,7 @@ export async function syncCustomProviderToProxy(
       });
 
       if (!getRes.ok) {
+        await getRes.body?.cancel();
         logger.error({ status: getRes.status }, "Failed to fetch current config from Management API");
         return {
           syncStatus: "failed",
@@ -123,6 +124,7 @@ export async function syncCustomProviderToProxy(
     });
 
     if (!putRes.ok) {
+      await putRes.body?.cancel();
       logger.error({ status: putRes.status }, `Failed to sync custom provider to Management API (${operation})`);
       return {
         syncStatus: "failed",

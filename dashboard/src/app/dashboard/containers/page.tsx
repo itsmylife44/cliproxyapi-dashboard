@@ -93,7 +93,7 @@ export default function ContainersPage() {
   const handleAction = async () => {
     if (!pendingAction) return;
 
-    const { containerName, displayName, action } = pendingAction;
+    const { containerName, action } = pendingAction;
 
     setActionLoading((prev) => ({ ...prev, [containerName]: true }));
     try {

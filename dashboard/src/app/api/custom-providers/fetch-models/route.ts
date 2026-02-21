@@ -32,10 +32,26 @@ function isPrivateIPv4(a: number, b: number): boolean {
 }
 
 /**
+ * Docker Compose service hostnames that are safe to reach from inside the network.
+ * These resolve to private IPs but are trusted internal services, not SSRF targets.
+ */
+const ALLOWED_INTERNAL_HOSTS = new Set([
+  "perplexity-sidecar",
+  "cliproxyapi",
+  "dashboard",
+  "postgres",
+  "docker-proxy",
+]);
+
+/**
  * Block SSRF: reject localhost, private, link-local, and IPv4-mapped IPv6 addresses.
  */
 function isPrivateHost(hostname: string): boolean {
   const lower = hostname.toLowerCase();
+
+  if (ALLOWED_INTERNAL_HOSTS.has(lower)) {
+    return false;
+  }
 
   if (lower === "localhost" || lower === "127.0.0.1" || lower === "[::1]" || lower === "0.0.0.0") {
     return true;

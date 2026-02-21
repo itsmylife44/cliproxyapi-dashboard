@@ -71,16 +71,22 @@ MODEL_MAP: dict[str, tuple[str, str]] = {
     "perplexity-sonar": ("pro", "experimental"),
     "perplexity-gpt-5.2": ("pro", "gpt52"),
     "perplexity-claude-4.5-sonnet": ("pro", "claude45sonnet"),
+    "perplexity-claude-4.6-opus": ("pro", "claude46opus"),
     "perplexity-grok-4.1": ("pro", "grok41nonreasoning"),
+    "perplexity-gemini-3.0-flash": ("pro", "gemini30flash"),
     # Reasoning mode
     "perplexity-reasoning": ("reasoning", "pplx_reasoning"),
     "perplexity-gpt-5.2-thinking": ("reasoning", "gpt52_thinking"),
     "perplexity-claude-4.5-sonnet-thinking": ("reasoning", "claude45sonnetthinking"),
+    "perplexity-claude-4.6-opus-thinking": ("reasoning", "claude46opusthinking"),
     "perplexity-gemini-3.0-pro": ("reasoning", "gemini30pro"),
-    "perplexity-kimi-k2-thinking": ("reasoning", "kimik2thinking"),
+    "perplexity-gemini-3.0-flash-thinking": ("reasoning", "gemini30flash_high"),
+    "perplexity-kimi-k2.5-thinking": ("reasoning", "kimik25thinking"),
     "perplexity-grok-4.1-reasoning": ("reasoning", "grok41reasoning"),
     # Deep research
     "perplexity-deep-research": ("deep research", "pplx_alpha"),
+    # Labs (create files and apps)
+    "perplexity-labs": ("pro", "pplx_beta"),
 }
 
 # ---------------------------------------------------------------------------

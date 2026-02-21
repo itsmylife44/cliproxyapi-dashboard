@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.23](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.22...dashboard-v0.1.23) (2026-02-21)
+
+
+### Features
+
+* add missing Perplexity Pro web UI models to sidecar ([4e5fa31](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/4e5fa315de7d4873ad1bbac46f9d3b28c0b8069a))
+
 ## [0.1.22](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.21...dashboard-v0.1.22) (2026-02-21)
 
 

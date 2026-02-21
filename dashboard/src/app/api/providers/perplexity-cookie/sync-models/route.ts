@@ -5,6 +5,8 @@ import { Errors } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
 import { hashProviderKey } from "@/lib/providers/hash";
+import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 
 const SIDECAR_BASE_URL = "http://perplexity-sidecar:8766/v1";
 const SIDECAR_FETCH_TIMEOUT_MS = 5_000;
@@ -28,6 +30,65 @@ async function fetchSidecarModels(): Promise<Array<{ upstreamName: string; alias
     return models.map((m) => ({ upstreamName: m.id, alias: m.id }));
   } finally {
     clearTimeout(timeoutId);
+  }
+}
+
+function verifyInternalAuth(request: NextRequest): boolean {
+  const authHeader = request.headers.get("authorization") ?? "";
+  const token = authHeader.replace("Bearer ", "");
+  if (!token) return false;
+  const validTokens = [env.MANAGEMENT_API_KEY];
+  if (env.PERPLEXITY_SIDECAR_SECRET) validTokens.push(env.PERPLEXITY_SIDECAR_SECRET);
+  return validTokens.includes(token);
+}
+
+async function syncModelsCore() {
+  const models = await fetchSidecarModels();
+
+  const existingProvider = await prisma.customProvider.findUnique({
+    where: { providerId: "perplexity-pro" },
+    include: { models: true },
+  });
+
+  if (!existingProvider) {
+    return { synced: true, created: false, modelCount: 0, skipped: true, message: "No provider configured yet" };
+  }
+
+  const existingNames = new Set(existingProvider.models.map((m) => m.upstreamName));
+  const hasChanges =
+    existingNames.size !== models.length ||
+    models.some((m) => !existingNames.has(m.upstreamName));
+
+  if (!hasChanges) {
+    return { synced: true, created: false, modelCount: models.length, models: models.map((m) => m.upstreamName), message: "Models already up to date" };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.customProviderModel.deleteMany({ where: { customProviderId: existingProvider.id } });
+    await tx.customProvider.update({ where: { id: existingProvider.id }, data: { models: { create: models } } });
+  });
+
+  await syncCustomProviderToProxy(
+    { providerId: "perplexity-pro", baseUrl: SIDECAR_BASE_URL, apiKey: "sk-perplexity-sidecar", models, excludedModels: [] },
+    "update"
+  );
+
+  const added = models.filter((m) => !existingNames.has(m.upstreamName));
+  const removed = [...existingNames].filter((name) => !models.some((m) => m.upstreamName === name));
+
+  return { synced: true, created: false, modelCount: models.length, models: models.map((m) => m.upstreamName), added: added.map((m) => m.upstreamName), removed };
+}
+
+// PUT: internal endpoint for sidecar auto-sync (key auth, no session/origin required)
+export async function PUT(request: NextRequest) {
+  if (!verifyInternalAuth(request)) return Errors.unauthorized();
+
+  try {
+    const result = await syncModelsCore();
+    logger.info({ result }, "Sidecar-triggered model sync completed");
+    return NextResponse.json(result);
+  } catch (error) {
+    return Errors.internal("sidecar-triggered sync perplexity models", error);
   }
 }
 

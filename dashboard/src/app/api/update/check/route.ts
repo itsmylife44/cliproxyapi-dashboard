@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { logger } from "@/lib/logger";
+import { updateCheckCache, CACHE_TTL } from "@/lib/cache";
 
 const execFileAsync = promisify(execFile);
 
@@ -28,6 +29,10 @@ interface GitHubRunsResponse {
 }
 
 async function getDockerHubTags(): Promise<DockerHubTag[]> {
+  const cacheKey = "docker-hub-tags:eceasy/cli-proxy-api";
+  const cached = updateCheckCache.get(cacheKey) as DockerHubTag[] | null;
+  if (cached) return cached;
+
   const response = await fetch(
     "https://hub.docker.com/v2/repositories/eceasy/cli-proxy-api/tags?page_size=20",
     { cache: "no-store" }
@@ -38,7 +43,9 @@ async function getDockerHubTags(): Promise<DockerHubTag[]> {
   }
   
   const data = await response.json();
-  return data.results || [];
+  const tags: DockerHubTag[] = data.results || [];
+  updateCheckCache.set(cacheKey, tags, CACHE_TTL.DOCKER_HUB_TAGS);
+  return tags;
 }
 
 async function getCurrentImageDigest(): Promise<{ version: string; digest: string; fullDigest: string }> {
@@ -65,6 +72,10 @@ async function getCurrentImageDigest(): Promise<{ version: string; digest: strin
 }
 
 async function checkGitHubBuildStatus(): Promise<boolean> {
+  const cacheKey = "github-build-status:router-for-me/CLIProxyAPI";
+  const cached = updateCheckCache.get(cacheKey) as boolean | null;
+  if (cached !== null) return cached;
+
   try {
     const headers = {
       Accept: "application/vnd.github+json",
@@ -82,7 +93,9 @@ async function checkGitHubBuildStatus(): Promise<boolean> {
       queuedRes.ok ? queuedRes.json() : Promise.resolve({}),
     ]);
 
-    return (inProgressData.total_count ?? 0) > 0 || (queuedData.total_count ?? 0) > 0;
+    const isBuilding = (inProgressData.total_count ?? 0) > 0 || (queuedData.total_count ?? 0) > 0;
+    updateCheckCache.set(cacheKey, isBuilding, CACHE_TTL.GITHUB_BUILD_STATUS);
+    return isBuilding;
   } catch {
     return false;
   }

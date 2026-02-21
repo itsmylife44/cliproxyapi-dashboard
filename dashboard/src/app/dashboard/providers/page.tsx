@@ -905,7 +905,11 @@ export default function ProvidersPage() {
         showToast(data.error?.message ?? data.error ?? "Failed to save cookie", "error");
         return;
       }
-      showToast("Perplexity cookie saved", "success");
+      if (data.providerProvisioned) {
+        showToast("Cookie saved & Perplexity Pro provider auto-configured", "success");
+      } else {
+        showToast("Perplexity cookie saved", "success");
+      }
       setPerplexitySessionToken("");
       setPerplexityCsrfToken("");
       setPerplexityCookieLabel("");

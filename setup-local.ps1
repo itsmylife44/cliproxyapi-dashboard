@@ -85,11 +85,13 @@ function Ensure-EnvFile {
     $jwt = New-RandomBase64 32
     $mgmt = New-RandomHex 32
     $pg = New-RandomHex 32
+    $pplxSecret = New-RandomHex 32
 
     $content = @(
         "JWT_SECRET=$jwt",
         "MANAGEMENT_API_KEY=$mgmt",
-        "POSTGRES_PASSWORD=$pg"
+        "POSTGRES_PASSWORD=$pg",
+        "PERPLEXITY_SIDECAR_SECRET=$pplxSecret"
     ) -join "`n"
 
     [System.IO.File]::WriteAllText($EnvFile, $content, [System.Text.UTF8Encoding]::new($false))

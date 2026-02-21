@@ -29,7 +29,10 @@ async function checkProxy(): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
 
-    const response = await fetch(env.CLIPROXYAPI_MANAGEMENT_URL, {
+    // Use the root endpoint (/) instead of /v0/management which has no route handler
+    // and produces 404 warn spam in cliproxyapi logs every healthcheck interval
+    const proxyRoot = env.CLIPROXYAPI_MANAGEMENT_URL.replace(/\/v0\/management\/?$/, "/");
+    const response = await fetch(proxyRoot, {
       method: "HEAD",
       signal: controller.signal,
     });

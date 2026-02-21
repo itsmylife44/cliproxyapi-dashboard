@@ -346,6 +346,7 @@ export default function ProvidersPage() {
   const [perplexityCookieSaving, setPerplexityCookieSaving] = useState(false);
   const [showPerplexitySessionToken, setShowPerplexitySessionToken] = useState(false);
   const [showPerplexityCsrfToken, setShowPerplexityCsrfToken] = useState(false);
+  const [perplexityModelSyncing, setPerplexityModelSyncing] = useState(false);
 
   const selectedOAuthProvider = getOAuthProviderById(selectedOAuthProviderId);
   const selectedOAuthProviderRequiresCallback = selectedOAuthProvider?.requiresCallback ?? true;
@@ -921,6 +922,34 @@ export default function ProvidersPage() {
     }
   };
 
+  const handlePerplexityModelSync = async () => {
+    setPerplexityModelSyncing(true);
+    try {
+      const res = await fetch("/api/providers/perplexity-cookie/sync-models", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error?.message ?? data.error ?? "Failed to sync models", "error");
+        return;
+      }
+      if (data.created) {
+        showToast(`Provider created with ${data.modelCount} models`, "success");
+      } else if (data.added?.length > 0 || data.removed?.length > 0) {
+        const parts: string[] = [];
+        if (data.added?.length > 0) parts.push(`${data.added.length} added`);
+        if (data.removed?.length > 0) parts.push(`${data.removed.length} removed`);
+        showToast(`Models synced: ${parts.join(", ")}`, "success");
+      } else {
+        showToast("Models already up to date", "success");
+      }
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setPerplexityModelSyncing(false);
+    }
+  };
+
   const handlePerplexityCookieDelete = async (id: string) => {
     try {
       const res = await fetch("/api/providers/perplexity-cookie", {
@@ -1343,6 +1372,22 @@ export default function ProvidersPage() {
                       </Button>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {perplexityCookies.length > 0 && (
+                <div className="flex items-center justify-between rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-medium text-slate-300">Sync Models</p>
+                    <p className="text-[11px] text-slate-500">Fetch latest models from sidecar and update proxy config</p>
+                  </div>
+                  <Button
+                    className="shrink-0 px-3 py-1.5 text-xs"
+                    onClick={handlePerplexityModelSync}
+                    disabled={perplexityModelSyncing}
+                  >
+                    {perplexityModelSyncing ? "Syncing…" : "Sync Models"}
+                  </Button>
                 </div>
               )}
 

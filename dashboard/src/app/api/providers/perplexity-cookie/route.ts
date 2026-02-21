@@ -34,6 +34,80 @@ async function fetchSidecarModels(): Promise<Array<{ upstreamName: string; alias
   }
 }
 
+async function syncPerplexityProvider(
+  userId: string
+): Promise<{ created: boolean; modelsUpdated: number }> {
+  const models = await fetchSidecarModels();
+
+  const existingProvider = await prisma.customProvider.findFirst({
+    where: { userId, providerId: "perplexity-pro" },
+    include: { models: true },
+  });
+
+  if (!existingProvider) {
+    await prisma.customProvider.create({
+      data: {
+        userId,
+        providerId: "perplexity-pro",
+        name: "Perplexity Pro",
+        baseUrl: SIDECAR_BASE_URL,
+        apiKeyHash: hashProviderKey("sk-perplexity-sidecar"),
+        prefix: null,
+        proxyUrl: null,
+        headers: {},
+        models: { create: models },
+        excludedModels: { create: [] },
+      },
+    });
+
+    await syncCustomProviderToProxy(
+      {
+        providerId: "perplexity-pro",
+        baseUrl: SIDECAR_BASE_URL,
+        apiKey: "sk-perplexity-sidecar",
+        models,
+        excludedModels: [],
+      },
+      "create"
+    );
+
+    return { created: true, modelsUpdated: models.length };
+  }
+
+  const existingNames = new Set(existingProvider.models.map((m) => m.upstreamName));
+  const sidecarNames = new Set(models.map((m) => m.upstreamName));
+  const hasChanges =
+    existingNames.size !== sidecarNames.size ||
+    models.some((m) => !existingNames.has(m.upstreamName));
+
+  if (!hasChanges) {
+    return { created: false, modelsUpdated: 0 };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.customProviderModel.deleteMany({
+      where: { customProviderId: existingProvider.id },
+    });
+    await tx.customProvider.update({
+      where: { id: existingProvider.id },
+      data: { models: { create: models } },
+    });
+  });
+
+  await syncCustomProviderToProxy(
+    {
+      providerId: "perplexity-pro",
+      baseUrl: SIDECAR_BASE_URL,
+      apiKey: "sk-perplexity-sidecar",
+      models,
+      excludedModels: [],
+    },
+    "update"
+  );
+
+  return { created: false, modelsUpdated: models.length };
+}
+
 function isValidCookieJson(raw: string): { valid: boolean; error?: string } {
   let parsed: unknown;
   try {
@@ -128,54 +202,20 @@ export async function POST(request: NextRequest) {
     });
 
     let providerProvisioned = false;
+    let modelsUpdated = 0;
 
     try {
-      const existingProvider = await prisma.customProvider.findFirst({
-        where: {
-          userId: session.userId,
-          providerId: "perplexity-pro",
-        },
-      });
-
-      if (!existingProvider) {
-        const models = await fetchSidecarModels();
-
-        await prisma.customProvider.create({
-          data: {
-            userId: session.userId,
-            providerId: "perplexity-pro",
-            name: "Perplexity Pro",
-            baseUrl: SIDECAR_BASE_URL,
-            apiKeyHash: hashProviderKey("sk-perplexity-sidecar"),
-            prefix: null,
-            proxyUrl: null,
-            headers: {},
-            models: { create: models },
-            excludedModels: { create: [] },
-          },
-        });
-
-        await syncCustomProviderToProxy(
-          {
-            providerId: "perplexity-pro",
-            baseUrl: SIDECAR_BASE_URL,
-            apiKey: "sk-perplexity-sidecar",
-            models,
-            excludedModels: [],
-          },
-          "create"
-        );
-
-        providerProvisioned = true;
-      }
+      const result = await syncPerplexityProvider(session.userId);
+      providerProvisioned = result.created;
+      modelsUpdated = result.modelsUpdated;
     } catch (error) {
       logger.error(
         { err: error, userId: session.userId },
-        "Failed to auto-provision perplexity-pro custom provider"
+        "Failed to sync perplexity-pro custom provider"
       );
     }
 
-    return NextResponse.json({ cookie, providerProvisioned }, { status: 201 });
+    return NextResponse.json({ cookie, providerProvisioned, modelsUpdated }, { status: 201 });
   } catch (error) {
     return Errors.internal("save perplexity cookie", error);
   }

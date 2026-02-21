@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.21](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.20...dashboard-v0.1.21) (2026-02-21)
+
+
+### Features
+
+* add Perplexity Pro sidecar with dashboard cookie management ([#54](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/54)) ([a5cb6dc](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a5cb6dcaffd8e210ea19b85c13f986c2f8f60ff7))
+
 ## [0.1.20](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.19...dashboard-v0.1.20) (2026-02-19)
 
 

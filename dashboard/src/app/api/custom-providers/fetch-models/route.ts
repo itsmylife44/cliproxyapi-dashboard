@@ -38,9 +38,6 @@ function isPrivateIPv4(a: number, b: number): boolean {
 const ALLOWED_INTERNAL_HOSTS = new Set([
   "perplexity-sidecar",
   "cliproxyapi",
-  "dashboard",
-  "postgres",
-  "docker-proxy",
 ]);
 
 /**

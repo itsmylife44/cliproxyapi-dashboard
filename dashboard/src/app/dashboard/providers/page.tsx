@@ -340,10 +340,12 @@ export default function ProvidersPage() {
 
   const [perplexityCookies, setPerplexityCookies] = useState<PerplexityCookie[]>([]);
   const [perplexityCookiesLoading, setPerplexityCookiesLoading] = useState(true);
-  const [perplexityCookieInput, setPerplexityCookieInput] = useState("");
+  const [perplexitySessionToken, setPerplexitySessionToken] = useState("");
+  const [perplexityCsrfToken, setPerplexityCsrfToken] = useState("");
   const [perplexityCookieLabel, setPerplexityCookieLabel] = useState("");
   const [perplexityCookieSaving, setPerplexityCookieSaving] = useState(false);
-  const [perplexityCookieJsonError, setPerplexityCookieJsonError] = useState<string | null>(null);
+  const [showPerplexitySessionToken, setShowPerplexitySessionToken] = useState(false);
+  const [showPerplexityCsrfToken, setShowPerplexityCsrfToken] = useState(false);
 
   const selectedOAuthProvider = getOAuthProviderById(selectedOAuthProviderId);
   const selectedOAuthProviderRequiresCallback = selectedOAuthProvider?.requiresCallback ?? true;
@@ -877,25 +879,24 @@ export default function ProvidersPage() {
   }, [showToast]);
 
   const handlePerplexityCookieSave = async () => {
-    const trimmed = perplexityCookieInput.trim();
-    if (!trimmed) {
-      showToast("Cookie JSON is required", "error");
+    const sessionToken = perplexitySessionToken.trim();
+    if (!sessionToken) {
+      showToast("Session token is required", "error");
       return;
     }
-    try {
-      JSON.parse(trimmed);
-      setPerplexityCookieJsonError(null);
-    } catch {
-      setPerplexityCookieJsonError("Invalid JSON. Check your formatting and try again.");
-      return;
+    const csrfToken = perplexityCsrfToken.trim();
+    const cookieObj: Record<string, string> = { "next-auth.session-token": sessionToken };
+    if (csrfToken) {
+      cookieObj["next-auth.csrf-token"] = csrfToken;
     }
+    const cookieData = JSON.stringify(cookieObj);
     setPerplexityCookieSaving(true);
     try {
       const res = await fetch("/api/providers/perplexity-cookie", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          cookieData: trimmed,
+          cookieData,
           label: perplexityCookieLabel.trim() || undefined,
         }),
       });
@@ -905,9 +906,9 @@ export default function ProvidersPage() {
         return;
       }
       showToast("Perplexity cookie saved", "success");
-      setPerplexityCookieInput("");
+      setPerplexitySessionToken("");
+      setPerplexityCsrfToken("");
       setPerplexityCookieLabel("");
-      setPerplexityCookieJsonError(null);
       void loadPerplexityCookies();
     } catch {
       showToast("Network error", "error");
@@ -1288,8 +1289,7 @@ export default function ProvidersPage() {
                 <ol className="mt-1.5 list-decimal space-y-1 pl-4">
                   <li>Go to <span className="font-mono text-amber-100">perplexity.ai</span> and sign in to your Pro account</li>
                   <li>Open DevTools (<span className="font-mono text-amber-100">F12</span>) → Application → Cookies → <span className="font-mono text-amber-100">https://www.perplexity.ai</span></li>
-                  <li>Copy the values of <span className="font-mono text-amber-100">next-auth.session-token</span> and <span className="font-mono text-amber-100">next-auth.csrf-token</span></li>
-                  <li>Paste as JSON in the form below, e.g. <span className="font-mono text-amber-100">{"{"}&quot;next-auth.session-token&quot;: &quot;…&quot;, &quot;next-auth.csrf-token&quot;: &quot;…&quot;{"}"}</span></li>
+                  <li>Copy each cookie value and paste into the fields below</li>
                 </ol>
               </div>
 
@@ -1361,29 +1361,69 @@ export default function ProvidersPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="perplexity-cookie" className="mb-1.5 block text-xs font-medium text-slate-300">
-                    Cookie JSON <span className="text-red-400">*</span>
+                  <label htmlFor="perplexity-session-token" className="mb-1.5 block text-xs font-medium text-slate-300">
+                    Session Token <span className="text-red-400">*</span>
                   </label>
-                  <textarea
-                    id="perplexity-cookie"
-                    value={perplexityCookieInput}
-                    onChange={(e) => {
-                      setPerplexityCookieInput(e.target.value);
-                      setPerplexityCookieJsonError(null);
-                    }}
-                    placeholder={`{\n  "next-auth.session-token": "your-session-token-here",\n  "next-auth.csrf-token": "your-csrf-token-here"\n}`}
-                    disabled={perplexityCookieSaving}
-                    rows={5}
-                    className="glass-input w-full rounded-md px-3 py-2 font-mono text-xs placeholder:text-slate-600 focus:outline-none resize-none"
-                  />
-                  {perplexityCookieJsonError && (
-                    <p className="mt-1.5 text-xs text-red-400">{perplexityCookieJsonError}</p>
-                  )}
+                  <p className="mb-1.5 text-[11px] text-slate-500 font-mono">next-auth.session-token</p>
+                  <div className="relative">
+                    <input
+                      id="perplexity-session-token"
+                      type={showPerplexitySessionToken ? "text" : "password"}
+                      value={perplexitySessionToken}
+                      onChange={(e) => setPerplexitySessionToken(e.target.value)}
+                      placeholder="Paste session token value"
+                      disabled={perplexityCookieSaving}
+                      className="glass-input w-full rounded-md px-3 py-1.5 pr-10 font-mono text-xs placeholder:text-slate-600 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPerplexitySessionToken(!showPerplexitySessionToken)}
+                      className="absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400 hover:text-slate-200 transition-colors"
+                      tabIndex={-1}
+                      aria-label={showPerplexitySessionToken ? "Hide session token" : "Show session token"}
+                    >
+                      {showPerplexitySessionToken ? (
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      ) : (
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="perplexity-csrf-token" className="mb-1.5 block text-xs font-medium text-slate-300">
+                    CSRF Token <span className="text-slate-500">(optional)</span>
+                  </label>
+                  <p className="mb-1.5 text-[11px] text-slate-500 font-mono">next-auth.csrf-token</p>
+                  <div className="relative">
+                    <input
+                      id="perplexity-csrf-token"
+                      type={showPerplexityCsrfToken ? "text" : "password"}
+                      value={perplexityCsrfToken}
+                      onChange={(e) => setPerplexityCsrfToken(e.target.value)}
+                      placeholder="Paste CSRF token value"
+                      disabled={perplexityCookieSaving}
+                      className="glass-input w-full rounded-md px-3 py-1.5 pr-10 font-mono text-xs placeholder:text-slate-600 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPerplexityCsrfToken(!showPerplexityCsrfToken)}
+                      className="absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400 hover:text-slate-200 transition-colors"
+                      tabIndex={-1}
+                      aria-label={showPerplexityCsrfToken ? "Hide CSRF token" : "Show CSRF token"}
+                    >
+                      {showPerplexityCsrfToken ? (
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      ) : (
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex justify-end">
                   <Button
                     onClick={handlePerplexityCookieSave}
-                    disabled={perplexityCookieSaving || !perplexityCookieInput.trim()}
+                    disabled={perplexityCookieSaving || !perplexitySessionToken.trim()}
                   >
                     {perplexityCookieSaving ? "Saving…" : "Save Cookie"}
                   </Button>

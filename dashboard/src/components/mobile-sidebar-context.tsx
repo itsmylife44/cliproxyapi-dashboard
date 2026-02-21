@@ -15,12 +15,12 @@ const MobileSidebarContext = createContext<MobileSidebarContextValue | undefined
 
 export function MobileSidebarProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem("dashboard.sidebar.collapsed");
-    setIsCollapsed(saved === "true");
-  }, []);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return window.localStorage.getItem("dashboard.sidebar.collapsed") === "true";
+  });
 
   const toggleCollapsed = () => {
     setIsCollapsed((prev) => {

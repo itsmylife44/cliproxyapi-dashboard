@@ -66,7 +66,13 @@ export default function AdminUsersPage() {
   }, [showToast, router]);
 
   useEffect(() => {
-    void fetchUsers();
+    const timeoutId = window.setTimeout(() => {
+      void fetchUsers();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [fetchUsers]);
 
   const handleCreateUser = async () => {

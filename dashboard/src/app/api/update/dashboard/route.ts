@@ -70,6 +70,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await response.body?.cancel();
+
     return NextResponse.json({
       success: true,
       message: "Dashboard update triggered. The container will restart shortly.",

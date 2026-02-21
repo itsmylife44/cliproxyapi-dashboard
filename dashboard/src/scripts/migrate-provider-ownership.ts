@@ -83,6 +83,7 @@ async function fetchManagementJson(endpoint: string): Promise<unknown> {
       },
     });
     if (!res.ok) {
+      await res.body?.cancel();
       console.warn(`⚠️  Management API ${endpoint} returned ${res.status}`);
       return null;
     }

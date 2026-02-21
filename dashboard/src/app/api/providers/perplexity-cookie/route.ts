@@ -24,7 +24,10 @@ async function fetchSidecarModels(): Promise<Array<{ upstreamName: string; alias
       signal: controller.signal,
       cache: "no-store",
     });
-    if (!res.ok) throw new Error(`Sidecar /v1/models returned ${res.status}`);
+    if (!res.ok) {
+      await res.body?.cancel();
+      throw new Error(`Sidecar /v1/models returned ${res.status}`);
+    }
     const data: { data?: SidecarModel[] } = await res.json();
     const models = data.data ?? [];
     if (models.length === 0) throw new Error("Sidecar returned empty model list");

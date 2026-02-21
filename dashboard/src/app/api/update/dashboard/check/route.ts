@@ -66,6 +66,7 @@ async function getGitHubReleases(): Promise<GitHubRelease[]> {
   );
 
   if (!response.ok) {
+    await response.body?.cancel();
     throw new Error(`GitHub API error: ${response.status}`);
   }
 
@@ -92,8 +93,12 @@ async function checkGitHubBuildStatus(): Promise<boolean> {
     ]);
 
     const [inProgressData, queuedData]: GitHubRunsResponse[] = await Promise.all([
-      inProgressRes.ok ? inProgressRes.json() : Promise.resolve({}),
-      queuedRes.ok ? queuedRes.json() : Promise.resolve({}),
+      inProgressRes.ok
+        ? inProgressRes.json()
+        : inProgressRes.body?.cancel().then(() => ({})) ?? Promise.resolve({}),
+      queuedRes.ok
+        ? queuedRes.json()
+        : queuedRes.body?.cancel().then(() => ({})) ?? Promise.resolve({}),
     ]);
 
     const isBuilding = (inProgressData.total_count ?? 0) > 0 || (queuedData.total_count ?? 0) > 0;

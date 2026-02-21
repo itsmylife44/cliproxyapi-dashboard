@@ -163,6 +163,8 @@ export async function PATCH(
                 resolvedApiKey = firstEntry["api-key"];
               }
             }
+          } else {
+            await getRes.body?.cancel();
           }
         } catch (err) {
           logger.error({ err }, "Failed to retrieve existing API key for update");
@@ -288,6 +290,7 @@ export async function DELETE(
           });
 
           if (!putRes.ok) {
+            await putRes.body?.cancel();
             syncStatus = "failed";
             syncMessage = "Backend sync failed - provider deleted but may still work temporarily";
             logger.error({ statusCode: putRes.status }, "Failed to sync deleted custom provider to Management API");
@@ -295,6 +298,7 @@ export async function DELETE(
             invalidateProxyModelsCache();
           }
         } else {
+          await getRes.body?.cancel();
           syncStatus = "failed";
           syncMessage = "Backend sync failed - provider deleted but may still work temporarily";
           logger.error({ statusCode: getRes.status }, "Failed to fetch current config from Management API");

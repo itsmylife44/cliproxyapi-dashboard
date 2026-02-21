@@ -27,7 +27,10 @@ async function fetchManagementJson(path: string) {
       },
       cache: "no-store",
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      await res.body?.cancel();
+      return null;
+    }
     return await res.json();
   } catch {
     return null;

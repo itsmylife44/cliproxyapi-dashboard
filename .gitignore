@@ -119,3 +119,6 @@ infrastructure/.env
 
 # OpenCode (local dev state)
 /.opencode/
+
+# Agent instructions (local only)
+AGENTS.md

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.34](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.33...dashboard-v0.1.34) (2026-02-23)
+
+
+### Bug Fixes
+
+* clean stale digests on self-hosted runner before export ([48276bd](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/48276bd811dc4fed84d691073860b1472cd80e7f))
+
 ## [0.1.33](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.32...dashboard-v0.1.33) (2026-02-23)
 
 

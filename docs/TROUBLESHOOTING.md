@@ -47,7 +47,7 @@ nc -zv YOUR_SERVER_IP 1455
 # ... test other OAuth ports
 ```
 
-**Check CLIProxyAPI logs:**
+**Check CLIProxyAPIPlus logs:**
 ```bash
 docker compose logs -f cliproxyapi
 ```

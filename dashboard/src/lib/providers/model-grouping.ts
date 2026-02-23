@@ -1,37 +1,82 @@
+/**
+ * Maps CLIProxyAPIPlus `owned_by` values to display-friendly provider names.
+ * Unknown owned_by values are title-cased automatically.
+ */
+const OWNED_BY_DISPLAY: Record<string, string> = {
+  anthropic: "Claude",
+  "github-copilot": "Copilot",
+  google: "Gemini",
+  antigravity: "Antigravity",
+  openai: "OpenAI/Codex",
+  moonshot: "Kimi",
+  "perplexity-pro": "Perplexity",
+  zai: "ZAI",
+  kiro: "Kiro",
+  iflow: "iFlow",
+  qwen: "Qwen",
+};
+
+/** Display order for known providers. Unknown providers sort after these. */
 export const MODEL_PROVIDER_ORDER = [
   "Claude",
+  "Copilot",
   "Gemini",
   "Antigravity",
   "OpenAI/Codex",
+  "Kimi",
+  "Perplexity",
+  "ZAI",
+  "Kiro",
+  "iFlow",
+  "Qwen",
   "OpenAI-Compatible",
   "Other",
 ] as const;
 
-export type ModelProviderName = (typeof MODEL_PROVIDER_ORDER)[number];
+export type ModelProviderName = (typeof MODEL_PROVIDER_ORDER)[number] | (string & {});
 
 export interface ModelGroup {
-  provider: ModelProviderName;
+  provider: string;
   models: string[];
 }
 
-function isModelProviderName(value: string): value is ModelProviderName {
-  return (MODEL_PROVIDER_ORDER as readonly string[]).includes(value);
+/**
+ * Resolve owned_by to a display-friendly provider name.
+ * Used by buildSourceMap in page.tsx.
+ */
+export function resolveOwnedByDisplay(ownedBy: string): string {
+  if (OWNED_BY_DISPLAY[ownedBy]) {
+    return OWNED_BY_DISPLAY[ownedBy];
+  }
+
+  return ownedBy
+    .split(/[-_]/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
+/**
+ * Detect which provider group a model belongs to.
+ * Prefers modelSourceMap (owned_by-derived) over name-prefix heuristics.
+ */
 export function detectModelProvider(
   modelId: string,
   modelSourceMap?: Map<string, string>
-): ModelProviderName {
+): string {
   const source = modelSourceMap?.get(modelId);
-  if (source && isModelProviderName(source)) {
+  if (source) {
     return source;
   }
 
+  // Fallback: name-prefix heuristics for models without source info
   const lower = modelId.toLowerCase();
 
   if (lower.startsWith("claude-")) return "Claude";
   if (lower.startsWith("gemini-")) return "Gemini";
   if (lower.startsWith("antigravity-")) return "Antigravity";
+  if (lower.startsWith("kimi-")) return "Kimi";
+  if (lower.startsWith("perplexity-")) return "Perplexity";
+  if (lower.startsWith("glm-")) return "ZAI";
   if (
     lower.startsWith("gpt-") ||
     lower.startsWith("o1") ||
@@ -59,7 +104,7 @@ export function groupModelsByProvider(
   models: string[],
   modelSourceMap?: Map<string, string>
 ): ModelGroup[] {
-  const grouped = new Map<ModelProviderName, string[]>();
+  const grouped = new Map<string, string[]>();
 
   for (const model of models) {
     const provider = detectModelProvider(model, modelSourceMap);
@@ -72,8 +117,25 @@ export function groupModelsByProvider(
     providerModels.sort((a, b) => a.localeCompare(b));
   }
 
-  return MODEL_PROVIDER_ORDER.map((provider) => ({
-    provider,
-    models: grouped.get(provider) ?? [],
-  })).filter((group) => group.models.length > 0);
+  // Known providers first (in display order), then unknown providers alphabetically
+  const result: ModelGroup[] = [];
+
+  for (const provider of MODEL_PROVIDER_ORDER) {
+    const models = grouped.get(provider);
+    if (models && models.length > 0) {
+      result.push({ provider, models });
+      grouped.delete(provider);
+    }
+  }
+
+  // Remaining (unknown) providers
+  const unknownProviders = Array.from(grouped.keys()).sort((a, b) => a.localeCompare(b));
+  for (const provider of unknownProviders) {
+    const models = grouped.get(provider);
+    if (models && models.length > 0) {
+      result.push({ provider, models });
+    }
+  }
+
+  return result;
 }

@@ -10,6 +10,7 @@ import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-openc
 import { fetchProxyModels } from "@/lib/config-generators/shared";
 import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases } from "@/lib/config-generators/opencode";
 import type { ConfigData } from "@/lib/config-generators/shared";
+import { resolveOwnedByDisplay } from "@/lib/providers/model-grouping";
 
 interface ManagementFetchParams {
   path: string;
@@ -83,17 +84,7 @@ function extractOAuthAccounts(data: unknown): OAuthAccountEntry[] {
 function buildSourceMap(proxyModels: { id: string; owned_by: string }[]): Map<string, string> {
   const sourceMap = new Map<string, string>();
   for (const m of proxyModels) {
-    const source =
-      m.owned_by === "anthropic"
-        ? "Claude"
-        : m.owned_by === "antigravity"
-          ? "Antigravity"
-          : m.owned_by === "google"
-            ? "Gemini"
-            : m.owned_by === "openai"
-              ? "OpenAI/Codex"
-              : m.owned_by;
-    sourceMap.set(m.id, source);
+    sourceMap.set(m.id, resolveOwnedByDisplay(m.owned_by));
   }
   return sourceMap;
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.33](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.32...dashboard-v0.1.33) (2026-02-23)
+
+
+### Bug Fixes
+
+* match github-copilot provider name for Copilot quota tracking ([8e6d134](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/8e6d134b4b8d7ed259b7bcb8538ec78573617b87))
+
 ## [0.1.32](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.31...dashboard-v0.1.32) (2026-02-23)
 
 

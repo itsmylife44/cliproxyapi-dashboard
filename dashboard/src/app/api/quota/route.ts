@@ -1075,7 +1075,7 @@ export async function GET() {
       }
 
 
-      if (account.provider === "github") {
+      if (account.provider === "github" || account.provider === "github-copilot") {
         const result = await fetchCopilotQuota(authIndex);
 
         if ("error" in result) {

@@ -27,6 +27,18 @@ const PROVIDERS_WITH_CALLBACK = new Set<Provider>([
   PROVIDERS.IFLOW,
 ]);
 
+const PROVIDER_MATCH_ALIASES: Record<Provider, readonly string[]> = {
+  [PROVIDERS.CLAUDE]: ["claude", "anthropic"],
+  [PROVIDERS.GEMINI_CLI]: ["gemini-cli", "gemini"],
+  [PROVIDERS.CODEX]: ["codex", "openai"],
+  [PROVIDERS.ANTIGRAVITY]: ["antigravity"],
+  [PROVIDERS.IFLOW]: ["iflow"],
+  [PROVIDERS.QWEN]: ["qwen"],
+  [PROVIDERS.KIMI]: ["kimi"],
+  [PROVIDERS.COPILOT]: ["copilot", "github", "github-copilot"],
+  [PROVIDERS.KIRO]: ["kiro"],
+};
+
 const CLIPROXYAPI_BASE = process.env.CLIPROXYAPI_MANAGEMENT_URL?.replace("/v0/management", "") || "http://cliproxyapi:8317";
 const CLIPROXYAPI_MANAGEMENT_URL = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
 const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
@@ -61,6 +73,17 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const isProvider = (value: unknown): value is Provider =>
   Object.values(PROVIDERS).includes(value as Provider);
+
+const matchesAuthFileProvider = (
+  provider: Provider,
+  fileProviderRaw: string,
+  fileNameRaw: string
+) => {
+  const aliases = PROVIDER_MATCH_ALIASES[provider];
+  const fileProvider = fileProviderRaw.toLowerCase();
+  const fileName = fileNameRaw.toLowerCase();
+  return aliases.some((alias) => fileProvider === alias || fileName.includes(alias));
+};
 
 const parseRequestBody = (body: unknown): OAuthCallbackRequestBody | null => {
   if (!isRecord(body)) return null;
@@ -202,14 +225,11 @@ export async function POST(request: NextRequest) {
 
       const afterAuthFiles = await fetchAuthFiles();
 
-      if (afterAuthFiles) {
-        candidateFiles = afterAuthFiles.filter((file) => {
+        if (afterAuthFiles) {
+          candidateFiles = afterAuthFiles.filter((file) => {
           const fileNameLower = file.name.toLowerCase();
           const fileProvider = (file.provider || file.type || "").toLowerCase();
-          const providerMatches =
-            fileProvider.length > 0
-              ? fileProvider === provider
-              : fileNameLower.includes(provider);
+          const providerMatches = matchesAuthFileProvider(provider, fileProvider, fileNameLower);
 
           if (!providerMatches) {
             return false;

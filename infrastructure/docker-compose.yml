@@ -29,7 +29,7 @@ services:
 
   # CLIProxyAPI Service
   cliproxyapi:
-    image: eceasy/cli-proxy-api:latest
+    image: eceasy/cli-proxy-api-plus:latest
     container_name: cliproxyapi
     restart: unless-stopped
     networks:

@@ -23,7 +23,7 @@ services:
       start_period: 10s
 
   cliproxyapi:
-    image: eceasy/cli-proxy-api:latest
+    image: eceasy/cli-proxy-api-plus:latest
     container_name: cliproxyapi
     restart: unless-stopped
     networks:

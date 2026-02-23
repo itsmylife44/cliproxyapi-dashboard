@@ -11,7 +11,7 @@
 ### What's Included
 
 - PostgreSQL database dump
-- CLIProxyAPI configuration
+- CLIProxyAPIPlus configuration
 - OAuth token storage
 - Environment files
 - TLS certificates

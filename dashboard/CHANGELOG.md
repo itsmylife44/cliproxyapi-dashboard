@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.29](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.28...dashboard-v0.1.29) (2026-02-23)
+
+
+### Features
+
+* add CLIProxyAPIPlus, Copilot and Kiro providers support ([f3620f9](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/f3620f927d796e3a2fd20e1063791ad016b647c6))
+
 ## [0.1.28](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.27...dashboard-v0.1.28) (2026-02-23)
 
 

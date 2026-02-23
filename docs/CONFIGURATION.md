@@ -18,9 +18,9 @@ Configuration is managed through `infrastructure/.env`.
 | `CLIPROXYAPI_MANAGEMENT_URL` | Internal management API URL | `http://cliproxyapi:8317/v0/management` |
 | `TZ` | Server timezone | `UTC` |
 
-## CLIProxyAPI Configuration
+## CLIProxyAPIPlus Configuration
 
-CLIProxyAPI configuration lives in `infrastructure/config/config.yaml`. The dashboard provides a structured UI for editing it, but you can also edit the file directly:
+CLIProxyAPIPlus configuration lives in `infrastructure/config/config.yaml`. The dashboard provides a structured UI for editing it, but you can also edit the file directly:
 
 ```yaml
 api-keys:

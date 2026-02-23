@@ -22,7 +22,7 @@
 
 ## What is this?
 
-[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) wraps OAuth-based CLI tools (Claude Code, Gemini CLI, Codex, Antigravity, Kimi, Qwen) into **OpenAI-compatible APIs**. This dashboard gives you a web UI to manage everything — providers, API keys, configs, logs, and updates — without touching YAML files.
+[CLIProxyAPIPlus](https://github.com/router-for-me/CLIProxyAPIPlus) wraps OAuth-based CLI tools (Claude Code, Gemini CLI, Codex, GitHub Copilot, Kiro, Antigravity, Kimi, Qwen) into **OpenAI-compatible APIs**. This dashboard gives you a web UI to manage everything — providers, API keys, configs, logs, and updates — without touching YAML files.
 
 ## Quick Start
 
@@ -41,8 +41,8 @@ Open **http://localhost:3000** → create admin account → done.
 
 ## Features
 
-- **Visual Configuration** — Manage CLIProxyAPI settings through structured forms, no YAML editing
-- **Multi-Provider OAuth** — Connect Claude, Gemini, Codex, Antigravity, iFlow, Kimi, and Qwen accounts
+- **Visual Configuration** — Manage CLIProxyAPIPlus settings through structured forms, no YAML editing
+- **Multi-Provider OAuth** — Connect Claude, Gemini, Codex, Copilot, Kiro, Antigravity, iFlow, Kimi, and Qwen accounts
 - **Custom Providers** — Add any OpenAI-compatible endpoint (OpenRouter, Ollama, etc.) with model mappings
 - **API Key Management** — Create, revoke, and track API keys with per-user ownership
 - **Real-time Monitoring** — Live log streaming, container health, and service management
@@ -50,7 +50,7 @@ Open **http://localhost:3000** → create admin account → done.
 - **Usage Analytics** — Request counts, provider breakdown, model stats, error rates
 - **Config Sync** — Auto-sync OpenCode configs via the [`opencode-cliproxyapi-sync`](https://github.com/itsmylife44/opencode-cliproxyapi-sync) plugin
 - **Config Sharing** — Share model configs with others via share codes (`XXXX-XXXX`)
-- **One-Click Updates** — Update both Dashboard (GHCR) and CLIProxyAPI (Docker Hub) from the admin panel
+- **One-Click Updates** — Update both Dashboard (GHCR) and CLIProxyAPIPlus (Docker Hub) from the admin panel
 - **Container Management** — Start, stop, restart containers directly from the UI
 - **Automatic TLS** — Let's Encrypt certificates via Caddy, auto-renewed
 
@@ -76,7 +76,7 @@ Five Docker containers, two isolated networks:
 |---------|------|
 | **Caddy** | Reverse proxy, automatic TLS, HTTP/3 |
 | **Dashboard** | Next.js web app, JWT auth, Docker management via socket proxy |
-| **CLIProxyAPI** | AI proxy server, OAuth callbacks, management API |
+| **CLIProxyAPIPlus** | AI proxy server, OAuth callbacks, management API |
 | **Docker Socket Proxy** | Restricted Docker API access (containers/images only) |
 | **PostgreSQL** | Database on isolated internal network |
 
@@ -139,7 +139,7 @@ Release-Please auto-generates releases from commit messages.
 
 ## Support
 
-- **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)** — Core proxy documentation
+- **[CLIProxyAPIPlus](https://github.com/router-for-me/CLIProxyAPIPlus)** — Core proxy documentation
 - **[Issues](https://github.com/itsmylife44/cliproxyapi-dashboard/issues)** — Bug reports and feature requests
 - **[Discussions](https://github.com/itsmylife44/cliproxyapi-dashboard/discussions)** — Questions and community
 

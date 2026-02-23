@@ -27,6 +27,8 @@ const NON_ADMIN_OAUTH_PATHS = new Set<string>([
   "iflow-auth-url",
   "kimi-auth-url",
   "qwen-auth-url",
+  "github-auth-url",
+  "kiro-auth-url",
   "get-auth-status",
 ]);
 

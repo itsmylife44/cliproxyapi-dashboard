@@ -13,6 +13,8 @@ const PROVIDERS = {
   IFLOW: "iflow",
   QWEN: "qwen",
   KIMI: "kimi",
+  COPILOT: "copilot",
+  KIRO: "kiro",
 } as const;
 
 type Provider = (typeof PROVIDERS)[keyof typeof PROVIDERS];

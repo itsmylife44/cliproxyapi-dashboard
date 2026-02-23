@@ -68,6 +68,20 @@ const OAUTH_PROVIDERS = [
     authEndpoint: "/api/management/qwen-auth-url?is_webui=true",
     requiresCallback: false,
   },
+  {
+    id: "copilot" as const,
+    name: "GitHub Copilot",
+    description: "GitHub Copilot (via GitHub device OAuth)",
+    authEndpoint: "/api/management/github-auth-url?is_webui=true",
+    requiresCallback: false,
+  },
+  {
+    id: "kiro" as const,
+    name: "Kiro",
+    description: "AWS CodeWhisperer / Kiro (device OAuth)",
+    authEndpoint: "/api/management/kiro-auth-url?is_webui=true",
+    requiresCallback: false,
+  },
 ] as const;
 
 type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];

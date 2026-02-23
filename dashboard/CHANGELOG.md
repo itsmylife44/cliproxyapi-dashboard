@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.31](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.30...dashboard-v0.1.31) (2026-02-23)
+
+
+### Bug Fixes
+
+* show device authorization code for Copilot and other device-flow providers ([f14b6e7](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/f14b6e7ee1980018bb70bd5d5847005d3cb9004c))
+
 ## [0.1.30](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.29...dashboard-v0.1.30) (2026-02-23)
 
 

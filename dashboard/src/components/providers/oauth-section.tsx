@@ -447,6 +447,13 @@ export function OAuthSection({
         setCallbackValidation(CALLBACK_VALIDATION.VALID);
         setCallbackMessage("No callback URL needed. Complete sign-in in the popup window.");
         showToast("OAuth window opened. Complete sign-in in the popup.", "info");
+        if (data.user_code && data.url) {
+          setDeviceCodeInfo({
+            verificationUrl: data.url,
+            userCode: data.user_code,
+          });
+          deviceCodePopupOpenedRef.current = true;
+        }
         stopNoCallbackClaimPolling();
         void claimOAuthWithoutCallback(providerId, data.state);
       }

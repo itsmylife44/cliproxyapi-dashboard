@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.32](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.31...dashboard-v0.1.32) (2026-02-23)
+
+
+### Features
+
+* add Copilot quota tracking and improve model grouping by provider ([ac02861](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/ac02861c8b233a48bfe5c2c514b39e0f50c7d53e))
+
 ## [0.1.31](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.30...dashboard-v0.1.31) (2026-02-23)
 
 

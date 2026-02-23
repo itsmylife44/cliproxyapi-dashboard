@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.28](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.27...dashboard-v0.1.28) (2026-02-23)
+
+
+### Features
+
+* switch to CLIProxyAPIPlus, add Copilot & Kiro providers, fix OAuth delete 403 ([#67](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/67)) ([6ab774f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6ab774ff130a96e3758e1a1ad9c53987f866c382))
+
 ## [0.1.27](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.26...dashboard-v0.1.27) (2026-02-21)
 
 

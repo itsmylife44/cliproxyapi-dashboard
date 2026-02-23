@@ -514,6 +514,128 @@ async function fetchKimiQuota(
   }
 }
 
+
+interface CopilotQuotaSnapshot {
+  remaining?: number;
+  entitlement?: number;
+  percent_remaining?: number;
+  unlimited?: boolean;
+}
+
+interface CopilotUserResponse {
+  quota_snapshots?: {
+    premium_interactions?: CopilotQuotaSnapshot;
+  };
+  quota_reset_date_utc?: string;
+  quota_reset_date?: string;
+  limited_user_reset_date?: string;
+}
+
+function deriveCopilotFraction(snapshot: CopilotQuotaSnapshot | undefined): number {
+  if (!snapshot) return 0;
+  if (snapshot.unlimited === true) return 1;
+  if (typeof snapshot.percent_remaining === "number") {
+    return Math.max(0, Math.min(1, snapshot.percent_remaining / 100));
+  }
+  if (
+    typeof snapshot.remaining === "number" &&
+    typeof snapshot.entitlement === "number" &&
+    snapshot.entitlement > 0
+  ) {
+    return Math.max(0, Math.min(1, snapshot.remaining / snapshot.entitlement));
+  }
+  return 0;
+}
+
+function formatCopilotLabel(snapshot: CopilotQuotaSnapshot | undefined): string {
+  if (!snapshot) return "Premium Requests";
+  if (snapshot.unlimited === true) return "Premium Requests (Unlimited)";
+  if (
+    typeof snapshot.remaining === "number" &&
+    typeof snapshot.entitlement === "number"
+  ) {
+    const used = snapshot.entitlement - snapshot.remaining;
+    return `Premium Requests (${used}/${snapshot.entitlement})`;
+  }
+  return "Premium Requests";
+}
+
+async function fetchCopilotQuota(
+  authIndex: string
+): Promise<QuotaGroup[] | { error: string }> {
+  try {
+    const response = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/api-call`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(30_000),
+      body: JSON.stringify({
+        auth_index: authIndex,
+        method: "GET",
+        url: "https://api.github.com/copilot_internal/user",
+        header: {
+          Authorization: "Bearer $TOKEN$",
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+          "User-Agent": "copilot-dashboard/1.0",
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      await response.body?.cancel();
+      return { error: `API call failed: ${response.status}` };
+    }
+
+    const apiCallResult = (await response.json()) as ApiCallResponse;
+    const statusCode = Number(apiCallResult.status_code ?? apiCallResult.statusCode ?? 0);
+
+    if (statusCode < 200 || statusCode >= 300) {
+      return { error: `Provider API failed: ${statusCode}` };
+    }
+
+    const body = parseApiCallBody(apiCallResult) as CopilotUserResponse;
+
+    if (!body || typeof body !== "object") {
+      return { error: "Invalid Copilot quota response" };
+    }
+
+    const premium = body.quota_snapshots?.premium_interactions;
+    const remainingFraction = deriveCopilotFraction(premium);
+    const label = formatCopilotLabel(premium);
+    const resetTime =
+      body.quota_reset_date_utc ??
+      body.quota_reset_date ??
+      body.limited_user_reset_date ??
+      null;
+
+    const groups: QuotaGroup[] = [
+      {
+        id: "premium-requests",
+        label,
+        remainingFraction,
+        resetTime,
+        models: [
+          {
+            id: "premium-requests",
+            displayName: label,
+            remainingFraction,
+            resetTime,
+          },
+        ],
+      },
+    ];
+
+    return groups;
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
 function parseApiCallBody(result: ApiCallResponse): unknown {
   if (typeof result.body === "string") {
     try {
@@ -932,6 +1054,29 @@ export async function GET() {
 
       if (account.provider === "kimi") {
         const result = await fetchKimiQuota(authIndex);
+
+        if ("error" in result) {
+          return {
+            auth_index: authIndex,
+            provider: account.provider,
+            email: displayEmail,
+            supported: true,
+            error: result.error,
+          };
+        }
+
+        return {
+          auth_index: authIndex,
+          provider: account.provider,
+          email: displayEmail,
+          supported: true,
+          groups: result,
+        };
+      }
+
+
+      if (account.provider === "github") {
+        const result = await fetchCopilotQuota(authIndex);
 
         if ("error" in result) {
           return {

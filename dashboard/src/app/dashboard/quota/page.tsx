@@ -38,6 +38,7 @@ const PROVIDERS = {
   ANTIGRAVITY: "antigravity",
   CLAUDE: "claude",
   CODEX: "codex",
+  COPILOT: "github",
   KIMI: "kimi",
 } as const;
 
@@ -317,6 +318,7 @@ export default function QuotaPage() {
     { key: PROVIDERS.ANTIGRAVITY, label: "Antigravity" },
     { key: PROVIDERS.CLAUDE, label: "Claude" },
     { key: PROVIDERS.CODEX, label: "Codex" },
+    { key: PROVIDERS.COPILOT, label: "Copilot" },
     { key: PROVIDERS.KIMI, label: "Kimi" },
   ] as const;
 

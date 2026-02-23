@@ -38,7 +38,7 @@ const PROVIDERS = {
   ANTIGRAVITY: "antigravity",
   CLAUDE: "claude",
   CODEX: "codex",
-  COPILOT: "github",
+  COPILOT: "github-copilot",
   KIMI: "kimi",
 } as const;
 
@@ -291,6 +291,9 @@ export default function QuotaPage() {
 
   const filteredAccounts = quotaData?.accounts.filter((account) => {
     if (selectedProvider === PROVIDERS.ALL) return true;
+    if (selectedProvider === PROVIDERS.COPILOT) {
+      return account.provider === "github" || account.provider === "github-copilot";
+    }
     return account.provider === selectedProvider;
   }) || [];
 

@@ -122,11 +122,16 @@ interface AuthUrlResponse {
   status?: string;
   url?: string;
   state?: string;
+  user_code?: string;
+  method?: string;
+  verification_uri?: string;
 }
-
 interface AuthStatusResponse {
   status?: string;
   error?: string;
+  verification_url?: string;
+  user_code?: string;
+  url?: string;
 }
 
 interface OAuthCallbackResponse {
@@ -188,6 +193,8 @@ export function OAuthSection({
   const noCallbackClaimAttemptsRef = useRef(0);
   const authStateRef = useRef<string | null>(null);
   const selectedOAuthProviderIdRef = useRef<OAuthProviderId | null>(null);
+  const [deviceCodeInfo, setDeviceCodeInfo] = useState<{ verificationUrl: string; userCode: string } | null>(null);
+  const deviceCodePopupOpenedRef = useRef(false);
   const [accounts, setAccounts] = useState<OAuthAccountWithOwnership[]>([]);
   const [oauthAccountsLoading, setOauthAccountsLoading] = useState(true);
   const [showConfirmOAuthDelete, setShowConfirmOAuthDelete] = useState(false);
@@ -269,6 +276,18 @@ export function OAuthSection({
           return;
         }
 
+        if (data.status === "device_code" && data.verification_url && data.user_code) {
+          setDeviceCodeInfo({
+            verificationUrl: data.verification_url,
+            userCode: data.user_code,
+          });
+          if (!deviceCodePopupOpenedRef.current) {
+            deviceCodePopupOpenedRef.current = true;
+            window.open(data.verification_url, "oauth", "width=600,height=800");
+          }
+          return;
+        }
+
         if (data.status === "ok") {
           stopPolling();
           setOauthModalStatus(MODAL_STATUS.SUCCESS);
@@ -304,6 +323,8 @@ export function OAuthSection({
     setCallbackValidation(CALLBACK_VALIDATION.EMPTY);
     setCallbackMessage("Paste the full URL.");
     setOauthErrorMessage(null);
+    setDeviceCodeInfo(null);
+    deviceCodePopupOpenedRef.current = false;
   };
 
   const handleOAuthModalClose = () => {
@@ -384,22 +405,38 @@ export function OAuthSection({
       }
 
       const data: AuthUrlResponse = await res.json();
-      if (!data.url || !data.state) {
+      if (!data.state) {
         setOauthModalStatus(MODAL_STATUS.ERROR);
-        setOauthErrorMessage("OAuth response missing URL or state.");
+        setOauthErrorMessage("OAuth response missing state.");
         return;
       }
 
+      if (!data.url && data.method === "device_code") {
+        authStateRef.current = data.state;
+        setAuthState(data.state);
+        setOauthModalStatus(MODAL_STATUS.POLLING);
+        setCallbackValidation(CALLBACK_VALIDATION.VALID);
+        setCallbackMessage("Waiting for device authorization details...");
+        showToast("Initializing device authorization flow...", "info");
+        pollAuthStatus(data.state);
+        stopNoCallbackClaimPolling();
+        void claimOAuthWithoutCallback(provider.id, data.state);
+        return;
+      }
+
+      if (!data.url) {
+        setOauthModalStatus(MODAL_STATUS.ERROR);
+        setOauthErrorMessage("OAuth response missing URL.");
+        return;
+      }
       const popupOpened = openAuthPopup(data.url);
       if (!popupOpened) {
         setOauthModalStatus(MODAL_STATUS.ERROR);
         setOauthErrorMessage("Popup blocked. Allow pop-ups and try again.");
         return;
       }
-
       authStateRef.current = data.state;
       setAuthState(data.state);
-
       if (provider.requiresCallback) {
         setOauthModalStatus(MODAL_STATUS.WAITING);
         setCallbackValidation(CALLBACK_VALIDATION.EMPTY);
@@ -699,6 +736,20 @@ export function OAuthSection({
                 <li>Log in and approve the access request.</li>
                 <li>Once approved, this dialog will update automatically.</li>
               </ol>
+              {deviceCodeInfo && (
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-lg bg-slate-800/60 p-3">
+                    <p className="text-xs font-medium text-slate-400">Your authorization code:</p>
+                    <p className="mt-1 select-all font-mono text-lg font-bold tracking-wider text-white">{deviceCodeInfo.userCode}</p>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Enter this code at{" "}
+                    <a href={deviceCodeInfo.verificationUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">
+                      {deviceCodeInfo.verificationUrl}
+                    </a>
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

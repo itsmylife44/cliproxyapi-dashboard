@@ -822,7 +822,6 @@ async function resolveOAuthAccountByIdOrName(
     where: { id: idOrName },
     select: { id: true, userId: true, accountName: true },
   });
-
   if (byId) {
     return {
       accountName: byId.accountName,
@@ -830,6 +829,18 @@ async function resolveOAuthAccountByIdOrName(
     };
   }
 
+  // Try to find by accountName (management API file ID)
+  const byName = await prisma.providerOAuthOwnership.findUnique({
+    where: { accountName: idOrName },
+    select: { id: true, userId: true, accountName: true },
+  });
+
+  if (byName) {
+    return {
+      accountName: byName.accountName,
+      ownership: { id: byName.id, userId: byName.userId },
+    };
+  }
   // Fallback: treat as management file name/id directly
   return {
     accountName: idOrName,

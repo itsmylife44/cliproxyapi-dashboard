@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.30](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.29...dashboard-v0.1.30) (2026-02-23)
+
+
+### Bug Fixes
+
+* handle Kiro device_code OAuth flow without initial URL ([07a4f6f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/07a4f6f6b1ac70950e5134dbbe60269e593d14bd))
+
 ## [0.1.29](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.28...dashboard-v0.1.29) (2026-02-23)
 
 

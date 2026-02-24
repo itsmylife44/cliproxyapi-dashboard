@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.37](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.36...dashboard-v0.1.37) (2026-02-24)
+
+
+### Bug Fixes
+
+* harden collector concurrency and reduce proxy/dashboard load ([#81](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/81)) ([8950a53](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/8950a53cb27326132c71f41e9758d4522ab5af54))
+
 ## [0.1.36](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.35...dashboard-v0.1.36) (2026-02-24)
 
 

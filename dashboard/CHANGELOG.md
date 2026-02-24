@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.35](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.34...dashboard-v0.1.35) (2026-02-24)
+
+
+### Bug Fixes
+
+* improve dashboard UX with tooltips, consistent spacing, and proper navigation ([2be1484](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/2be1484c35e81bfb0937bc5e1b6fd27cb9336087))
+
 ## [0.1.34](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.33...dashboard-v0.1.34) (2026-02-23)
 
 

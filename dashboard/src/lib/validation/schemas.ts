@@ -85,12 +85,16 @@ const LocalMcpEntrySchema = z.object({
   name: z.string().min(1),
   type: z.literal("local"),
   command: z.array(z.string()).min(1),
+  enabled: z.boolean().optional(),
+  environment: z.record(z.string(), z.string()).optional(),
 });
 
 const RemoteMcpEntrySchema = z.object({
   name: z.string().min(1),
   type: z.literal("remote"),
   url: z.string().min(1),
+  enabled: z.boolean().optional(),
+  environment: z.record(z.string(), z.string()).optional(),
 });
 
 const McpEntrySchema = z.union([LocalMcpEntrySchema, RemoteMcpEntrySchema]);

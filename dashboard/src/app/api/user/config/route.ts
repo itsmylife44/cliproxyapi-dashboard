@@ -10,12 +10,21 @@ interface UserConfigRequest {
   customPlugins?: string[];
 }
 
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.values(value as Record<string, unknown>).every((v) => typeof v === "string");
+}
+
 function isMcpEntry(value: unknown): value is McpEntry {
   if (!value || typeof value !== "object") return false;
   const obj = value as Record<string, unknown>;
   
   if (typeof obj.name !== "string" || !obj.name) return false;
   if (typeof obj.type !== "string") return false;
+  
+  // Validate optional shared fields
+  if (obj.enabled !== undefined && typeof obj.enabled !== "boolean") return false;
+  if (obj.environment !== undefined && !isStringRecord(obj.environment)) return false;
   
   if (obj.type === "local") {
     return Array.isArray(obj.command) && obj.command.every((c) => typeof c === "string");

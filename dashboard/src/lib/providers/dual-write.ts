@@ -44,6 +44,19 @@ class AsyncMutex {
 
 const providerMutex = new AsyncMutex();
 
+async function acquireProviderAdvisoryLock(lockKey: string): Promise<boolean> {
+  const rows = await prisma.$queryRaw<Array<{ locked: boolean }>>`
+    SELECT pg_try_advisory_lock(hashtext(${lockKey})) AS locked
+  `;
+  return rows[0]?.locked === true;
+}
+
+async function releaseProviderAdvisoryLock(lockKey: string): Promise<void> {
+  await prisma.$queryRaw<Array<{ unlocked: boolean }>>`
+    SELECT pg_advisory_unlock(hashtext(${lockKey})) AS unlocked
+  `;
+}
+
 const MANAGEMENT_BASE_URL = env.CLIPROXYAPI_MANAGEMENT_URL;
 const MANAGEMENT_API_KEY = env.MANAGEMENT_API_KEY;
 const FETCH_TIMEOUT_MS = 10000; // 10 second timeout for all Management API calls
@@ -171,6 +184,12 @@ export async function contributeKey(
 
   const lockKey = PROVIDER_ENDPOINT[provider];
   const release = await providerMutex.acquire(lockKey);
+  const advisoryLockAcquired = await acquireProviderAdvisoryLock(lockKey);
+
+  if (!advisoryLockAcquired) {
+    release();
+    return { ok: false, error: "Provider operation already in progress" };
+  }
 
   try {
     try {
@@ -306,6 +325,7 @@ export async function contributeKey(
       error: error instanceof Error ? error.message : "Unknown error during key contribution",
     };
   } finally {
+    await releaseProviderAdvisoryLock(lockKey);
     release();
   }
 }
@@ -334,6 +354,12 @@ export async function removeKey(
 
   const lockKey = PROVIDER_ENDPOINT[ownership.provider as Provider];
   const release = await providerMutex.acquire(lockKey);
+  const advisoryLockAcquired = await acquireProviderAdvisoryLock(lockKey);
+
+  if (!advisoryLockAcquired) {
+    release();
+    return { ok: false, error: "Provider operation already in progress" };
+  }
 
    try {
      const endpoint = `${MANAGEMENT_BASE_URL}${PROVIDER_ENDPOINT[ownership.provider as Provider]}`;
@@ -452,6 +478,7 @@ export async function removeKey(
       error: error instanceof Error ? error.message : "Unknown error during key removal",
     };
   } finally {
+    await releaseProviderAdvisoryLock(lockKey);
     release();
   }
 }
@@ -466,6 +493,12 @@ export async function removeKeyByAdmin(
 
   const lockKey = PROVIDER_ENDPOINT[provider];
   const release = await providerMutex.acquire(lockKey);
+  const advisoryLockAcquired = await acquireProviderAdvisoryLock(lockKey);
+
+  if (!advisoryLockAcquired) {
+    release();
+    return { ok: false, error: "Provider operation already in progress" };
+  }
 
    try {
      const endpoint = `${MANAGEMENT_BASE_URL}${PROVIDER_ENDPOINT[provider]}`;
@@ -580,6 +613,7 @@ export async function removeKeyByAdmin(
       error: error instanceof Error ? error.message : "Unknown error during key removal",
     };
   } finally {
+    await releaseProviderAdvisoryLock(lockKey);
     release();
   }
 }

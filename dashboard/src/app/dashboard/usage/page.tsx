@@ -45,6 +45,11 @@ interface UsageResponse {
 
 type DateFilter = "today" | "7d" | "30d" | "all" | "custom";
 
+function shouldPollDashboard(): boolean {
+  if (typeof document === "undefined") return true;
+  return document.visibilityState === "visible";
+}
+
 function toLocalDateString(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -113,14 +118,6 @@ export default function UsagePage() {
       }
 
       try {
-        if (isAdminRef.current) {
-          try {
-            await fetch("/api/usage/collect", { method: "POST", signal: abortController.signal });
-          } catch {
-            if (abortController.signal.aborted) return;
-          }
-        }
-
         const { from, to } = getDateRange(activeFilter, customFrom, customTo);
         const res = await fetch(`/api/usage/history?from=${from}&to=${to}`, { signal: abortController.signal });
 
@@ -149,6 +146,7 @@ export default function UsagePage() {
     }
 
     intervalRef.current = setInterval(() => {
+      if (!shouldPollDashboard()) return;
       void collectAndFetch(false);
     }, 300000);
 

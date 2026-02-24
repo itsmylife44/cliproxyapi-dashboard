@@ -86,6 +86,8 @@ const OAUTH_PROVIDERS = [
 
 type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
 type OAuthProviderId = OAuthProvider["id"];
+const OAUTH_STATUS_POLL_INTERVAL_MS = 5000;
+const OAUTH_STATUS_POLL_INTERVAL_HIDDEN_MS = 10000;
 
 const MODAL_STATUS = {
   IDLE: "idle",
@@ -141,6 +143,11 @@ interface OAuthCallbackResponse {
 
 const getOAuthProviderById = (id: OAuthProviderId | null) =>
   OAUTH_PROVIDERS.find((provider) => provider.id === id) || null;
+
+function isTabVisible(): boolean {
+  if (typeof document === "undefined") return true;
+  return document.visibilityState === "visible";
+}
 
 const validateCallbackUrl = (value: string) => {
   if (!value.trim()) {
@@ -252,6 +259,10 @@ export function OAuthSection({
     }
 
     pollingIntervalRef.current = window.setInterval(async () => {
+      if (!isTabVisible()) {
+        return;
+      }
+
       pollingAttemptsRef.current += 1;
       if (pollingAttemptsRef.current > 60) {
         stopPolling();
@@ -308,7 +319,7 @@ export function OAuthSection({
         setOauthModalStatus(MODAL_STATUS.ERROR);
         setOauthErrorMessage("Network error while polling authorization.");
       }
-    }, 2000);
+    }, isTabVisible() ? OAUTH_STATUS_POLL_INTERVAL_MS : OAUTH_STATUS_POLL_INTERVAL_HIDDEN_MS);
   };
 
   const resetOAuthModalState = () => {

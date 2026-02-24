@@ -57,7 +57,8 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   const [mcpUrl, setMcpUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [envRows, setEnvRows] = useState<Array<{ key: string; value: string }>>([]);
+  const [envRows, setEnvRows] = useState<Array<{ id: number; key: string; value: string }>>([]);
+  const envIdCounter = useRef(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingDataRef = useRef<{ mcps: McpEntry[]; plugins: string[] } | null>(null);
 
@@ -194,47 +195,39 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
       return;
     }
 
+    const environment = envRows.reduce<Record<string, string>>((acc, row) => {
+      const key = row.key.trim();
+      if (key) acc[key] = row.value;
+      return acc;
+    }, {});
+    const envSpread = Object.keys(environment).length > 0 ? { environment } : {};
+
     if (mcpType === "remote") {
       const trimmedUrl = mcpUrl.trim();
       if (!trimmedUrl) return;
-      const environment = envRows.reduce((acc, row) => {
-        const key = row.key.trim();
-        if (key) acc[key] = row.value;
-        return acc;
-      }, {} as Record<string, string>);
-      setMcps([...mcps, { 
-        name: trimmedName, 
-        type: "remote", 
+      setMcps([...mcps, {
+        name: trimmedName,
+        type: "remote",
         url: trimmedUrl,
         enabled: true,
-        ...(Object.keys(environment).length > 0 ? { environment } : {})
+        ...envSpread,
       }]);
-      setMcpName("");
       setMcpUrl("");
-      setEnvRows([]);
     } else {
       const trimmedCommand = mcpCommand.trim();
       if (!trimmedCommand) return;
-      const commandArray = trimmedCommand.split(/\s+/);
-      const environment = envRows.reduce((acc, row) => {
-        const key = row.key.trim();
-        if (key) acc[key] = row.value;
-        return acc;
-      }, {} as Record<string, string>);
-      setMcps([
-        ...mcps,
-        {
-          name: trimmedName,
-          type: "local",
-          command: commandArray,
-          enabled: true,
-          ...(Object.keys(environment).length > 0 ? { environment } : {})
-        },
-      ]);
-      setMcpName("");
+      setMcps([...mcps, {
+        name: trimmedName,
+        type: "local",
+        command: trimmedCommand.split(/\s+/),
+        enabled: true,
+        ...envSpread,
+      }]);
       setMcpCommand("");
-      setEnvRows([]);
     }
+
+    setMcpName("");
+    setEnvRows([]);
   };
 
   const handleRemoveMcp = (name: string) => {
@@ -250,7 +243,8 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   };
 
   const handleAddEnvRow = () => {
-    setEnvRows([...envRows, { key: "", value: "" }]);
+    envIdCounter.current += 1;
+    setEnvRows([...envRows, { id: envIdCounter.current, key: "", value: "" }]);
   };
 
   const handleUpdateEnvRow = (index: number, field: "key" | "value", value: string) => {
@@ -548,7 +542,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
                 {envRows.length > 0 && (
                   <div className="space-y-2">
                     {envRows.map((row, index) => (
-                      <div key={index} className="flex gap-2">
+                      <div key={row.id} className="flex gap-2">
                         <input
                           type="text"
                           value={row.key}

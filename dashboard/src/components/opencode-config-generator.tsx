@@ -57,6 +57,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   const [mcpUrl, setMcpUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [envRows, setEnvRows] = useState<Array<{ key: string; value: string }>>([]);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingDataRef = useRef<{ mcps: McpEntry[]; plugins: string[] } | null>(null);
 
@@ -196,28 +197,70 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
     if (mcpType === "remote") {
       const trimmedUrl = mcpUrl.trim();
       if (!trimmedUrl) return;
-      setMcps([...mcps, { name: trimmedName, type: "remote", url: trimmedUrl }]);
+      const environment = envRows.reduce((acc, row) => {
+        const key = row.key.trim();
+        if (key) acc[key] = row.value;
+        return acc;
+      }, {} as Record<string, string>);
+      setMcps([...mcps, { 
+        name: trimmedName, 
+        type: "remote", 
+        url: trimmedUrl,
+        enabled: true,
+        ...(Object.keys(environment).length > 0 ? { environment } : {})
+      }]);
       setMcpName("");
       setMcpUrl("");
+      setEnvRows([]);
     } else {
       const trimmedCommand = mcpCommand.trim();
       if (!trimmedCommand) return;
       const commandArray = trimmedCommand.split(/\s+/);
+      const environment = envRows.reduce((acc, row) => {
+        const key = row.key.trim();
+        if (key) acc[key] = row.value;
+        return acc;
+      }, {} as Record<string, string>);
       setMcps([
         ...mcps,
         {
           name: trimmedName,
           type: "local",
           command: commandArray,
+          enabled: true,
+          ...(Object.keys(environment).length > 0 ? { environment } : {})
         },
       ]);
       setMcpName("");
       setMcpCommand("");
+      setEnvRows([]);
     }
   };
 
   const handleRemoveMcp = (name: string) => {
     setMcps(mcps.filter((m) => m.name !== name));
+  };
+
+  const handleToggleMcpEnabled = (name: string) => {
+    setMcps(mcps.map((m) => 
+      m.name === name 
+        ? { ...m, enabled: m.enabled === false ? true : false } 
+        : m
+    ));
+  };
+
+  const handleAddEnvRow = () => {
+    setEnvRows([...envRows, { key: "", value: "" }]);
+  };
+
+  const handleUpdateEnvRow = (index: number, field: "key" | "value", value: string) => {
+    const newRows = [...envRows];
+    newRows[index][field] = value;
+    setEnvRows(newRows);
+  };
+
+  const handleRemoveEnvRow = (index: number) => {
+    setEnvRows(envRows.filter((_, i) => i !== index));
   };
 
   const handleDownload = () => {
@@ -460,85 +503,180 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
                 </select>
               </div>
               {mcpType === "remote" ? (
-                <div className="flex gap-2">
+                <div className="space-y-2">
                   <input
                     type="text"
                     value={mcpUrl}
                     onChange={(e) => setMcpUrl(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAddMcp()}
                     placeholder="https://mcp.example.com/mcp"
-                    className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+                    className="w-full backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
                   />
-                  <button
-                    type="button"
-                    onClick={handleAddMcp}
-                    className="px-4 py-2 rounded-lg bg-blue-500/20 border border-blue-400/30 text-blue-300 text-sm font-medium hover:bg-blue-500/30 hover:border-blue-400/50 transition-all"
-                  >
-                    Add
-                  </button>
                 </div>
               ) : (
-                <div className="flex gap-2">
+                <div className="space-y-2">
                   <input
                     type="text"
                     value={mcpCommand}
                     onChange={(e) => setMcpCommand(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAddMcp()}
                     placeholder="npx -y @modelcontextprotocol/server-everything"
-                    className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+                    className="w-full backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
                   />
+                </div>
+              )}
+              
+              {/* Environment Variables Editor */}
+              <div className="space-y-2 pt-2 border-t border-white/10">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
+                    Environment Variables
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddEnvRow}
+                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Add Env Var
+                  </button>
+                </div>
+                
+                {envRows.length > 0 && (
+                  <div className="space-y-2">
+                    {envRows.map((row, index) => (
+                      <div key={index} className="flex gap-2">
+                        <input
+                          type="text"
+                          value={row.key}
+                          onChange={(e) => handleUpdateEnvRow(index, "key", e.target.value)}
+                          placeholder="KEY"
+                          className="w-1/3 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-1.5 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+                        />
+                        <input
+                          type="text"
+                          value={row.value}
+                          onChange={(e) => handleUpdateEnvRow(index, "value", e.target.value)}
+                          placeholder="Value"
+                          className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-1.5 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveEnvRow(index)}
+                          className="p-1.5 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="flex justify-end pt-2">
                   <button
                     type="button"
                     onClick={handleAddMcp}
                     className="px-4 py-2 rounded-lg bg-blue-500/20 border border-blue-400/30 text-blue-300 text-sm font-medium hover:bg-blue-500/30 hover:border-blue-400/50 transition-all"
                   >
-                    Add
+                    Add MCP Server
                   </button>
                 </div>
-              )}
+              </div>
             </div>
             {mcps.length > 0 && (
               <div className="space-y-1.5">
-                {mcps.map((mcp) => (
-                  <div
-                    key={mcp.name}
-                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-400/20"
-                  >
-                    <div className="flex items-center gap-2 text-xs font-mono">
-                      <span className="text-blue-300">{mcp.name}</span>
-                      <span className="text-white/30">→</span>
-                      {mcp.type === "remote" ? (
-                        <>
-                          <span className="text-purple-400">Remote</span>
-                          <span className="text-white/60">{mcp.url}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-emerald-400">Local</span>
-                          <span className="text-white/60">{mcp.command.join(" ")}</span>
-                        </>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMcp(mcp.name)}
-                      className="text-white/40 hover:text-red-400 transition-colors"
-                      aria-label={`Remove ${mcp.name}`}
+                {mcps.map((mcp) => {
+                  const isEnabled = mcp.enabled !== false;
+                  const envCount = mcp.environment ? Object.keys(mcp.environment).length : 0;
+                  return (
+                    <div
+                      key={mcp.name}
+                      className={`flex items-start justify-between px-3 py-3 rounded-lg border transition-all ${
+                        isEnabled
+                          ? "bg-blue-500/10 border-blue-400/20"
+                          : "bg-white/5 border-white/10 opacity-60"
+                      }`}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <title>Remove</title>
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex-1 space-y-2 overflow-hidden mr-4">
+                        <div className="flex items-center gap-2 text-sm font-mono">
+                          <span className={isEnabled ? "text-blue-300" : "text-white/50"}>{mcp.name}</span>
+                          <span className="text-white/30">→</span>
+                          {mcp.type === "remote" ? (
+                            <>
+                              <span className={isEnabled ? "text-purple-400 text-xs" : "text-white/40 text-xs"}>Remote</span>
+                              <span className="text-white/60 text-xs truncate" title={mcp.url}>{mcp.url}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className={isEnabled ? "text-emerald-400 text-xs" : "text-white/40 text-xs"}>Local</span>
+                              <div className="flex flex-wrap gap-1">
+                                {mcp.command.map((cmd, i) => (
+                                  <span key={i} className="px-1.5 py-0.5 bg-white/5 rounded text-white/70 text-[10px] whitespace-nowrap">
+                                    {cmd}
+                                  </span>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        {envCount > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-white/10 text-white/60 uppercase">
+                              {envCount} Env Var{envCount !== 1 ? "s" : ""}
+                            </span>
+                            <div className="flex gap-1 overflow-x-auto pb-1">
+                              {Object.entries(mcp.environment!).map(([k, v]) => (
+                                <span key={k} className="text-[10px] font-mono text-white/40 whitespace-nowrap" title={`${k}=${v}`}>
+                                  <span className="text-white/60">{k}</span>={v}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleMcpEnabled(mcp.name)}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
+                            isEnabled ? "bg-emerald-500/60" : "bg-white/10"
+                          }`}
+                          aria-label={`Toggle ${mcp.name}`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                              isEnabled ? "translate-x-4" : "translate-x-0.5"
+                            }`}
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMcp(mcp.name)}
+                          className="text-white/40 hover:text-red-400 transition-colors"
+                          aria-label={`Remove ${mcp.name}`}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <title>Remove</title>
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
 
-       <button
+      <button
          type="button"
          onClick={() => setIsExpanded(!isExpanded)}
          className="flex items-center gap-2 text-xs font-medium text-white/60 hover:text-white/90 transition-colors"

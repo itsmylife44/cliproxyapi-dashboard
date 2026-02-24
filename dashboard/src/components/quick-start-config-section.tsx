@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ModelSelector } from "@/components/model-selector";
 import { OpenCodeConfigGenerator } from "@/components/opencode-config-generator";
@@ -108,21 +109,21 @@ export function QuickStartConfigSection({
             <div className="space-y-1.5 text-sm text-slate-300">
               <p className="flex items-start gap-2">
                 <span className="text-orange-300">•</span>
-                <span>Add providers via <a href="/dashboard/providers" className="font-medium text-blue-300 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-200">Providers</a></span>
+                <span>Add providers via <Link href="/dashboard/providers" className="font-medium text-blue-300 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-200">Providers</Link></span>
               </p>
               <p className="flex items-start gap-2">
                 <span className="text-orange-300">•</span>
                 <span>Set default model: <code className="break-all rounded bg-slate-800/80 px-1.5 py-0.5 font-mono text-xs text-orange-200">cliproxyapi/model-name</code></span>
               </p>
             </div>
-           </div>
 
-            <div className="mt-4 flex items-start gap-3 rounded-md border border-slate-700/80 bg-slate-900/40 p-3">
+            <div className="flex items-start gap-3 rounded-md border border-slate-700/80 bg-slate-900/40 p-3">
               <span className="text-lg">💡</span>
               <p className="text-sm text-slate-300">
-                Auto-sync: Get token in <a href="/dashboard/settings" className="font-medium text-blue-300 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-200">Settings</a>, install <code className="rounded bg-slate-800/80 px-1.5 py-0.5 font-mono text-xs text-blue-200">opencode-cliproxyapi-sync@latest</code>
+                Auto-sync: Get token in <Link href="/dashboard/settings" className="font-medium text-blue-300 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-200">Settings</Link>, install <code className="rounded bg-slate-800/80 px-1.5 py-0.5 font-mono text-xs text-blue-200">opencode-cliproxyapi-sync@latest</code>
               </p>
             </div>
+           </div>
          </CardContent>
        </Card>
       </section>

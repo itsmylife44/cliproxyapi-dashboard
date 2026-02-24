@@ -53,6 +53,11 @@ const LOGGING_STATE = {
 
 type LoggingState = (typeof LOGGING_STATE)[keyof typeof LOGGING_STATE];
 
+function shouldPollDashboard(): boolean {
+  if (typeof document === "undefined") return true;
+  return document.visibilityState === "visible";
+}
+
 function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
@@ -125,6 +130,7 @@ export default function MonitoringPage() {
 
   useEffect(() => {
     const fetchStatus = async () => {
+      if (!shouldPollDashboard()) return;
       try {
         const res = await fetch("/api/proxy/status");
         if (res.ok) {
@@ -142,6 +148,7 @@ export default function MonitoringPage() {
 
   useEffect(() => {
     const fetchUsage = async () => {
+      if (!shouldPollDashboard()) return;
       try {
         const res = await fetch("/api/management/usage");
         if (res.ok) {
@@ -193,6 +200,7 @@ export default function MonitoringPage() {
     }
 
     const fetchLogs = async () => {
+      if (!shouldPollDashboard()) return;
       try {
         const url = lastTimestampRef.current > 0
           ? `/api/management/logs?after=${lastTimestampRef.current}`
@@ -228,7 +236,7 @@ export default function MonitoringPage() {
     };
 
     fetchLogs();
-    logsIntervalRef.current = setInterval(fetchLogs, 2000);
+    logsIntervalRef.current = setInterval(fetchLogs, 5000);
 
     return () => {
       if (logsIntervalRef.current) {

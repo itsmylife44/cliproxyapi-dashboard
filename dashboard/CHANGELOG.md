@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.36](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.35...dashboard-v0.1.36) (2026-02-24)
+
+
+### Features
+
+* redesign MCP server management for complex configurations ([#79](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/79)) ([7088623](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/708862331375a2844d96d9775d42e8c4962d66d6))
+
 ## [0.1.35](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.34...dashboard-v0.1.35) (2026-02-24)
 
 

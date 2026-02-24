@@ -9,6 +9,7 @@ import { fetchWithRetry } from "@/lib/fetch-utils";
 const BACKEND_API_URL = env.CLIPROXYAPI_MANAGEMENT_URL;
 const MANAGEMENT_API_KEY = env.MANAGEMENT_API_KEY;
 const FETCH_TIMEOUT_MS = 30_000;
+const RESPONSE_SIZE_LIMIT_BYTES = 10 * 1024 * 1024;
 
 const ALLOWED_HOST = (() => {
   try {
@@ -114,6 +115,7 @@ async function proxyRequest(
   rawPath: string,
   request: NextRequest
 ): Promise<NextResponse> {
+  const startedAt = Date.now();
   const session = await verifySession();
 
   if (!session) {
@@ -229,6 +231,7 @@ async function proxyRequest(
         body,
         cache: "no-store",
         timeout: FETCH_TIMEOUT_MS,
+        disableRetry: method !== "GET" && method !== "PUT",
       });
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
@@ -242,7 +245,40 @@ async function proxyRequest(
     }
 
     const responseContentType = response.headers.get("content-type");
+    const responseLength = response.headers.get("content-length");
+    if (responseLength) {
+      const parsedLength = parseInt(responseLength, 10);
+      if (!Number.isNaN(parsedLength) && parsedLength > RESPONSE_SIZE_LIMIT_BYTES) {
+        logger.warn({ path: normalizedPath, method, contentLength: parsedLength }, "Proxy response too large");
+        await response.body?.cancel();
+        return NextResponse.json(
+          { error: "Response too large" },
+          { status: 502 }
+        );
+      }
+    }
+
     const responseData = await response.text();
+    const responseSize = new TextEncoder().encode(responseData).length;
+    if (responseSize > RESPONSE_SIZE_LIMIT_BYTES) {
+      logger.warn({ path: normalizedPath, method, responseSize }, "Proxy response exceeded size budget");
+      return NextResponse.json(
+        { error: "Response too large" },
+        { status: 502 }
+      );
+    }
+
+    logger.info(
+      {
+        userId: session.userId,
+        method,
+        path: normalizedPath,
+        status: response.status,
+        durationMs: Date.now() - startedAt,
+        responseSize,
+      },
+      "Proxy request completed"
+    );
 
     return new NextResponse(responseData, {
       status: response.status,
@@ -251,7 +287,7 @@ async function proxyRequest(
       },
     });
   } catch (error) {
-    logger.error({ err: error }, "Proxy request error");
+    logger.error({ err: error, method, path: rawPath, userId: session.userId, durationMs: Date.now() - startedAt }, "Proxy request error");
     return NextResponse.json(
       { error: "Failed to proxy request" },
       { status: 502 }

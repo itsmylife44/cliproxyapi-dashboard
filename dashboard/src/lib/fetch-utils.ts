@@ -7,6 +7,7 @@ const IDEMPOTENT_METHODS = new Set(["GET", "PUT"]);
 
 interface FetchWithRetryOptions extends RequestInit {
   timeout?: number;
+  disableRetry?: boolean;
 }
 
 /**
@@ -22,11 +23,11 @@ export async function fetchWithRetry(
   url: string,
   options: FetchWithRetryOptions = {}
 ): Promise<Response> {
-  const { timeout, ...fetchOptions } = options;
+  const { timeout, disableRetry = false, ...fetchOptions } = options;
   const method = fetchOptions.method?.toUpperCase() || "GET";
 
   // Skip retry for non-idempotent methods
-  if (!IDEMPOTENT_METHODS.has(method)) {
+  if (disableRetry || !IDEMPOTENT_METHODS.has(method)) {
     return fetchWithTimeout(url, timeout || 10000, fetchOptions);
   }
 

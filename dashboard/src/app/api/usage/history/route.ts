@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { usageCache } from "@/lib/cache";
+
+const USAGE_HISTORY_CACHE_TTL_MS = 15_000;
+const USAGE_RECORD_LIMIT = 25_000;
 
 interface KeyUsage {
   keyName: string;
@@ -33,6 +37,7 @@ function isValidDateParam(dateString: string): boolean {
 }
 
 export async function GET(request: NextRequest) {
+  const requestStartedAt = Date.now();
   const session = await verifySession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -72,6 +77,12 @@ export async function GET(request: NextRequest) {
       select: { isAdmin: true, username: true },
     });
     const isAdmin = user?.isAdmin ?? false;
+    const cacheKey = `usage-history:v1:${session.userId}:${isAdmin ? "admin" : "user"}:${fromParam}:${toParam}`;
+    const cached = usageCache.get(cacheKey) as { data: unknown; isAdmin: boolean } | null;
+    if (cached) {
+      logger.debug({ userId: session.userId, from: fromParam, to: toParam }, "Usage history cache hit");
+      return NextResponse.json(cached);
+    }
 
     let sourceFilter: string[] = [];
     if (!isAdmin) {
@@ -103,8 +114,6 @@ export async function GET(request: NextRequest) {
             ],
           }),
     };
-
-    const USAGE_RECORD_LIMIT = 50_000;
 
     const usageRecords = await prisma.usageRecord.findMany({
       where: whereClause,
@@ -239,9 +248,23 @@ export async function GET(request: NextRequest) {
       isAdmin,
     };
 
+    usageCache.set(cacheKey, responseData, USAGE_HISTORY_CACHE_TTL_MS);
+    logger.info(
+      {
+        userId: session.userId,
+        isAdmin,
+        from: fromParam,
+        to: toParam,
+        recordCount: usageRecords.length,
+        truncated,
+        durationMs: Date.now() - requestStartedAt,
+      },
+      "Usage history request completed"
+    );
+
     return NextResponse.json(responseData);
   } catch (error) {
-    logger.error({ err: error }, "Failed to fetch usage history");
+    logger.error({ err: error, userId: session.userId, durationMs: Date.now() - requestStartedAt }, "Failed to fetch usage history");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

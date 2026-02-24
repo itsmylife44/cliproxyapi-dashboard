@@ -4,6 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { randomUUID } from "crypto";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -12,6 +13,33 @@ const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
 const COLLECTOR_API_KEY = process.env.COLLECTOR_API_KEY;
 
 const BATCH_SIZE = 500;
+const COLLECTOR_LEASE_STALE_MS = 15 * 60 * 1000;
+
+function markCollectorError(runId: string, errorMessage: string): Promise<void> {
+  return prisma.collectorState
+    .upsert({
+      where: { id: "singleton" },
+      create: {
+        id: "singleton",
+        lastCollectedAt: new Date(),
+        lastStatus: "error",
+        recordsStored: 0,
+        errorMessage,
+      },
+      update: {
+        lastCollectedAt: new Date(),
+        lastStatus: "error",
+        recordsStored: 0,
+        errorMessage,
+      },
+    })
+    .then(() => {
+      logger.warn({ runId, errorMessage }, "Collector state marked as error");
+    })
+    .catch((stateError) => {
+      logger.error({ err: stateError, runId }, "Failed to mark collector error state");
+    });
+}
 
 interface TokenDetails {
   input_tokens: number;
@@ -119,6 +147,37 @@ interface UsageRecordCandidate {
   failed: boolean;
 }
 
+async function tryAcquireCollectorLease(now: Date): Promise<boolean> {
+  await prisma.collectorState.upsert({
+    where: { id: "singleton" },
+    create: {
+      id: "singleton",
+      lastCollectedAt: now,
+      lastStatus: "idle",
+      recordsStored: 0,
+      errorMessage: null,
+    },
+    update: {},
+  });
+
+  const staleBefore = new Date(now.getTime() - COLLECTOR_LEASE_STALE_MS);
+  const claim = await prisma.collectorState.updateMany({
+    where: {
+      id: "singleton",
+      OR: [
+        { lastStatus: { not: "running" } },
+        { updatedAt: { lt: staleBefore } },
+      ],
+    },
+    data: {
+      lastStatus: "running",
+      errorMessage: null,
+    },
+  });
+
+  return claim.count === 1;
+}
+
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const isCronAuth =
@@ -152,6 +211,27 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const runId = randomUUID();
+  const startedAtMs = Date.now();
+  const leaseAcquiredAt = new Date();
+
+  try {
+    const leaseAcquired = await tryAcquireCollectorLease(leaseAcquiredAt);
+    if (!leaseAcquired) {
+      logger.warn({ runId }, "Usage collection skipped: collector already running");
+      return NextResponse.json(
+        { error: "Collector already running", runId },
+        { status: 202 }
+      );
+    }
+  } catch (error) {
+    logger.error({ err: error, runId }, "Failed to acquire collector lease");
+    return NextResponse.json(
+      { error: "Failed to acquire collector lock", runId },
+      { status: 500 }
+    );
+  }
+
   try {
     let usageResponse: Response;
     let authFilesResponse: Response | null = null;
@@ -170,6 +250,7 @@ export async function POST(request: NextRequest) {
       ]);
     } catch (fetchError) {
       logger.error({ err: fetchError }, "Failed to connect to CLIProxyAPI");
+      await markCollectorError(runId, "Proxy service unavailable");
       return NextResponse.json(
         { error: "Proxy service unavailable" },
         { status: 503 }
@@ -213,6 +294,7 @@ export async function POST(request: NextRequest) {
         { status: usageResponse.status, statusText: usageResponse.statusText },
         "CLIProxyAPI usage endpoint returned error"
       );
+      await markCollectorError(runId, "Failed to fetch usage data");
       return NextResponse.json(
         { error: "Failed to fetch usage data" },
         { status: 502 }
@@ -233,6 +315,7 @@ export async function POST(request: NextRequest) {
         { response: JSON.stringify(responseJson).slice(0, 200) },
         "Unexpected usage response format from CLIProxyAPI"
       );
+      await markCollectorError(runId, "Invalid usage data format");
       return NextResponse.json(
         { error: "Invalid usage data format" },
         { status: 502 }
@@ -368,6 +451,7 @@ export async function POST(request: NextRequest) {
 
     const skipped = candidates.length - totalStored;
     const now = new Date();
+    const durationMs = Date.now() - startedAtMs;
 
     await prisma.collectorState.upsert({
       where: { id: "singleton" },
@@ -387,18 +471,21 @@ export async function POST(request: NextRequest) {
     });
 
     logger.info(
-      { processed: candidates.length, stored: totalStored, skipped },
+      { runId, processed: candidates.length, stored: totalStored, skipped, durationMs },
       "Usage collection completed"
     );
 
     return NextResponse.json({
+      runId,
       processed: candidates.length,
       stored: totalStored,
       skipped,
+      durationMs,
       lastCollectedAt: now.toISOString(),
     });
   } catch (error) {
-    logger.error({ err: error }, "Usage collection failed");
+    const durationMs = Date.now() - startedAtMs;
+    logger.error({ err: error, runId, durationMs }, "Usage collection failed");
 
     try {
       await prisma.collectorState.upsert({
@@ -421,6 +508,6 @@ export async function POST(request: NextRequest) {
       /* state update failed, continue */
     }
 
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal error", runId }, { status: 500 });
   }
 }

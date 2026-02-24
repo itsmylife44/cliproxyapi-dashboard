@@ -129,9 +129,15 @@ export function extractOAuthModelAliases(config: import("./shared").ConfigData |
    return models;
 }
 
+interface McpBaseFields {
+  name: string;
+  enabled?: boolean;
+  environment?: Record<string, string>;
+}
+
 export type McpEntry =
-  | { name: string; type: "local"; command: string[] }
-  | { name: string; type: "remote"; url: string };
+  | (McpBaseFields & { type: "local"; command: string[] })
+  | (McpBaseFields & { type: "remote"; url: string });
 
 export interface LspEntry {
   language: string;
@@ -196,17 +202,21 @@ export function generateConfigJson(
   if (options?.mcps && options.mcps.length > 0) {
     const mcpServers: Record<string, Record<string, unknown>> = {};
     for (const mcp of options.mcps) {
+      const mcpEntry: Record<string, unknown> = {};
       if (mcp.type === "remote") {
-        mcpServers[mcp.name] = {
-          type: "remote",
-          url: mcp.url,
-        };
+        mcpEntry.type = "remote";
+        mcpEntry.url = mcp.url;
       } else if (mcp.type === "local") {
-        mcpServers[mcp.name] = {
-          type: "local",
-          command: mcp.command,
-        };
+        mcpEntry.type = "local";
+        mcpEntry.command = mcp.command;
       }
+      if (mcp.enabled !== undefined) {
+        mcpEntry.enabled = mcp.enabled;
+      }
+      if (mcp.environment && Object.keys(mcp.environment).length > 0) {
+        mcpEntry.environment = mcp.environment;
+      }
+      mcpServers[mcp.name] = mcpEntry;
     }
     configObj.mcp = mcpServers;
   }

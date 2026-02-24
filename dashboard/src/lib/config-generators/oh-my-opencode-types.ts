@@ -486,6 +486,22 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
        if (typeof mcpObj.name !== "string" || !mcpObj.name) continue;
        const mcpType = mcpObj.type;
 
+       // Extract optional shared fields
+       const enabled = typeof mcpObj.enabled === "boolean" ? mcpObj.enabled : undefined;
+       let environment: Record<string, string> | undefined;
+       if (mcpObj.environment && typeof mcpObj.environment === "object" && !Array.isArray(mcpObj.environment)) {
+         const envObj = mcpObj.environment as Record<string, unknown>;
+         const validatedEnv: Record<string, string> = {};
+         for (const [envKey, envVal] of Object.entries(envObj)) {
+           if (typeof envVal === "string") {
+             validatedEnv[envKey] = envVal;
+           }
+         }
+         if (Object.keys(validatedEnv).length > 0) {
+           environment = validatedEnv;
+         }
+       }
+
        if (mcpType === "local") {
          if (Array.isArray(mcpObj.command)) {
            const command = mcpObj.command.filter((c): c is string => typeof c === "string");
@@ -494,6 +510,8 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
                name: mcpObj.name,
                type: "local",
                command,
+               ...(enabled !== undefined && { enabled }),
+               ...(environment && { environment }),
              });
            }
          }
@@ -503,6 +521,8 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
              name: mcpObj.name,
              type: "remote",
              url: mcpObj.url,
+             ...(enabled !== undefined && { enabled }),
+             ...(environment && { environment }),
            });
          }
        }

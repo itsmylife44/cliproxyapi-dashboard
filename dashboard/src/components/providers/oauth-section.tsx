@@ -259,15 +259,15 @@ export function OAuthSection({
     }
 
     pollingIntervalRef.current = window.setInterval(async () => {
+      if (!isTabVisible()) {
+        return;
+      }
+
       pollingAttemptsRef.current += 1;
       if (pollingAttemptsRef.current > 60) {
         stopPolling();
         setOauthModalStatus(MODAL_STATUS.ERROR);
         setOauthErrorMessage("Timed out waiting for authorization.");
-        return;
-      }
-
-      if (!isTabVisible()) {
         return;
       }
 

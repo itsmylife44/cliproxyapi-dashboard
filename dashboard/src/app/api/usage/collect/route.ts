@@ -15,6 +15,32 @@ const COLLECTOR_API_KEY = process.env.COLLECTOR_API_KEY;
 const BATCH_SIZE = 500;
 const COLLECTOR_LEASE_STALE_MS = 15 * 60 * 1000;
 
+function markCollectorError(runId: string, errorMessage: string): Promise<void> {
+  return prisma.collectorState
+    .upsert({
+      where: { id: "singleton" },
+      create: {
+        id: "singleton",
+        lastCollectedAt: new Date(),
+        lastStatus: "error",
+        recordsStored: 0,
+        errorMessage,
+      },
+      update: {
+        lastCollectedAt: new Date(),
+        lastStatus: "error",
+        recordsStored: 0,
+        errorMessage,
+      },
+    })
+    .then(() => {
+      logger.warn({ runId, errorMessage }, "Collector state marked as error");
+    })
+    .catch((stateError) => {
+      logger.error({ err: stateError, runId }, "Failed to mark collector error state");
+    });
+}
+
 interface TokenDetails {
   input_tokens: number;
   output_tokens: number;
@@ -224,6 +250,7 @@ export async function POST(request: NextRequest) {
       ]);
     } catch (fetchError) {
       logger.error({ err: fetchError }, "Failed to connect to CLIProxyAPI");
+      await markCollectorError(runId, "Proxy service unavailable");
       return NextResponse.json(
         { error: "Proxy service unavailable" },
         { status: 503 }
@@ -267,6 +294,7 @@ export async function POST(request: NextRequest) {
         { status: usageResponse.status, statusText: usageResponse.statusText },
         "CLIProxyAPI usage endpoint returned error"
       );
+      await markCollectorError(runId, "Failed to fetch usage data");
       return NextResponse.json(
         { error: "Failed to fetch usage data" },
         { status: 502 }
@@ -287,6 +315,7 @@ export async function POST(request: NextRequest) {
         { response: JSON.stringify(responseJson).slice(0, 200) },
         "Unexpected usage response format from CLIProxyAPI"
       );
+      await markCollectorError(runId, "Invalid usage data format");
       return NextResponse.json(
         { error: "Invalid usage data format" },
         { status: 502 }

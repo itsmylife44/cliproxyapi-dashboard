@@ -23,7 +23,7 @@ export async function GET() {
         models: true,
         excludedModels: true
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { sortOrder: "asc" }
     });
 
     return NextResponse.json({
@@ -34,6 +34,8 @@ export async function GET() {
         baseUrl: p.baseUrl,
         prefix: p.prefix,
         proxyUrl: p.proxyUrl,
+        groupId: p.groupId,
+        sortOrder: p.sortOrder,
         headers: p.headers,
         models: p.models,
         excludedModels: p.excludedModels,

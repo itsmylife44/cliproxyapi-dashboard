@@ -88,7 +88,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
 
       showToast(`Group ${isEditing ? "updated" : "created"} successfully`, "success");
       onSuccess();
-      handleClose();
+      onClose();
     } catch (error) {
       showToast(error instanceof Error ? error.message : "An error occurred", "error");
     } finally {

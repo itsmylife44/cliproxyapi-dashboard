@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.39](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.38...dashboard-v0.1.39) (2026-02-25)
+
+
+### Features
+
+* add provider group management and priority ordering ([#84](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/84)) ([2ec1a7b](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/2ec1a7b657971e46080315dab89815523857e926)), closes [#78](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/78)
+
 ## [0.1.38](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.37...dashboard-v0.1.38) (2026-02-25)
 
 

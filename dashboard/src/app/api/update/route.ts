@@ -11,7 +11,7 @@ const execFileAsync = promisify(execFile);
 const CONTAINER_NAME = "cliproxyapi";
 const COMPOSE_FILE = "/opt/cliproxyapi/infrastructure/docker-compose.yml";
 const IMAGE_NAME = "eceasy/cli-proxy-api-plus";
-const VERSION_PATTERN = /^(latest|v\d+\.\d+\.\d+)$/;
+const DOCKER_TAG_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/;
 
 interface PortBinding {
   HostIp: string;
@@ -31,6 +31,14 @@ function getCommandErrorText(error: unknown): string {
     return error.message;
   }
   return String(error);
+}
+
+function isValidImageTag(tag: string): boolean {
+  if (tag === "latest") {
+    return true;
+  }
+
+  return DOCKER_TAG_PATTERN.test(tag);
 }
 
 async function getContainerConfig(): Promise<ContainerConfig> {
@@ -154,7 +162,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Confirmation required" }, { status: 400 });
     }
 
-    if (typeof version !== "string" || !VERSION_PATTERN.test(version)) {
+    if (typeof version !== "string" || !isValidImageTag(version)) {
       return NextResponse.json({ error: "Invalid version format" }, { status: 400 });
     }
 

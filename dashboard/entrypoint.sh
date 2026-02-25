@@ -211,6 +211,36 @@ client.connect()
       ALTER TABLE "custom_providers" ADD CONSTRAINT "custom_providers_userId_fkey"
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    
+    -- Provider groups table (grouping + ordering for custom providers)
+    CREATE TABLE IF NOT EXISTS "provider_groups" (
+      "id" TEXT NOT NULL,
+      "userId" TEXT NOT NULL,
+      "name" TEXT NOT NULL,
+      "color" TEXT,
+      "sortOrder" INTEGER NOT NULL DEFAULT 0,
+      "isActive" BOOLEAN NOT NULL DEFAULT true,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      CONSTRAINT "provider_groups_pkey" PRIMARY KEY ("id")
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS "provider_groups_userId_name_key" ON "provider_groups"("userId", "name");
+    CREATE INDEX IF NOT EXISTS "provider_groups_userId_idx" ON "provider_groups"("userId");
+    DO $$ BEGIN
+      ALTER TABLE "provider_groups" ADD CONSTRAINT "provider_groups_userId_fkey"
+        FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE "custom_providers" ADD COLUMN "groupId" TEXT;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE "custom_providers" ADD COLUMN "sortOrder" INTEGER NOT NULL DEFAULT 0;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE "custom_providers" ADD CONSTRAINT "custom_providers_groupId_fkey"
+        FOREIGN KEY ("groupId") REFERENCES "provider_groups"("id") ON DELETE SET NULL;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    CREATE INDEX IF NOT EXISTS "custom_providers_groupId_idx" ON "custom_providers"("groupId");
 
     -- Custom provider models table (model mappings for custom providers)
     CREATE TABLE IF NOT EXISTS "custom_provider_models" (

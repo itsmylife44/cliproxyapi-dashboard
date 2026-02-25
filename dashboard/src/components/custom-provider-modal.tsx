@@ -21,6 +21,7 @@ interface CustomProvider {
   headers: Record<string, string>;
   models: ModelMapping[];
   excludedModels: { pattern: string }[];
+  groupId: string | null;
 }
 
 interface CustomProviderModalProps {
@@ -65,6 +66,8 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
   const [fetchingModels, setFetchingModels] = useState(false);
   const [fetchedModels, setFetchedModels] = useState<FetchedModel[]>([]);
   const [showFetchedModels, setShowFetchedModels] = useState(false);
+  const [groupId, setGroupId] = useState<string | null>(null);
+  const [groups, setGroups] = useState<{id: string; name: string; color: string | null}[]>([]);
 
   const [errors, setErrors] = useState({
     name: "",
@@ -73,6 +76,21 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     apiKey: "",
     models: ""
   });
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const res = await fetch("/api/provider-groups");
+        if (res.ok) {
+          const data = await res.json();
+          setGroups(data.groups || []);
+        }
+      } catch (err) {
+        // silently fail for group fetch in modal
+      }
+    };
+    void fetchGroups();
+  }, []);
 
   useEffect(() => {
     if (provider) {
@@ -84,6 +102,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
       setHeaders(Object.entries(provider.headers || {}).map(([key, value]) => ({ key, value })));
       setModels(provider.models.length > 0 ? provider.models : [{ upstreamName: "", alias: "" }]);
       setExcludedModels(provider.excludedModels.map(e => e.pattern));
+      setGroupId(provider.groupId);
       setApiKey("");
     } else {
       resetForm();
@@ -104,6 +123,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     setFetchingModels(false);
     setFetchedModels([]);
     setShowFetchedModels(false);
+    setGroupId(null);
   };
 
   const handleNameChange = (value: string) => {
@@ -146,7 +166,8 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
       proxyUrl: proxyUrl || undefined,
       headers: Object.keys(headersObj).length > 0 ? headersObj : undefined,
       models: validModels,
-      excludedModels: excludedModels.filter(e => e.trim())
+      excludedModels: excludedModels.filter(e => e.trim()),
+      groupId: groupId || null
     };
 
     try {
@@ -580,6 +601,25 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
             {excludedModels.length === 0 && (
               <p className="text-xs text-white/50">Supports wildcards: gpt-4, claude-*, *-mini</p>
             )}
+          </div>
+
+          {/* Group Assignment */}
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-white">
+              Group (Optional)
+            </label>
+            <select
+              value={groupId ?? ""}
+              onChange={(e) => setGroupId(e.target.value || null)}
+              disabled={saving}
+              className="w-full px-3 py-2 text-sm rounded-md glass-input text-white focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 bg-slate-900 border border-slate-700/70"
+            >
+              <option value="" className="bg-slate-900 text-white">No group</option>
+              {groups.map(g => (
+                <option key={g.id} value={g.id} className="bg-slate-900 text-white">{g.name}</option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-xs text-white/50">Assign this provider to a group for organization</p>
           </div>
         </div>
       </ModalContent>

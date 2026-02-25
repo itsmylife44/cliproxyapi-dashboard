@@ -28,6 +28,7 @@ model User {
   providerKeys        ProviderKeyOwnership[]
   providerOAuth       ProviderOAuthOwnership[]
   customProviders     CustomProvider[]
+  providerGroups      ProviderGroup[]
   perplexityCookies   PerplexityCookie[]
   auditLogs           AuditLog[]
   usageRecords        UsageRecord[]
@@ -166,6 +167,8 @@ model SystemSetting {
 model CustomProvider {
   id          String   @id @default(cuid())
   userId      String
+  groupId     String?                   // Optional: assign to a group
+  sortOrder   Int      @default(0)      // Priority order within group (or globally if ungrouped)
   name        String                    // Display name (e.g., "OpenRouter")
   providerId  String   @unique          // URL-safe ID (e.g., "openrouter-custom")
   baseUrl     String                    // https://openrouter.ai/api/v1
@@ -176,13 +179,33 @@ model CustomProvider {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  user   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  models CustomProviderModel[]
+  user           User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group          ProviderGroup?                @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  models         CustomProviderModel[]
   excludedModels CustomProviderExcludedModel[]
   
   @@index([userId])
+  @@index([groupId])
   @@index([providerId])
   @@map("custom_providers")
+}
+
+model ProviderGroup {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String?                    // Optional hex color for UI display
+  sortOrder Int      @default(0)       // Order among groups for this user
+  isActive  Boolean  @default(true)    // Enable/disable whole group
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  providers CustomProvider[]
+
+  @@unique([userId, name])             // Unique group names per user
+  @@index([userId])
+  @@map("provider_groups")
 }
 
 model CustomProviderModel {

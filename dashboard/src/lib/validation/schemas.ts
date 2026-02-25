@@ -138,7 +138,7 @@ export type FetchModelsInput = z.infer<typeof FetchModelsSchema>;
 export const CreateCustomProviderSchema = z.object({
   name: z.string().min(1).max(100),
   providerId: z.string().regex(/^[a-z0-9-]+$/, "Provider ID must be lowercase alphanumeric with hyphens"),
-  baseUrl: z.string().url().startsWith("https://", "Base URL must start with https://"),
+  baseUrl: z.url().startsWith("https://", "Base URL must start with https://"),
   apiKey: z.string().min(1),
   prefix: z.string().optional(),
   proxyUrl: z.string().optional(),
@@ -177,3 +177,40 @@ export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
 export function formatZodError(error: z.ZodError): { error: z.core.$ZodIssue[] } {
   return { error: error.issues };
 }
+
+// ============================================================================
+// PROVIDER GROUPS
+// ============================================================================
+
+export const CreateProviderGroupSchema = z.object({
+  name: z.string().min(1).max(50),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+});
+
+export type CreateProviderGroupInput = z.infer<typeof CreateProviderGroupSchema>;
+
+export const UpdateProviderGroupSchema = z.object({
+  name: z.string().min(1).max(50).optional(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
+export type UpdateProviderGroupInput = z.infer<typeof UpdateProviderGroupSchema>;
+
+export const ReorderProviderGroupsSchema = z.object({
+  groupIds: z.array(z.string()).min(1),
+});
+
+export type ReorderProviderGroupsInput = z.infer<typeof ReorderProviderGroupsSchema>;
+
+export const ReorderCustomProvidersSchema = z.object({
+  providerIds: z.array(z.string()).min(1),
+});
+
+export type ReorderCustomProvidersInput = z.infer<typeof ReorderCustomProvidersSchema>;
+
+export const AssignProviderGroupSchema = z.object({
+  groupId: z.string().nullable(),
+});
+
+export type AssignProviderGroupInput = z.infer<typeof AssignProviderGroupSchema>;

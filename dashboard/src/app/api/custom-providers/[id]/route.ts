@@ -28,6 +28,7 @@ const UpdateCustomProviderSchema = z.object({
   apiKey: z.string().min(1).optional(),
   prefix: z.string().optional(),
   proxyUrl: z.string().optional(),
+  groupId: z.string().nullable().optional(),
   headers: z.record(z.string(), z.string()).optional(),
   models: z.array(z.object({
     upstreamName: z.string().min(1),
@@ -94,6 +95,16 @@ export async function PATCH(
       }
     }
 
+    if (validated.groupId !== undefined && validated.groupId !== null) {
+      const groupExists = await prisma.providerGroup.findFirst({
+        where: { id: validated.groupId, userId: session.userId },
+        select: { id: true },
+      });
+      if (!groupExists) {
+        return NextResponse.json({ error: "Provider group not found" }, { status: 404 });
+      }
+    }
+
     const provider = await prisma.$transaction(async (tx) => {
       if (validated.models) {
         await tx.customProviderModel.deleteMany({
@@ -115,6 +126,7 @@ export async function PATCH(
           ...(validated.apiKey ? { apiKeyHash: hashProviderKey(validated.apiKey) } : {}),
           prefix: validated.prefix,
           proxyUrl: validated.proxyUrl,
+          groupId: validated.groupId,
           headers: validated.headers ? (validated.headers as Record<string, string>) : undefined,
           models: validated.models ? {
             create: validated.models.map(m => ({

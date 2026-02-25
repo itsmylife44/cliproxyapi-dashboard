@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.38](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.37...dashboard-v0.1.38) (2026-02-25)
+
+
+### Bug Fixes
+
+* accept valid docker tags for proxy update versions ([dee982d](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/dee982d31b50244d920be9f30b8ca22619a8325b))
+
 ## [0.1.37](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.36...dashboard-v0.1.37) (2026-02-24)
 
 

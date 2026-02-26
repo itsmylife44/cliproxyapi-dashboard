@@ -10,7 +10,7 @@ const OWNED_BY_DISPLAY: Record<string, string> = {
   openai: "OpenAI/Codex",
   moonshot: "Kimi",
   "perplexity-pro": "Perplexity",
-  zai: "ZAI",
+  aws: "Kiro",
   kiro: "Kiro",
   iflow: "iFlow",
   qwen: "Qwen",
@@ -25,7 +25,6 @@ export const MODEL_PROVIDER_ORDER = [
   "OpenAI/Codex",
   "Kimi",
   "Perplexity",
-  "ZAI",
   "Kiro",
   "iFlow",
   "Qwen",
@@ -72,11 +71,13 @@ export function detectModelProvider(
   const lower = modelId.toLowerCase();
 
   if (lower.startsWith("claude-")) return "Claude";
-  if (lower.startsWith("gemini-")) return "Gemini";
+  if (lower.startsWith("gemini-") || lower.startsWith("imagen-")) return "Gemini";
   if (lower.startsWith("antigravity-")) return "Antigravity";
   if (lower.startsWith("kimi-")) return "Kimi";
   if (lower.startsWith("perplexity-")) return "Perplexity";
-  if (lower.startsWith("glm-")) return "ZAI";
+  if (lower.startsWith("kiro-") || lower.startsWith("amazonq-")) return "Kiro";
+  if (lower.startsWith("glm-") || lower.startsWith("iflow-") || lower.startsWith("minimax-") || lower.startsWith("tstars")) return "iFlow";
+  if (lower.startsWith("qwen")) return "Qwen";
   if (
     lower.startsWith("gpt-") ||
     lower.startsWith("o1") ||

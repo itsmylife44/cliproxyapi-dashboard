@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.40](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.39...dashboard-v0.1.40) (2026-02-26)
+
+
+### Bug Fixes
+
+* correct model-to-provider heuristics and add missing provider mappings ([#87](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/87)) ([c1856fb](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c1856fbabc468978b1e422e73185a4f32a5f80cc))
+
 ## [0.1.39](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.38...dashboard-v0.1.39) (2026-02-25)
 
 

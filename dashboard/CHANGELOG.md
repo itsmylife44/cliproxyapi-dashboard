@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.41](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.40...dashboard-v0.1.41) (2026-02-27)
+
+
+### Bug Fixes
+
+* remove incompatible thinking/reasoning options from generated config ([#90](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/90)) ([e95e68a](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/e95e68aae440c0318f7fecdfb018974a6cd98a95))
+
 ## [0.1.40](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.39...dashboard-v0.1.40) (2026-02-26)
 
 

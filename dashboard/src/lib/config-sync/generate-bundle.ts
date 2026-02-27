@@ -319,9 +319,6 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
      if (def.reasoning) {
        entry.reasoning = true;
      }
-     if (def.options) {
-       entry.options = def.options;
-     }
      modelEntries[id] = entry;
    }
 

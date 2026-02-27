@@ -26,26 +26,25 @@ export interface ModelDefinition {
   attachment: boolean;
   reasoning: boolean;
   modalities: { input: string[]; output: string[] };
-  options?: Record<string, unknown>;
 }
 
 const DEFAULT_MODALITIES: { input: string[]; output: string[] } = { input: ["text", "image"], output: ["text"] };
 
-function inferModelDefinition(modelId: string, ownedBy: string): ModelDefinition {
-  const isReasoning = modelId.includes("thinking") ||
-    modelId.includes("opus") ||
-    modelId.includes("codex") ||
-    modelId.includes("pro") ||
-    modelId.startsWith("o1") || modelId.startsWith("o3") || modelId.startsWith("o4");
+/**
+ * Detect whether a model supports reasoning/thinking variants.
+ * Narrow heuristic: only models explicitly named as thinking/reasoning,
+ * or OpenAI o-series reasoning models. Avoids false positives on
+ * generic names like "pro" or "opus" (non-thinking variants).
+ */
+function supportsReasoning(modelId: string): boolean {
+  const id = modelId.toLowerCase();
+  if (id.includes("thinking") || id.includes("reasoning")) return true;
+  if (id.startsWith("o1") || id.startsWith("o3") || id.startsWith("o4")) return true;
+  return false;
+}
 
-  let options: Record<string, unknown> | undefined;
-  if (isReasoning) {
-    if (modelId.includes("thinking") || ownedBy === "anthropic") {
-      options = { thinking: { type: "enabled", budgetTokens: 10000 } };
-    } else if (ownedBy === "openai" || modelId.includes("codex")) {
-      options = { reasoning: { effort: "medium" } };
-    }
-  }
+function inferModelDefinition(modelId: string, ownedBy: string): ModelDefinition {
+  const isReasoning = supportsReasoning(modelId);
 
   let context = 200000;
   let output = 64000;
@@ -70,7 +69,6 @@ function inferModelDefinition(modelId: string, ownedBy: string): ModelDefinition
     attachment: true,
     reasoning: isReasoning,
     modalities: DEFAULT_MODALITIES,
-    options,
   };
 }
 
@@ -111,17 +109,13 @@ export function extractOAuthModelAliases(config: import("./shared").ConfigData |
        if (!isRecord(entry)) continue;
        const alias = entry as unknown as OAuthModelAlias;
       if (typeof alias.alias === "string" && typeof alias.name === "string") {
-          const thinking = alias.alias.includes("thinking");
           models[alias.alias] = {
             name: `${alias.name} (via ${provider})`,
             context: 200000,
             output: 64000,
             attachment: true,
-            reasoning: thinking,
+            reasoning: supportsReasoning(alias.alias),
             modalities: DEFAULT_MODALITIES,
-            options: thinking
-              ? { thinking: { type: "enabled", budgetTokens: 10000 } }
-              : undefined,
           };
         }
      }
@@ -168,12 +162,8 @@ export function generateConfigJson(
      if (def.reasoning) {
        entry.reasoning = true;
      }
-     if (def.options) {
-       entry.options = def.options;
-     }
      modelEntries[id] = entry;
    }
- 
    const firstModelId = Object.keys(models)[0] ?? "gemini-2.5-flash";
  
    const plugins = options?.plugins ?? [

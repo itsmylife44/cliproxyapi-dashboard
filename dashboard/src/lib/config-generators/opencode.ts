@@ -27,6 +27,20 @@ export interface ModelDefinition {
   reasoning: boolean;
   modalities: { input: string[]; output: string[] };
   options?: Record<string, unknown>;
+  /** The owned_by value from the proxy, used to determine provider routing */
+  ownedBy?: string;
+}
+
+/**
+ * Determines if a model should use the OpenAI Responses API provider (@ai-sdk/openai)
+ * instead of the generic Chat Completions provider (@ai-sdk/openai-compatible).
+ *
+ * Models with owned_by="openai" are served through Codex OAuth tokens and route
+ * through OpenAI's Responses API (/v1/responses), which uses a different SSE
+ * protocol (event: response.created) than Chat Completions (data: {...}).
+ */
+export function isOpenAIResponsesModel(ownedBy: string): boolean {
+  return ownedBy === "openai";
 }
 
 const DEFAULT_MODALITIES: { input: string[]; output: string[] } = { input: ["text", "image"], output: ["text"] };
@@ -71,6 +85,7 @@ function inferModelDefinition(modelId: string, ownedBy: string): ModelDefinition
     reasoning: isReasoning,
     modalities: DEFAULT_MODALITIES,
     options,
+    ownedBy,
   };
 }
 
@@ -157,7 +172,9 @@ export function generateConfigJson(
    proxyUrl: string,
    options?: GenerateConfigOptions
  ): string {
-   const modelEntries: Record<string, Record<string, unknown>> = {};
+   // Split models by provider type: OpenAI Responses API vs Chat Completions
+   const openaiModelEntries: Record<string, Record<string, unknown>> = {};
+   const compatModelEntries: Record<string, Record<string, unknown>> = {};
    for (const [id, def] of Object.entries(models)) {
      const entry: Record<string, unknown> = {
        name: def.name,
@@ -171,10 +188,20 @@ export function generateConfigJson(
      if (def.options) {
        entry.options = def.options;
      }
-     modelEntries[id] = entry;
+     if (def.ownedBy && isOpenAIResponsesModel(def.ownedBy)) {
+       openaiModelEntries[id] = entry;
+     } else {
+       compatModelEntries[id] = entry;
+     }
    }
  
-   const firstModelId = Object.keys(models)[0] ?? "gemini-2.5-flash";
+   const allModelIds = Object.keys(models);
+   const firstModelId = allModelIds[0] ?? "gemini-2.5-flash";
+   // Determine default model provider prefix
+   const firstModel = models[firstModelId];
+   const defaultModelProvider = firstModel?.ownedBy && isOpenAIResponsesModel(firstModel.ownedBy)
+     ? "cliproxyapi-openai"
+     : "cliproxyapi";
  
    const plugins = options?.plugins ?? [
      "opencode-cliproxyapi-sync@latest",
@@ -182,21 +209,39 @@ export function generateConfigJson(
      "opencode-anthropic-auth@latest",
    ];
  
+   const providers: Record<string, Record<string, unknown>> = {};
+
+   // Chat Completions provider for non-OpenAI models
+   if (Object.keys(compatModelEntries).length > 0) {
+     providers.cliproxyapi = {
+       npm: "@ai-sdk/openai-compatible",
+       name: "CLIProxyAPI",
+       options: {
+         baseURL: `${proxyUrl}/v1`,
+         apiKey,
+       },
+       models: compatModelEntries,
+     };
+   }
+
+   // OpenAI Responses API provider for OpenAI/Codex models
+   if (Object.keys(openaiModelEntries).length > 0) {
+     providers["cliproxyapi-openai"] = {
+       npm: "@ai-sdk/openai",
+       name: "CLIProxyAPI OpenAI",
+       options: {
+         baseURL: `${proxyUrl}/v1`,
+         apiKey,
+       },
+       models: openaiModelEntries,
+     };
+   }
+
    const configObj: Record<string, unknown> = {
      $schema: "https://opencode.ai/config.json",
      plugin: plugins,
-     provider: {
-       cliproxyapi: {
-         npm: "@ai-sdk/openai-compatible",
-         name: "CLIProxyAPI",
-         options: {
-           baseURL: `${proxyUrl}/v1`,
-           apiKey,
-         },
-         models: modelEntries,
-       },
-     },
-     model: `cliproxyapi/${firstModelId}`,
+     provider: providers,
+     model: `${defaultModelProvider}/${firstModelId}`,
    };
 
   if (options?.mcps && options.mcps.length > 0) {

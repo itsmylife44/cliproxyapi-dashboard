@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
-import { buildAvailableModelsFromProxy, extractOAuthModelAliases, getProxyUrl, getInternalProxyUrl, type McpEntry, type ModelDefinition } from "@/lib/config-generators/opencode";
+import { buildAvailableModelsFromProxy, extractOAuthModelAliases, getProxyUrl, getInternalProxyUrl, isOpenAIResponsesModel, type McpEntry, type ModelDefinition } from "@/lib/config-generators/opencode";
 import { buildOhMyOpenCodeConfig } from "@/lib/config-generators/oh-my-opencode";
 import { fetchProxyModels, type ProxyModel } from "@/lib/config-generators/shared";
 import { validateFullConfig, type OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
@@ -306,7 +306,9 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
      Object.entries(allModels).filter(([modelId]) => !excludedModels.has(modelId))
    );
 
-   const modelEntries: Record<string, Record<string, unknown>> = {};
+   // Split filtered models by provider type: OpenAI Responses API vs Chat Completions
+   const openaiModelEntries: Record<string, Record<string, unknown>> = {};
+   const compatModelEntries: Record<string, Record<string, unknown>> = {};
    const sortedFilteredIds = Object.keys(filteredModels).sort();
    for (const id of sortedFilteredIds) {
      const def = filteredModels[id];
@@ -322,7 +324,11 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
      if (def.options) {
        entry.options = def.options;
      }
-     modelEntries[id] = entry;
+     if (def.ownedBy && isOpenAIResponsesModel(def.ownedBy)) {
+       openaiModelEntries[id] = entry;
+     } else {
+       compatModelEntries[id] = entry;
+     }
    }
 
     const firstModelId = sortedFilteredIds[0] ?? null;
@@ -334,17 +340,33 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
    const pluginSet = new Set([...defaultPlugins, ...customPlugins]);
    const plugins = Array.from(pluginSet).sort();
 
-   const providers: Record<string, Record<string, unknown>> = {
-     cliproxyapi: {
+   const providers: Record<string, Record<string, unknown>> = {};
+
+   // Chat Completions provider for non-OpenAI models
+   if (Object.keys(compatModelEntries).length > 0) {
+     providers.cliproxyapi = {
        npm: "@ai-sdk/openai-compatible",
        name: "CLIProxyAPI",
        options: {
           baseURL: `${externalProxyUrl}/v1`,
          apiKey,
        },
-       models: modelEntries,
-     },
-   };
+       models: compatModelEntries,
+     };
+   }
+
+   // OpenAI Responses API provider for OpenAI/Codex models
+   if (Object.keys(openaiModelEntries).length > 0) {
+     providers["cliproxyapi-openai"] = {
+       npm: "@ai-sdk/openai",
+       name: "CLIProxyAPI OpenAI",
+       options: {
+          baseURL: `${externalProxyUrl}/v1`,
+         apiKey,
+       },
+       models: openaiModelEntries,
+     };
+   }
 
     const opencodeConfig: Record<string, unknown> = {
       $schema: "https://opencode.ai/config.json",
@@ -352,7 +374,12 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
       provider: providers,
     };
     if (firstModelId) {
-      opencodeConfig.model = `cliproxyapi/${firstModelId}`;
+      // Determine which provider owns the first model for the default model reference
+      const firstModelDef = filteredModels[firstModelId];
+      const firstModelProvider = firstModelDef?.ownedBy && isOpenAIResponsesModel(firstModelDef.ownedBy)
+        ? "cliproxyapi-openai"
+        : "cliproxyapi";
+      opencodeConfig.model = `${firstModelProvider}/${firstModelId}`;
     }
 
    if (mcpEntries.length > 0) {

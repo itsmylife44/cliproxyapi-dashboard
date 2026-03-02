@@ -6,6 +6,7 @@ import { MobileSidebarProvider } from "@/components/mobile-sidebar-context";
 import { MobileTopBar } from "@/components/mobile-top-bar";
 import { UpdateNotification } from "@/components/update-notification";
 import { ProxyUpdateNotification } from "@/components/proxy-update-notification";
+import { DashboardShell } from "@/components/dashboard-shell";
 
 export default async function DashboardLayout({
   children,
@@ -25,7 +26,9 @@ export default async function DashboardLayout({
          <div className="flex min-h-screen">
            <DashboardNav />
             <main className="min-w-0 flex-1 px-3 pb-4 pt-16 lg:px-6 lg:pb-6 lg:pt-6">
-              <div className="mx-auto w-full max-w-[1320px]">{children}</div>
+              <div className="mx-auto w-full max-w-[1320px]">
+                <DashboardShell>{children}</DashboardShell>
+              </div>
             </main>
           </div>
           <UpdateNotification />

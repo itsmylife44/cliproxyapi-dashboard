@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.43](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.42...dashboard-v0.1.43) (2026-03-02)
+
+
+### Features
+
+* add fullscreen update overlay with progress animation and auto-reload ([#97](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/97)) ([0abb89e](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/0abb89eca0821412cc4383724b5d351bd6f024d5))
+
 ## [0.1.42](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.41...dashboard-v0.1.42) (2026-03-02)
 
 

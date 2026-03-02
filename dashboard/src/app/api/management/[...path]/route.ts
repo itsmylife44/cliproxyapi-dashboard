@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { posix as pathPosix } from "path";
 import { verifySession } from "@/lib/auth/session";
+import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
@@ -123,6 +124,14 @@ async function proxyRequest(
       { error: "Unauthorized" },
       { status: 401 }
     );
+  }
+
+  // CSRF protection: validate Origin header on mutating methods
+  if (method !== "GET" && method !== "HEAD") {
+    const originError = validateOrigin(request);
+    if (originError) {
+      return originError;
+    }
   }
 
   const user = await prisma.user.findUnique({

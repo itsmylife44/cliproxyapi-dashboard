@@ -5,6 +5,7 @@ import { z } from "zod";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { logger } from "@/lib/logger";
 import { FetchModelsSchema } from "@/lib/validation/schemas";
+import { lookup } from "dns/promises";
 
 interface OpenAIModel {
   id: string;
@@ -80,6 +81,32 @@ function isPrivateHost(hostname: string): boolean {
   return false;
 }
 
+/**
+ * Check if a resolved IP address is private/internal.
+ * Used after DNS resolution to prevent DNS rebinding attacks.
+ */
+function isPrivateResolvedIP(ip: string): boolean {
+  // IPv4
+  const ipv4Match = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4Match) {
+    return isPrivateIPv4(Number(ipv4Match[1]), Number(ipv4Match[2]));
+  }
+
+  // IPv6 loopback and private ranges
+  const normalized = ip.toLowerCase();
+  if (normalized === "::1" || normalized.startsWith("fe80:") || normalized.startsWith("fc") || normalized.startsWith("fd")) {
+    return true;
+  }
+
+  // IPv4-mapped IPv6
+  const mappedMatch = normalized.match(/^::ffff:(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (mappedMatch) {
+    return isPrivateIPv4(Number(mappedMatch[1]), Number(mappedMatch[2]));
+  }
+
+  return false;
+}
+
 export async function POST(request: NextRequest) {
   const rateLimit = checkRateLimitWithPreset(request, "custom-providers-fetch-models", "CUSTOM_PROVIDERS");
   if (!rateLimit.allowed) {
@@ -120,6 +147,33 @@ export async function POST(request: NextRequest) {
         { error: "Cannot connect to private or localhost addresses" },
         { status: 400 }
       );
+    }
+
+    // DNS rebinding protection: resolve hostname and verify the IP is not private.
+    // This prevents attackers from using a domain that initially resolves to a public IP
+    // but re-resolves to an internal IP (e.g., 127.0.0.1) at request time.
+    // Skip check for allowed internal Docker hosts (they resolve to private IPs by design).
+    const ipv4Match = parsedUrl.hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (!ipv4Match && !ALLOWED_INTERNAL_HOSTS.has(parsedUrl.hostname.toLowerCase())) {
+      try {
+        const resolved = await lookup(parsedUrl.hostname);
+        if (isPrivateResolvedIP(resolved.address)) {
+          logger.warn(
+            { hostname: parsedUrl.hostname, resolvedIp: resolved.address },
+            "Blocked SSRF: hostname resolved to private IP (possible DNS rebinding)"
+          );
+          return NextResponse.json(
+            { error: "Cannot connect to private or localhost addresses" },
+            { status: 400 }
+          );
+        }
+      } catch (dnsError) {
+        logger.warn({ hostname: parsedUrl.hostname, err: dnsError }, "DNS resolution failed for provider URL");
+        return NextResponse.json(
+          { error: "Could not resolve hostname" },
+          { status: 400 }
+        );
+      }
     }
 
     const modelsEndpoint = parsedUrl.toString();
@@ -203,7 +257,7 @@ export async function POST(request: NextRequest) {
         
         logger.error({ err: fetchError, url: modelsEndpoint }, "Failed to fetch models from provider");
         return NextResponse.json(
-          { error: `Network error: ${fetchError.message}` },
+          { error: "Network error: unable to reach the provider" },
           { status: 503 }
         );
       }

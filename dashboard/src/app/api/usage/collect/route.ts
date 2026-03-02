@@ -4,7 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { randomUUID } from "crypto";
+import { randomUUID, timingSafeEqual } from "crypto";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -180,9 +180,16 @@ async function tryAcquireCollectorLease(now: Date): Promise<boolean> {
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
-  const isCronAuth =
-    COLLECTOR_API_KEY &&
-    authHeader === `Bearer ${COLLECTOR_API_KEY}`;
+  const isCronAuth = (() => {
+    if (!COLLECTOR_API_KEY || !authHeader) return false;
+    const expected = `Bearer ${COLLECTOR_API_KEY}`;
+    if (authHeader.length !== expected.length) return false;
+    try {
+      return timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));
+    } catch {
+      return false;
+    }
+  })();
 
   if (!isCronAuth) {
     const session = await verifySession();

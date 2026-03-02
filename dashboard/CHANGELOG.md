@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.44](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.43...dashboard-v0.1.44) (2026-03-02)
+
+
+### Features
+
+* add persistent dashboard header with live status pulse and user panel ([#99](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/99)) ([3cc9fef](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/3cc9fefd807148a77f5e5ba8745c0d26a5f60c85))
+
 ## [0.1.43](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.42...dashboard-v0.1.43) (2026-03-02)
 
 

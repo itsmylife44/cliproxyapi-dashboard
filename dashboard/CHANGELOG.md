@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.42](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.41...dashboard-v0.1.42) (2026-03-02)
+
+
+### Bug Fixes
+
+* **security:** harden SSRF, CSRF, timing, error leakage + lint cleanup ([#94](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/94)) ([7eceec9](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/7eceec900b457845db911dcc1e288bb19360aaeb))
+
 ## [0.1.41](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.40...dashboard-v0.1.41) (2026-02-27)
 
 

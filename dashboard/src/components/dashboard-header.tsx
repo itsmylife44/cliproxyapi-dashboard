@@ -15,7 +15,7 @@ interface ProxyStatus {
 }
 
 function formatUptime(seconds: number): string {
-  if (!seconds || seconds < 0) return "0m";
+  if (seconds <= 0) return "0m";
   
   const d = Math.floor(seconds / (3600 * 24));
   const h = Math.floor((seconds % (3600 * 24)) / 3600);
@@ -87,7 +87,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin }: DashboardHea
           )}
         </div>
         
-        {status?.running && status.uptime && (
+        {status?.running && status.uptime != null && (
           <>
             <div className="w-px h-4 bg-slate-700" />
             <span className="text-slate-400 text-xs">

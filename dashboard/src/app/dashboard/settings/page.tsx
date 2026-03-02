@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { DeployDashboard } from "@/components/deploy-dashboard";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -41,10 +40,6 @@ interface AvailableApiKey {
 }
 
 export default function SettingsPage() {
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [cliProxyVersion, setCliProxyVersion] = useState<string | null>(null);
   const [cliProxyLoading, setCliProxyLoading] = useState(true);
   
@@ -145,45 +140,6 @@ export default function SettingsPage() {
     fetchSyncTokens();
   }, [fetchProxyUpdateInfo, fetchDashboardUpdateInfo, fetchSyncTokens]);
 
-  const handlePasswordChange = async (e: { preventDefault: () => void }) => {
-    e.preventDefault();
-
-    if (newPassword !== confirmPassword) {
-      showToast("New passwords do not match", "error");
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      showToast("Password must be at least 8 characters", "error");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/auth/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        showToast(data.error?.message ?? data.error ?? "Failed to change password", "error");
-        setLoading(false);
-        return;
-      }
-
-      showToast("Password changed successfully", "success");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setLoading(false);
-    } catch {
-      showToast("Network error", "error");
-      setLoading(false);
-    }
-  };
 
   const confirmProxyUpdate = (version: string = "latest") => {
     setPendingProxyVersion(version);
@@ -367,66 +323,6 @@ export default function SettingsPage() {
         <p className="mt-1 text-sm text-slate-400">Manage account, security, config sync, and system operations.</p>
       </section>
 
-      {/* Account & Security Section */}
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-400">Account & Security</h2>
-        </div>
-
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
-          <h3 className="mb-3 text-sm font-semibold text-slate-100">Change Password</h3>
-              <form onSubmit={handlePasswordChange} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div>
-                    <label htmlFor="currentPassword" className="mb-2 block text-sm font-medium text-slate-300">
-                      Current Password
-                    </label>
-                    <Input
-                      type="password"
-                      name="currentPassword"
-                      value={currentPassword}
-                      onChange={setCurrentPassword}
-                      required
-                      autoComplete="current-password"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="newPassword" className="mb-2 block text-sm font-medium text-slate-300">
-                      New Password
-                    </label>
-                    <Input
-                      type="password"
-                      name="newPassword"
-                      value={newPassword}
-                      onChange={setNewPassword}
-                      required
-                      autoComplete="new-password"
-                      placeholder="Minimum 8 characters"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium text-slate-300">
-                      Confirm New Password
-                    </label>
-                    <Input
-                      type="password"
-                      name="confirmPassword"
-                      value={confirmPassword}
-                      onChange={setConfirmPassword}
-                      required
-                      autoComplete="new-password"
-                    />
-                  </div>
-                </div>
-
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Changing..." : "Change Password"}
-                </Button>
-              </form>
-        </div>
-      </section>
 
       {/* Config Sync Section */}
       <section className="space-y-3">

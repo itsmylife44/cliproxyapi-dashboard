@@ -152,8 +152,9 @@ export async function POST(request: NextRequest) {
     // DNS rebinding protection: resolve hostname and verify the IP is not private.
     // This prevents attackers from using a domain that initially resolves to a public IP
     // but re-resolves to an internal IP (e.g., 127.0.0.1) at request time.
+    // Skip check for allowed internal Docker hosts (they resolve to private IPs by design).
     const ipv4Match = parsedUrl.hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-    if (!ipv4Match) {
+    if (!ipv4Match && !ALLOWED_INTERNAL_HOSTS.has(parsedUrl.hostname.toLowerCase())) {
       try {
         const resolved = await lookup(parsedUrl.hostname);
         if (isPrivateResolvedIP(resolved.address)) {

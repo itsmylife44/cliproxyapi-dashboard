@@ -278,7 +278,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
     if (index === 0) return;
     
     // Apply optimistic update
-    let newGroups = [...groups];
+    const newGroups = [...groups];
     let newUngrouped = [...ungroupedProviders];
     
     if (groupId) {
@@ -328,7 +328,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
     if (index === listLength - 1) return;
     
     // Apply optimistic update
-    let newGroups = [...groups];
+    const newGroups = [...groups];
     let newUngrouped = [...ungroupedProviders];
     
     if (groupId) {

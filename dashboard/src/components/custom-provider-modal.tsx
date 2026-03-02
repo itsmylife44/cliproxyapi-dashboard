@@ -85,7 +85,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
           const data = await res.json();
           setGroups(data.groups || []);
         }
-      } catch (err) {
+      } catch {
         // silently fail for group fetch in modal
       }
     };

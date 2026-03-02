@@ -39,6 +39,7 @@ export function useProxyUpdateCheck() {
   const [showPopup, setShowPopup] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [showOverlay, setShowOverlay] = useState(false);
 
   const checkForUpdate = useCallback(async () => {
     try {
@@ -125,10 +126,7 @@ export function useProxyUpdateCheck() {
           setDismissedVersion(updateInfo.latestVersion);
         }
         setShowPopup(false);
-        setUpdateInfo(null);
-
-        // Recheck after a delay to reflect new state
-        setTimeout(checkForUpdate, 10000);
+        setShowOverlay(true);
 
         return true;
       } catch (err) {
@@ -138,13 +136,14 @@ export function useProxyUpdateCheck() {
         setIsUpdating(false);
       }
     },
-    [updateInfo, checkForUpdate]
+    [updateInfo]
   );
 
   return {
     updateInfo,
     isAdmin,
     showPopup,
+    showOverlay,
     isUpdating,
     updateError,
     dismissUpdate,

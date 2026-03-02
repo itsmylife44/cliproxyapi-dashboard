@@ -215,3 +215,56 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   background: rgba(30, 64, 175, 0.24);
   border-color: rgba(96, 165, 250, 0.4);
 }
+
+/* Dashboard header — status pulse dot */
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* User panel slide-in */
+@keyframes panel-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes panel-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-panel-slide {
+  animation: panel-slide-in 0.3s ease-out forwards;
+}
+
+.animate-panel-overlay {
+  animation: panel-overlay-in 0.2s ease-out forwards;
+}
+
+/* User avatar glow on hover */
+.avatar-glow {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.avatar-glow:hover {
+  border-color: rgba(96, 165, 250, 0.5);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+}

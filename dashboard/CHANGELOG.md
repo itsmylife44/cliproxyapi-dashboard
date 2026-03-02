@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.45](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.44...dashboard-v0.1.45) (2026-03-02)
+
+
+### Bug Fixes
+
+* increase GitHub API cache TTLs to avoid rate limiting and remove duplicate password change ([226f5b7](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/226f5b76a0f1c6a089ef298df02647b1b5f5dde3))
+
 ## [0.1.44](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.43...dashboard-v0.1.44) (2026-03-02)
 
 

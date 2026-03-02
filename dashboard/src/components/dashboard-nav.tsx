@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -134,11 +134,9 @@ const NAV_ITEMS = [
 ] as const;
 
 export function DashboardNav() {
-  const router = useRouter();
   const pathname = usePathname();
   const { isOpen, isCollapsed, toggleCollapsed, close } = useMobileSidebar();
   const [isAdmin, setIsAdmin] = useState(false);
-
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
@@ -154,12 +152,6 @@ export function DashboardNav() {
 
     fetchUserInfo();
   }, []);
-
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
-  };
 
   const handleNavClick = () => {
     close();
@@ -275,20 +267,6 @@ export function DashboardNav() {
           })}
         </ul>
 
-        <div className="mt-auto border-t border-slate-700/80 pt-4">
-          <button
-            type="button"
-            onClick={handleLogout}
-            className={cn(
-              "w-full glass-button-secondary px-3 py-2 text-sm font-medium text-slate-300 rounded-md hover:text-slate-100 transition-colors duration-200",
-              isCollapsed && "lg:px-0"
-            )}
-            title={isCollapsed ? "Logout" : undefined}
-          >
-            <span className={cn(isCollapsed && "lg:hidden")}>Logout</span>
-            <span className={cn("hidden", isCollapsed && "lg:inline")}>⎋</span>
-          </button>
-        </div>
       </nav>
     </>
   );

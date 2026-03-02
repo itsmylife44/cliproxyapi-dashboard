@@ -67,6 +67,10 @@ async function getGitHubReleases(): Promise<GitHubRelease[]> {
 
   if (!response.ok) {
     await response.body?.cancel();
+    // On rate limit (403), return empty array instead of throwing
+    if (response.status === 403 || response.status === 429) {
+      return [];
+    }
     throw new Error(`GitHub API error: ${response.status}`);
   }
 

@@ -882,7 +882,7 @@ CADDY_DOCKER_CONFIG
         fi
     else
         log_info "Skipping auto-apply. Please manually add one of the configurations above to your Caddyfile."
-        if [[ "$CADDY_MODE" =~ ^[Dd]ocker$ ]]; then
+        if [[ "${CADDY_MODE:-}" =~ ^[Dd]ocker$ ]]; then
             log_info "Remember to connect Caddy to the frontend network:"
             echo "  ${YELLOW}docker network connect cliproxyapi_frontend <your-caddy-container-name>${NC}"
         fi

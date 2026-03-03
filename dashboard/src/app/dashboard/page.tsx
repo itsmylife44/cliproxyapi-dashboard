@@ -11,6 +11,7 @@ import { fetchProxyModels } from "@/lib/config-generators/shared";
 import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases } from "@/lib/config-generators/opencode";
 import type { ConfigData } from "@/lib/config-generators/shared";
 import { resolveOwnedByDisplay } from "@/lib/providers/model-grouping";
+import { DashboardMiniCharts } from "@/components/dashboard-mini-charts";
 
 interface ManagementFetchParams {
   path: string;
@@ -315,6 +316,8 @@ export default async function QuickStartPage() {
           </Card>
         )}
       </section>
+
+      <DashboardMiniCharts />
 
       <QuickStartConfigSection
         apiKeys={apiKeys}

@@ -128,6 +128,7 @@ export async function GET(request: NextRequest) {
         reasoningTokens: true,
         cachedTokens: true,
         failed: true,
+        timestamp: true,
         user: {
           select: {
             username: true,
@@ -155,6 +156,8 @@ export async function GET(request: NextRequest) {
     });
 
     const keyUsageMap: Record<string, KeyUsage> = {};
+    const dailyMap: Record<string, { requests: number; tokens: number; inputTokens: number; outputTokens: number; success: number; failure: number }> = {};
+    const modelTotalsMap: Record<string, { requests: number; tokens: number }> = {};
     let totalRequests = 0;
     let totalTokens = 0;
     let totalInputTokens = 0;
@@ -213,6 +216,28 @@ export async function GET(request: NextRequest) {
       keyUsage.models[modelName].inputTokens += record.inputTokens;
       keyUsage.models[modelName].outputTokens += record.outputTokens;
 
+      // Daily aggregation for charts
+      const dayKey = record.timestamp.toISOString().slice(0, 10);
+      if (!dailyMap[dayKey]) {
+        dailyMap[dayKey] = { requests: 0, tokens: 0, inputTokens: 0, outputTokens: 0, success: 0, failure: 0 };
+      }
+      dailyMap[dayKey].requests += 1;
+      dailyMap[dayKey].tokens += record.totalTokens;
+      dailyMap[dayKey].inputTokens += record.inputTokens;
+      dailyMap[dayKey].outputTokens += record.outputTokens;
+      if (record.failed) {
+        dailyMap[dayKey].failure += 1;
+      } else {
+        dailyMap[dayKey].success += 1;
+      }
+
+      // Model totals aggregation for charts
+      if (!modelTotalsMap[modelName]) {
+        modelTotalsMap[modelName] = { requests: 0, tokens: 0 };
+      }
+      modelTotalsMap[modelName].requests += 1;
+      modelTotalsMap[modelName].tokens += record.totalTokens;
+
       totalRequests += 1;
       totalTokens += record.totalTokens;
       totalInputTokens += record.inputTokens;
@@ -223,6 +248,16 @@ export async function GET(request: NextRequest) {
         totalSuccessCount += 1;
       }
     }
+
+    // Build sorted daily breakdown array
+    const dailyBreakdown = Object.entries(dailyMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, data]) => ({ date, ...data }));
+
+    // Build sorted model breakdown array (top models first)
+    const modelBreakdown = Object.entries(modelTotalsMap)
+      .sort(([, a], [, b]) => b.requests - a.requests)
+      .map(([model, data]) => ({ model, ...data }));
 
     const responseData = {
       data: {
@@ -235,6 +270,8 @@ export async function GET(request: NextRequest) {
           successCount: totalSuccessCount,
           failureCount: totalFailureCount,
         },
+        dailyBreakdown,
+        modelBreakdown,
         period: {
           from: fromDate.toISOString(),
           to: toDate.toISOString(),

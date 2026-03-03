@@ -1,6 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { ChartContainer, ChartEmpty, CHART_COLORS, SERIES_PALETTE, TOOLTIP_STYLE, AXIS_TICK_STYLE, formatCompact } from "@/components/ui/chart-theme";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -440,50 +442,66 @@ export default function MonitoringPage() {
                 </div>
               </div>
 
-              {modelStats.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Requests by Model</h3>
-                  <div className="divide-y divide-slate-700/60 overflow-hidden rounded-sm border border-slate-700/70 bg-slate-900/25">
-                    {modelStats.map((stat) => (
-                      <div
-                        key={stat.model}
-                        className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 px-3 py-2"
-                      >
-                        <span className="truncate text-xs text-slate-200">{stat.model}</span>
-                        <span className="whitespace-nowrap text-xs text-slate-400">{stat.tokens.toLocaleString()} tokens</span>
-                        <span className="whitespace-nowrap text-right text-xs text-slate-300">{stat.requests.toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {modelStats.length > 0 ? (
+                <ChartContainer title="Requests by Model">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart
+                      layout="vertical"
+                      data={modelStats}
+                      margin={{ top: 0, right: 8, left: 4, bottom: 0 }}
+                    >
+                      <CartesianGrid horizontal={false} stroke={CHART_COLORS.grid} />
+                      <YAxis
+                        type="category"
+                        dataKey="model"
+                        tick={AXIS_TICK_STYLE}
+                        width={80}
+                        tickFormatter={(v) => v.length > 12 ? v.slice(0, 12) + "…" : v}
+                      />
+                      <XAxis
+                        type="number"
+                        tick={AXIS_TICK_STYLE}
+                        tickFormatter={formatCompact}
+                      />
+                      <Tooltip
+                        {...TOOLTIP_STYLE}
+                        formatter={(value) => [formatCompact(value as number), "Requests"]}
+                      />
+                      <Bar dataKey="requests" radius={[0, 3, 3, 0]}>
+                        {modelStats.map((_, i) => (
+                          <Cell key={i} fill={SERIES_PALETTE[i % SERIES_PALETTE.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              ) : null}
 
-              {hourlyData.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Requests by Hour</h3>
-                  <div className="overflow-hidden rounded-sm border border-slate-700/70 bg-slate-900/25">
-                    {hourlyData.map((item) => {
-                      const maxCount = Math.max(...hourlyData.map((d) => d.count));
-                      const widthPercent = (item.count / maxCount) * 100;
-
-                       return (
-                         <div key={item.hour} className="grid grid-cols-[60px_minmax(0,1fr)_auto] items-center gap-2 border-b border-slate-700/60 px-3 py-2 last:border-b-0 sm:grid-cols-[80px_minmax(0,1fr)_64px] sm:gap-3">
-                           <span className="text-xs text-slate-400">
-                             {item.hour}
-                           </span>
-                           <div className="h-2 overflow-hidden rounded-full bg-slate-700/60">
-                             <div
-                               className="h-full bg-blue-500/70"
-                               style={{ width: `${widthPercent}%` }}
-                             />
-                           </div>
-                           <span className="whitespace-nowrap text-right text-xs text-slate-300">{item.count}</span>
-                         </div>
-                       );
-                    })}
-                  </div>
-                </div>
-              )}
+              {hourlyData.length > 0 ? (
+                <ChartContainer title="Requests by Hour">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart
+                      data={hourlyData}
+                      margin={{ top: 0, right: 8, left: 4, bottom: 0 }}
+                    >
+                      <CartesianGrid vertical={false} stroke={CHART_COLORS.grid} />
+                      <XAxis
+                        dataKey="hour"
+                        tick={AXIS_TICK_STYLE}
+                      />
+                      <YAxis
+                        tick={AXIS_TICK_STYLE}
+                        tickFormatter={formatCompact}
+                      />
+                      <Tooltip
+                        {...TOOLTIP_STYLE}
+                        formatter={(value) => [formatCompact(value as number), "Requests"]}
+                      />
+                      <Bar dataKey="count" fill={CHART_COLORS.primary} radius={[3, 3, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              ) : null}
             </div>
           ) : (
             <div className="text-sm text-slate-400">Loading usage statistics...</div>

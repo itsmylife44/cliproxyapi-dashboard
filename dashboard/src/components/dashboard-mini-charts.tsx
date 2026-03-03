@@ -141,8 +141,10 @@ function MiniSparkCard({
               labelStyle={TOOLTIP_STYLE.labelStyle}
               itemStyle={TOOLTIP_STYLE.itemStyle}
               formatter={(val) => [formatCompact(Number(val ?? 0)), label.split(" ")[0]]}
-              labelFormatter={(l) => {
-                const d = new Date(String(l) + "T00:00:00");
+              labelFormatter={(_l, payload) => {
+                const dateStr = payload?.[0]?.payload?.date;
+                if (!dateStr) return "";
+                const d = new Date(String(dateStr) + "T00:00:00");
                 return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
               }}
             />

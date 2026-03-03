@@ -91,7 +91,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin }: DashboardHea
           <>
             <div className="w-px h-4 bg-slate-700" />
             <span className="text-slate-400 text-xs">
-              Uptime: {formatUptime(status.uptime)}
+              Proxy Uptime: {formatUptime(status.uptime)}
             </span>
           </>
         )}

@@ -1,0 +1,66 @@
+# Version control
+.git
+.gitignore
+
+# Dependencies (rebuilt inside container)
+node_modules
+
+# Build output (rebuilt inside container)
+.next
+out
+build
+dist
+
+# Environment files (NEVER send secrets to build context)
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+
+# Generated files (regenerated during build)
+src/generated/
+
+# Development files
+dev-local.sh
+coverage/
+*.lcov
+.nyc_output
+
+# Documentation
+docs/
+*.md
+
+# Editor/IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# TypeScript incremental
+*.tsbuildinfo
+
+# Docker files (not needed inside build)
+Dockerfile
+docker-compose*.yml
+
+# Agent/skill files
+.agents/
+.claude/
+.trae/
+AGENTS.md

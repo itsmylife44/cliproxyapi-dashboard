@@ -9,6 +9,14 @@ services:
     image: postgres:16-alpine
     container_name: cliproxyapi-postgres
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     networks:
       - backend
     environment:
@@ -32,6 +40,14 @@ services:
     image: eceasy/cli-proxy-api-plus:latest
     container_name: cliproxyapi
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     networks:
       - frontend
       - backend
@@ -70,6 +86,14 @@ services:
     image: tecnativa/docker-socket-proxy:latest
     container_name: cliproxyapi-docker-proxy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 32M
     networks:
       - backend
     environment:
@@ -105,6 +129,14 @@ services:
     build: ${INSTALL_DIR:-.}/../perplexity-sidecar
     container_name: cliproxyapi-perplexity-sidecar
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
     networks:
       - frontend
       - backend
@@ -129,6 +161,14 @@ services:
     image: ghcr.io/itsmylife44/cliproxyapi-dashboard/dashboard:latest
     container_name: cliproxyapi-dashboard
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     networks:
       - frontend
       - backend
@@ -159,13 +199,21 @@ services:
       interval: 15s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 40s  # Allow time for DB init + Next.js startup
 
   # Caddy Reverse Proxy
   caddy:
     image: caddy:2-alpine
     container_name: cliproxyapi-caddy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
     networks:
       - frontend
     env_file:
@@ -184,7 +232,7 @@ services:
       dashboard:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "caddy", "version"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3

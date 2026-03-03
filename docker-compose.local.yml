@@ -135,7 +135,7 @@ services:
       interval: 15s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 40s  # Allow time for DB init + Next.js startup
 
 volumes:
   postgres_data:
@@ -149,3 +149,4 @@ networks:
   backend:
     driver: bridge
     name: cliproxyapi_backend
+    internal: true  # Match production — no external internet access

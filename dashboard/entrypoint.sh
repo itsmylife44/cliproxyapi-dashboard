@@ -5,8 +5,15 @@ node <<'NODE'
 const { Client } = require('pg');
 const client = new Client({ connectionString: process.env.DATABASE_URL });
 
-client.connect()
-  .then(() => client.query(`
+async function migrate() {
+  await client.connect();
+
+  try {
+    // Acquire advisory lock — prevents concurrent migration from multiple containers
+    await client.query('SELECT pg_advisory_lock(424242)');
+    console.log('[dashboard] Acquired migration lock');
+
+    await client.query(`
     -- Users table with isAdmin field
     CREATE TABLE IF NOT EXISTS "users" (
       "id" TEXT NOT NULL,
@@ -354,17 +361,23 @@ client.connect()
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "collector_state_pkey" PRIMARY KEY ("id")
     );
-  `))
-  .then(() => {
-    console.log('[dashboard] Tables ready');
-    client.end();
-  })
-  .catch(e => {
-    console.error('[dashboard] DB init error:', e.message);
-    client.end();
-  });
-NODE
-2>&1 || echo "[dashboard] WARNING: DB init had issues, continuing..."
+    `);
 
+    console.log('[dashboard] Tables ready');
+
+  } catch (e) {
+    console.error('[dashboard] FATAL: DB migration failed:', e.message);
+    process.exit(1);  // Do not start server with broken schema
+  } finally {
+    // Release advisory lock
+    await client.query('SELECT pg_advisory_unlock(424242)').catch(() => {});
+    await client.end();
+  }
+}
+
+migrate();
+NODE
+
+# Only reach here if migration succeeded (exit 1 above prevents otherwise)
 echo "[dashboard] Starting server..."
 exec node server.js

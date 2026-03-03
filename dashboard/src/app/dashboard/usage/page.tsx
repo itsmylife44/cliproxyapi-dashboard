@@ -291,7 +291,7 @@ export default function UsagePage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
             <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Requests</p>
               <p className="mt-0.5 text-xs font-semibold text-slate-100">{usageData.totals.totalRequests.toLocaleString()}</p>
@@ -311,7 +311,7 @@ export default function UsagePage() {
           </div>
 
           {hasInputOutputBreakdown && (
-            <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
               <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Input Tokens</p>
                 <p className="mt-0.5 text-xs font-semibold text-slate-100">{usageData.totals.inputTokens.toLocaleString()}</p>
@@ -337,7 +337,7 @@ export default function UsagePage() {
               <div className="overflow-x-auto">
                 <div className="min-w-[600px] rounded-md border border-slate-700/70 bg-slate-900/25">
                   <table className="w-full text-sm">
-                  <thead className="border-b border-slate-700/70 bg-slate-900/60">
+                  <thead className="sticky top-0 z-10 border-b border-slate-700/70 bg-slate-900/95 backdrop-blur-sm">
                     <tr>
                       <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 w-8"></th>
                       <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Key Name</th>

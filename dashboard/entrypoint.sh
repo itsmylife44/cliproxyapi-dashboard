@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 echo "[dashboard] Ensuring database tables exist..."
 node <<'NODE'
@@ -7,6 +8,7 @@ const client = new Client({ connectionString: process.env.DATABASE_URL });
 
 async function migrate() {
   await client.connect();
+  let failed = false;
 
   try {
     // Acquire advisory lock — prevents concurrent migration from multiple containers
@@ -367,17 +369,21 @@ async function migrate() {
 
   } catch (e) {
     console.error('[dashboard] FATAL: DB migration failed:', e.message);
-    process.exit(1);  // Do not start server with broken schema
+    failed = true;
   } finally {
-    // Release advisory lock
+    // Release advisory lock — runs even on failure
     await client.query('SELECT pg_advisory_unlock(424242)').catch(() => {});
     await client.end();
+  }
+
+  if (failed) {
+    process.exitCode = 1;  // Let Node exit naturally after cleanup
   }
 }
 
 migrate();
 NODE
 
-# Only reach here if migration succeeded (exit 1 above prevents otherwise)
+# Only reach here if migration succeeded (non-zero exit from node stops the script)
 echo "[dashboard] Starting server..."
 exec node server.js

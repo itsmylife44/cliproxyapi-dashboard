@@ -9,14 +9,10 @@ services:
     image: postgres:16-alpine
     container_name: cliproxyapi-postgres
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
+    # Resource limits (calibrated from real usage: ~29MiB actual)
+    cpus: 0.5
+    mem_limit: 256m
+    mem_reservation: 64m
     networks:
       - backend
     environment:
@@ -40,14 +36,10 @@ services:
     image: eceasy/cli-proxy-api-plus:latest
     container_name: cliproxyapi
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
+    # Resource limits (calibrated from real usage: ~25MiB actual)
+    cpus: 1.0
+    mem_limit: 256m
+    mem_reservation: 64m
     networks:
       - frontend
       - backend
@@ -86,14 +78,10 @@ services:
     image: tecnativa/docker-socket-proxy:latest
     container_name: cliproxyapi-docker-proxy
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 128M
-        reservations:
-          cpus: '0.1'
-          memory: 32M
+    # Resource limits (calibrated from real usage: ~23MiB actual)
+    cpus: 0.25
+    mem_limit: 128m
+    mem_reservation: 32m
     networks:
       - backend
     environment:
@@ -129,14 +117,10 @@ services:
     build: ${INSTALL_DIR:-.}/../perplexity-sidecar
     container_name: cliproxyapi-perplexity-sidecar
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          cpus: '0.1'
-          memory: 64M
+    # Resource limits (calibrated from real usage: ~72MiB actual)
+    cpus: 0.5
+    mem_limit: 256m
+    mem_reservation: 64m
     networks:
       - frontend
       - backend
@@ -161,14 +145,10 @@ services:
     image: ghcr.io/itsmylife44/cliproxyapi-dashboard/dashboard:latest
     container_name: cliproxyapi-dashboard
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
+    # Resource limits (calibrated from real usage: ~98MiB actual, spiky CPU)
+    cpus: 1.0
+    mem_limit: 512m
+    mem_reservation: 128m
     networks:
       - frontend
       - backend
@@ -206,14 +186,10 @@ services:
     image: caddy:2-alpine
     container_name: cliproxyapi-caddy
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.1'
-          memory: 64M
+    # Resource limits (calibrated from real usage: ~57MiB actual)
+    cpus: 0.5
+    mem_limit: 256m
+    mem_reservation: 64m
     networks:
       - frontend
     env_file:

@@ -36,7 +36,7 @@ lerna-debug.log*
 .env
 .env*.local
 .env.production
-.env.development
+# .env.development is committed (contains safe dev defaults only)
 config.local.yaml
 secrets/
 *.key
@@ -78,7 +78,7 @@ next-env.d.ts
 
 # Docker
 docker-compose.override.yml
-docker-compose.dev.yml
+# docker-compose.dev.yml is committed (local dev setup)
 
 # Database
 *.db

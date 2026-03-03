@@ -1,0 +1,52 @@
+# Local development setup — Postgres + CLIProxyAPI only
+# Dashboard runs via `npm run dev` (not containerized)
+# Usage: managed by dev-local.sh
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cliproxyapi-dev-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cliproxyapi
+      POSTGRES_USER: cliproxyapi
+      POSTGRES_PASSWORD: devpassword
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - dev_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cliproxyapi -d cliproxyapi"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  cliproxyapi:
+    image: eceasy/cli-proxy-api-plus:latest
+    container_name: cliproxyapi-dev-api
+    restart: unless-stopped
+    environment:
+      MANAGEMENT_PASSWORD: devmanagementkey
+      DEPLOY: production
+    ports:
+      - "127.0.0.1:28317:8317"
+      - "127.0.0.1:28085:8085"
+      - "127.0.0.1:21455:1455"
+      - "127.0.0.1:24545:54545"
+      - "127.0.0.1:21121:51121"
+      - "127.0.0.1:21451:11451"
+    volumes:
+      - ./config.dev.yaml:/CLIProxyAPI/config.yaml
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "-O", "/dev/null", "http://localhost:8317/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  dev_postgres_data:

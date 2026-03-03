@@ -140,6 +140,9 @@ run_migrations() {
          npx prisma migrate resolve --applied 20260210_add_user_session_version >/dev/null 2>&1 || true
          npx prisma migrate resolve --applied 20260221_add_perplexity_cookies >/dev/null 2>&1 || true
          npx prisma migrate resolve --applied 20260225_add_provider_groups >/dev/null 2>&1 || true
+         npx prisma migrate resolve --applied 20260213000000_add_usage_tracking >/dev/null 2>&1 || true
+         npx prisma migrate resolve --applied 20260216_add_collected_at_index >/dev/null 2>&1 || true
+         npx prisma migrate resolve --applied 20260217_add_audit_target_usage_source_indexes >/dev/null 2>&1 || true
        fi
     
     if npx prisma migrate deploy; then

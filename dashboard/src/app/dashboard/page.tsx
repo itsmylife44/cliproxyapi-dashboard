@@ -271,7 +271,7 @@ export default async function QuickStartPage() {
         id="overview"
         className={`scroll-mt-24 grid gap-3 ${shouldShowSetupChecklist ? "xl:grid-cols-[minmax(0,2.2fr)_minmax(280px,1fr)]" : ""}`}
       >
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
           {statusCards.map((card) => (
             <div key={card.label} className="glass-card rounded-md border border-slate-700/70 px-2.5 py-2 transition-colors hover:border-slate-600">
               <div className="flex items-center justify-between">

@@ -413,7 +413,7 @@ export default function MonitoringPage() {
         <h2 className="mb-3 text-sm font-semibold text-slate-100">Usage Statistics</h2>
            {usage ? (
              <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
                 <div className="rounded-md border border-slate-700/70 bg-slate-900/30 px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Requests</p>
                   <p className="mt-0.5 text-xs font-semibold text-slate-100">
@@ -443,11 +443,11 @@ export default function MonitoringPage() {
               {modelStats.length > 0 && (
                 <div className="space-y-2">
                   <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Requests by Model</h3>
-                  <div className="overflow-hidden rounded-sm border border-slate-700/70 bg-slate-900/25">
+                  <div className="divide-y divide-slate-700/60 overflow-hidden rounded-sm border border-slate-700/70 bg-slate-900/25">
                     {modelStats.map((stat) => (
                       <div
                         key={stat.model}
-                        className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 border-b border-slate-700/60 px-3 py-2 last:border-b-0"
+                        className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 px-3 py-2"
                       >
                         <span className="truncate text-xs text-slate-200">{stat.model}</span>
                         <span className="whitespace-nowrap text-xs text-slate-400">{stat.tokens.toLocaleString()} tokens</span>

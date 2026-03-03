@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { CopyBlock } from "@/components/copy-block";
 import { Button } from "@/components/ui/button";
@@ -269,13 +270,13 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           <p className="text-white/60 text-xs">
             You need to configure at least one AI provider before generating an OpenCode config.
             Head to the{" "}
-            <a href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
+            <Link href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
               Providers
-            </a>{" "}
+            </Link>{" "}
             page to add Gemini, Claude, Codex, or OpenAI Compatible keys, or set up{" "}
-            <a href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
+            <Link href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
               Providers
-            </a>.
+            </Link>.
           </p>
         </div>
       </div>
@@ -290,12 +291,12 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           <p className="text-sm text-white/70">
             Create an API key to generate your configuration.
           </p>
-          <a
+          <Link
             href="/dashboard/api-keys"
             className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-500/20 border border-violet-400/30 text-violet-300 text-sm font-medium hover:bg-violet-500/30 transition-colors"
           >
             Create API Key →
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -309,9 +310,9 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           <p className="text-white/60 text-xs">
             Providers are configured, but no models were discovered yet. If you just added providers,
             wait a moment and refresh. If the issue persists, verify provider credentials on the{" "}
-            <a href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
+            <Link href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
               Providers
-            </a>{" "}
+            </Link>{" "}
             page.
           </p>
         </div>
@@ -376,13 +377,13 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           <p className="text-white/90 font-medium mb-1">No API keys found</p>
           <p className="text-white/60 text-xs">
             Create an API key on the{" "}
-            <a href="/dashboard/api-keys" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
+            <Link href="/dashboard/api-keys" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
               API Keys
-            </a>{" "}
+            </Link>{" "}
             page or connect an OAuth provider on the{" "}
-            <a href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
+            <Link href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
               Providers
-            </a>{" "}
+            </Link>{" "}
             page. The config below uses a placeholder.
           </p>
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CopyBlock } from "@/components/copy-block";
@@ -404,12 +405,12 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
         <div className="border-l-4 border-amber-400/60 backdrop-blur-xl bg-amber-500/10 p-4 rounded-r-xl">
           <div className="text-sm font-medium text-white mb-1">API Key Required</div>
           <p className="text-sm text-white/70">Create an API key to generate your configuration.</p>
-          <a
+          <Link
             href="/dashboard/api-keys"
             className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-500/20 border border-violet-400/30 text-violet-300 text-sm font-medium hover:bg-violet-500/30 transition-colors"
           >
             Create API Key →
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -422,12 +423,12 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
           <p className="text-white/90 font-medium mb-1">No providers configured</p>
           <p className="text-white/60 text-xs">
             You need to configure at least one AI provider before generating an Oh My OpenCode config. Head to the{" "}
-            <a
+            <Link
               href="/dashboard/providers"
               className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30"
             >
               Providers
-            </a>{" "}
+            </Link>{" "}
             page to add Gemini, Claude, Codex, or OpenAI Compatible keys, or set up OAuth providers.
           </p>
         </div>

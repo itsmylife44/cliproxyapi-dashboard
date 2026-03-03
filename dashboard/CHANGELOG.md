@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.46](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.45...dashboard-v0.1.46) (2026-03-03)
+
+
+### Features
+
+* apply advanced Tailwind CSS layout techniques across dashboard ([eeb190f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/eeb190f54d0a1e03e0be6e9574f2ce5b388c083d))
+
+
+### Bug Fixes
+
+* address react-doctor findings to improve score from 84 to 94 ([6d372a2](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6d372a21714657f0230e57afc3a1fbe86fae2e32))
+* clarify uptime label as proxy uptime in dashboard header ([2ea0de0](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/2ea0de0de6369fb3511dcf1af38e2e57d25a6d87))
+* **install:** avoid unbound CADDY_MODE when skipping Caddy auto-apply ([dd6f28a](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/dd6f28a97c8385de35b64bee95397b81f8a38573)), closes [#102](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/102)
+
 ## [0.1.45](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.44...dashboard-v0.1.45) (2026-03-02)
 
 

@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 
 interface ModelMapping {
+  _id: number;
+  upstreamName: string;
+  alias: string;
+}
+
+interface ApiModelMapping {
   upstreamName: string;
   alias: string;
 }
@@ -19,7 +25,7 @@ interface CustomProvider {
   prefix: string | null;
   proxyUrl: string | null;
   headers: Record<string, string>;
-  models: ModelMapping[];
+  models: ApiModelMapping[];
   excludedModels: { pattern: string }[];
   groupId: string | null;
 }
@@ -32,6 +38,7 @@ interface CustomProviderModalProps {
 }
 
 interface HeaderEntry {
+  _id: number;
   key: string;
   value: string;
 }
@@ -49,6 +56,9 @@ function generateProviderId(name: string): string {
     .trim();
 }
 
+let _nextId = 0;
+function nextId() { return ++_nextId; }
+
 export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: CustomProviderModalProps) {
   const { showToast } = useToast();
   const isEdit = !!provider;
@@ -60,8 +70,9 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
   const [prefix, setPrefix] = useState("");
   const [proxyUrl, setProxyUrl] = useState("");
   const [headers, setHeaders] = useState<HeaderEntry[]>([]);
-  const [models, setModels] = useState<ModelMapping[]>([{ upstreamName: "", alias: "" }]);
+  const [models, setModels] = useState<ModelMapping[]>([{ _id: nextId(), upstreamName: "", alias: "" }]);
   const [excludedModels, setExcludedModels] = useState<string[]>([]);
+  const excludedModelIds = useRef<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [fetchingModels, setFetchingModels] = useState(false);
   const [fetchedModels, setFetchedModels] = useState<FetchedModel[]>([]);
@@ -99,9 +110,10 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
       setBaseUrl(provider.baseUrl);
       setPrefix(provider.prefix || "");
       setProxyUrl(provider.proxyUrl || "");
-      setHeaders(Object.entries(provider.headers || {}).map(([key, value]) => ({ key, value })));
-      setModels(provider.models.length > 0 ? provider.models : [{ upstreamName: "", alias: "" }]);
+      setHeaders(Object.entries(provider.headers || {}).map(([key, value]) => ({ _id: nextId(), key, value })));
+      setModels(provider.models.length > 0 ? provider.models.map(m => ({ ...m, _id: nextId() })) : [{ _id: nextId(), upstreamName: "", alias: "" }]);
       setExcludedModels(provider.excludedModels.map(e => e.pattern));
+      excludedModelIds.current = provider.excludedModels.map(() => nextId());
       setGroupId(provider.groupId);
       setApiKey("");
     } else {
@@ -117,8 +129,9 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     setPrefix("");
     setProxyUrl("");
     setHeaders([]);
-    setModels([{ upstreamName: "", alias: "" }]);
+    setModels([{ _id: nextId(), upstreamName: "", alias: "" }]);
     setExcludedModels([]);
+    excludedModelIds.current = [];
     setErrors({ name: "", providerId: "", baseUrl: "", apiKey: "", models: "" });
     setFetchingModels(false);
     setFetchedModels([]);
@@ -197,38 +210,40 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
   };
 
   const addModelMapping = () => {
-    setModels([...models, { upstreamName: "", alias: "" }]);
+    setModels([...models, { _id: nextId(), upstreamName: "", alias: "" }]);
   };
 
   const removeModelMapping = (index: number) => {
     setModels(models.filter((_, i) => i !== index));
   };
 
-  const updateModelMapping = (index: number, field: keyof ModelMapping, value: string) => {
+  const updateModelMapping = (index: number, field: 'upstreamName' | 'alias', value: string) => {
     const updated = [...models];
     updated[index][field] = value;
     setModels(updated);
   };
 
   const addHeader = () => {
-    setHeaders([...headers, { key: "", value: "" }]);
+    setHeaders([...headers, { _id: nextId(), key: "", value: "" }]);
   };
 
   const removeHeader = (index: number) => {
     setHeaders(headers.filter((_, i) => i !== index));
   };
 
-  const updateHeader = (index: number, field: keyof HeaderEntry, value: string) => {
+  const updateHeader = (index: number, field: 'key' | 'value', value: string) => {
     const updated = [...headers];
     updated[index][field] = value;
     setHeaders(updated);
   };
 
   const addExcludedModel = () => {
+    excludedModelIds.current = [...excludedModelIds.current, nextId()];
     setExcludedModels([...excludedModels, ""]);
   };
 
   const removeExcludedModel = (index: number) => {
+    excludedModelIds.current = excludedModelIds.current.filter((_, i) => i !== index);
     setExcludedModels(excludedModels.filter((_, i) => i !== index));
   };
 
@@ -298,6 +313,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     const newModels = selectedModels
       .filter(model => !existingModelIds.has(model.id))
       .map(model => ({
+        _id: nextId(),
         upstreamName: model.id,
         alias: model.id
       }));
@@ -436,7 +452,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
             {headers.length > 0 && (
               <div className="space-y-2">
                 {headers.map((header, idx) => (
-                  <div key={idx} className="flex gap-2">
+                  <div key={header._id} className="flex gap-2">
                     <Input
                       type="text"
                       name={`header-key-${idx}`}
@@ -539,7 +555,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
             </div>
             <div className="space-y-2">
               {models.map((model, idx) => (
-                <div key={idx} className="flex gap-2">
+                <div key={model._id} className="flex gap-2">
                   <Input
                     type="text"
                     name={`model-upstream-${idx}`}
@@ -581,7 +597,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
             {excludedModels.length > 0 && (
               <div className="space-y-2">
                 {excludedModels.map((pattern, idx) => (
-                  <div key={idx} className="flex gap-2">
+                  <div key={excludedModelIds.current[idx]} className="flex gap-2">
                     <Input
                       type="text"
                       name={`excluded-${idx}`}
@@ -605,10 +621,11 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
 
           {/* Group Assignment */}
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white">
+            <label htmlFor="group-select" className="mb-2 block text-sm font-semibold text-white">
               Group (Optional)
             </label>
             <select
+              id="group-select"
               value={groupId ?? ""}
               onChange={(e) => setGroupId(e.target.value || null)}
               disabled={saving}

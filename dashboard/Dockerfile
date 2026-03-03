@@ -16,8 +16,8 @@ COPY prisma ./prisma
 
 # ARG is not persisted in image layers — safe for build-time placeholders
 ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
-ARG JWT_SECRET="build-time-placeholder"
-ARG MANAGEMENT_API_KEY="build-time-placeholder"
+ARG JWT_SECRET="build-time-placeholder-at-least-32-chars"
+ARG MANAGEMENT_API_KEY="build-time-placeholder-16ch"
 
 RUN npx prisma generate
 RUN npm run build

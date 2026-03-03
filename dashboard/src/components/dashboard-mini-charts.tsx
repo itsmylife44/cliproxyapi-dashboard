@@ -15,6 +15,7 @@ interface DailyPoint {
   tokens: number;
   success: number;
   failure: number;
+  successRate: number;
 }
 
 interface MiniChartData {
@@ -46,7 +47,11 @@ export function DashboardMiniCharts() {
         const res = await fetch(`/api/usage/history?from=${fromStr}&to=${toStr}`);
         if (!res.ok) return;
         const json = await res.json();
-        const daily: DailyPoint[] = json.data?.dailyBreakdown ?? [];
+        const rawDaily: Array<{ date: string; requests: number; tokens: number; success: number; failure: number }> = json.data?.dailyBreakdown ?? [];
+        const daily: DailyPoint[] = rawDaily.map((d) => ({
+          ...d,
+          successRate: (d.success + d.failure) > 0 ? (d.success / (d.success + d.failure)) * 100 : 0,
+        }));
         const totals = json.data?.totals;
         const totalReqs = totals?.totalRequests ?? 0;
         const successCount = totals?.successCount ?? 0;
@@ -89,7 +94,7 @@ export function DashboardMiniCharts() {
         label="Success Rate (7d)"
         value={`${data.successRate.toFixed(1)}%`}
         data={data.daily}
-        dataKey="success"
+        dataKey="successRate"
         color={CHART_COLORS.success}
         gradientId="sucGrad"
       />

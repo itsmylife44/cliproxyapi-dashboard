@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.47](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.46...dashboard-v0.1.47) (2026-03-03)
+
+
+### Bug Fixes
+
+* harden Docker setup with security and resource improvements ([8bf4285](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/8bf42852c60fd811f1336fe0479311bd3dcbe8c5))
+* use build ARG placeholders that pass env validation ([0de71c2](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/0de71c2f284fda86a331020890981380775025fb))
+
 ## [0.1.46](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.45...dashboard-v0.1.46) (2026-03-03)
 
 

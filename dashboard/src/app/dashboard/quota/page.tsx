@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartEmpty, CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK_STYLE } from "@/components/ui/chart-theme";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 interface QuotaModel {
   id: string;
@@ -265,6 +268,350 @@ function getCapacityBarClass(value: number): string {
   return "bg-rose-500/80";
 }
 
+interface TelegramSettings {
+  botToken: string;
+  chatId: string;
+  threshold: number;
+  enabled: boolean;
+  providers: string[];
+}
+
+const ALERT_PROVIDERS = [
+  { key: "claude", label: "Claude" },
+  { key: "antigravity", label: "Antigravity" },
+  { key: "codex", label: "Codex" },
+  { key: "github-copilot", label: "Copilot" },
+  { key: "kimi", label: "Kimi" },
+] as const;
+
+interface CheckAlertResult {
+  checked?: boolean;
+  skipped?: boolean;
+  reason?: string;
+  alertsSent?: number;
+  accounts?: Array<{
+    provider: string;
+    account: string;
+    window: string;
+    capacity: number;
+    belowThreshold: boolean;
+  }>;
+}
+
+function TelegramAlertsSection() {
+  const { showToast } = useToast();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [settings, setSettings] = useState<TelegramSettings>({
+    botToken: "",
+    chatId: "",
+    threshold: 20,
+    enabled: false,
+    providers: ALERT_PROVIDERS.map((p) => p.key),
+  });
+  const [showToken, setShowToken] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState<CheckAlertResult | null>(null);
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const meRes = await fetch("/api/auth/me");
+        if (!meRes.ok) return;
+        const meData = await meRes.json();
+        if (!meData.isAdmin) return;
+        setIsAdmin(true);
+
+        const res = await fetch("/api/admin/telegram");
+        if (res.ok) {
+          const data = await res.json();
+          setSettings({
+            botToken: data.botToken ?? "",
+            chatId: data.chatId ?? "",
+            threshold: data.threshold ?? 20,
+            enabled: data.enabled ?? false,
+            providers: Array.isArray(data.providers) ? data.providers : ALERT_PROVIDERS.map((p) => p.key),
+          });
+        }
+      } catch {
+        // silently fail — non-admin users won't see the section
+      } finally {
+        setLoaded(true);
+      }
+    };
+    init();
+  }, []);
+
+  if (!loaded || !isAdmin) return null;
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const body: Record<string, unknown> = {
+        chatId: settings.chatId,
+        threshold: settings.threshold,
+        enabled: settings.enabled,
+        providers: settings.providers,
+      };
+      // Only send botToken if user changed it (not the masked version)
+      if (settings.botToken && !settings.botToken.startsWith("*")) {
+        body.botToken = settings.botToken;
+      }
+      const res = await fetch("/api/admin/telegram", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        showToast("Telegram settings saved", "success");
+        // Re-fetch to get masked token
+        const refreshRes = await fetch("/api/admin/telegram");
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          setSettings({
+            botToken: refreshData.botToken ?? "",
+            chatId: refreshData.chatId ?? "",
+            threshold: refreshData.threshold ?? 20,
+            enabled: refreshData.enabled ?? false,
+            providers: Array.isArray(refreshData.providers) ? refreshData.providers : ALERT_PROVIDERS.map((p) => p.key),
+          });
+          setShowToken(false);
+        }
+      } else {
+        const errData = await res.json();
+        const msg = errData?.error?.message ?? errData?.error ?? "Failed to save";
+        showToast(msg, "error");
+      }
+    } catch {
+      showToast("Failed to save settings", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    try {
+      const res = await fetch("/api/admin/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (res.ok) {
+        showToast("Test message sent! Check your Telegram.", "success");
+      } else {
+        const errData = await res.json();
+        const msg = errData?.error?.message ?? errData?.error ?? "Test failed";
+        showToast(msg, "error");
+      }
+    } catch {
+      showToast("Failed to send test message", "error");
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleCheckNow = async () => {
+    setChecking(true);
+    setCheckResult(null);
+    try {
+      const res = await fetch("/api/quota/check-alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      setCheckResult(data);
+      if (data.skipped) {
+        showToast(`Check skipped: ${data.reason}`, "info");
+      } else if (data.alertsSent > 0) {
+        showToast(`${data.alertsSent} alert(s) sent`, "success");
+      } else {
+        showToast("All accounts above threshold", "success");
+      }
+    } catch {
+      showToast("Failed to check alerts", "error");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const hasSavedConfig = settings.botToken.length > 0 && settings.chatId.length > 0;
+
+  return (
+    <section className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+      <div>
+        <h2 className="text-sm font-semibold tracking-tight text-slate-100">Telegram Alerts</h2>
+        <p className="mt-0.5 text-xs text-slate-400">Get notified when quota drops below a threshold.</p>
+      </div>
+
+      <div className="space-y-3">
+        {/* Enable/Disable toggle */}
+        <label className="flex items-center gap-2 cursor-pointer">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={settings.enabled}
+            onClick={() => setSettings((s) => ({ ...s, enabled: !s.enabled }))}
+            className={cn(
+              "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors",
+              settings.enabled
+                ? "bg-blue-500/60 border-blue-400/50"
+                : "bg-slate-700/60 border-slate-600/50"
+            )}
+          >
+            <span
+              className={cn(
+                "inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform",
+                settings.enabled ? "translate-x-4" : "translate-x-0.5"
+              )}
+            />
+          </button>
+          <span className="text-xs text-slate-300">Enable alerts</span>
+        </label>
+
+        {/* Bot Token */}
+        <div className="space-y-1">
+          <label htmlFor="tg-bot-token" className="text-xs font-medium text-slate-400">Bot Token</label>
+          <div className="flex gap-2">
+            <Input
+              type={showToken ? "text" : "password"}
+              name="tg-bot-token"
+              value={settings.botToken}
+              onChange={(v) => setSettings((s) => ({ ...s, botToken: v }))}
+              placeholder="123456789:ABCdef..."
+              autoComplete="off"
+            />
+            <Button
+              variant="ghost"
+              onClick={() => setShowToken((v) => !v)}
+              className="shrink-0 px-2 text-xs"
+            >
+              {showToken ? "Hide" : "Show"}
+            </Button>
+          </div>
+          <p className="text-[10px] text-slate-500">Create a bot via @BotFather on Telegram</p>
+        </div>
+
+        {/* Chat ID */}
+        <div className="space-y-1">
+          <label htmlFor="tg-chat-id" className="text-xs font-medium text-slate-400">Chat ID</label>
+          <Input
+            name="tg-chat-id"
+            value={settings.chatId}
+            onChange={(v) => setSettings((s) => ({ ...s, chatId: v }))}
+            placeholder="-1001234567890"
+          />
+          <p className="text-[10px] text-slate-500">Your Telegram user/group ID. Use @userinfobot to find it</p>
+        </div>
+
+        {/* Threshold */}
+        <div className="space-y-1">
+          <label htmlFor="tg-threshold" className="text-xs font-medium text-slate-400">Threshold %</label>
+          <Input
+            type="number"
+            name="tg-threshold"
+            value={String(settings.threshold)}
+            onChange={(v) => {
+              const num = parseInt(v, 10);
+              if (!Number.isNaN(num) && num >= 1 && num <= 100) {
+                setSettings((s) => ({ ...s, threshold: num }));
+              } else if (v === "") {
+                setSettings((s) => ({ ...s, threshold: 0 }));
+              }
+            }}
+            placeholder="20"
+          />
+          <p className="text-[10px] text-slate-500">Alert when any account drops below this capacity</p>
+        </div>
+
+        {/* Provider selection */}
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-slate-400">Monitored Providers</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            {ALERT_PROVIDERS.map((provider) => {
+              const isChecked = settings.providers.includes(provider.key);
+              return (
+                <label key={provider.key} className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => {
+                      setSettings((s) => ({
+                        ...s,
+                        providers: isChecked
+                          ? s.providers.filter((p) => p !== provider.key)
+                          : [...s.providers, provider.key],
+                      }));
+                    }}
+                    className="size-3.5 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500/30 focus:ring-offset-0"
+                  />
+                  <span className="text-xs text-slate-300">{provider.label}</span>
+                </label>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-slate-500">Only selected providers will trigger alerts</p>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button onClick={handleSave} disabled={saving} className="text-xs">
+            {saving ? "Saving..." : "Save"}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleTest}
+            disabled={testing || !hasSavedConfig}
+            className="text-xs"
+          >
+            {testing ? "Sending..." : "Send Test"}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleCheckNow}
+            disabled={checking || !hasSavedConfig}
+            className="text-xs"
+          >
+            {checking ? "Checking..." : "Check Now"}
+          </Button>
+        </div>
+
+        {/* Check result */}
+        {checkResult && checkResult.accounts && checkResult.accounts.length > 0 && (
+          <div className="mt-2 space-y-1 rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+              Check Result — {checkResult.alertsSent} alert(s) sent
+            </p>
+            <div className="space-y-0.5">
+              {checkResult.accounts.map((a) => (
+                <div
+                  key={`${a.provider}-${a.account}-${a.window}`}
+                  className="flex items-center justify-between text-xs"
+                >
+                  <span className="text-slate-300">
+                    {a.provider} / {a.account} / {a.window}
+                  </span>
+                  <span
+                    className={cn(
+                      "font-medium",
+                      a.belowThreshold ? "text-rose-300" : "text-emerald-300"
+                    )}
+                  >
+                    {a.capacity}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function QuotaPage() {
   const [quotaData, setQuotaData] = useState<QuotaResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -290,6 +637,7 @@ export default function QuotaPage() {
     const interval = setInterval(fetchQuota, 60000);
     return () => clearInterval(interval);
   }, []);
+
 
   const filteredAccounts = quotaData?.accounts.filter((account) => {
     if (selectedProvider === PROVIDERS.ALL) return true;
@@ -359,7 +707,14 @@ export default function QuotaPage() {
                 <Button
                   key={filter.key}
                   variant={selectedProvider === filter.key ? "secondary" : "ghost"}
-                  onClick={() => setSelectedProvider(filter.key)}
+                  onClick={() => {
+                    setSelectedProvider(filter.key);
+                    if (filter.key !== PROVIDERS.ALL) {
+                      setTimeout(() => {
+                        document.getElementById("quota-accounts")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                      }, 50);
+                    }
+                  }}
                   className="px-2.5 py-1 text-xs"
                 >
                   {filter.label}
@@ -385,11 +740,11 @@ export default function QuotaPage() {
               <p className="mt-0.5 text-xs font-semibold text-slate-100">{activeAccounts}</p>
             </div>
             <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Overall Capacity</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Overall Capacity <HelpTooltip content="Weighted average of remaining quota across all active provider accounts" /></p>
               <p className="mt-0.5 text-xs font-semibold text-slate-100">{Math.round(overallCapacity.value * 100)}%</p>
             </div>
             <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Low Capacity</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Low Capacity <HelpTooltip content="Number of accounts with remaining quota below 20%" /></p>
               <p className="mt-0.5 text-xs font-semibold text-slate-100">{lowCapacityCount}</p>
             </div>
             <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
@@ -429,7 +784,7 @@ export default function QuotaPage() {
                         <RadialBar dataKey="value" background={false} cornerRadius={4} />
                       </RadialBarChart>
                     </ResponsiveContainer>
-                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center" style={{ paddingBottom: "12%" }}>
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                       <span className="text-3xl font-bold" style={{ color: gaugeColor }}>{pct}%</span>
                       <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: CHART_COLORS.text.dimmed }}>Capacity</span>
                     </div>
@@ -506,8 +861,8 @@ export default function QuotaPage() {
                 <div className="min-w-[600px]">
                 <div className="grid grid-cols-[minmax(0,1fr)_160px_160px_120px_100px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
                   <span>Provider</span>
-                  <span>Long-Term</span>
-                  <span>Short-Term</span>
+                  <span>Long-Term <HelpTooltip content="Quota remaining in the longer reset window (e.g., daily or weekly limit)" /></span>
+                  <span>Short-Term <HelpTooltip content="Quota remaining in the shorter reset window (e.g., per-minute or per-hour limit)" /></span>
                   <span>Healthy</span>
                   <span>Issues</span>
                 </div>
@@ -556,7 +911,7 @@ export default function QuotaPage() {
             </section>
           )}
 
-          <section className="space-y-2">
+          <section id="quota-accounts" className="scroll-mt-24 space-y-2">
             <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Accounts</h2>
             <div className="overflow-x-auto rounded-md border border-slate-700/70 bg-slate-900/25">
               <div className="min-w-[650px]">
@@ -657,6 +1012,9 @@ export default function QuotaPage() {
           </section>
         </>
       )}
+
+      <TelegramAlertsSection />
+
     </div>
   );
 }

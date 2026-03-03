@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.48](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.47...dashboard-v0.1.48) (2026-03-03)
+
+
+### Features
+
+* add recharts visualizations to dashboard pages ([#106](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/106)) ([dc05595](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/dc05595e5a10401fc94f80df0f06c7fdb7d76003))
+
 ## [0.1.47](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.46...dashboard-v0.1.47) (2026-03-03)
 
 

@@ -1,6 +1,8 @@
 "use client";
 
+import { RadialBarChart, RadialBar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
 import { Button } from "@/components/ui/button";
+import { ChartContainer, ChartEmpty, CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK_STYLE } from "@/components/ui/chart-theme";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
@@ -394,6 +396,107 @@ export default function QuotaPage() {
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Providers</p>
               <p className="mt-0.5 text-xs font-semibold text-slate-100">{providerSummaries.length}</p>
             </div>
+          </section>
+
+          {/* Charts: Capacity Gauge + Provider Comparison */}
+          <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {/* Radial Gauge: Overall Capacity */}
+            <ChartContainer title="Overall Capacity" subtitle="Weighted across all providers">
+              {providerSummaries.length === 0 ? (
+                <ChartEmpty message="No provider data" />
+              ) : (() => {
+                const pct = Math.round(overallCapacity.value * 100);
+                const gaugeColor =
+                  overallCapacity.value > 0.6
+                    ? CHART_COLORS.success
+                    : overallCapacity.value > 0.2
+                    ? CHART_COLORS.warning
+                    : CHART_COLORS.danger;
+                const gaugeData = [{ value: pct, fill: gaugeColor }];
+                return (
+                  <div className="relative flex h-48 items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadialBarChart
+                        cx="50%"
+                        cy="60%"
+                        innerRadius="55%"
+                        outerRadius="80%"
+                        startAngle={210}
+                        endAngle={-30}
+                        data={[{ value: 100, fill: "rgba(148,163,184,0.1)" }, ...gaugeData]}
+                        barSize={14}
+                      >
+                        <RadialBar dataKey="value" background={false} cornerRadius={4} />
+                      </RadialBarChart>
+                    </ResponsiveContainer>
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center" style={{ paddingBottom: "12%" }}>
+                      <span className="text-3xl font-bold" style={{ color: gaugeColor }}>{pct}%</span>
+                      <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: CHART_COLORS.text.dimmed }}>Capacity</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </ChartContainer>
+
+            {/* Horizontal BarChart: Provider long-term capacity */}
+            <ChartContainer title="Provider Capacity" subtitle="Long-term window minimum per provider">
+              {providerSummaries.length === 0 ? (
+                <ChartEmpty message="No provider data" />
+              ) : (() => {
+                const barData = providerSummaries.map((s) => {
+                  const longTerm = s.windowCapacities.filter((w) => !w.isShortTerm);
+                  const shortTerm = s.windowCapacities.filter((w) => w.isShortTerm);
+                  const relevant = longTerm.length > 0 ? longTerm : shortTerm;
+                  const cap = relevant.length > 0 ? Math.min(...relevant.map((w) => w.capacity)) : 0;
+                  return { provider: s.provider, capacity: Math.round(cap * 100) };
+                });
+                return (
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={barData}
+                        layout="vertical"
+                        margin={{ top: 4, right: 12, bottom: 4, left: 4 }}
+                        barSize={10}
+                      >
+                        <XAxis
+                          type="number"
+                          domain={[0, 100]}
+                          tick={AXIS_TICK_STYLE}
+                          tickLine={false}
+                          axisLine={{ stroke: CHART_COLORS.border }}
+                          tickFormatter={(v) => `${v}%`}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="provider"
+                          tick={{ ...AXIS_TICK_STYLE, fontSize: 10 }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={72}
+                        />
+                        <Tooltip
+                          {...TOOLTIP_STYLE}
+                          formatter={(value) => [`${value}%`, "Capacity"]}
+                        />
+                        <Bar dataKey="capacity" radius={[0, 3, 3, 0]}>
+                          {barData.map((entry, index) => {
+                            const v = entry.capacity / 100;
+                            const color =
+                              v > 0.6
+                                ? CHART_COLORS.success
+                                : v > 0.2
+                                ? CHART_COLORS.warning
+                                : CHART_COLORS.danger;
+                            return <Cell key={`cell-${index}`} fill={color} />;
+                          })}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })()}
+            </ChartContainer>
           </section>
 
           {providerSummaries.length > 0 && (

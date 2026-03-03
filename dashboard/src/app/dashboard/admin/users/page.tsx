@@ -170,7 +170,7 @@ export default function AdminUsersPage() {
         <section className="overflow-x-auto rounded-md border border-slate-700/70 bg-slate-900/25">
           <table className="min-w-[600px] w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-700/70 bg-slate-900/60">
+              <tr className="sticky top-0 z-10 border-b border-slate-700/70 bg-slate-900/95 backdrop-blur-sm">
                 <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Username</th>
                 <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Role</th>
                 <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Created</th>

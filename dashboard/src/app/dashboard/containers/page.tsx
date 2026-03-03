@@ -215,8 +215,8 @@ export default function ContainersPage() {
             </div>
           ) : (
           <div className="overflow-x-auto">
-            <div className="min-w-[600px] overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
-              <div className="grid grid-cols-[minmax(0,1.2fr)_80px_100px_100px_minmax(140px,auto)] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            <div className="min-w-[600px] divide-y divide-slate-700/60 overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+              <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1.2fr)_80px_100px_100px_minmax(140px,auto)] border-b border-slate-700/70 bg-slate-900/95 backdrop-blur-sm px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
                 <span>Container</span>
                 <span>State</span>
                 <span>Uptime</span>
@@ -227,7 +227,7 @@ export default function ContainersPage() {
               const isActionLoading = actionLoading[container.name] || false;
 
               return (
-                <div key={container.name} className="border-b border-slate-700/60 px-3 py-3 last:border-b-0">
+                <div key={container.name} className="px-3 py-3">
                   <div className="grid grid-cols-[minmax(0,1.2fr)_80px_100px_100px_minmax(140px,auto)] items-center gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-slate-100">{container.displayName}</p>

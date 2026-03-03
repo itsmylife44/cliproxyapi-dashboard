@@ -221,7 +221,7 @@ export default function LogsPage() {
               </div>
           ) : (
             <div
-              className="max-h-[520px] overflow-y-auto rounded-sm border border-slate-700/70 bg-black/50 p-4 font-mono text-xs text-zinc-200"
+              className="max-h-[clamp(300px,60vh,700px)] overflow-y-auto rounded-sm border border-slate-700/70 bg-black/50 p-4 font-mono text-xs text-zinc-200"
             >
               <div className="space-y-1">
                 {pagedLogs.map((line, index) => {

@@ -202,7 +202,7 @@ export default function ApiKeysPage() {
       ) : (
         <div className="overflow-x-auto">
           <section className="min-w-[600px] overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
-            <div className="grid grid-cols-[minmax(0,1fr)_180px_160px_110px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1fr)_180px_160px_110px] border-b border-slate-700/70 bg-slate-900/95 backdrop-blur-sm px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
               <span>Name</span>
               <span>Created</span>
               <span>Last Used</span>

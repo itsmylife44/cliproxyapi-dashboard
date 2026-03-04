@@ -1,13 +1,20 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
+  # Manual trigger only — no automatic releases on push
   workflow_dispatch:
     inputs:
-      tag_name:
-        description: "Release tag to build (e.g. dashboard-v0.1.4)"
+      action:
+        description: "What to do"
         required: true
+        type: choice
+        options:
+          - create-release
+          - build-existing-tag
+        default: create-release
+      tag_name:
+        description: "Existing tag to build (only for 'build-existing-tag', e.g. dashboard-v0.1.50)"
+        required: false
 
 permissions:
   contents: write
@@ -18,9 +25,11 @@ env:
   IMAGE: ghcr.io/${{ github.repository }}/dashboard
 
 jobs:
+  # Run Release Please to create/update a release PR, then merge and tag.
+  # Only runs when action is 'create-release'.
   release-please:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ github.event.inputs.action == 'create-release' }}
     outputs:
       release_created: ${{ steps.resolve.outputs.release_created }}
       tag_name: ${{ steps.resolve.outputs.tag_name }}
@@ -45,9 +54,9 @@ jobs:
           echo "version=${RP_VERSION}" >> "$GITHUB_OUTPUT"
 
           if [ "${RP_RELEASE_CREATED}" = "true" ]; then
-            echo "✅ Release-Please created release: ${RP_TAG_NAME} (${RP_VERSION})"
+            echo "✅ Release created: ${RP_TAG_NAME} (${RP_VERSION})"
           else
-            echo "ℹ️ No release created (PR opened or no releasable commits)"
+            echo "ℹ️ No release created — Release Please PR opened/updated. Merge the PR, then run this workflow again."
           fi
 
   # Build each platform natively in parallel — no QEMU emulation needed.
@@ -65,14 +74,17 @@ jobs:
             suffix: arm64
     runs-on: ${{ matrix.runner }}
     needs: release-please
-    if: ${{ always() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
+    if: >-
+      always() &&
+      (needs.release-please.outputs.release_created == 'true' ||
+       (github.event.inputs.action == 'build-existing-tag' && github.event.inputs.tag_name != ''))
     steps:
       - uses: actions/checkout@v4
 
       - name: Resolve version
         id: version
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${{ github.event.inputs.action }}" = "build-existing-tag" ]; then
             TAG="${{ github.event.inputs.tag_name }}"
           else
             TAG="${{ needs.release-please.outputs.tag_name }}"
@@ -126,7 +138,7 @@ jobs:
       - name: Resolve version
         id: version
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${{ github.event.inputs.action }}" = "build-existing-tag" ]; then
             TAG="${{ github.event.inputs.tag_name }}"
           else
             TAG="${{ needs.release-please.outputs.tag_name }}"

@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
           signal: AbortSignal.timeout(60_000),
         });
         if (!quotaResponse.ok) return null;
-        return quotaResponse.json();
+        return await quotaResponse.json();
       } catch {
         return null;
       }

@@ -200,6 +200,7 @@ export async function runAlertCheck(
 
   const result = await sendTelegramMessage(botToken, chatId, message, "HTML");
   const messageSent = result.ok ? 1 : 0;
+  const breachedCount = breached.length;
   const breachedCount = result.ok ? breached.length : 0;
 
   if (!result.ok) {

@@ -526,7 +526,7 @@ function TelegramAlertsSection() {
               if (!Number.isNaN(num) && num >= 1 && num <= 100) {
                 setSettings((s) => ({ ...s, threshold: num }));
               } else if (v === "") {
-                setSettings((s) => ({ ...s, threshold: 0 }));
+                setSettings((s) => ({ ...s, threshold: 1 }));
               }
             }}
             placeholder="20"

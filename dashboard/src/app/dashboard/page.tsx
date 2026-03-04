@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { redirect } from "next/navigation";
 import { CopyBlock } from "@/components/copy-block";
 import { QuickStartConfigSection } from "@/components/quick-start-config-section";
 import { ConfigPublisher } from "@/components/config-publisher";
@@ -203,6 +203,11 @@ export default async function QuickStartPage() {
   ];
   const completedSetupItems = setupItems.filter((item) => item.done).length;
   const shouldShowSetupChecklist = completedSetupItems < setupItems.length;
+
+  // Redirect to setup wizard if setup is incomplete
+  if (shouldShowSetupChecklist) {
+    redirect("/dashboard/setup");
+  }
   const statusCards = [
     {
       label: "Service",
@@ -268,10 +273,7 @@ export default async function QuickStartPage() {
         </div>
       </section>
 
-      <section
-        id="overview"
-        className={`scroll-mt-24 grid gap-3 ${shouldShowSetupChecklist ? "xl:grid-cols-[minmax(0,2.2fr)_minmax(280px,1fr)]" : ""}`}
-      >
+      <section id="overview" className="scroll-mt-24">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
           {statusCards.map((card) => (
             <div key={card.label} className="glass-card rounded-md border border-slate-700/70 px-2.5 py-2 transition-colors hover:border-slate-600">
@@ -285,36 +287,6 @@ export default async function QuickStartPage() {
             </div>
           ))}
         </div>
-
-        {shouldShowSetupChecklist && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Setup Checklist</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-3 text-sm text-slate-400">
-                {completedSetupItems}/{setupItems.length} steps complete
-              </p>
-              <div className="space-y-2.5">
-                {setupItems.map((item) => (
-                  <div key={item.label} className="flex items-center justify-between gap-3 rounded-md border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className={item.done ? "text-emerald-400" : "text-amber-300"} aria-hidden="true">
-                        {item.done ? "●" : "○"}
-                      </span>
-                      <span className="text-sm text-slate-200">{item.label}</span>
-                    </div>
-                    {!item.done && (
-                      <Link href={item.link} className="text-xs font-medium text-blue-300 hover:text-blue-200">
-                        {item.linkLabel}
-                      </Link>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </section>
 
       <DashboardMiniCharts />

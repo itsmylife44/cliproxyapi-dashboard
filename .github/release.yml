@@ -1,0 +1,45 @@
+# Auto-generated release notes configuration
+# GitHub uses this to categorize PRs in release notes and credit contributors
+# https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+    authors:
+      - dependabot
+      - dependabot[bot]
+
+  categories:
+    - title: "🚀 Features"
+      labels:
+        - feat
+        - feature
+        - enhancement
+
+    - title: "🐛 Bug Fixes"
+      labels:
+        - fix
+        - bug
+        - bugfix
+
+    - title: "📖 Documentation"
+      labels:
+        - docs
+        - documentation
+
+    - title: "🏗️ Maintenance"
+      labels:
+        - chore
+        - refactor
+        - ci
+        - build
+
+    - title: "🙏 Community Contributions"
+      labels:
+        - community
+        - external
+
+    - title: "📦 Other Changes"
+      labels:
+        - "*"

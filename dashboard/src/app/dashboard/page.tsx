@@ -175,7 +175,7 @@ export default async function QuickStartPage() {
   const proxyModels = apiKeyForProxy ? await fetchProxyModels(getInternalProxyUrl(), apiKeyForProxy) : [];
   const oauthAliasModels = extractOAuthModelAliases(config as ConfigData | null, oauthAccounts);
   const oauthAliasIds = Object.keys(oauthAliasModels);
-  const availableModelIds = [...proxyModels.map((m) => m.id), ...oauthAliasIds];
+  const availableModelIds = [...new Set([...proxyModels.map((m) => m.id), ...oauthAliasIds])];
   const modelSourceMap = buildSourceMap(proxyModels);
   for (const aliasId of oauthAliasIds) {
     modelSourceMap.set(aliasId, "OAuth Alias");

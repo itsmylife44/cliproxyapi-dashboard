@@ -48,7 +48,6 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   const { apiKeys, config, oauthAccounts, models: allModels, excludedModels, proxyUrl } = props;
    const [selectedKeyIndex, setSelectedKeyIndex] = useState(0);
    const [isExpanded, setIsExpanded] = useState(false);
-   const [isModelsExpanded, setIsModelsExpanded] = useState(false);
    const [plugins, setPlugins] = useState<string[]>(DEFAULT_PLUGINS);
    const [pluginInput, setPluginInput] = useState("");
   const [mcps, setMcps] = useState<McpEntry[]>([]);
@@ -389,43 +388,6 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
         </div>
        )}
 
-       <div className="space-y-2">
-         <button
-           type="button"
-           onClick={() => setIsModelsExpanded(!isModelsExpanded)}
-           className="flex items-center gap-2 text-xs font-medium text-white/60 hover:text-white/90 transition-colors"
-         >
-           <svg
-             width="12"
-             height="12"
-             viewBox="0 0 24 24"
-             fill="none"
-             stroke="currentColor"
-             strokeWidth="2"
-             strokeLinecap="round"
-             strokeLinejoin="round"
-             className={`transition-transform duration-200 ${isModelsExpanded ? "rotate-90" : ""}`}
-             aria-hidden="true"
-           >
-             <polyline points="9 18 15 12 9 6" />
-           </svg>
-           {isModelsExpanded ? "Hide" : "Show"} available models ({Object.keys(availableModels).length})
-         </button>
-
-         {isModelsExpanded && (
-           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5">
-             {Object.keys(availableModels).map((id) => (
-               <span
-                 key={id}
-                 className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-white/70 font-mono truncate"
-                 title={id}
-               >
-                 {id}
-               </span>
-             ))}
-           </div>
-         )}
-       </div>
 
        <div className="space-y-4 border-t border-white/10 pt-4">
          <div className="space-y-2">

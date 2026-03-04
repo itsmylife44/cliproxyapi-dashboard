@@ -704,10 +704,10 @@ export default function QuotaPage() {
     return account.provider === selectedProvider;
   }) || [];
 
-  const activeAccounts = quotaData?.accounts.filter((account) => account.supported && !account.error).length || 0;
+  const activeAccounts = filteredAccounts.filter((account) => account.supported && !account.error).length;
 
   const providerGroups = new Map<string, QuotaAccount[]>();
-  for (const account of quotaData?.accounts ?? []) {
+  for (const account of filteredAccounts) {
     const existing = providerGroups.get(account.provider) ?? [];
     existing.push(account);
     providerGroups.set(account.provider, existing);

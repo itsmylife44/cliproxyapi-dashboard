@@ -96,7 +96,7 @@ function Wait-ForPostgres {
 function Wait-ForCliProxyApi {
     Write-Info "Waiting for CLIProxyAPI to be ready..."
 
-    $maxAttempts = 30
+    $maxAttempts = 60
     for ($i = 0; $i -lt $maxAttempts; $i++) {
         try {
             $response = Invoke-WebRequest -Uri "http://localhost:28317/" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue

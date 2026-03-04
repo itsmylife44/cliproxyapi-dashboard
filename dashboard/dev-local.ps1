@@ -8,7 +8,10 @@ Param(
     [switch]$Help
 )
 
-$ErrorActionPreference = "Stop"
+# Note: We do NOT use $ErrorActionPreference = "Stop" globally because
+# native commands (docker, npx, npm) write progress to stderr, which
+# PowerShell would treat as terminating errors. Instead we check
+# $LASTEXITCODE after each native command.
 
 # Script directory
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -64,7 +67,7 @@ function Start-Containers {
         return
     }
 
-    docker compose -f $ComposeFile up -d 2>&1 | Write-Host
+    docker compose -f $ComposeFile up -d
     if ($LASTEXITCODE -ne 0) {
         Write-Err "Failed to start containers"
         exit 1
@@ -147,7 +150,7 @@ function Invoke-Migrations {
         }
     }
 
-    npx prisma migrate deploy 2>&1 | Write-Host
+    npx prisma migrate deploy
     if ($LASTEXITCODE -ne 0) {
         Write-Err "Failed to run migrations"
         exit 1
@@ -157,7 +160,7 @@ function Invoke-Migrations {
 
 function Invoke-PrismaGenerate {
     Write-Info "Generating Prisma client..."
-    npx prisma generate 2>&1 | Write-Host
+    npx prisma generate
     if ($LASTEXITCODE -ne 0) {
         Write-Err "Failed to generate Prisma client"
         exit 1
@@ -173,13 +176,13 @@ function Write-EnvLocal {
 
 function Stop-Containers {
     Write-Info "Stopping containers..."
-    docker compose -f $ComposeFile down 2>&1 | Write-Host
+    docker compose -f $ComposeFile down 2>&1 | Out-Null
     Write-OK "Containers stopped"
 }
 
 function Reset-Containers {
     Write-Info "Resetting development environment (this will delete all data)..."
-    docker compose -f $ComposeFile down -v 2>&1 | Write-Host
+    docker compose -f $ComposeFile down -v 2>&1 | Out-Null
     Write-OK "Containers and volumes removed"
 }
 

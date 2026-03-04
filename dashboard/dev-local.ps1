@@ -5,7 +5,7 @@
 Param(
     [switch]$Down,
     [switch]$Reset,
-    [switch]$Help
+    [switch]$ShowHelp
 )
 
 # Note: We do NOT use $ErrorActionPreference = "Stop" globally because
@@ -118,7 +118,7 @@ function Wait-ForCliProxyApi {
 function Invoke-Migrations {
     Write-Info "Running Prisma migrations..."
 
-    $env:DATABASE_URL = "postgresql://cliproxyapi:devpassword@localhost:5432/cliproxyapi"
+    $env:DATABASE_URL = "postgresql://cliproxyapi:devpassword@localhost:5433/cliproxyapi"
 
     # Bootstrap: push full schema if fresh database
     $null = docker exec $PostgresContainer psql -U cliproxyapi -d cliproxyapi -tAc "SELECT 1 FROM _prisma_migrations LIMIT 1" 2>&1
@@ -191,7 +191,7 @@ function Start-NextDev {
     Write-Host ""
     Write-Host "  ============================================================" -ForegroundColor Green
     Write-Host "    Dashboard:  http://localhost:3000" -ForegroundColor Green
-    Write-Host "    PostgreSQL: localhost:5432" -ForegroundColor Cyan
+    Write-Host "    PostgreSQL: localhost:5433" -ForegroundColor Cyan
     Write-Host "    API:        http://localhost:28317" -ForegroundColor Cyan
     Write-Host "  ============================================================" -ForegroundColor Green
     Write-Host ""
@@ -203,14 +203,14 @@ function Start-NextDev {
 
 # --- Main ---
 
-if ($Help) {
-    Write-Host "Usage: .\dev-local.ps1 [-Down] [-Reset] [-Help]"
+if ($ShowHelp) {
+    Write-Host "Usage: .\dev-local.ps1 [-Down] [-Reset] [-ShowHelp]"
     Write-Host ""
     Write-Host "Options:"
-    Write-Host "  (none)   Start development environment"
-    Write-Host "  -Down    Stop and remove containers"
-    Write-Host "  -Reset   Stop containers and remove volumes (fresh start)"
-    Write-Host "  -Help    Show this help message"
+    Write-Host "  (none)      Start development environment"
+    Write-Host "  -Down       Stop and remove containers"
+    Write-Host "  -Reset      Stop containers and remove volumes (fresh start)"
+    Write-Host "  -ShowHelp   Show this help message"
     exit 0
 }
 

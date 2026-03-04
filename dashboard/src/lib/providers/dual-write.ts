@@ -805,6 +805,7 @@ export async function listOAuthWithOwnership(
          status: file.status || "active",
          statusMessage: file.status_message || null,
          unavailable: file.unavailable ?? false,
+       };
      });
 
     return { ok: true, accounts: accountsWithOwnership };

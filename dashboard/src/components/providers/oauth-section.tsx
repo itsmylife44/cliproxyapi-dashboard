@@ -118,6 +118,9 @@ interface OAuthAccountWithOwnership {
   ownerUsername: string | null;
   ownerUserId: string | null;
   isOwn: boolean;
+  status: "active" | "error" | "disabled" | string;
+  statusMessage: string | null;
+  unavailable: boolean;
 }
 
 interface AuthUrlResponse {
@@ -179,6 +182,65 @@ const validateCallbackUrl = (value: string) => {
     message: "Callback URL looks good. Ready to submit.",
   };
 };
+
+function parseStatusMessage(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed?.error?.message) return parsed.error.message;
+    if (typeof parsed?.message === "string") return parsed.message;
+    return raw;
+  } catch {
+    return raw;
+  }
+}
+
+function OAuthStatusBadge({
+  status,
+  statusMessage,
+  unavailable,
+}: {
+  status: string;
+  statusMessage: string | null;
+  unavailable: boolean;
+}) {
+  const message = parseStatusMessage(statusMessage);
+
+  if (status === "active" && !unavailable) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400" title="Token is valid and working">
+        <span className="size-1.5 rounded-full bg-emerald-400" />
+        Active
+      </span>
+    );
+  }
+
+  if (status === "error" || unavailable) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-medium text-red-400"
+        title={message || "Account has an error"}
+      >
+        <span className="size-1.5 rounded-full bg-red-400" />
+        {message
+          ? message.length > 40 ? `${message.slice(0, 40)}…` : message
+          : "Error"}
+      </span>
+    );
+  }
+
+  if (status === "disabled") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-slate-500/15 px-2 py-0.5 text-[10px] font-medium text-slate-400" title="Account is disabled">
+        <span className="size-1.5 rounded-full bg-slate-400" />
+        Disabled
+      </span>
+    );
+  }
+
+  return null;
+}
+
 
 export function OAuthSection({
   showToast,
@@ -617,6 +679,7 @@ export function OAuthSection({
                         {currentUser && (
                           <OwnerBadge ownerUsername={account.ownerUsername} isOwn={account.isOwn} />
                         )}
+                        <OAuthStatusBadge status={account.status} statusMessage={account.statusMessage} unavailable={account.unavailable} />
                       </div>
                       {account.accountEmail && (
                         <p className="truncate text-xs text-slate-300">{account.accountEmail}</p>

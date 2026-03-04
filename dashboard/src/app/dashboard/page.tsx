@@ -180,7 +180,7 @@ export default async function QuickStartPage() {
   for (const aliasId of oauthAliasIds) {
     modelSourceMap.set(aliasId, "OAuth Alias");
   }
-  const allProxyModels = { ...buildAvailableModelsFromProxy(proxyModels), ...oauthAliasModels };
+  const allProxyModels = { ...oauthAliasModels, ...buildAvailableModelsFromProxy(proxyModels) };
   const setupItems = [
     {
       label: "Provider connected",

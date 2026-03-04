@@ -1,6 +1,6 @@
 "use client";
 
-import { RadialBarChart, RadialBar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
+import { RadialBarChart, RadialBar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartEmpty, CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK_STYLE } from "@/components/ui/chart-theme";
 import { useState, useEffect } from "react";
@@ -850,17 +850,24 @@ export default function QuotaPage() {
               })()}
             </ChartContainer>
 
-            {/* Horizontal BarChart: Provider long-term capacity */}
-            <ChartContainer title="Provider Capacity" subtitle="Long-term window minimum per provider">
+            {/* Horizontal BarChart: Provider capacity with long-term and short-term */}
+            <ChartContainer title="Provider Capacity" subtitle="Long-term & short-term window minimum per provider">
               {providerSummaries.length === 0 ? (
                 <ChartEmpty message="No provider data" />
               ) : (() => {
                 const barData = providerSummaries.map((s) => {
                   const longTerm = s.windowCapacities.filter((w) => !w.isShortTerm);
                   const shortTerm = s.windowCapacities.filter((w) => w.isShortTerm);
-                  const relevant = longTerm.length > 0 ? longTerm : shortTerm;
-                  const cap = relevant.length > 0 ? Math.min(...relevant.map((w) => w.capacity)) : 0;
-                  return { provider: s.provider, capacity: Math.round(cap * 100) };
+                  const longMin = longTerm.length > 0 ? Math.round(Math.min(...longTerm.map((w) => w.capacity)) * 100) : null;
+                  const shortMin = shortTerm.length > 0 ? Math.round(Math.min(...shortTerm.map((w) => w.capacity)) * 100) : null;
+                  return {
+                    provider: s.provider,
+                    longTerm: longMin,
+                    shortTerm: shortMin,
+                    healthy: s.healthyAccounts,
+                    total: s.totalAccounts,
+                    issues: s.errorAccounts,
+                  };
                 });
                 return (
                   <div className="h-48">
@@ -869,7 +876,8 @@ export default function QuotaPage() {
                         data={barData}
                         layout="vertical"
                         margin={{ top: 4, right: 12, bottom: 4, left: 4 }}
-                        barSize={10}
+                        barSize={8}
+                        barGap={2}
                       >
                         <XAxis
                           type="number"
@@ -889,20 +897,21 @@ export default function QuotaPage() {
                         />
                         <Tooltip
                           {...TOOLTIP_STYLE}
-                          formatter={(value) => [`${value}%`, "Capacity"]}
+                          formatter={(value: number | null, name: string, props: { payload: { healthy: number; total: number; issues: number } }) => {
+                            if (value === null) return ["-", name];
+                            const label = name === "longTerm" ? "Long-Term" : "Short-Term";
+                            const extra = name === "longTerm" ? ` (${props.payload.healthy}/${props.payload.total} healthy${props.payload.issues > 0 ? `, ${props.payload.issues} issues` : ""})` : "";
+                            return [`${value}%${extra}`, label];
+                          }}
                         />
-                        <Bar dataKey="capacity" radius={[0, 3, 3, 0]}>
-                          {barData.map((entry, index) => {
-                            const v = entry.capacity / 100;
-                            const color =
-                              v > 0.6
-                                ? CHART_COLORS.success
-                                : v > 0.2
-                                ? CHART_COLORS.warning
-                                : CHART_COLORS.danger;
-                            return <Cell key={`cell-${index}`} fill={color} />;
-                          })}
-                        </Bar>
+                        <Legend
+                          verticalAlign="top"
+                          height={24}
+                          formatter={(value: string) => value === "longTerm" ? "Long-Term" : "Short-Term"}
+                          wrapperStyle={{ fontSize: 10, color: CHART_COLORS.text.dimmed }}
+                        />
+                        <Bar dataKey="longTerm" radius={[0, 3, 3, 0]} fill={CHART_COLORS.success} />
+                        <Bar dataKey="shortTerm" radius={[0, 3, 3, 0]} fill={CHART_COLORS.cyan} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -910,63 +919,6 @@ export default function QuotaPage() {
               })()}
             </ChartContainer>
           </section>
-
-          {providerSummaries.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Provider Capacity</h2>
-              <div className="overflow-x-auto rounded-md border border-slate-700/70 bg-slate-900/25">
-                <div className="min-w-[600px]">
-                <div className="grid grid-cols-[minmax(0,1fr)_160px_160px_120px_100px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                  <span>Provider</span>
-                  <span>Long-Term <HelpTooltip content="Quota remaining in the longer reset window (e.g., daily or weekly limit)" /></span>
-                  <span>Short-Term <HelpTooltip content="Quota remaining in the shorter reset window (e.g., per-minute or per-hour limit)" /></span>
-                  <span>Healthy</span>
-                  <span>Issues</span>
-                </div>
-                {providerSummaries.map((summary) => {
-                  const longTerm = summary.windowCapacities.filter((w) => !w.isShortTerm);
-                  const shortTerm = summary.windowCapacities.filter((w) => w.isShortTerm);
-                  const longMin = longTerm.length > 0 ? Math.min(...longTerm.map((w) => w.capacity)) : null;
-                  const shortMin = shortTerm.length > 0 ? Math.min(...shortTerm.map((w) => w.capacity)) : null;
-
-                  return (
-                    <div key={summary.provider} className="grid grid-cols-[minmax(0,1fr)_160px_160px_120px_100px] items-center border-b border-slate-700/60 px-3 py-2 last:border-b-0">
-                      <span className="truncate text-sm font-medium capitalize text-slate-100">{summary.provider}</span>
-                      <div className="pr-3">
-                        {longMin !== null ? (
-                          <>
-                            <span className="text-xs text-slate-300">{Math.round(longMin * 100)}%</span>
-                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-700/70">
-                              <div className={cn("h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
-                            </div>
-                          </>
-                        ) : (
-                          <span className="text-xs text-slate-500">-</span>
-                        )}
-                      </div>
-                      <div className="pr-3">
-                        {shortMin !== null ? (
-                          <>
-                            <span className="text-xs text-slate-300">{Math.round(shortMin * 100)}%</span>
-                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-700/70">
-                              <div className={cn("h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
-                            </div>
-                          </>
-                        ) : (
-                          <span className="text-xs text-slate-500">-</span>
-                        )}
-                      </div>
-                      <span className="text-xs text-slate-300">{summary.healthyAccounts}/{summary.totalAccounts}</span>
-                      <span className={cn("text-xs", summary.errorAccounts > 0 ? "text-amber-300" : "text-slate-500")}>
-                        {summary.errorAccounts > 0 ? summary.errorAccounts : "0"}
-                      </span>
-                    </div>
-                  );
-                })}
-                </div>
-              </div>
-            </section>
-          )}
 
           <section id="quota-accounts" className="scroll-mt-24 space-y-2">
             <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Accounts</h2>

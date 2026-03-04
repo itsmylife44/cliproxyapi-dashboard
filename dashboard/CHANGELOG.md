@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.1.51](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.50...dashboard-v0.1.51) (2026-03-04)
+
+
+### Features
+
+* add OAuth health status badges and fix alias model override priority ([dcc2e9c](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/dcc2e9ca5cf22c9766706d0a157a00fa36bd2fdf))
+* add setup wizard with inline forms and sequential step locking ([887a5eb](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/887a5eb4cb08db668afa07be1b8426eae61d8d08))
+* add Windows PowerShell dev-local script for local development ([da6987c](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/da6987cab911eefbc91ee7135d62836c3e4e96a1))
+* make Telegram check interval and cooldown configurable via settings ([b76d265](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/b76d265e04a0dfbf3e25173ab7b04db579f26049))
+
+
+### Bug Fixes
+
+* apply provider filter to charts and stats on quota page ([198aded](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/198aded17193d032941f76403d6e9251e993d7f8))
+* deduplicate model IDs to prevent duplicate React keys in ModelSelector ([124761d](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/124761d02e5ce72cdc39ce8155b5b07933463f3a))
+* increase CLIProxyAPI wait timeout to 60s for cold starts ([cc1ccc4](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/cc1ccc414b3f6e7d24ed8e2825d8002a441a9aeb))
+* prevent PowerShell from treating Docker stderr progress as errors ([5f0fc8c](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/5f0fc8c9e788cc61cc6a6db02fcbd0c33f838f2b))
+* remove duplicate model list from OpenCode config section ([9f22e53](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/9f22e53882b3eba5d1e2f8851f1413d0dcd348d7))
+* replace duplicate provider capacity table with enhanced chart showing long-term and short-term ([f7831cb](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/f7831cbdb9ad88970baaeac874a7360bac3e52f0))
+* show prisma db push output instead of silencing it ([34e01a7](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/34e01a78cc9cd2c508aa1124edfc365b94ed2d6c))
+* use curl.exe instead of Invoke-WebRequest for API health check ([064c6b7](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/064c6b798e0698a55526ee5deaf3f44e12e2e171))
+* use port 5433 to avoid conflicts with local Postgres and fix -Help param ([a01a34c](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a01a34ced18824945584f09e00881f1927443adb))
+
 ## [0.1.50](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.49...dashboard-v0.1.50) (2026-03-04)
 
 

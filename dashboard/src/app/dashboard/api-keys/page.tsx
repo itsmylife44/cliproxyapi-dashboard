@@ -6,6 +6,7 @@ import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/com
 import { useToast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 interface ApiKey {
   id: string;
@@ -169,7 +170,7 @@ export default function ApiKeysPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-slate-100">API Keys</h1>
-            <p className="mt-1 text-xs text-slate-400">Manage dashboard access keys for clients and integrations.</p>
+            <p className="mt-1 text-xs text-slate-400">Manage dashboard access keys for clients and integrations. <HelpTooltip content="API keys authenticate external tools (like the opencode-cliproxyapi-sync plugin) to access your dashboard configuration programmatically" /></p>
           </div>
           <Button onClick={() => { setKeyNameInput(""); setIsCreateModalOpen(true); }} disabled={creating} className="px-2.5 py-1 text-xs">
             Create Key

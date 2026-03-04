@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
 interface LogEntry {
   level: number;
@@ -196,6 +197,7 @@ export default function AdminLogsPage() {
 
   return (
     <div className="space-y-4">
+      <Breadcrumbs items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Admin" }, { label: "Application Logs" }]} />
       <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>

@@ -827,7 +827,7 @@ export default function QuotaPage() {
                 const gaugeData = [{ value: pct, fill: gaugeColor }];
                 return (
                   <div className="relative flex h-48 items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <RadialBarChart
                         cx="50%"
                         cy="60%"
@@ -871,7 +871,7 @@ export default function QuotaPage() {
                 });
                 return (
                   <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <BarChart
                         data={barData}
                         layout="vertical"

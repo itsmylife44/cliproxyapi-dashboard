@@ -39,7 +39,7 @@ export function DashboardMiniCharts() {
     const fetchData = async () => {
       const now = new Date();
       const from = new Date(now);
-      from.setDate(from.getDate() - 7);
+      from.setDate(from.getDate() - 6);
       const fromStr = toLocalDateString(from);
       const toStr = toLocalDateString(now);
 

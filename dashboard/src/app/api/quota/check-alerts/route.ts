@@ -4,7 +4,8 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { Errors } from "@/lib/errors";
 import { runAlertCheck } from "@/lib/quota-alerts";
-import { cookies } from "next/headers";
+
+const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
 
 async function requireAdmin(): Promise<
   { userId: string; username: string } | NextResponse
@@ -38,24 +39,25 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("session");
+    // Use server-side env var for base URL instead of trusting request headers
+    const port = process.env.PORT ?? "3000";
+    const baseUrl = process.env.NEXTAUTH_URL ?? process.env.DASHBOARD_URL ?? `http://localhost:${port}`;
 
-    const protocol = request.headers.get("x-forwarded-proto") ?? "http";
-    const host =
-      request.headers.get("x-forwarded-host") ??
-      request.headers.get("host") ??
-      "localhost:3000";
-    const baseUrl = `${protocol}://${host}`;
+    if (!MANAGEMENT_API_KEY) {
+      return Errors.internal("check quota alerts", new Error("MANAGEMENT_API_KEY not configured"));
+    }
 
     const quotaFetcher = async () => {
-      const quotaResponse = await fetch(`${baseUrl}/api/quota`, {
-        headers: {
-          Cookie: sessionCookie ? `session=${sessionCookie.value}` : "",
-        },
-      });
-      if (!quotaResponse.ok) return null;
-      return quotaResponse.json();
+      try {
+        const quotaResponse = await fetch(`${baseUrl}/api/quota`, {
+          headers: { "X-Internal-Key": MANAGEMENT_API_KEY },
+          signal: AbortSignal.timeout(60_000),
+        });
+        if (!quotaResponse.ok) return null;
+        return quotaResponse.json();
+      } catch {
+        return null;
+      }
     };
 
     const result = await runAlertCheck(quotaFetcher, baseUrl);

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 
 export default function DashboardNotFound() {
   return (
@@ -32,8 +31,8 @@ export default function DashboardNotFound() {
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <Link href="/dashboard">
-            <Button variant="primary">Back to Dashboard</Button>
+          <Link href="/dashboard" className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 glass-button-primary text-white shadow-[0_8px_20px_rgba(37,99,235,0.2)]">
+            Back to Dashboard
           </Link>
         </div>
       </div>

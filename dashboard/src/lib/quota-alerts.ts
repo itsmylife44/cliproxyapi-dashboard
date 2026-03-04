@@ -48,7 +48,10 @@ export interface AlertCheckResult {
   skipped?: boolean;
   reason?: string;
   nextAlertAvailable?: string;
+  /** Number of Telegram messages sent (0 or 1) */
   alertsSent?: number;
+  /** Number of accounts that breached the threshold */
+  breachedCount?: number;
   accounts?: Array<{
     provider: string;
     account: string;
@@ -121,10 +124,13 @@ export async function runAlertCheck(
   const enabled = settingMap.get(SETTING_KEYS.ENABLED) === "true";
   const botToken = settingMap.get(SETTING_KEYS.BOT_TOKEN) ?? "";
   const chatId = settingMap.get(SETTING_KEYS.CHAT_ID) ?? "";
-  const threshold = parseInt(
+  const thresholdRaw = parseInt(
     settingMap.get(SETTING_KEYS.THRESHOLD) ?? "20",
     10
   );
+  const threshold = Number.isNaN(thresholdRaw) || thresholdRaw < 1 || thresholdRaw > 100
+    ? 20
+    : thresholdRaw;
 
   const providersRaw = settingMap.get(SETTING_KEYS.PROVIDERS) ?? "";
   const selectedProviders = providersRaw ? providersRaw.split(",").filter(Boolean) : [];
@@ -193,7 +199,8 @@ export async function runAlertCheck(
   );
 
   const result = await sendTelegramMessage(botToken, chatId, message, "HTML");
-  const alertsSent = result.ok ? breached.length : 0;
+  const messageSent = result.ok ? 1 : 0;
+  const breachedCount = result.ok ? breached.length : 0;
 
   if (!result.ok) {
     logger.warn(
@@ -203,7 +210,7 @@ export async function runAlertCheck(
   }
 
   // 7. Update last alert time
-  if (alertsSent > 0) {
+  if (messageSent > 0) {
     await prisma.systemSetting.upsert({
       where: { key: SETTING_KEYS.LAST_ALERT_TIME },
       create: { key: SETTING_KEYS.LAST_ALERT_TIME, value: String(Date.now()) },
@@ -211,5 +218,5 @@ export async function runAlertCheck(
     });
   }
 
-  return { checked: true, alertsSent, accounts: accountsSummary };
+  return { checked: true, alertsSent: messageSent, breachedCount, accounts: accountsSummary };
 }

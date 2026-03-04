@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { verifySession } from "@/lib/auth/session";
 import { logger } from "@/lib/logger";
 
@@ -917,7 +918,15 @@ async function fetchClaudeQuota(
 export async function GET(request: NextRequest) {
   // Allow internal scheduler calls via management API key
   const internalKey = request.headers.get("x-internal-key");
-  const isInternalCall = internalKey !== null && MANAGEMENT_API_KEY !== undefined && internalKey === MANAGEMENT_API_KEY;
+  const isInternalCall = (() => {
+    if (!internalKey || !MANAGEMENT_API_KEY) return false;
+    if (internalKey.length !== MANAGEMENT_API_KEY.length) return false;
+    try {
+      return timingSafeEqual(Buffer.from(internalKey), Buffer.from(MANAGEMENT_API_KEY));
+    } catch {
+      return false;
+    }
+  })();
 
   if (!isInternalCall) {
     const session = await verifySession();

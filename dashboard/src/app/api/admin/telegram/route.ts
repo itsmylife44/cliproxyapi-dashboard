@@ -130,8 +130,11 @@ export async function PUT(request: NextRequest) {
 
     // Validate threshold if provided
     if (threshold !== undefined) {
-      const thresholdNum =
-        typeof threshold === "number" ? threshold : parseInt(String(threshold), 10);
+      const thresholdStr = String(threshold);
+      if (!/^\d+$/.test(thresholdStr)) {
+        return Errors.validation("Threshold must be a valid integer.");
+      }
+      const thresholdNum = parseInt(thresholdStr, 10);
       if (
         Number.isNaN(thresholdNum) ||
         !Number.isInteger(thresholdNum) ||
@@ -159,8 +162,8 @@ export async function PUT(request: NextRequest) {
     }
 
     if (threshold !== undefined) {
-      const thresholdVal =
-        typeof threshold === "number" ? threshold : parseInt(String(threshold), 10);
+      const thresholdStr = String(threshold);
+      const thresholdVal = parseInt(thresholdStr, 10);
       updates.push({
         key: SETTING_KEYS.THRESHOLD,
         value: String(thresholdVal),
@@ -184,13 +187,15 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    for (const { key, value } of updates) {
-      await prisma.systemSetting.upsert({
-        where: { key },
-        create: { key, value },
-        update: { value },
-      });
-    }
+    await prisma.$transaction(
+      updates.map(({ key, value }) =>
+        prisma.systemSetting.upsert({
+          where: { key },
+          create: { key, value },
+          update: { value },
+        })
+      )
+    );
 
     logAuditAsync({
       userId: authResult.userId,

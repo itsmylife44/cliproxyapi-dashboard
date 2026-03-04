@@ -49,8 +49,8 @@ export default function DashboardError({ error, reset }: ErrorProps) {
           <Button variant="primary" onClick={reset}>
             Try Again
           </Button>
-          <Link href="/dashboard">
-            <Button variant="secondary">Go to Dashboard</Button>
+          <Link href="/dashboard" className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 glass-button-secondary text-slate-100">
+            Go to Dashboard
           </Link>
         </div>
       </div>

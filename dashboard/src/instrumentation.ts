@@ -4,8 +4,16 @@
  * The alert system has a 1-hour cooldown, so even with 5-min checks,
  * at most 1 alert per hour is sent.
  */
+
+// Idempotency guard for HMR in dev — prevents duplicate intervals
+const globalForScheduler = globalThis as typeof globalThis & {
+  __quotaSchedulerRegistered?: boolean;
+};
+
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  if (globalForScheduler.__quotaSchedulerRegistered) return;
+  globalForScheduler.__quotaSchedulerRegistered = true;
 
   // Delay start to let the server fully initialize
   const STARTUP_DELAY_MS = 30_000; // 30 seconds
@@ -17,14 +25,22 @@ export async function register() {
 }
 
 function startQuotaAlertScheduler(intervalMs: number) {
+  let isRunning = false;
+
   // Dynamic imports to avoid loading server modules at build time
   const run = async () => {
+    if (isRunning) return;
+    isRunning = true;
+
     try {
       const { runAlertCheck } = await import("@/lib/quota-alerts");
       const { logger } = await import("@/lib/logger");
 
       const managementKey = process.env.MANAGEMENT_API_KEY;
-      if (!managementKey) return;
+      if (!managementKey) {
+        logger.warn("Quota alert scheduler: MANAGEMENT_API_KEY not set, skipping");
+        return;
+      }
 
       const port = process.env.PORT ?? "3000";
       const baseUrl = process.env.NEXTAUTH_URL ?? process.env.DASHBOARD_URL ?? `http://localhost:${port}`;
@@ -50,8 +66,16 @@ function startQuotaAlertScheduler(intervalMs: number) {
           "Scheduled quota alert check: alerts sent"
         );
       }
-    } catch {
-      // Silent — scheduler should never crash the server
+    } catch (error) {
+      // Log but never crash — scheduler errors must not take down the server
+      try {
+        const { logger } = await import("@/lib/logger");
+        logger.error({ error }, "Quota alert scheduler error");
+      } catch {
+        // If even the logger import fails, silently continue
+      }
+    } finally {
+      isRunning = false;
     }
   };
 

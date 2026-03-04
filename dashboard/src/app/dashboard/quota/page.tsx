@@ -289,6 +289,7 @@ interface CheckAlertResult {
   skipped?: boolean;
   reason?: string;
   alertsSent?: number;
+  breachedCount?: number;
   accounts?: Array<{
     provider: string;
     account: string;
@@ -422,12 +423,18 @@ function TelegramAlertsSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        const msg = errData?.error?.message ?? errData?.error ?? "Check failed";
+        showToast(msg, "error");
+        return;
+      }
       const data = await res.json();
       setCheckResult(data);
       if (data.skipped) {
         showToast(`Check skipped: ${data.reason}`, "info");
-      } else if (data.alertsSent > 0) {
-        showToast(`${data.alertsSent} alert(s) sent`, "success");
+      } else if (data.breachedCount > 0) {
+        showToast(`Alert sent for ${data.breachedCount} account(s)`, "success");
       } else {
         showToast("All accounts above threshold", "success");
       }
@@ -583,7 +590,7 @@ function TelegramAlertsSection() {
         {checkResult && checkResult.accounts && checkResult.accounts.length > 0 && (
           <div className="mt-2 space-y-1 rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-              Check Result — {checkResult.alertsSent} alert(s) sent
+              Check Result — {checkResult.breachedCount ?? 0} account(s) breached
             </p>
             <div className="space-y-0.5">
               {checkResult.accounts.map((a) => (

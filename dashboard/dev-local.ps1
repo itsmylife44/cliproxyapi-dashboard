@@ -120,7 +120,7 @@ function Invoke-Migrations {
     $null = docker exec $PostgresContainer psql -U cliproxyapi -d cliproxyapi -tAc "SELECT 1 FROM _prisma_migrations LIMIT 1" 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Info "Fresh database detected, bootstrapping schema via prisma db push..."
-        npx prisma db push --accept-data-loss 2>&1 | Out-Null
+        npx prisma db push --accept-data-loss
 
         # Mark all existing migrations as applied
         $migrations = @(

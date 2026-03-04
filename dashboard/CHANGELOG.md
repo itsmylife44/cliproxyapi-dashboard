@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.49](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.48...dashboard-v0.1.49) (2026-03-04)
+
+
+### Features
+
+* add dashboard UX improvements and Telegram quota alerts ([#108](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/108)) ([57e7e68](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/57e7e6862a4c382c13fcd21ea3844cff4118a217))
+
 ## [0.1.48](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.47...dashboard-v0.1.48) (2026-03-03)
 
 

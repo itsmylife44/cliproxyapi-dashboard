@@ -72,11 +72,57 @@ function inferModelDefinition(modelId: string, ownedBy: string): ModelDefinition
   };
 }
 
+/**
+ * Deduplicate proxy models: prefer dot-notation (claude-opus-4.1) over
+ * hyphenated (claude-opus-4-1), and drop dated variants (-20250514) when
+ * the undated version exists. The proxy rotates accounts regardless of
+ * which alias is used, so duplicates just clutter the config.
+ */
+function deduplicateProxyModels(proxyModels: ProxyModel[]): ProxyModel[] {
+  const idSet = new Set(proxyModels.map((m) => m.id));
+  
+  return proxyModels.filter((pm) => {
+    const id = pm.id;
+    
+    // 1. Drop dated variants (-YYYYMMDD) if the undated base exists
+    const dateMatch = id.match(/^(.+)-\d{8}$/);
+    if (dateMatch) {
+      const base = dateMatch[1];
+      if (idSet.has(base)) return false;
+      // Also check if dot-notation of the base exists
+      // e.g. claude-opus-4-1-20250805 -> base claude-opus-4-1 -> check claude-opus-4.1
+      const dotBase = hyphenatedToDot(base);
+      if (dotBase !== base && idSet.has(dotBase)) return false;
+    }
+    
+    // 2. Drop hyphenated version if dot-notation exists
+    //    e.g. claude-opus-4-1 -> claude-opus-4.1 exists -> drop
+    const dotVersion = hyphenatedToDot(id);
+    if (dotVersion !== id && idSet.has(dotVersion)) return false;
+    
+    return true;
+  });
+}
+
+/**
+ * Convert hyphenated version numbers to dot notation.
+ * claude-opus-4-1 -> claude-opus-4.1
+ * claude-sonnet-4-5 -> claude-sonnet-4.5
+ * Only converts trailing number-number patterns that look like versions.
+ */
+function hyphenatedToDot(id: string): string {
+  // Match patterns like -4-1, -4-5, -3-7 at the end or before another hyphen segment
+  // Be careful not to convert things like gpt-4o-2024 or claude-3-5-haiku
+  // Strategy: convert the LAST occurrence of digit-digit that looks like a version
+  return id.replace(/(\d+)-(\d+)$/, "$1.$2");
+}
+
 export function buildAvailableModelsFromProxy(
   proxyModels: ProxyModel[]
 ): Record<string, ModelDefinition> {
+  const deduplicated = deduplicateProxyModels(proxyModels);
   const models: Record<string, ModelDefinition> = {};
-  for (const pm of proxyModels) {
+  for (const pm of deduplicated) {
     models[pm.id] = inferModelDefinition(pm.id, pm.owned_by);
   }
   return models;

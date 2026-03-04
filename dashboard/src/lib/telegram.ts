@@ -99,7 +99,7 @@ export function formatQuotaAlertBatch(
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
+    hourCycle: "h23",
   });
 
   // Group by provider for organized display

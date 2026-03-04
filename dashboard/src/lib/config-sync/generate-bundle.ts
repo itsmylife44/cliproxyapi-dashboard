@@ -297,9 +297,13 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
    const proxyModels = apiKey !== "no-api-key-create-one-in-dashboard"
      ? await fetchProxyModelsCached(internalProxyUrl, apiKey)
      : [];
+   const nativeModels = buildAvailableModelsFromProxy(proxyModels);
+   const aliasModels = extractOAuthModelAliases(managementConfig as ConfigData | null, oauthAccounts);
+   // Native proxy models take priority over OAuth aliases with the same ID
+   // This prevents e.g. a github-copilot fork alias from overwriting the native Claude model
    const allModels: Record<string, ModelDefinition> = {
-     ...buildAvailableModelsFromProxy(proxyModels),
-     ...extractOAuthModelAliases(managementConfig as ConfigData | null, oauthAccounts),
+     ...aliasModels,
+     ...nativeModels,
    };
 
    const filteredModels = Object.fromEntries(

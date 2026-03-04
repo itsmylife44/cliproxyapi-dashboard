@@ -99,6 +99,9 @@ interface OAuthAccountWithOwnership {
   ownerUsername: string | null;
   ownerUserId: string | null;
   isOwn: boolean;
+  status: "active" | "error" | "disabled" | string;
+  statusMessage: string | null;
+  unavailable: boolean;
 }
 
 interface ListOAuthResult {
@@ -772,6 +775,9 @@ export async function listOAuthWithOwnership(
       provider?: string;
       type?: string;
       email?: string;
+      status?: string;
+      status_message?: string;
+      unavailable?: boolean;
     }>;
 
     const accountNames = authFiles.map((file) => file.name);
@@ -796,7 +802,9 @@ export async function listOAuthWithOwnership(
          ownerUsername: canSeeDetails ? ownership?.user.username || null : null,
          ownerUserId: canSeeDetails ? ownership?.user.id || null : null,
          isOwn,
-       };
+         status: file.status || "active",
+         statusMessage: file.status_message || null,
+         unavailable: file.unavailable ?? false,
      });
 
     return { ok: true, accounts: accountsWithOwnership };

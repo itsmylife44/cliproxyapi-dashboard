@@ -897,7 +897,7 @@ export default function QuotaPage() {
                         />
                         <Tooltip
                           {...TOOLTIP_STYLE}
-                          formatter={(value: number | null, name: string, props: { payload: { healthy: number; total: number; issues: number } }) => {
+                          formatter={(value, name, props) => {
                             if (value === null) return ["-", name];
                             const label = name === "longTerm" ? "Long-Term" : "Short-Term";
                             const extra = name === "longTerm" ? ` (${props.payload.healthy}/${props.payload.total} healthy${props.payload.issues > 0 ? `, ${props.payload.issues} issues` : ""})` : "";

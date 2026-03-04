@@ -17,6 +17,8 @@ const SETTING_KEYS = {
   THRESHOLD: "telegram_quota_threshold",
   ENABLED: "telegram_alerts_enabled",
   PROVIDERS: "telegram_alert_providers",
+  CHECK_INTERVAL: "telegram_check_interval",
+  COOLDOWN: "telegram_cooldown",
 } as const;
 
 async function requireAdmin(): Promise<
@@ -60,6 +62,8 @@ export async function GET() {
             SETTING_KEYS.THRESHOLD,
             SETTING_KEYS.ENABLED,
             SETTING_KEYS.PROVIDERS,
+            SETTING_KEYS.CHECK_INTERVAL,
+            SETTING_KEYS.COOLDOWN,
           ],
         },
       },
@@ -78,12 +82,17 @@ export async function GET() {
     const providersRaw = settingMap.get(SETTING_KEYS.PROVIDERS) ?? "";
     const providers = providersRaw ? providersRaw.split(",").filter(Boolean) : [];
 
+    const checkIntervalRaw = parseInt(settingMap.get(SETTING_KEYS.CHECK_INTERVAL) ?? "", 10);
+    const cooldownRaw = parseInt(settingMap.get(SETTING_KEYS.COOLDOWN) ?? "", 10);
+
     return NextResponse.json({
       botToken: rawToken ? maskToken(rawToken) : "",
       chatId,
       threshold: Number.isNaN(threshold) ? 20 : threshold,
       enabled,
       providers,
+      checkInterval: !Number.isNaN(checkIntervalRaw) ? checkIntervalRaw : 5,
+      cooldown: !Number.isNaN(cooldownRaw) ? cooldownRaw : 60,
     });
   } catch (error) {
     return Errors.internal("fetch telegram settings", error);
@@ -145,6 +154,23 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // Validate checkInterval if provided (in minutes)
+    const { checkInterval, cooldown } = body;
+    if (checkInterval !== undefined) {
+      const val = Number(checkInterval);
+      if (!Number.isInteger(val) || val < 1 || val > 1440) {
+        return Errors.validation("Check interval must be an integer between 1 and 1440 minutes.");
+      }
+    }
+
+    // Validate cooldown if provided (in minutes)
+    if (cooldown !== undefined) {
+      const val = Number(cooldown);
+      if (!Number.isInteger(val) || val < 1 || val > 1440) {
+        return Errors.validation("Cooldown must be an integer between 1 and 1440 minutes.");
+      }
+    }
+
     // Upsert each provided setting
     const updates: Array<{ key: string; value: string }> = [];
 
@@ -184,6 +210,22 @@ export async function PUT(request: NextRequest) {
       updates.push({
         key: SETTING_KEYS.PROVIDERS,
         value: validProviders.join(","),
+      });
+    }
+
+    // Save check interval if provided
+    if (checkInterval !== undefined) {
+      updates.push({
+        key: SETTING_KEYS.CHECK_INTERVAL,
+        value: String(Number(checkInterval)),
+      });
+    }
+
+    // Save cooldown if provided
+    if (cooldown !== undefined) {
+      updates.push({
+        key: SETTING_KEYS.COOLDOWN,
+        value: String(Number(cooldown)),
       });
     }
 

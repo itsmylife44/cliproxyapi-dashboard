@@ -1,11 +1,10 @@
 /**
  * Node.js-only instrumentation — imported conditionally from instrumentation.ts.
- * Starts a periodic quota alert checker that runs every 5 minutes.
- * The alert system has a 1-hour cooldown, so even with 5-min checks,
- * at most 1 alert per hour is sent.
+ * Starts a periodic quota alert checker with a configurable interval.
+ * Both the check interval and alert cooldown are read from DB settings.
  */
 
-import { runAlertCheck } from "@/lib/quota-alerts";
+import { runAlertCheck, getCheckIntervalMs } from "@/lib/quota-alerts";
 import { logger } from "@/lib/logger";
 
 // Idempotency guard for HMR in dev — prevents duplicate intervals
@@ -19,14 +18,13 @@ export function registerNodeInstrumentation() {
 
   // Delay start to let the server fully initialize
   const STARTUP_DELAY_MS = 30_000; // 30 seconds
-  const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
   setTimeout(() => {
-    startQuotaAlertScheduler(CHECK_INTERVAL_MS);
+    startQuotaAlertScheduler();
   }, STARTUP_DELAY_MS);
 }
 
-function startQuotaAlertScheduler(intervalMs: number) {
+function startQuotaAlertScheduler() {
   let isRunning = false;
 
   const run = async () => {
@@ -72,6 +70,17 @@ function startQuotaAlertScheduler(intervalMs: number) {
     }
   };
 
-  run();
-  setInterval(run, intervalMs);
+  // Use recursive setTimeout so interval can be re-read from DB each cycle
+  const scheduleNext = async () => {
+    await run();
+    try {
+      const intervalMs = await getCheckIntervalMs();
+      setTimeout(scheduleNext, intervalMs);
+    } catch {
+      // Fallback to 5 minutes if DB read fails
+      setTimeout(scheduleNext, 5 * 60 * 1000);
+    }
+  };
+
+  scheduleNext();
 }

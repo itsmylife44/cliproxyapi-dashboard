@@ -274,6 +274,8 @@ interface TelegramSettings {
   threshold: number;
   enabled: boolean;
   providers: string[];
+  checkInterval: number;
+  cooldown: number;
 }
 
 const ALERT_PROVIDERS = [
@@ -309,6 +311,8 @@ function TelegramAlertsSection() {
     threshold: 20,
     enabled: false,
     providers: ALERT_PROVIDERS.map((p) => p.key),
+    checkInterval: 5,
+    cooldown: 60,
   });
   const [showToken, setShowToken] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -334,6 +338,8 @@ function TelegramAlertsSection() {
             threshold: data.threshold ?? 20,
             enabled: data.enabled ?? false,
             providers: Array.isArray(data.providers) ? data.providers : ALERT_PROVIDERS.map((p) => p.key),
+            checkInterval: data.checkInterval ?? 5,
+            cooldown: data.cooldown ?? 60,
           });
         }
       } catch {
@@ -355,6 +361,8 @@ function TelegramAlertsSection() {
         threshold: settings.threshold,
         enabled: settings.enabled,
         providers: settings.providers,
+        checkInterval: settings.checkInterval,
+        cooldown: settings.cooldown,
       };
       // Only send botToken if user changed it (not the masked version)
       if (settings.botToken && !settings.botToken.startsWith("*")) {
@@ -377,6 +385,8 @@ function TelegramAlertsSection() {
             threshold: refreshData.threshold ?? 20,
             enabled: refreshData.enabled ?? false,
             providers: Array.isArray(refreshData.providers) ? refreshData.providers : ALERT_PROVIDERS.map((p) => p.key),
+            checkInterval: refreshData.checkInterval ?? 5,
+            cooldown: refreshData.cooldown ?? 60,
           });
           setShowToken(false);
         }
@@ -532,6 +542,46 @@ function TelegramAlertsSection() {
             placeholder="20"
           />
           <p className="text-[10px] text-slate-500">Alert when any account drops below this capacity</p>
+        </div>
+
+        {/* Check Interval */}
+        <div className="space-y-1">
+          <label htmlFor="tg-check-interval" className="text-xs font-medium text-slate-400">Check Interval (minutes)</label>
+          <Input
+            type="number"
+            name="tg-check-interval"
+            value={String(settings.checkInterval)}
+            onChange={(v) => {
+              const num = parseInt(v, 10);
+              if (!Number.isNaN(num) && num >= 1 && num <= 1440) {
+                setSettings((s) => ({ ...s, checkInterval: num }));
+              } else if (v === "") {
+                setSettings((s) => ({ ...s, checkInterval: 1 }));
+              }
+            }}
+            placeholder="5"
+          />
+          <p className="text-[10px] text-slate-500">How often to check quota levels (1–1440 min, default: 5)</p>
+        </div>
+
+        {/* Cooldown */}
+        <div className="space-y-1">
+          <label htmlFor="tg-cooldown" className="text-xs font-medium text-slate-400">Cooldown (minutes)</label>
+          <Input
+            type="number"
+            name="tg-cooldown"
+            value={String(settings.cooldown)}
+            onChange={(v) => {
+              const num = parseInt(v, 10);
+              if (!Number.isNaN(num) && num >= 1 && num <= 1440) {
+                setSettings((s) => ({ ...s, cooldown: num }));
+              } else if (v === "") {
+                setSettings((s) => ({ ...s, cooldown: 1 }));
+              }
+            }}
+            placeholder="60"
+          />
+          <p className="text-[10px] text-slate-500">Minimum time between notifications (1–1440 min, default: 60)</p>
         </div>
 
         {/* Provider selection */}

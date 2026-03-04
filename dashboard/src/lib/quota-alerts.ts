@@ -11,9 +11,12 @@ const SETTING_KEYS = {
   ENABLED: "telegram_alerts_enabled",
   LAST_ALERT_TIME: "telegram_last_alert_time",
   PROVIDERS: "telegram_alert_providers",
+  CHECK_INTERVAL: "telegram_check_interval",
+  COOLDOWN: "telegram_cooldown",
 } as const;
 
-const COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+const DEFAULT_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 interface QuotaGroup {
   id: string;
@@ -115,6 +118,7 @@ export async function runAlertCheck(
           SETTING_KEYS.ENABLED,
           SETTING_KEYS.LAST_ALERT_TIME,
           SETTING_KEYS.PROVIDERS,
+          SETTING_KEYS.COOLDOWN,
         ],
       },
     },
@@ -135,6 +139,9 @@ export async function runAlertCheck(
   const providersRaw = settingMap.get(SETTING_KEYS.PROVIDERS) ?? "";
   const selectedProviders = providersRaw ? providersRaw.split(",").filter(Boolean) : [];
 
+  const cooldownRaw = parseInt(settingMap.get(SETTING_KEYS.COOLDOWN) ?? "", 10);
+  const cooldownMs = !Number.isNaN(cooldownRaw) && cooldownRaw >= 1 ? cooldownRaw * 60 * 1000 : DEFAULT_COOLDOWN_MS;
+
   // 2. Check if alerts are enabled and configured
   if (!enabled) {
     return { skipped: true, reason: "alerts disabled" };
@@ -148,11 +155,12 @@ export async function runAlertCheck(
   const lastAlertTimeStr = settingMap.get(SETTING_KEYS.LAST_ALERT_TIME);
   if (lastAlertTimeStr) {
     const lastAlertTime = parseInt(lastAlertTimeStr, 10);
-    if (!Number.isNaN(lastAlertTime) && Date.now() - lastAlertTime < COOLDOWN_MS) {
+    if (!Number.isNaN(lastAlertTime) && Date.now() - lastAlertTime < cooldownMs) {
+      const cooldownMinutes = Math.round(cooldownMs / 60000);
       return {
         skipped: true,
-        reason: "cooldown active (1 alert per hour)",
-        nextAlertAvailable: new Date(lastAlertTime + COOLDOWN_MS).toISOString(),
+        reason: `cooldown active (1 alert per ${cooldownMinutes} min)`,
+        nextAlertAvailable: new Date(lastAlertTime + cooldownMs).toISOString(),
       };
     }
   }
@@ -219,4 +227,46 @@ export async function runAlertCheck(
   }
 
   return { checked: true, alertsSent: messageSent, breachedCount, accounts: accountsSummary };
+}
+
+/**
+ * Read the configured check interval from DB (in milliseconds).
+ * Falls back to DEFAULT_CHECK_INTERVAL_MS if not set.
+ */
+export async function getCheckIntervalMs(): Promise<number> {
+  try {
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: SETTING_KEYS.CHECK_INTERVAL },
+    });
+    if (setting) {
+      const minutes = parseInt(setting.value, 10);
+      if (!Number.isNaN(minutes) && minutes >= 1) {
+        return minutes * 60 * 1000;
+      }
+    }
+  } catch {
+    // fall through to default
+  }
+  return DEFAULT_CHECK_INTERVAL_MS;
+}
+
+/**
+ * Read the configured cooldown from DB (in milliseconds).
+ * Falls back to DEFAULT_COOLDOWN_MS if not set.
+ */
+export async function getCooldownMs(): Promise<number> {
+  try {
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: SETTING_KEYS.COOLDOWN },
+    });
+    if (setting) {
+      const minutes = parseInt(setting.value, 10);
+      if (!Number.isNaN(minutes) && minutes >= 1) {
+        return minutes * 60 * 1000;
+      }
+    }
+  } catch {
+    // fall through to default
+  }
+  return DEFAULT_COOLDOWN_MS;
 }

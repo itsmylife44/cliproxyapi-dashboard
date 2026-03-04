@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.50](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.49...dashboard-v0.1.50) (2026-03-04)
+
+
+### Bug Fixes
+
+* eliminate Edge Runtime warnings by splitting instrumentation into Node.js-only module ([0bea7a7](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/0bea7a718a873756b0209ed38f49a3d4d0512323))
+
 ## [0.1.49](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.48...dashboard-v0.1.49) (2026-03-04)
 
 

@@ -98,14 +98,10 @@ function Wait-ForCliProxyApi {
 
     $maxAttempts = 60
     for ($i = 0; $i -lt $maxAttempts; $i++) {
-        try {
-            $response = Invoke-WebRequest -Uri "http://localhost:28317/" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
-            if ($response.StatusCode -eq 200) {
-                Write-OK "CLIProxyAPI is ready"
-                return
-            }
-        } catch {
-            # not ready yet
+        $null = curl.exe -s -f -o NUL http://127.0.0.1:28317/ 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-OK "CLIProxyAPI is ready"
+            return
         }
         Start-Sleep -Seconds 1
         Write-Host "." -NoNewline

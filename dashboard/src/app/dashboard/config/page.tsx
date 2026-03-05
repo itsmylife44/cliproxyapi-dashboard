@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import yaml from "js-yaml";
 
 // Config shape (excluding fields managed elsewhere)
 interface StreamingConfig {
@@ -184,10 +185,10 @@ export default function ConfigPage() {
     setSaving(true);
 
     try {
-      const res = await fetch("/api/management/config", {
+      const res = await fetch("/api/management/config.yaml", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+        headers: { "Content-Type": "text/yaml" },
+        body: yaml.dump(config, { lineWidth: -1, noRefs: true }),
       });
 
       if (!res.ok) {

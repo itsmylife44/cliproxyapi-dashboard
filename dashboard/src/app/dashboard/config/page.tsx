@@ -22,6 +22,46 @@ interface RoutingConfig {
   strategy: string;
 }
 
+interface TlsConfig {
+  enable: boolean;
+  cert: string;
+  key: string;
+}
+
+interface PprofConfig {
+  enable: boolean;
+  addr: string;
+}
+
+interface ClaudeHeaderDefaults {
+  "user-agent": string;
+  "package-version": string;
+  "runtime-version": string;
+  timeout: string;
+}
+
+interface AmpcodeConfig {
+  "upstream-url": string;
+  "upstream-api-key": string;
+  "restrict-management-to-localhost": boolean;
+  "model-mappings": unknown;
+  "force-model-mappings": boolean;
+}
+
+interface PayloadConfig {
+  default: unknown;
+  "default-raw": unknown;
+  override: unknown;
+  "override-raw": unknown;
+  filter: unknown;
+}
+
+interface OAuthModelAliasEntry {
+  name: string;
+  alias: string;
+  fork?: boolean;
+}
+
 interface Config {
   "proxy-url": string;
   "force-model-prefix": boolean;
@@ -37,6 +77,19 @@ interface Config {
   "quota-exceeded": QuotaExceededConfig;
   routing: RoutingConfig;
   "ws-auth": boolean;
+  "disable-cooling": boolean;
+  "request-log": boolean;
+  "max-retry-credentials": number;
+  "passthrough-headers": boolean;
+  "incognito-browser": boolean;
+  "kiro-preferred-endpoint": string;
+  kiro: unknown;
+  tls: TlsConfig;
+  pprof: PprofConfig;
+  "claude-header-defaults": ClaudeHeaderDefaults;
+  ampcode: AmpcodeConfig;
+  payload: PayloadConfig;
+  "oauth-model-alias": Record<string, OAuthModelAliasEntry[]>;
 }
 
 // Toggle Switch Component
@@ -144,6 +197,7 @@ export default function ConfigPage() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
 
   const hasUnsavedChanges = config && originalConfig && JSON.stringify(config) !== JSON.stringify(originalConfig);
@@ -250,6 +304,71 @@ export default function ConfigPage() {
         ...config.routing,
         [key]: value,
       },
+    });
+  };
+
+  const updateTlsConfig = (key: keyof TlsConfig, value: string | boolean) => {
+    if (!config) return;
+    setConfig({ ...config, tls: { ...config.tls, [key]: value } });
+  };
+
+  const updatePprofConfig = (key: keyof PprofConfig, value: string | boolean) => {
+    if (!config) return;
+    setConfig({ ...config, pprof: { ...config.pprof, [key]: value } });
+  };
+
+  const updateClaudeHeaderDefaults = (key: keyof ClaudeHeaderDefaults, value: string) => {
+    if (!config) return;
+    setConfig({ ...config, "claude-header-defaults": { ...config["claude-header-defaults"], [key]: value } });
+  };
+
+  const updateAmpcodeConfig = (key: keyof AmpcodeConfig, value: string | boolean | unknown) => {
+    if (!config) return;
+    setConfig({ ...config, ampcode: { ...config.ampcode, [key]: value } });
+  };
+
+  const updatePayloadConfig = (key: keyof PayloadConfig, value: unknown) => {
+    if (!config) return;
+    setConfig({ ...config, payload: { ...config.payload, [key]: value } });
+  };
+
+  const toggleProviderExpanded = (provider: string) => {
+    setExpandedProviders((prev) => ({ ...prev, [provider]: !prev[provider] }));
+  };
+
+  const updateOAuthAliasEntry = (
+    provider: string,
+    index: number,
+    field: keyof OAuthModelAliasEntry,
+    value: string | boolean
+  ) => {
+    if (!config) return;
+    const aliases = config["oauth-model-alias"] ?? {};
+    const entries = [...(aliases[provider] ?? [])];
+    entries[index] = { ...entries[index], [field]: value };
+    setConfig({
+      ...config,
+      "oauth-model-alias": { ...aliases, [provider]: entries },
+    });
+  };
+
+  const addOAuthAliasEntry = (provider: string) => {
+    if (!config) return;
+    const aliases = config["oauth-model-alias"] ?? {};
+    const entries = [...(aliases[provider] ?? []), { name: "", alias: "" }];
+    setConfig({
+      ...config,
+      "oauth-model-alias": { ...aliases, [provider]: entries },
+    });
+  };
+
+  const removeOAuthAliasEntry = (provider: string, index: number) => {
+    if (!config) return;
+    const aliases = config["oauth-model-alias"] ?? {};
+    const entries = (aliases[provider] ?? []).filter((_, i) => i !== index);
+    setConfig({
+      ...config,
+      "oauth-model-alias": { ...aliases, [provider]: entries },
     });
   };
 
@@ -380,6 +499,46 @@ export default function ConfigPage() {
                 onChange={(value) => updateConfig("ws-auth", value)}
               />
             </ConfigField>
+
+            <ConfigField
+              label="Disable Cooling"
+              description="Disable cooldown between retry attempts"
+            >
+              <Toggle
+                enabled={config["disable-cooling"] ?? false}
+                onChange={(value) => updateConfig("disable-cooling", value)}
+              />
+            </ConfigField>
+
+            <ConfigField
+              label="Request Log"
+              description="Log all incoming requests"
+            >
+              <Toggle
+                enabled={config["request-log"] ?? false}
+                onChange={(value) => updateConfig("request-log", value)}
+              />
+            </ConfigField>
+
+            <ConfigField
+              label="Passthrough Headers"
+              description="Forward client headers to upstream providers"
+            >
+              <Toggle
+                enabled={config["passthrough-headers"] ?? false}
+                onChange={(value) => updateConfig("passthrough-headers", value)}
+              />
+            </ConfigField>
+
+            <ConfigField
+              label="Incognito Browser"
+              description="Use incognito mode for browser-based OAuth flows"
+            >
+              <Toggle
+                enabled={config["incognito-browser"] ?? false}
+                onChange={(value) => updateConfig("incognito-browser", value)}
+              />
+            </ConfigField>
           </div>
       </section>
 
@@ -502,6 +661,19 @@ export default function ConfigPage() {
                 }
               />
             </ConfigField>
+
+            <ConfigField
+              label="Max Retry Credentials"
+              description="Maximum credential rotation retries (0 = disabled)"
+            >
+              <Input
+                type="number"
+                name="max-retry-credentials"
+                value={String(config["max-retry-credentials"] ?? 0)}
+                onChange={(value) => updateConfig("max-retry-credentials", Number(value))}
+                className="font-mono"
+              />
+            </ConfigField>
           </div>
       </section>
 
@@ -555,6 +727,347 @@ export default function ConfigPage() {
               />
             </ConfigField>
           </div>
+      </section>
+
+      {/* TLS / HTTPS */}
+      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <SectionHeader title="TLS / HTTPS" />
+        <div className="rounded-sm border border-slate-600/40 bg-slate-800/30 p-3 text-xs text-slate-400">
+          TLS is typically handled by Caddy reverse proxy. Only configure this for direct TLS termination.
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ConfigField
+            label="Enable TLS"
+            description="Enable TLS"
+          >
+            <Toggle
+              enabled={config.tls?.enable ?? false}
+              onChange={(value) => updateTlsConfig("enable", value)}
+            />
+          </ConfigField>
+
+          <ConfigField
+            label="Certificate Path"
+            description="Path to TLS certificate file"
+          >
+            <Input
+              type="text"
+              name="tls-cert"
+              value={config.tls?.cert ?? ""}
+              onChange={(value) => updateTlsConfig("cert", value)}
+              placeholder="/path/to/cert.pem"
+              className="font-mono"
+            />
+          </ConfigField>
+
+          <ConfigField
+            label="Private Key Path"
+            description="Path to TLS private key file"
+          >
+            <Input
+              type="text"
+              name="tls-key"
+              value={config.tls?.key ?? ""}
+              onChange={(value) => updateTlsConfig("key", value)}
+              placeholder="/path/to/key.pem"
+              className="font-mono"
+            />
+          </ConfigField>
+        </div>
+      </section>
+
+      {/* Kiro */}
+      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <SectionHeader title="Kiro" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ConfigField
+            label="Preferred Endpoint"
+            description="Preferred Kiro API endpoint URL"
+          >
+            <Input
+              type="text"
+              name="kiro-preferred-endpoint"
+              value={config["kiro-preferred-endpoint"] ?? ""}
+              onChange={(value) => updateConfig("kiro-preferred-endpoint", value)}
+              placeholder="https://..."
+              className="font-mono"
+            />
+          </ConfigField>
+        </div>
+      </section>
+
+      {/* Claude Header Defaults */}
+      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <SectionHeader title="Claude Header Defaults" />
+        <p className="text-xs text-slate-500">Custom headers sent with all Claude API requests</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ConfigField
+            label="User-Agent"
+            description="Custom User-Agent header"
+          >
+            <Input
+              type="text"
+              name="claude-header-user-agent"
+              value={config["claude-header-defaults"]?.["user-agent"] ?? ""}
+              onChange={(value) => updateClaudeHeaderDefaults("user-agent", value)}
+              className="font-mono"
+            />
+          </ConfigField>
+
+          <ConfigField
+            label="Package Version"
+            description="Package version header"
+          >
+            <Input
+              type="text"
+              name="claude-header-package-version"
+              value={config["claude-header-defaults"]?.["package-version"] ?? ""}
+              onChange={(value) => updateClaudeHeaderDefaults("package-version", value)}
+              className="font-mono"
+            />
+          </ConfigField>
+
+          <ConfigField
+            label="Runtime Version"
+            description="Runtime version header"
+          >
+            <Input
+              type="text"
+              name="claude-header-runtime-version"
+              value={config["claude-header-defaults"]?.["runtime-version"] ?? ""}
+              onChange={(value) => updateClaudeHeaderDefaults("runtime-version", value)}
+              className="font-mono"
+            />
+          </ConfigField>
+
+          <ConfigField
+            label="Timeout"
+            description="Request timeout header"
+          >
+            <Input
+              type="text"
+              name="claude-header-timeout"
+              value={config["claude-header-defaults"]?.["timeout"] ?? ""}
+              onChange={(value) => updateClaudeHeaderDefaults("timeout", value)}
+              className="font-mono"
+            />
+          </ConfigField>
+        </div>
+      </section>
+
+      {/* Amp Code */}
+      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <SectionHeader title="Amp Code" />
+        <p className="text-xs text-slate-500">Configuration for Amp Code upstream integration</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ConfigField
+            label="Upstream URL"
+            description="Upstream Amp Code URL"
+          >
+            <Input
+              type="text"
+              name="ampcode-upstream-url"
+              value={config.ampcode?.["upstream-url"] ?? ""}
+              onChange={(value) => updateAmpcodeConfig("upstream-url", value)}
+              className="font-mono"
+            />
+          </ConfigField>
+
+          <ConfigField
+            label="Upstream API Key"
+            description="Upstream API key"
+          >
+            <Input
+              type="password"
+              name="ampcode-upstream-api-key"
+              value={config.ampcode?.["upstream-api-key"] ?? ""}
+              onChange={(value) => updateAmpcodeConfig("upstream-api-key", value)}
+              className="font-mono"
+            />
+          </ConfigField>
+
+          <ConfigField
+            label="Restrict Management to Localhost"
+            description="Restrict management API to localhost only"
+          >
+            <Toggle
+              enabled={config.ampcode?.["restrict-management-to-localhost"] ?? false}
+              onChange={(value) => updateAmpcodeConfig("restrict-management-to-localhost", value)}
+            />
+          </ConfigField>
+
+          <ConfigField
+            label="Force Model Mappings"
+            description="Force model mappings"
+          >
+            <Toggle
+              enabled={config.ampcode?.["force-model-mappings"] ?? false}
+              onChange={(value) => updateAmpcodeConfig("force-model-mappings", value)}
+            />
+          </ConfigField>
+        </div>
+      </section>
+
+      {/* Profiling (pprof) */}
+      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <SectionHeader title="Profiling (pprof)" />
+        <div className="rounded-sm border border-slate-600/40 bg-slate-800/30 p-3 text-xs text-slate-400">
+          Go runtime profiling. Only enable for debugging.
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ConfigField
+            label="Enable pprof"
+            description="Enable pprof endpoint"
+          >
+            <Toggle
+              enabled={config.pprof?.enable ?? false}
+              onChange={(value) => updatePprofConfig("enable", value)}
+            />
+          </ConfigField>
+
+          <ConfigField
+            label="Listen Address"
+            description="pprof listen address"
+          >
+            <Input
+              type="text"
+              name="pprof-addr"
+              value={config.pprof?.addr ?? ""}
+              onChange={(value) => updatePprofConfig("addr", value)}
+              placeholder="127.0.0.1:8316"
+              className="font-mono"
+            />
+          </ConfigField>
+        </div>
+      </section>
+
+      {/* OAuth Model Aliases */}
+      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <SectionHeader title="OAuth Model Aliases" />
+        <p className="text-xs text-slate-500">Override model names for OAuth providers. Each provider has a list of model name mappings.</p>
+        <div className="space-y-3">
+          {Object.keys(config["oauth-model-alias"] ?? {}).length === 0 && (
+            <p className="text-xs text-slate-500 italic">No OAuth model aliases configured.</p>
+          )}
+          {Object.entries(config["oauth-model-alias"] ?? {}).map(([provider, entries]) => (
+            <div key={provider} className="rounded-sm border border-slate-700/50 bg-slate-900/40">
+              <button
+                type="button"
+                onClick={() => toggleProviderExpanded(provider)}
+                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-200 hover:bg-slate-800/30 transition-colors"
+              >
+                <span>{provider}</span>
+                <span className="text-slate-400 text-xs">
+                  {entries.length} {entries.length === 1 ? "alias" : "aliases"}
+                  <span className="ml-2">{expandedProviders[provider] ? "▲" : "▼"}</span>
+                </span>
+              </button>
+              {expandedProviders[provider] && (
+                <div className="border-t border-slate-700/50 p-4 space-y-3">
+                  {entries.length > 0 && (
+                    <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wide pb-1 border-b border-slate-700/30">
+                      <span>Name</span>
+                      <span>Alias</span>
+                      <span>Fork</span>
+                      <span></span>
+                    </div>
+                  )}
+                  {entries.map((entry, index) => (
+                    <div key={index} className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 items-center">
+                      <input
+                        type="text"
+                        value={entry.name}
+                        onChange={(e) => updateOAuthAliasEntry(provider, index, "name", e.target.value)}
+                        placeholder="model-name"
+                        className="rounded-sm border border-slate-700/70 bg-slate-900/50 px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30"
+                      />
+                      <input
+                        type="text"
+                        value={entry.alias}
+                        onChange={(e) => updateOAuthAliasEntry(provider, index, "alias", e.target.value)}
+                        placeholder="alias-name"
+                        className="rounded-sm border border-slate-700/70 bg-slate-900/50 px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30"
+                      />
+                      <input
+                        type="checkbox"
+                        checked={entry.fork ?? false}
+                        onChange={(e) => updateOAuthAliasEntry(provider, index, "fork", e.target.checked)}
+                        className="size-4 rounded accent-emerald-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeOAuthAliasEntry(provider, index)}
+                        className="flex size-6 items-center justify-center rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        title="Remove entry"
+                      >
+                        <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
+                          <path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => addOAuthAliasEntry(provider)}
+                    className="mt-1 flex items-center gap-1.5 rounded-sm border border-dashed border-slate-600/60 px-3 py-1.5 text-xs text-slate-400 hover:border-blue-400/50 hover:text-blue-400 transition-colors"
+                  >
+                    <svg viewBox="0 0 16 16" fill="currentColor" className="size-3">
+                      <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z" />
+                    </svg>
+                    Add entry
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Payload Manipulation */}
+      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+        <SectionHeader title="Payload Manipulation" />
+        <p className="text-xs text-slate-500">Override or filter request payloads sent to upstream providers. Values are JSON.</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {(["default", "default-raw", "override", "override-raw", "filter"] as const).map((key) => (
+            <ConfigField
+              key={key}
+              label={key}
+              description={
+                key === "default" ? "Default payload fields merged into every request" :
+                key === "default-raw" ? "Raw default payload (overrides default)" :
+                key === "override" ? "Payload fields that override request values" :
+                key === "override-raw" ? "Raw override payload (overrides override)" :
+                "Fields to filter/remove from requests"
+              }
+            >
+              <textarea
+                value={
+                  config.payload?.[key] == null
+                    ? ""
+                    : typeof config.payload[key] === "string"
+                      ? (config.payload[key] as string)
+                      : JSON.stringify(config.payload[key], null, 2)
+                }
+                onChange={(e) => {
+                  const raw = e.target.value.trim();
+                  if (raw === "") {
+                    updatePayloadConfig(key, null);
+                    return;
+                  }
+                  try {
+                    updatePayloadConfig(key, JSON.parse(raw));
+                  } catch {
+                    // allow partial editing — update as raw string temporarily
+                    updatePayloadConfig(key, raw);
+                  }
+                }}
+                placeholder="null"
+                spellCheck={false}
+                className="h-28 w-full rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 font-mono text-xs text-slate-200 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/30 transition-colors resize-y"
+              />
+            </ConfigField>
+          ))}
+        </div>
       </section>
 
       {/* Advanced: Raw JSON Editor */}

@@ -7,14 +7,11 @@ import { updateCheckCache, CACHE_TTL } from "@/lib/cache";
 const GITHUB_REPO = process.env.GITHUB_REPO || "itsmylife44/cliproxyapi-dashboard";
 const DASHBOARD_VERSION = process.env.DASHBOARD_VERSION || "dev";
 
-interface GitHubRelease {
-  tag_name: string;
-  name: string;
-  published_at: string;
-  html_url: string;
-  body: string;
-  prerelease: boolean;
-  draft: boolean;
+interface RemoteVersionData {
+  version: string;
+  tag: string;
+  releaseUrl: string;
+  releaseNotes: string;
 }
 
 interface VersionInfo {
@@ -25,10 +22,6 @@ interface VersionInfo {
   availableVersions: string[];
   releaseUrl: string | null;
   releaseNotes: string | null;
-}
-
-interface GitHubRunsResponse {
-  total_count?: number;
 }
 
 function parseVersion(tag: string): number[] | null {
@@ -49,16 +42,15 @@ function isNewerVersion(current: string, latest: string): boolean {
   return false;
 }
 
-async function getGitHubReleases(): Promise<GitHubRelease[]> {
-  const cacheKey = `github-releases:${GITHUB_REPO}`;
-  const cached = updateCheckCache.get(cacheKey) as GitHubRelease[] | null;
+async function getRemoteVersion(): Promise<RemoteVersionData | null> {
+  const cacheKey = `version-json:${GITHUB_REPO}`;
+  const cached = updateCheckCache.get(cacheKey) as RemoteVersionData | null;
   if (cached) return cached;
 
   const response = await fetch(
-    `https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=20`,
+    `https://raw.githubusercontent.com/${GITHUB_REPO}/main/version.json`,
     {
       headers: {
-        Accept: "application/vnd.github+json",
         "User-Agent": `cliproxyapi-dashboard/${DASHBOARD_VERSION}`,
       },
       cache: "no-store",
@@ -67,50 +59,12 @@ async function getGitHubReleases(): Promise<GitHubRelease[]> {
 
   if (!response.ok) {
     await response.body?.cancel();
-    // On rate limit (403), return empty array instead of throwing
-    if (response.status === 403 || response.status === 429) {
-      return [];
-    }
-    throw new Error(`GitHub API error: ${response.status}`);
+    return null;
   }
 
-  const releases: GitHubRelease[] = await response.json();
-  updateCheckCache.set(cacheKey, releases, CACHE_TTL.GITHUB_RELEASES);
-  return releases;
-}
-
-async function checkGitHubBuildStatus(): Promise<boolean> {
-  const cacheKey = `github-build-status:${GITHUB_REPO}`;
-  const cached = updateCheckCache.get(cacheKey) as boolean | null;
-  if (cached !== null) return cached;
-
-  try {
-    const headers = {
-      Accept: "application/vnd.github+json",
-      "User-Agent": `cliproxyapi-dashboard/${DASHBOARD_VERSION}`,
-    };
-    const base = `https://api.github.com/repos/${GITHUB_REPO}/actions/runs?per_page=1`;
-
-    const [inProgressRes, queuedRes] = await Promise.all([
-      fetch(`${base}&status=in_progress`, { cache: "no-store", headers }),
-      fetch(`${base}&status=queued`, { cache: "no-store", headers }),
-    ]);
-
-    const [inProgressData, queuedData]: GitHubRunsResponse[] = await Promise.all([
-      inProgressRes.ok
-        ? inProgressRes.json()
-        : inProgressRes.body?.cancel().then(() => ({})) ?? Promise.resolve({}),
-      queuedRes.ok
-        ? queuedRes.json()
-        : queuedRes.body?.cancel().then(() => ({})) ?? Promise.resolve({}),
-    ]);
-
-    const isBuilding = (inProgressData.total_count ?? 0) > 0 || (queuedData.total_count ?? 0) > 0;
-    updateCheckCache.set(cacheKey, isBuilding, CACHE_TTL.GITHUB_BUILD_STATUS);
-    return isBuilding;
-  } catch {
-    return false;
-  }
+  const data: RemoteVersionData = await response.json();
+  updateCheckCache.set(cacheKey, data, CACHE_TTL.VERSION_CHECK);
+  return data;
 }
 
 export async function GET() {
@@ -136,39 +90,22 @@ export async function GET() {
   }
 
   try {
-    const [releases, buildInProgress] = await Promise.all([
-      getGitHubReleases(),
-      checkGitHubBuildStatus(),
-    ]);
+    const remote = await getRemoteVersion();
 
-    const stableReleases = releases.filter((r) => !r.prerelease && !r.draft);
+    const latestVersion = remote?.tag ?? DASHBOARD_VERSION;
 
-    const sortedReleases = stableReleases
-      .filter((r) => parseVersion(r.tag_name) !== null)
-      .sort((a, b) => {
-        const aParts = parseVersion(a.tag_name)!;
-        const bParts = parseVersion(b.tag_name)!;
-        for (let i = 0; i < 3; i++) {
-          if (bParts[i] !== aParts[i]) return bParts[i] - aParts[i];
-        }
-        return 0;
-      });
-
-    const latestRelease = sortedReleases[0] ?? null;
-    const latestVersion = latestRelease?.tag_name ?? DASHBOARD_VERSION;
-
-    const updateAvailable = latestRelease
-      ? isNewerVersion(DASHBOARD_VERSION, latestRelease.tag_name)
+    const updateAvailable = remote
+      ? isNewerVersion(DASHBOARD_VERSION, remote.tag)
       : false;
 
     const versionInfo: VersionInfo = {
       currentVersion: DASHBOARD_VERSION,
       latestVersion,
-      updateAvailable: buildInProgress ? false : updateAvailable,
-      buildInProgress,
-      availableVersions: sortedReleases.slice(0, 10).map((r) => r.tag_name),
-      releaseUrl: latestRelease?.html_url ?? null,
-      releaseNotes: latestRelease?.body?.slice(0, 2000) ?? null,
+      updateAvailable,
+      buildInProgress: false,
+      availableVersions: remote ? [remote.tag] : [],
+      releaseUrl: remote?.releaseUrl ?? null,
+      releaseNotes: remote?.releaseNotes?.slice(0, 2000) ?? null,
     };
 
     return NextResponse.json(versionInfo);

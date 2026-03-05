@@ -91,6 +91,25 @@ export function UpdateNotification() {
                 </div>
               </div>
 
+              {updateInfo.releaseNotes && (
+                <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-white/40 mb-2">What&apos;s New</p>
+                  <div className="text-white/60 text-xs leading-relaxed whitespace-pre-line max-h-40 overflow-y-auto scrollbar-thin">
+                    {updateInfo.releaseNotes}
+                  </div>
+                  {updateInfo.releaseUrl && (
+                    <a
+                      href={updateInfo.releaseUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-400/60 text-[10px] mt-2 block hover:text-purple-300 transition-colors"
+                    >
+                      View full release notes &rarr;
+                    </a>
+                  )}
+                </div>
+              )}
+
               {updateInfo.availableVersions && updateInfo.availableVersions.length > 1 && (
                 <div>
                   <label

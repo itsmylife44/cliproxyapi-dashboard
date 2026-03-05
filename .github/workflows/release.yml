@@ -198,17 +198,13 @@ jobs:
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME}"
           RELEASE_NOTES=$(gh release view "${TAG_NAME}" --json body -q .body 2>/dev/null | head -c 2000 || echo "")
 
-          cat > version.json <<EOF
-{
-  "version": "${VERSION}",
-  "tag": "${TAG_NAME}",
-  "releaseUrl": "${RELEASE_URL}",
-  "releaseNotes": $(echo "$RELEASE_NOTES" | jq -Rs .)
-}
-EOF
-
-          # Pretty-print the JSON
-          cat version.json | jq . > version.json.tmp && mv version.json.tmp version.json
+          jq -n \
+            --arg version "${VERSION}" \
+            --arg tag "${TAG_NAME}" \
+            --arg url "${RELEASE_URL}" \
+            --arg notes "${RELEASE_NOTES}" \
+            '{version: $version, tag: $tag, releaseUrl: $url, releaseNotes: $notes}' \
+            > version.json
 
       - name: Commit version.json
         run: |

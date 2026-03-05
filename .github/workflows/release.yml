@@ -178,3 +178,39 @@ jobs:
           echo "   Sources: $SOURCES"
 
           docker buildx imagetools create $TAGS $SOURCES
+
+  # Update version.json so dashboards can check for updates without GitHub API rate limits.
+  update-version-json:
+    runs-on: ubuntu-latest
+    needs: [release-please, merge]
+    if: ${{ needs.release-please.outputs.release_created == 'true' && needs.merge.result == 'success' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Update version.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+          VERSION: ${{ needs.release-please.outputs.version }}
+        run: |
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME}"
+          RELEASE_NOTES=$(gh release view "${TAG_NAME}" --json body -q .body 2>/dev/null | head -c 2000 || echo "")
+
+          jq -n \
+            --arg version "${VERSION}" \
+            --arg tag "${TAG_NAME}" \
+            --arg url "${RELEASE_URL}" \
+            --arg notes "${RELEASE_NOTES}" \
+            '{version: $version, tag: $tag, releaseUrl: $url, releaseNotes: $notes}' \
+            > version.json
+
+      - name: Commit version.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore: update version.json to ${{ needs.release-please.outputs.version }}"
+          git push

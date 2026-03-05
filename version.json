@@ -1,0 +1,6 @@
+{
+  "version": "0.1.51",
+  "tag": "dashboard-v0.1.51",
+  "releaseUrl": "https://github.com/itsmylife44/cliproxyapi-dashboard/releases/tag/dashboard-v0.1.51",
+  "releaseNotes": "feat: add OAuth health status badges and fix alias model override priority\nfeat: add setup wizard with inline forms and sequential step locking\nfix: apply provider filter to charts and stats on quota page\nfix: deduplicate model IDs to prevent duplicate React keys"
+}

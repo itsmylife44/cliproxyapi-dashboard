@@ -153,6 +153,7 @@ interface ModelAssignment {
   temperature?: number;
   prompt_append?: string;
   description?: string;
+  fallback_models?: string[];
 }
 
 // Backward compatibility type alias
@@ -177,6 +178,12 @@ export function buildOhMyOpenCodeConfig(
     if (agentOverride?.variant) entry.variant = agentOverride.variant;
     if (agentOverride?.temperature !== undefined) entry.temperature = agentOverride.temperature;
     if (agentOverride?.prompt_append) entry.prompt_append = agentOverride.prompt_append;
+    if (agentOverride?.fallback_models?.length) {
+      entry.fallback_models = agentOverride.fallback_models
+        .filter(m => availableModels.includes(m))
+        .map(m => `cliproxyapi/${m}`);
+      if (entry.fallback_models.length === 0) delete entry.fallback_models;
+    }
     agents[agent] = entry;
   }
 
@@ -195,6 +202,12 @@ export function buildOhMyOpenCodeConfig(
     if (categoryOverride?.variant) entry.variant = categoryOverride.variant;
     if (categoryOverride?.temperature !== undefined) entry.temperature = categoryOverride.temperature;
     if (categoryOverride?.description) entry.description = categoryOverride.description;
+    if (categoryOverride?.fallback_models?.length) {
+      entry.fallback_models = categoryOverride.fallback_models
+        .filter(m => availableModels.includes(m))
+        .map(m => `cliproxyapi/${m}`);
+      if (entry.fallback_models.length === 0) delete entry.fallback_models;
+    }
     categories[category] = entry;
   }
 

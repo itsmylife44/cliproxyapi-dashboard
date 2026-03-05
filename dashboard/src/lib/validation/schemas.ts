@@ -36,6 +36,7 @@ const AgentConfigEntrySchema = z.object({
   variant: z.string().optional(),
   temperature: z.number().min(0).max(2).optional(),
   prompt_append: z.string().optional(),
+  fallback_models: z.array(z.string()).optional(),
 });
 
 const CategoryConfigEntrySchema = z.object({
@@ -43,6 +44,7 @@ const CategoryConfigEntrySchema = z.object({
   variant: z.string().optional(),
   temperature: z.number().min(0).max(2).optional(),
   description: z.string().optional(),
+  fallback_models: z.array(z.string()).optional(),
 });
 
 const TmuxConfigSchema = z.object({

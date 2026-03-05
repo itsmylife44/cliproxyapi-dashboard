@@ -19,9 +19,9 @@ interface TierAssignmentsProps {
   availableModelIds: string[];
   modelSourceMap?: Map<string, string>;
   onAgentModelChange: (agent: string, model: string | undefined) => void;
-  onAgentFieldChange: (agent: string, field: string, value: string | number | undefined) => void;
+  onAgentFieldChange: (agent: string, field: string, value: string | number | string[] | undefined) => void;
   onCategoryModelChange: (category: string, model: string | undefined) => void;
-  onCategoryFieldChange: (category: string, field: string, value: string | number | undefined) => void;
+  onCategoryFieldChange: (category: string, field: string, value: string | number | string[] | undefined) => void;
 }
 
 export function TierAssignments({
@@ -86,6 +86,7 @@ export function TierAssignments({
                           thirdField: config.prompt_append,
                           thirdFieldKey: "prompt_append",
                           thirdFieldPlaceholder: "prompt append",
+                          fallback_models: config.fallback_models,
                         }}
                         onFieldChange={(field, value) => onAgentFieldChange(name, field, value)}
                       />
@@ -145,6 +146,7 @@ export function TierAssignments({
                           thirdField: config.description,
                           thirdFieldKey: "description",
                           thirdFieldPlaceholder: "description",
+                          fallback_models: config.fallback_models,
                         }}
                         onFieldChange={(field, value) => onCategoryFieldChange(name, field, value)}
                       />

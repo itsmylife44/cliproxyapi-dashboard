@@ -52,6 +52,7 @@ export interface AgentConfigEntry {
   variant?: string;
   temperature?: number;
   prompt_append?: string;
+  fallback_models?: string[];
 }
 
 export interface CategoryConfigEntry {
@@ -59,8 +60,8 @@ export interface CategoryConfigEntry {
   variant?: string;
   temperature?: number;
   description?: string;
+  fallback_models?: string[];
 }
-
 export interface OhMyOpenCodeFullConfig {
   agents?: Record<string, AgentConfigEntry>;
   categories?: Record<string, CategoryConfigEntry>;
@@ -211,6 +212,10 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
           entry.temperature = entryObj.temperature;
         }
         if (typeof entryObj.prompt_append === "string") entry.prompt_append = entryObj.prompt_append;
+        if (Array.isArray(entryObj.fallback_models)) {
+          const fallbacks = entryObj.fallback_models.filter((v: unknown): v is string => typeof v === "string");
+          if (fallbacks.length > 0) entry.fallback_models = fallbacks;
+        }
         validatedAgents[key] = entry;
       }
     }
@@ -240,6 +245,10 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
           entry.temperature = entryObj.temperature;
         }
         if (typeof entryObj.description === "string") entry.description = entryObj.description;
+        if (Array.isArray(entryObj.fallback_models)) {
+          const fallbacks = entryObj.fallback_models.filter((v: unknown): v is string => typeof v === "string");
+          if (fallbacks.length > 0) entry.fallback_models = fallbacks;
+        }
         validatedCategories[key] = entry;
       }
     }

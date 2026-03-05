@@ -91,7 +91,7 @@ export const updateCheckCache = new LRUCache<unknown>(10);
 export const CACHE_TTL = {
   USAGE: 30_000,
   PROXY_MODELS: 300_000,
-  GITHUB_RELEASES: 1_800_000,
+  VERSION_CHECK: 1_800_000,
   GITHUB_BUILD_STATUS: 600_000,
   DOCKER_HUB_TAGS: 900_000,
 } as const;

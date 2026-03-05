@@ -1042,9 +1042,11 @@ export default function ConfigPage() {
             >
               <textarea
                 value={
-                  config.payload?.[key] != null
-                    ? JSON.stringify(config.payload[key], null, 2)
-                    : ""
+                  config.payload?.[key] == null
+                    ? ""
+                    : typeof config.payload[key] === "string"
+                      ? (config.payload[key] as string)
+                      : JSON.stringify(config.payload[key], null, 2)
                 }
                 onChange={(e) => {
                   const raw = e.target.value.trim();

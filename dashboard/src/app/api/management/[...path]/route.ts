@@ -36,6 +36,7 @@ const NON_ADMIN_OAUTH_PATHS = new Set<string>([
 
 const ALLOWED_MANAGEMENT_PATHS = new Set<string>([
   "config",
+  "config.yaml",
   "usage",
   "logs",
   "logging-to-file",
@@ -96,7 +97,7 @@ function normalizeAndValidateManagementPath(rawPath: string): string | null {
     return null;
   }
 
-  if (!/^[a-z0-9-]+(?:\/[a-z0-9-]+)*$/i.test(normalizedPath)) {
+  if (!/^[a-z0-9.-]+(?:\/[a-z0-9.-]+)*$/i.test(normalizedPath)) {
     return null;
   }
 

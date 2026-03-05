@@ -122,10 +122,10 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     saveOverrides(newOverrides);
   };
 
-  const handleAgentFieldChange = (agent: string, field: string, value: string | number | undefined) => {
+  const handleAgentFieldChange = (agent: string, field: string, value: string | number | string[] | undefined) => {
     const existing = overrides.agents?.[agent] ?? {};
     const newAgents = { ...overrides.agents };
-    if (value === undefined || value === "") {
+    if (value === undefined || value === "" || (Array.isArray(value) && value.length === 0)) {
       const updated = { ...existing } as Record<string, unknown>;
       delete updated[field];
       if (Object.keys(updated).length === 0) {
@@ -160,10 +160,10 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     saveOverrides(newOverrides);
   };
 
-  const handleCategoryFieldChange = (category: string, field: string, value: string | number | undefined) => {
+  const handleCategoryFieldChange = (category: string, field: string, value: string | number | string[] | undefined) => {
     const existing = overrides.categories?.[category] ?? {};
     const newCategories = { ...overrides.categories };
-    if (value === undefined || value === "") {
+    if (value === undefined || value === "" || (Array.isArray(value) && value.length === 0)) {
       const updated = { ...existing } as Record<string, unknown>;
       delete updated[field];
       if (Object.keys(updated).length === 0) {

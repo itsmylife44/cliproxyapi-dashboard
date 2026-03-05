@@ -22,6 +22,7 @@ export interface ExtraFieldConfig {
   thirdField?: string;
   thirdFieldKey: string;
   thirdFieldPlaceholder: string;
+  fallback_models?: string[];
 }
 
 export const TIER_META: Record<1 | 2 | 3 | 4, { label: string; hint: string }> = {
@@ -40,7 +41,7 @@ interface ModelBadgeProps {
   modelSourceMap?: Map<string, string>;
   onSelect: (value: string | undefined) => void;
   extraFields?: ExtraFieldConfig;
-  onFieldChange?: (field: string, value: string | number | undefined) => void;
+  onFieldChange?: (field: string, value: string | number | string[] | undefined) => void;
 }
 
 export function ModelBadge({
@@ -63,7 +64,7 @@ export function ModelBadge({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const hasExtraValues =
-    extraFields && (extraFields.variant || extraFields.temperature !== undefined || extraFields.thirdField);
+    extraFields && (extraFields.variant || extraFields.temperature !== undefined || extraFields.thirdField || (extraFields.fallback_models && extraFields.fallback_models.length > 0));
 
   useEffect(() => {
     if (!open) return;
@@ -152,34 +153,80 @@ export function ModelBadge({
       </div>
 
       {showExtra && onFieldChange && (
-        <div className="flex items-center gap-1.5 mt-1 ml-0.5">
-          <input
-            type="text"
-            placeholder="variant"
-            value={extraFields?.variant ?? ""}
-            onChange={(e) => onFieldChange("variant", e.target.value || undefined)}
-            className="w-16 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
-          />
-          <input
-            type="number"
-            placeholder="temp"
-            step={0.1}
-            min={0}
-            max={2}
-            value={extraFields?.temperature ?? ""}
-            onChange={(e) => onFieldChange("temperature", e.target.value ? Number(e.target.value) : undefined)}
-            className="w-14 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
-          />
-          <input
-            type="text"
-            placeholder={extraFields?.thirdFieldPlaceholder ?? ""}
-            value={extraFields?.thirdField ?? ""}
-            onChange={(e) => {
-              const key = extraFields?.thirdFieldKey;
-              if (key) onFieldChange(key, e.target.value || undefined);
-            }}
-            className="flex-1 min-w-0 w-24 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
-          />
+        <div className="mt-1 ml-0.5 space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <input
+              type="text"
+              placeholder="variant"
+              value={extraFields?.variant ?? ""}
+              onChange={(e) => onFieldChange("variant", e.target.value || undefined)}
+              className="w-16 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
+            />
+            <input
+              type="number"
+              placeholder="temp"
+              step={0.1}
+              min={0}
+              max={2}
+              value={extraFields?.temperature ?? ""}
+              onChange={(e) => onFieldChange("temperature", e.target.value ? Number(e.target.value) : undefined)}
+              className="w-14 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
+            />
+            <input
+              type="text"
+              placeholder={extraFields?.thirdFieldPlaceholder ?? ""}
+              value={extraFields?.thirdField ?? ""}
+              onChange={(e) => {
+                const key = extraFields?.thirdFieldKey;
+                if (key) onFieldChange(key, e.target.value || undefined);
+              }}
+              className="flex-1 min-w-0 w-24 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/35">Fallbacks</p>
+            <div className="flex flex-wrap gap-1">
+              {(extraFields?.fallback_models ?? []).map((fm) => (
+                <span
+                  key={fm}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/5 border border-white/10 rounded text-white/60"
+                >
+                  {fm}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = (extraFields?.fallback_models ?? []).filter((m) => m !== fm);
+                      onFieldChange("fallback_models", updated.length > 0 ? updated : undefined);
+                    }}
+                    className="text-white/30 hover:text-red-400/80 transition-colors cursor-pointer leading-none"
+                    aria-label={`Remove fallback ${fm}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              {(() => {
+                const current = extraFields?.fallback_models ?? [];
+                const choices = availableModels.filter((m) => m !== model && !current.includes(m));
+                if (choices.length === 0) return null;
+                return (
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      if (!e.target.value) return;
+                      onFieldChange("fallback_models", [...current, e.target.value]);
+                    }}
+                    className="px-1.5 py-0.5 text-[10px] font-mono bg-white/5 border border-white/10 rounded text-white/50 focus:outline-none focus:border-violet-400/30 cursor-pointer"
+                  >
+                    <option value="" className="bg-gray-900">+ add fallback</option>
+                    {choices.map((m) => (
+                      <option key={m} value={m} className="bg-gray-900">{m}</option>
+                    ))}
+                  </select>
+                );
+              })()}
+            </div>
+          </div>
         </div>
       )}
 

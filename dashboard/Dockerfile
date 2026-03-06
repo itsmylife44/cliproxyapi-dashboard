@@ -53,6 +53,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/adapter-pg .
 COPY --chown=nextjs:nodejs entrypoint.sh ./entrypoint.sh
 RUN chmod +x entrypoint.sh
 
+# Create logs directory with correct ownership before switching to non-root user
+RUN mkdir -p /app/logs && chown nextjs:nodejs /app/logs
+
 USER nextjs
 
 EXPOSE 3000

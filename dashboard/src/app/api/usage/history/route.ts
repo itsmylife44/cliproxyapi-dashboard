@@ -103,6 +103,8 @@ export async function GET(request: NextRequest) {
         gte: fromDate,
         lte: toDate,
       },
+      // Only show usage from dashboard-generated API keys (not OAuth auth-files)
+      apiKeyId: { not: null },
       ...(isAdmin
         ? {}
         : {

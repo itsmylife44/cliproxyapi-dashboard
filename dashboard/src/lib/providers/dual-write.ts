@@ -895,6 +895,9 @@ export async function importOAuthCredential(
         { provider, fileName },
         "importOAuthCredential: uploaded but could not find file to claim ownership"
       );
+      invalidateUsageCaches();
+      invalidateProxyModelsCache();
+      return { ok: true, accountName: fileName };
       return { ok: true, accountName: fileName };
     }
 
@@ -908,6 +911,8 @@ export async function importOAuthCredential(
           accountEmail: claimedEmail,
         },
       });
+      invalidateUsageCaches();
+      invalidateProxyModelsCache();
       return { ok: true, id: ownership.id, accountName: claimedAccountName };
     } catch (e) {
       if (

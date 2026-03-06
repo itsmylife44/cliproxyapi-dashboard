@@ -47,12 +47,13 @@ export async function createSession(_payload: SessionPayload, token: string): Pr
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   const cookieStore = await cookies();
 
-  // Determine secure flag from actual request protocol, not NODE_ENV.
-  // NODE_ENV is always "production" in Docker, but local setups run on HTTP.
-  // Caddy (and other reverse proxies) set X-Forwarded-Proto to "https" for TLS connections.
+  // Determine secure flag from actual request protocol.
+  // When behind a reverse proxy (Caddy, nginx), X-Forwarded-Proto tells us the real protocol.
+  // When the header is absent (direct access, no proxy), fall back to NODE_ENV
+  // so local HTTP dev works (NODE_ENV=development) while production defaults to secure.
   const headerStore = await headers();
   const proto = headerStore.get("x-forwarded-proto");
-  const isSecure = proto === "https";
+  const isSecure = proto ? proto === "https" : process.env.NODE_ENV === "production";
 
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,

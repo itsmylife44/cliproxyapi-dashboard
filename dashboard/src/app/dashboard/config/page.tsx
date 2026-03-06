@@ -1049,8 +1049,8 @@ export default function ConfigPage() {
                       : JSON.stringify(config.payload[key], null, 2)
                 }
                 onChange={(e) => {
-                  const raw = e.target.value.trim();
-                  if (raw === "") {
+                  const raw = e.target.value;
+                  if (raw.trim() === "") {
                     updatePayloadConfig(key, null);
                     return;
                   }

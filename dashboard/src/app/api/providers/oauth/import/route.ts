@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   // Basic JSON validation
   try {
     const parsed = JSON.parse(fileContent);
-    if (!parsed || typeof parsed !== "object") {
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return NextResponse.json(
         { error: "Credential file must contain a valid JSON object" },
         { status: 400 }

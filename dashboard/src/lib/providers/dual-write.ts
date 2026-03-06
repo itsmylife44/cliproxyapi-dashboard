@@ -755,8 +755,8 @@ export async function importOAuthCredential(
       return { ok: false, error: "Invalid JSON content" };
     }
 
-    if (!parsedContent || typeof parsedContent !== "object") {
-      return { ok: false, error: "Credential file must contain a JSON object" };
+    if (!parsedContent || typeof parsedContent !== "object" || Array.isArray(parsedContent)) {
+      return { ok: false, error: "Credential file must contain a JSON object, not an array" };
     }
 
     // Build multipart form data to upload to CLIProxyAPIPlus
@@ -766,6 +766,28 @@ export async function importOAuthCredential(
 
     const endpoint = `${MANAGEMENT_BASE_URL}/auth-files`;
 
+    // Snapshot existing auth file names before upload to diff later
+    const preExistingNames = new Set<string>();
+    try {
+      const snapshotRes = await fetchWithTimeout(endpoint, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+      });
+      if (snapshotRes.ok) {
+        const snapshotData = await snapshotRes.json();
+        if (isRecord(snapshotData) && Array.isArray(snapshotData.files)) {
+          for (const f of snapshotData.files) {
+            if (isRecord(f) && typeof f.name === "string") {
+              preExistingNames.add(f.name);
+            }
+          }
+        }
+      } else {
+        await snapshotRes.body?.cancel();
+      }
+    } catch {
+      // Non-fatal: we'll fall back to name-based matching if snapshot fails
+    }
     let uploadRes: Response;
     try {
       uploadRes = await fetchWithTimeout(endpoint, {
@@ -835,17 +857,29 @@ export async function importOAuthCredential(
         email?: string;
       }>;
 
-      // Match by filename or provider
-      const matchingFile = files.find((file) => {
-        const nameMatch = file.name === fileName ||
+      // Only consider files that did NOT exist before our upload
+      const newFiles = files.filter((file) => !preExistingNames.has(file.name));
+
+      // Primary: match new files by filename
+      const matchingFile = newFiles.find((file) => {
+        return file.name === fileName ||
           file.name.includes(fileName.replace(/\.json$/i, ""));
-        const providerMatch = (file.provider || file.type || "").toLowerCase() === provider.toLowerCase();
-        return nameMatch || (providerMatch && attempt >= 3);
       });
 
-      if (matchingFile) {
-        claimedAccountName = matchingFile.name;
-        claimedEmail = matchingFile.email || null;
+      // Fallback: if snapshot was available and there's exactly one new file
+      // matching the provider, use it
+      const fallbackFile = !matchingFile && preExistingNames.size > 0
+        ? newFiles.find((file) => {
+            const fileProvider = (file.provider || file.type || "").toLowerCase();
+            return fileProvider === provider.toLowerCase();
+          })
+        : null;
+
+      const resolvedFile = matchingFile || fallbackFile;
+
+      if (resolvedFile) {
+        claimedAccountName = resolvedFile.name;
+        claimedEmail = resolvedFile.email || null;
         break;
       }
     }

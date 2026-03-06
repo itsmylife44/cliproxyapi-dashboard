@@ -706,8 +706,8 @@ export function OAuthSection({
   const validateImportJson = (content: string) => {
     try {
       const parsed = JSON.parse(content);
-      if (!parsed || typeof parsed !== "object") {
-        setImportErrorMessage("File must contain a JSON object.");
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        setImportErrorMessage("File must contain a JSON object, not an array.");
         setImportStatus("error");
         return false;
       }
@@ -1129,7 +1129,7 @@ export function OAuthSection({
             <Button
               variant="secondary"
               onClick={handleImportSubmit}
-              disabled={!importJsonContent.trim() || importStatus === "uploading" || importStatus === "error"}
+              disabled={!importJsonContent.trim() || importStatus === "uploading"}
             >
               {importStatus === "uploading" ? "Importing..." : "Import Credential"}
             </Button>

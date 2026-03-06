@@ -78,16 +78,6 @@ export function UpdateNotification() {
                   <p className="text-purple-300 font-mono text-sm font-medium">
                     {updateInfo.latestVersion || "latest"}
                   </p>
-                  {updateInfo.releaseUrl && (
-                    <a
-                      href={updateInfo.releaseUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-purple-400/60 text-[10px] mt-1 block hover:text-purple-300 transition-colors"
-                    >
-                      View release notes
-                    </a>
-                  )}
                 </div>
               </div>
 
@@ -97,16 +87,6 @@ export function UpdateNotification() {
                   <div className="text-white/60 text-xs leading-relaxed whitespace-pre-line max-h-40 overflow-y-auto scrollbar-thin">
                     {updateInfo.releaseNotes}
                   </div>
-                  {updateInfo.releaseUrl && (
-                    <a
-                      href={updateInfo.releaseUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-purple-400/60 text-[10px] mt-2 block hover:text-purple-300 transition-colors"
-                    >
-                      View full release notes &rarr;
-                    </a>
-                  )}
                 </div>
               )}
 

@@ -611,15 +611,15 @@ export default function SettingsPage() {
                            <div className="mt-1 break-all text-lg font-semibold text-slate-100">
                              {dashboardUpdateInfo.latestVersion}
                            </div>
-                           {dashboardUpdateInfo.releaseUrl && (
-                             <a
-                               href={dashboardUpdateInfo.releaseUrl}
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               className="mt-0.5 block break-all text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                             >
-                               View release notes
-                             </a>
+                           {dashboardUpdateInfo.releaseNotes && (
+                             <details className="mt-2">
+                               <summary className="cursor-pointer text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                                 View release notes
+                               </summary>
+                               <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 text-xs text-slate-300 font-mono">
+                                 {dashboardUpdateInfo.releaseNotes}
+                               </pre>
+                             </details>
                            )}
                          </div>
                        </div>

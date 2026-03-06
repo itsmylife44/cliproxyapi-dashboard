@@ -867,13 +867,17 @@ export async function importOAuthCredential(
       });
 
       // Fallback: if snapshot was available and there's exactly one new file
-      // matching the provider, use it
-      const fallbackFile = !matchingFile && preExistingNames.size > 0
-        ? newFiles.find((file) => {
-            const fileProvider = (file.provider || file.type || "").toLowerCase();
-            return fileProvider === provider.toLowerCase();
-          })
-        : null;
+      // matching the provider, use it (refuse if ambiguous)
+      let fallbackFile: (typeof newFiles)[number] | null = null;
+      if (!matchingFile && preExistingNames.size > 0) {
+        const providerMatches = newFiles.filter((file) => {
+          const fileProvider = (file.provider || file.type || "").toLowerCase();
+          return fileProvider === provider.toLowerCase();
+        });
+        if (providerMatches.length === 1) {
+          fallbackFile = providerMatches[0];
+        }
+      }
 
       const resolvedFile = matchingFile || fallbackFile;
 

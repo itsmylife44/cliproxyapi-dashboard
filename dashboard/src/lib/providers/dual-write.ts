@@ -989,3 +989,82 @@ export async function removeOAuthAccountByIdOrName(
     };
   }
 }
+
+interface ToggleOAuthResult {
+  ok: boolean;
+  disabled?: boolean;
+  error?: string;
+}
+
+export async function toggleOAuthAccountByIdOrName(
+  userId: string,
+  idOrName: string,
+  disabled: boolean,
+  isAdmin: boolean
+): Promise<ToggleOAuthResult> {
+  if (!MANAGEMENT_API_KEY) {
+    return { ok: false, error: "Management API key not configured" };
+  }
+
+  try {
+    const resolved = await resolveOAuthAccountByIdOrName(idOrName);
+
+    if (!resolved.accountName) {
+      return { ok: false, error: "OAuth account not found" };
+    }
+
+    // Check ownership - if we have DB ownership, validate auth
+    if (resolved.ownership) {
+      if (!isAdmin && resolved.ownership.userId !== userId) {
+        return { ok: false, error: "Access denied" };
+      }
+    } else {
+      // No DB ownership - only admin can toggle
+      if (!isAdmin) {
+        return { ok: false, error: "Access denied" };
+      }
+    }
+
+    const endpoint = `${MANAGEMENT_BASE_URL}/auth-files?name=${encodeURIComponent(resolved.accountName)}`;
+
+    let postRes: Response;
+    try {
+      postRes = await fetchWithTimeout(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
+        },
+        body: JSON.stringify({
+          name: resolved.accountName,
+          disabled,
+        }),
+      });
+    } catch (fetchError) {
+      if (fetchError instanceof Error && fetchError.name === "AbortError") {
+        logger.error({
+          err: fetchError,
+          endpoint,
+          accountName: resolved.accountName,
+          timeoutMs: FETCH_TIMEOUT_MS,
+        }, "Fetch timeout - toggleOAuthAccountByIdOrName POST");
+        return { ok: false, error: "Request timeout toggling OAuth account" };
+      }
+      throw fetchError;
+    }
+
+    if (!postRes.ok) {
+      const errorBody = await postRes.text().catch(() => "");
+      await postRes.body?.cancel();
+      return { ok: false, error: `Failed to toggle OAuth account: HTTP ${postRes.status}${errorBody ? ` - ${errorBody}` : ""}` };
+    }
+
+    return { ok: true, disabled };
+  } catch (error) {
+    logger.error({ err: error, idOrName, disabled }, "toggleOAuthAccountByIdOrName error");
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Unknown error during OAuth toggle",
+    };
+  }
+}

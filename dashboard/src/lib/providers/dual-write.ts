@@ -729,6 +729,166 @@ export async function contributeOAuthAccount(
   }
 }
 
+interface ImportOAuthResult {
+  ok: boolean;
+  id?: string;
+  accountName?: string;
+  error?: string;
+}
+
+export async function importOAuthCredential(
+  userId: string,
+  provider: string,
+  fileName: string,
+  fileContent: string
+): Promise<ImportOAuthResult> {
+  if (!MANAGEMENT_API_KEY) {
+    return { ok: false, error: "Management API key not configured" };
+  }
+
+  try {
+    // Validate JSON content
+    let parsedContent: unknown;
+    try {
+      parsedContent = JSON.parse(fileContent);
+    } catch {
+      return { ok: false, error: "Invalid JSON content" };
+    }
+
+    if (!parsedContent || typeof parsedContent !== "object") {
+      return { ok: false, error: "Credential file must contain a JSON object" };
+    }
+
+    // Build multipart form data to upload to CLIProxyAPIPlus
+    const blob = new Blob([fileContent], { type: "application/json" });
+    const formData = new FormData();
+    formData.append("file", blob, fileName);
+
+    const endpoint = `${MANAGEMENT_BASE_URL}/auth-files`;
+
+    let uploadRes: Response;
+    try {
+      uploadRes = await fetchWithTimeout(endpoint, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+        body: formData,
+      });
+    } catch (fetchError) {
+      if (fetchError instanceof Error && fetchError.name === "AbortError") {
+        logger.error({
+          err: fetchError,
+          endpoint,
+          provider,
+          timeoutMs: FETCH_TIMEOUT_MS,
+        }, "Fetch timeout - importOAuthCredential POST");
+        return { ok: false, error: "Request timeout uploading credential file" };
+      }
+      throw fetchError;
+    }
+
+    if (!uploadRes.ok) {
+      const errorText = await uploadRes.text().catch(() => "");
+      await uploadRes.body?.cancel();
+      logger.warn(
+        { provider, status: uploadRes.status, errorText },
+        "importOAuthCredential: upload failed"
+      );
+      if (uploadRes.status === 409) {
+        return { ok: false, error: "Credential file already exists" };
+      }
+      return { ok: false, error: `Failed to upload credential file: HTTP ${uploadRes.status}${errorText ? ` - ${errorText}` : ""}` };
+    }
+
+    // Poll auth-files to find the newly created file and claim ownership
+    const MAX_RETRIES = 8;
+    const RETRY_DELAY_MS = 1500;
+    let claimedAccountName: string | null = null;
+    let claimedEmail: string | null = null;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+
+      let getRes: Response;
+      try {
+        getRes = await fetchWithTimeout(`${endpoint}`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+        });
+      } catch {
+        continue;
+      }
+
+      if (!getRes.ok) {
+        await getRes.body?.cancel();
+        continue;
+      }
+
+      const getData = await getRes.json();
+      if (!isRecord(getData) || !Array.isArray(getData.files)) {
+        continue;
+      }
+
+      const files = getData.files as Array<{
+        name: string;
+        provider?: string;
+        type?: string;
+        email?: string;
+      }>;
+
+      // Match by filename or provider
+      const matchingFile = files.find((file) => {
+        const nameMatch = file.name === fileName ||
+          file.name.includes(fileName.replace(/\.json$/i, ""));
+        const providerMatch = (file.provider || file.type || "").toLowerCase() === provider.toLowerCase();
+        return nameMatch || (providerMatch && attempt >= 3);
+      });
+
+      if (matchingFile) {
+        claimedAccountName = matchingFile.name;
+        claimedEmail = matchingFile.email || null;
+        break;
+      }
+    }
+
+    if (!claimedAccountName) {
+      // Upload succeeded but we couldn't find the file to claim
+      // This is not a hard failure — the credential was imported
+      logger.warn(
+        { provider, fileName },
+        "importOAuthCredential: uploaded but could not find file to claim ownership"
+      );
+      return { ok: true, accountName: fileName };
+    }
+
+    // Create ownership record in dashboard DB
+    try {
+      const ownership = await prisma.providerOAuthOwnership.create({
+        data: {
+          userId,
+          provider,
+          accountName: claimedAccountName,
+          accountEmail: claimedEmail,
+        },
+      });
+      return { ok: true, id: ownership.id, accountName: claimedAccountName };
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === "P2002"
+      ) {
+        return { ok: false, error: "Credential already imported and claimed" };
+      }
+      throw e;
+    }
+  } catch (error) {
+    logger.error({ err: error, provider, fileName }, "importOAuthCredential error");
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Unknown error during credential import",
+    };
+  }
+}
+
 export async function listOAuthWithOwnership(
   userId: string,
   isAdmin: boolean = false

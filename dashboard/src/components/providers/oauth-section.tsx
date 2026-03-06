@@ -269,6 +269,13 @@ export function OAuthSection({
   const [showConfirmOAuthDelete, setShowConfirmOAuthDelete] = useState(false);
   const [pendingOAuthDelete, setPendingOAuthDelete] = useState<{ accountId: string; accountName: string } | null>(null);
   const [togglingAccountId, setTogglingAccountId] = useState<string | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importProviderId, setImportProviderId] = useState<OAuthProviderId | null>(null);
+  const [importJsonContent, setImportJsonContent] = useState("");
+  const [importFileName, setImportFileName] = useState("");
+  const [importStatus, setImportStatus] = useState<"idle" | "validating" | "uploading" | "success" | "error">("idle");
+  const [importErrorMessage, setImportErrorMessage] = useState<string | null>(null);
+  const importFileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedOAuthProvider = getOAuthProviderById(selectedOAuthProviderId);
   const selectedOAuthProviderRequiresCallback = selectedOAuthProvider?.requiresCallback ?? true;
@@ -646,6 +653,123 @@ export function OAuthSection({
     }
   };
 
+  const openImportModal = (providerId: OAuthProviderId) => {
+    setImportProviderId(providerId);
+    setImportJsonContent("");
+    setImportFileName("");
+    setImportStatus("idle");
+    setImportErrorMessage(null);
+    setIsImportModalOpen(true);
+  };
+
+  const closeImportModal = () => {
+    setIsImportModalOpen(false);
+    setImportProviderId(null);
+    setImportJsonContent("");
+    setImportFileName("");
+    setImportStatus("idle");
+    setImportErrorMessage(null);
+  };
+
+  const handleImportFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".json")) {
+      setImportErrorMessage("Please select a JSON file.");
+      setImportStatus("error");
+      return;
+    }
+
+    if (file.size > 1024 * 1024) {
+      setImportErrorMessage("File is too large (max 1MB).");
+      setImportStatus("error");
+      return;
+    }
+
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result;
+      if (typeof content === "string") {
+        setImportJsonContent(content);
+        validateImportJson(content);
+      }
+    };
+    reader.onerror = () => {
+      setImportErrorMessage("Failed to read file.");
+      setImportStatus("error");
+    };
+    reader.readAsText(file);
+  };
+
+  const validateImportJson = (content: string) => {
+    try {
+      const parsed = JSON.parse(content);
+      if (!parsed || typeof parsed !== "object") {
+        setImportErrorMessage("File must contain a JSON object.");
+        setImportStatus("error");
+        return false;
+      }
+      setImportErrorMessage(null);
+      setImportStatus("idle");
+      return true;
+    } catch {
+      setImportErrorMessage("Invalid JSON content.");
+      setImportStatus("error");
+      return false;
+    }
+  };
+
+  const handleImportJsonChange = (value: string) => {
+    setImportJsonContent(value);
+    if (value.trim()) {
+      validateImportJson(value);
+    } else {
+      setImportErrorMessage(null);
+      setImportStatus("idle");
+    }
+  };
+
+  const handleImportSubmit = async () => {
+    if (!importProviderId || !importJsonContent.trim()) return;
+
+    if (!validateImportJson(importJsonContent)) return;
+
+    const fileName = importFileName || `${importProviderId}-credential.json`;
+
+    setImportStatus("uploading");
+    setImportErrorMessage(null);
+
+    try {
+      const res = await fetch("/api/providers/oauth/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: importProviderId,
+          fileName,
+          fileContent: importJsonContent.trim(),
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setImportStatus("error");
+        setImportErrorMessage(data.error || "Failed to import credential.");
+        return;
+      }
+
+      setImportStatus("success");
+      showToast("OAuth credential imported successfully", "success");
+      await refreshProviders();
+      void loadAccounts();
+    } catch {
+      setImportStatus("error");
+      setImportErrorMessage("Network error while importing credential.");
+    }
+  };
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       void loadAccounts();
@@ -755,13 +879,22 @@ export function OAuthSection({
                   <div className="text-sm font-medium text-slate-100">{provider.name}</div>
                   <p className="text-xs leading-relaxed text-slate-400">{provider.description}</p>
                 </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => handleOAuthConnect(provider.id)}
-                  className="shrink-0 px-2.5 py-1 text-xs"
-                >
-                  Connect
-                </Button>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleOAuthConnect(provider.id)}
+                    className="shrink-0 px-2.5 py-1 text-xs"
+                  >
+                    Connect
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => openImportModal(provider.id)}
+                    className="shrink-0 px-2.5 py-1 text-xs"
+                  >
+                    Import JSON
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -924,6 +1057,85 @@ export function OAuthSection({
         cancelLabel="Cancel"
         variant="danger"
       />
+
+      <Modal isOpen={isImportModalOpen} onClose={closeImportModal}>
+        <ModalHeader>
+          <ModalTitle>
+            Import {importProviderId ? getOAuthProviderById(importProviderId)?.name || importProviderId : ""} Credential
+          </ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-4">
+            <div className="rounded-xl border-l-4 border-blue-400/60 bg-blue-500/10 p-4 text-sm backdrop-blur-xl">
+              <div className="font-medium text-white">Import a local OAuth credential</div>
+              <p className="mt-2 text-white/80">
+                Upload a JSON credential file or paste the raw JSON content below.
+                The credential will be imported and connected to your account.
+              </p>
+            </div>
+
+            <div>
+              <div className="mb-2 text-xs font-medium text-white/90">Upload JSON file</div>
+              <input
+                ref={importFileInputRef}
+                type="file"
+                accept=".json,application/json"
+                onChange={handleImportFileSelect}
+                className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-md file:border-0 file:bg-slate-700 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-200 hover:file:bg-slate-600 file:cursor-pointer file:transition-colors"
+                disabled={importStatus === "uploading"}
+              />
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-x-0 top-0 flex items-center justify-center">
+                <span className="bg-slate-900 px-2 text-[10px] font-medium uppercase tracking-wider text-slate-500">or paste JSON</span>
+              </div>
+              <div className="border-t border-slate-700/50 pt-4 mt-2">
+                <textarea
+                  value={importJsonContent}
+                  onChange={(e) => handleImportJsonChange(e.target.value)}
+                  placeholder='{&#10;  "access_token": "...",&#10;  "refresh_token": "...",&#10;  ...&#10;}'
+                  rows={8}
+                  disabled={importStatus === "uploading"}
+                  className="w-full rounded-md border border-slate-700/70 bg-slate-800/50 px-3 py-2 font-mono text-xs text-slate-200 placeholder:text-slate-600 focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/30 disabled:opacity-50 resize-y"
+                />
+              </div>
+            </div>
+
+            {importStatus === "error" && importErrorMessage && (
+              <div className="rounded-xl border-l-4 border-red-400/60 bg-red-500/20 p-3 text-xs text-white backdrop-blur-xl">
+                {importErrorMessage}
+              </div>
+            )}
+
+            {importStatus === "success" && (
+              <div className="rounded-xl border-l-4 border-green-400/60 bg-green-500/20 p-3 text-xs text-white backdrop-blur-xl">
+                Credential imported successfully.
+              </div>
+            )}
+
+            {importJsonContent.trim() && importStatus !== "error" && importStatus !== "success" && (
+              <div className="rounded-xl border-l-4 border-green-400/60 bg-green-500/10 p-2 text-xs text-white/70 backdrop-blur-xl">
+                JSON content loaded ({importJsonContent.length.toLocaleString()} characters). Ready to import.
+              </div>
+            )}
+          </div>
+        </ModalContent>
+        <ModalFooter>
+          <Button variant="ghost" onClick={closeImportModal}>
+            {importStatus === "success" ? "Done" : "Cancel"}
+          </Button>
+          {importStatus !== "success" && (
+            <Button
+              variant="secondary"
+              onClick={handleImportSubmit}
+              disabled={!importJsonContent.trim() || importStatus === "uploading" || importStatus === "error"}
+            >
+              {importStatus === "uploading" ? "Importing..." : "Import Credential"}
+            </Button>
+          )}
+        </ModalFooter>
+      </Modal>
     </>
   );
 }

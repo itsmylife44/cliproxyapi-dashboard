@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { verifySession } from "@/lib/auth/session";
 import { logger } from "@/lib/logger";
+import { quotaCache, CACHE_TTL } from "@/lib/cache";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -715,6 +716,12 @@ async function fetchClaudeQuota(
       usageResult.status_code ?? usageResult.statusCode ?? 0
     );
 
+    if (usageStatusCode === 429) {
+      // 429 on the usage endpoint = API rate limit on the check itself, not actual quota exhaustion.
+      // Return a transient error so the UI can show "temporarily unavailable" instead of broken state.
+      return { error: "Rate limited by provider — quota data temporarily unavailable" };
+    }
+
     if (usageStatusCode >= 200 && usageStatusCode < 300) {
       const usageBody = parseApiCallBody(usageResult);
       if (typeof usageBody === "object" && usageBody !== null) {
@@ -943,6 +950,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const CACHE_KEY = "quota:all";
+  const cached = quotaCache.get(CACHE_KEY);
+  if (cached) {
+    return NextResponse.json(cached);
+  }
+
   try {
     const authFilesResponse = await fetch(
       `${CLIPROXYAPI_MANAGEMENT_URL}/auth-files`,
@@ -1138,6 +1151,8 @@ export async function GET(request: NextRequest) {
     });
 
     const response: QuotaResponse = { accounts };
+
+    quotaCache.set(CACHE_KEY, response, CACHE_TTL.QUOTA);
 
     return NextResponse.json(response);
   } catch (error) {

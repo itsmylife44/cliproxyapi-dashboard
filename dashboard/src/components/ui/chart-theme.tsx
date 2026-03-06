@@ -96,7 +96,7 @@ export function ChartContainer({
   className?: string;
 }) {
   return (
-    <div className={`rounded-md border border-slate-700/70 bg-slate-900/25 p-4 ${className}`}>
+    <div className={`w-full min-w-0 rounded-md border border-slate-700/70 bg-slate-900/25 p-4 ${className}`}>
       {(title || subtitle) && (
         <div className="mb-3">
           {title && (

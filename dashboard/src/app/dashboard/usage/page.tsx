@@ -348,7 +348,7 @@ export default function UsagePage() {
             {/* Line Chart: daily request trends */}
             {usageData.dailyBreakdown && usageData.dailyBreakdown.length > 0 ? (
               <ChartContainer title="Daily Requests">
-                <ResponsiveContainer width="100%" height={220} minWidth={0}>
+                <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
                   <LineChart data={usageData.dailyBreakdown} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
                     <XAxis dataKey="date" tickFormatter={formatDateShort} tick={AXIS_TICK_STYLE} tickLine={false} axisLine={false} />
@@ -367,7 +367,7 @@ export default function UsagePage() {
             {/* Area Chart: token usage over time */}
             {usageData.dailyBreakdown && usageData.dailyBreakdown.length > 0 ? (
               <ChartContainer title="Token Usage">
-                <ResponsiveContainer width="100%" height={220} minWidth={0}>
+                <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
                   <AreaChart data={usageData.dailyBreakdown} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
                     <defs>
                       <linearGradient id="gradInput" x1="0" y1="0" x2="0" y2="1">
@@ -406,7 +406,7 @@ export default function UsagePage() {
                 : top6;
               return (
                 <ChartContainer title="Model Distribution">
-                  <ResponsiveContainer width="100%" height={220} minWidth={0}>
+                  <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
                     <PieChart>
                       <Pie
                         data={pieData}

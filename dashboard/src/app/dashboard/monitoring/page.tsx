@@ -444,7 +444,7 @@ export default function MonitoringPage() {
 
               {modelStats.length > 0 ? (
                 <ChartContainer title="Requests by Model">
-                  <ResponsiveContainer width="100%" height={200} minWidth={0}>
+                  <ResponsiveContainer width="100%" height={200} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
                     <BarChart
                       layout="vertical"
                       data={modelStats}
@@ -479,7 +479,7 @@ export default function MonitoringPage() {
 
               {hourlyData.length > 0 ? (
                 <ChartContainer title="Requests by Hour">
-                  <ResponsiveContainer width="100%" height={200} minWidth={0}>
+                  <ResponsiveContainer width="100%" height={200} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
                     <BarChart
                       data={hourlyData}
                       margin={{ top: 0, right: 8, left: 4, bottom: 0 }}

@@ -268,6 +268,7 @@ export function OAuthSection({
   const [oauthAccountsLoading, setOauthAccountsLoading] = useState(true);
   const [showConfirmOAuthDelete, setShowConfirmOAuthDelete] = useState(false);
   const [pendingOAuthDelete, setPendingOAuthDelete] = useState<{ accountId: string; accountName: string } | null>(null);
+  const [togglingAccountId, setTogglingAccountId] = useState<string | null>(null);
 
   const selectedOAuthProvider = getOAuthProviderById(selectedOAuthProviderId);
   const selectedOAuthProviderRequiresCallback = selectedOAuthProvider?.requiresCallback ?? true;
@@ -309,6 +310,29 @@ export function OAuthSection({
       setOauthErrorMessage("Network error while loading accounts.");
     }
   }, [onAccountCountChange, showToast]);
+
+  const toggleOAuthAccount = async (accountId: string, currentlyDisabled: boolean) => {
+    setTogglingAccountId(accountId);
+    try {
+      const res = await fetch(`/api/providers/oauth/${accountId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ disabled: !currentlyDisabled }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error || "Failed to update account", "error");
+      } else {
+        showToast(`OAuth account ${!currentlyDisabled ? "disabled" : "enabled"}`, "success");
+        await loadAccounts();
+        await refreshProviders();
+      }
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setTogglingAccountId(null);
+    }
+  };
 
   const openAuthPopup = (url: string) => {
     const popup = window.open(url, "oauth", "width=600,height=800");
@@ -687,7 +711,15 @@ export function OAuthSection({
                       <p className="truncate text-xs font-mono text-slate-500">{account.accountName}</p>
                     </div>
                     {currentUser && (account.isOwn || currentUser.isAdmin) && (
-                      <div className="shrink-0">
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Button
+                          variant="secondary"
+                          className="px-2.5 py-1 text-xs"
+                          disabled={togglingAccountId === account.id}
+                          onClick={() => toggleOAuthAccount(account.id, account.status === "disabled")}
+                        >
+                          {togglingAccountId === account.id ? "..." : account.status === "disabled" ? "Enable" : "Disable"}
+                        </Button>
                         <Button
                           variant="danger"
                           className="px-2.5 py-1 text-xs"

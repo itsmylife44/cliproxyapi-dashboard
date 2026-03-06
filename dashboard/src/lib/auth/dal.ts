@@ -15,15 +15,6 @@ export const getUserByUsername = cache(async (username: string): Promise<User | 
   });
 });
 
-export async function createUser(username: string, passwordHash: string): Promise<User> {
-  return prisma.user.create({
-    data: {
-      username,
-      passwordHash,
-    },
-  });
-}
-
 export async function getUserCount(): Promise<number> {
   return prisma.user.count();
 }

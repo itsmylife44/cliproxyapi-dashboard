@@ -122,66 +122,6 @@ export interface APIErrorResponse {
 }
 
 /**
- * Standard API success response format
- */
-export interface APISuccessResponse<T = unknown> {
-  data: T;
-}
-
-/**
- * Custom error class for API errors
- *
- * @example
- * throw new APIError(ERROR_CODE.AUTH_FAILED, "Invalid credentials", 401);
- * throw new APIError(ERROR_CODE.VALIDATION_ERROR, "Invalid input", 400, zodIssues);
- */
-export class APIError extends Error {
-  constructor(
-    public readonly code: ErrorCode,
-    public readonly userMessage: string,
-    public readonly status: number,
-    public readonly details?: unknown
-  ) {
-    super(userMessage);
-    this.name = "APIError";
-  }
-
-  /**
-   * Convert to NextResponse JSON
-   */
-  toResponse(): NextResponse<APIErrorResponse> {
-    return NextResponse.json(
-      {
-        error: {
-          code: this.code,
-          message: this.userMessage,
-          ...(this.details !== undefined && { details: this.details }),
-        },
-      },
-      { status: this.status }
-    );
-  }
-
-  /**
-   * Convert to NextResponse JSON with additional headers
-   */
-  toResponseWithHeaders(
-    headers: Record<string, string>
-  ): NextResponse<APIErrorResponse> {
-    return NextResponse.json(
-      {
-        error: {
-          code: this.code,
-          message: this.userMessage,
-          ...(this.details !== undefined && { details: this.details }),
-        },
-      },
-      { status: this.status, headers }
-    );
-  }
-}
-
-/**
  * Transform Zod issues to a structured format
  *
  * @example
@@ -273,48 +213,6 @@ export function apiErrorWithHeaders(
       },
     },
     { status, headers }
-  );
-}
-
-/**
- * Create a standard success response
- *
- * @example
- * return apiSuccess({ user: { id: "123", name: "John" } });
- * return apiSuccess({ items: [] }, 201);
- */
-export function apiSuccess<T>(
-  data: T,
-  status = 200
-): NextResponse<APISuccessResponse<T>> {
-  return NextResponse.json({ data }, { status });
-}
-
-/**
- * Handle unknown errors and return standardized response
- *
- * Logs the error and returns a generic internal server error response.
- * Use at the end of catch blocks for unexpected errors.
- *
- * @example
- * try {
- *   // ...
- * } catch (error) {
- *   if (error instanceof APIError) {
- *     return error.toResponse();
- *   }
- *   return handleUnexpectedError(error, "Operation failed");
- * }
- */
-export function handleUnexpectedError(
-  error: unknown,
-  context: string
-): NextResponse<APIErrorResponse> {
-  logger.error({ err: error, context }, context);
-  return apiError(
-    ERROR_CODE.INTERNAL_SERVER_ERROR,
-    "Internal server error",
-    500
   );
 }
 

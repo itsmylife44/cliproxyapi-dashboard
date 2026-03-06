@@ -1,10 +1,3 @@
-export const PROVIDER_KEYS = {
-  GEMINI: "gemini-api-key",
-  CLAUDE: "claude-api-key",
-  CODEX: "codex-api-key",
-  OPENAI_COMPAT: "openai-compatibility",
-} as const;
-
 export interface OAuthAccount {
   id: string;
   name: string;
@@ -21,33 +14,8 @@ export interface ConfigData {
   "oauth-model-alias"?: unknown;
 }
 
-export const OAUTH_PROVIDER_MAP: Record<string, { providerKey: string }> = {
-  claude: { providerKey: "claude-api-key" },
-  "gemini-cli": { providerKey: "gemini-api-key" },
-  antigravity: { providerKey: "gemini-api-key" },
-  codex: { providerKey: "codex-api-key" },
-};
-
-export function getActiveOAuthProviderTypes(oauthAccounts: OAuthAccount[]): Set<string> {
-  const types = new Set<string>();
-  for (const account of oauthAccounts) {
-    if (!account.disabled) {
-      const provider = account.provider || account.type;
-      if (provider) types.add(provider);
-    }
-  }
-  return types;
-}
-
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-export function hasProvider(config: ConfigData | null, key: string): boolean {
-  if (!config) return false;
-  const value = config[key as keyof ConfigData];
-  if (Array.isArray(value)) return value.length > 0;
-  return Boolean(value);
-}
 
 export interface ProxyModel {
   id: string;

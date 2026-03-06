@@ -189,13 +189,6 @@ export function getLogs(options: GetLogsOptions = {}): LogEntry[] {
   return result;
 }
 
-export function getLogCount(): number {
-  if (!initialized) {
-    loadLogsFromFile();
-  }
-  return memoryLogs.length;
-}
-
 function getFileCountCached(): number {
   const now = Date.now();
   if (now - cacheTimestamp < CACHE_TTL_MS) {
@@ -237,10 +230,6 @@ export function clearLogs(): void {
   } catch (error) {
     console.error("[log-storage] Failed to clear log files:", error);
   }
-}
-
-export function getLogFilePath(): string {
-  return LOG_FILE;
 }
 
 export function getLogStats(): {

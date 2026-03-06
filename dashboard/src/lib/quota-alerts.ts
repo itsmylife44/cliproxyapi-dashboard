@@ -250,23 +250,3 @@ export async function getCheckIntervalMs(): Promise<number> {
   return DEFAULT_CHECK_INTERVAL_MS;
 }
 
-/**
- * Read the configured cooldown from DB (in milliseconds).
- * Falls back to DEFAULT_COOLDOWN_MS if not set.
- */
-export async function getCooldownMs(): Promise<number> {
-  try {
-    const setting = await prisma.systemSetting.findUnique({
-      where: { key: SETTING_KEYS.COOLDOWN },
-    });
-    if (setting) {
-      const minutes = parseInt(setting.value, 10);
-      if (!Number.isNaN(minutes) && minutes >= 1) {
-        return minutes * 60 * 1000;
-      }
-    }
-  } catch {
-    // fall through to default
-  }
-  return DEFAULT_COOLDOWN_MS;
-}

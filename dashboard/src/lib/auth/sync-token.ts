@@ -52,19 +52,6 @@ export function generateSyncToken(): TokenResult {
   return { token, hash };
 }
 
-export function verifySyncToken(token: string, hash: string): boolean {
-  const computedHash = crypto.createHash("sha256").update(token).digest("hex");
-
-  try {
-    return crypto.timingSafeEqual(
-      Buffer.from(computedHash),
-      Buffer.from(hash)
-    );
-  } catch {
-    return false;
-  }
-}
-
 export async function validateSyncTokenFromHeader(
   request: NextRequest
 ): Promise<SyncTokenValidationResult> {

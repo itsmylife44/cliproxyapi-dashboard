@@ -49,6 +49,7 @@ docker compose logs -f caddy
 docker compose logs -f cliproxyapi
 docker compose logs -f dashboard
 docker compose logs -f postgres
+docker compose logs -f perplexity-sidecar
 
 # Execute command in container
 docker compose exec cliproxyapi sh

@@ -84,7 +84,7 @@ Use the **Test Message** button to verify your configuration before enabling.
 
 ## Architecture
 
-Five Docker containers, two isolated networks:
+Six Docker containers, two isolated networks:
 
 <p align="center">
   <img src="docs/code-snippets/architecture.png" alt="Architecture" width="700">
@@ -95,6 +95,7 @@ Five Docker containers, two isolated networks:
 | **Caddy** | Reverse proxy, automatic TLS, HTTP/3 |
 | **Dashboard** | Next.js web app, JWT auth, Docker management via socket proxy |
 | **CLIProxyAPIPlus** | AI proxy server, OAuth callbacks, management API |
+| **Perplexity Sidecar** | OpenAI-compatible wrapper for Perplexity Pro subscription |
 | **Docker Socket Proxy** | Restricted Docker API access (containers/images only) |
 | **PostgreSQL** | Database on isolated internal network |
 

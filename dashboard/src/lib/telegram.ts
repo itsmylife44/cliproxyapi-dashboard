@@ -151,21 +151,6 @@ export function formatQuotaAlertBatch(
   return lines.join("\n");
 }
 
-/**
- * @deprecated Use formatQuotaAlertBatch for consolidated alerts
- */
-export function formatQuotaAlert(
-  provider: string,
-  account: string,
-  capacity: number,
-  threshold: number
-): string {
-  return formatQuotaAlertBatch(
-    [{ provider, account, windowId: "", windowLabel: "Unknown", capacity }],
-    threshold
-  );
-}
-
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")

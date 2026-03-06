@@ -181,8 +181,6 @@ export const HOOK_GROUPS = {
 
 export type HookGroupName = keyof typeof HOOK_GROUPS;
 
-export const ALL_HOOK_NAMES = Object.values(HOOK_GROUPS).flat();
-
 // ============================================================================
 // VALIDATION FUNCTION
 // ============================================================================

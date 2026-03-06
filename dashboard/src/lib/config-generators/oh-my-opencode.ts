@@ -156,9 +156,6 @@ interface ModelAssignment {
   fallback_models?: string[];
 }
 
-// Backward compatibility type alias
-export type AgentModelOverrides = OhMyOpenCodeFullConfig;
-
 export function buildOhMyOpenCodeConfig(
   availableModels: string[],
   overrides?: OhMyOpenCodeFullConfig

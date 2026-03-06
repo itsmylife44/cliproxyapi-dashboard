@@ -10,8 +10,6 @@ export const ModelPreferencesSchema = z.object({
     .max(500, "excludedModels array cannot exceed 500 items"),
 });
 
-export type ModelPreferencesInput = z.infer<typeof ModelPreferencesSchema>;
-
 // ============================================================================
 // CONTAINER ACTION
 // ============================================================================
@@ -24,8 +22,6 @@ export const ContainerActionSchema = z.object({
     message: "Confirmation required: set confirm to true",
   }),
 });
-
-export type ContainerActionInput = z.infer<typeof ContainerActionSchema>;
 
 // ============================================================================
 // AGENT CONFIG
@@ -124,8 +120,6 @@ export const AgentConfigSchema = z.object({
   overrides: AgentConfigOverridesSchema,
 });
 
-export type AgentConfigInput = z.infer<typeof AgentConfigSchema>;
-
 // ============================================================================
 // CUSTOM PROVIDERS
 // ============================================================================
@@ -134,8 +128,6 @@ export const FetchModelsSchema = z.object({
   baseUrl: z.string().startsWith("https://", "Base URL must start with https://"),
   apiKey: z.string().min(1)
 });
-
-export type FetchModelsInput = z.infer<typeof FetchModelsSchema>;
 
 export const CreateCustomProviderSchema = z.object({
   name: z.string().min(1).max(100),
@@ -152,8 +144,6 @@ export const CreateCustomProviderSchema = z.object({
   excludedModels: z.array(z.string()).optional()
 });
 
-export type CreateCustomProviderInput = z.infer<typeof CreateCustomProviderSchema>;
-
 // ============================================================================
 // AUTH
 // ============================================================================
@@ -163,14 +153,10 @@ export const LoginSchema = z.object({
   password: z.string().min(1)
 });
 
-export type LoginInput = z.infer<typeof LoginSchema>;
-
 export const ChangePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(1)
 });
-
-export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
 
 // ============================================================================
 // ERROR RESPONSE HELPER
@@ -189,30 +175,21 @@ export const CreateProviderGroupSchema = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
 });
 
-export type CreateProviderGroupInput = z.infer<typeof CreateProviderGroupSchema>;
-
 export const UpdateProviderGroupSchema = z.object({
   name: z.string().min(1).max(50).optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
   isActive: z.boolean().optional(),
 });
 
-export type UpdateProviderGroupInput = z.infer<typeof UpdateProviderGroupSchema>;
-
 export const ReorderProviderGroupsSchema = z.object({
   groupIds: z.array(z.string()).min(1),
 });
-
-export type ReorderProviderGroupsInput = z.infer<typeof ReorderProviderGroupsSchema>;
 
 export const ReorderCustomProvidersSchema = z.object({
   providerIds: z.array(z.string()).min(1),
 });
 
-export type ReorderCustomProvidersInput = z.infer<typeof ReorderCustomProvidersSchema>;
-
 export const AssignProviderGroupSchema = z.object({
   groupId: z.string().nullable(),
 });
 
-export type AssignProviderGroupInput = z.infer<typeof AssignProviderGroupSchema>;

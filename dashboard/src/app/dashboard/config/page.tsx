@@ -64,6 +64,7 @@ interface OAuthModelAliasEntry {
 
 interface Config {
   "proxy-url": string;
+  "auth-dir": string;
   "force-model-prefix": boolean;
   streaming: StreamingConfig;
   debug: boolean;
@@ -213,6 +214,10 @@ export default function ConfigPage() {
       }
 
       const data = await res.json();
+      // Ensure auth-dir is always present (required by CLIProxyAPI v6.8.42+)
+      if (!data["auth-dir"]) {
+        data["auth-dir"] = "~/.cli-proxy-api";
+      }
       setConfig(data as Config);
       setOriginalConfig(data as Config);
       setRawJson(JSON.stringify(data, null, 2));

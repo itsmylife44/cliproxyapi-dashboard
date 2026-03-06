@@ -691,7 +691,7 @@ export default function QuotaPage() {
     };
 
     fetchQuota();
-    const interval = setInterval(fetchQuota, 60000);
+    const interval = setInterval(fetchQuota, 120_000);
     return () => clearInterval(interval);
   }, []);
 

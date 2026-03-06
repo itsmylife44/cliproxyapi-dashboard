@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.1.52](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.51...dashboard-v0.1.52) (2026-03-06)
+
+
+### Features
+
+* add OAuth account enable/disable toggle ([581dcb0](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/581dcb03f095ea1f40930fe33fd24dcdcc12bab0))
+* expose all CLIProxyAPIPlus config fields in dashboard ([#116](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/116)) ([33b4a1a](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/33b4a1ad4015dc6456cdd6e52c4861f0740605af))
+* replace GitHub API with version.json for update checks and show release notes inline ([#114](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/114)) ([b1dfee4](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/b1dfee4dde1cef9a1a6a196641f26286d9d9553c))
+
+
+### Bug Fixes
+
+* deduplicate proxy models, suppress chart warnings, and fix 24h time format ([10530b8](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/10530b844230c72b6d4d6fda23fc213863f81a16))
+* filter usage page to only show dashboard-generated API keys, exclude OAuth auth-file indices ([c1d3bde](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c1d3bde03ed161d873fb4433d656a306703b6dcb))
+* filter usage to dashboard API keys only, add quota cache (2min TTL) and handle Claude 429 rate limits ([dd22ab6](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/dd22ab6b63f77c0155375473726099173b104c69))
+* resolve login failure on HTTP setups and /app/logs permission denied ([051f7d8](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/051f7d86ac9a1fad804ac559c2ece04979761ed9))
+* save config via PUT config.yaml instead of non-existent PUT config JSON ([#115](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/115)) ([9233b28](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/9233b28edaeae474261e8be7dfd4380d40152be5))
+* session secure flag falls back to NODE_ENV when X-Forwarded-Proto absent, stop trimming textarea on every keystroke ([060750c](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/060750c55dcd12dc2c1f40ee6ebef2065dc74160))
+
 ## [0.1.51](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.50...dashboard-v0.1.51) (2026-03-04)
 
 

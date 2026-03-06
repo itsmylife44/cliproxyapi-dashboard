@@ -898,7 +898,6 @@ export async function importOAuthCredential(
       invalidateUsageCaches();
       invalidateProxyModelsCache();
       return { ok: true, accountName: fileName };
-      return { ok: true, accountName: fileName };
     }
 
     // Create ownership record in dashboard DB

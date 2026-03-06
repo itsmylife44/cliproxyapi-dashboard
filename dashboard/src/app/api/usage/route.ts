@@ -238,9 +238,8 @@ function filterAndLabelApis(
     const keyName = keyNameMap.get(authIndex);
     const isUserKey = keyName !== undefined;
     const isUserSource = usage.sources.some((source) => normalizedSourceMatchers.has(source.toLowerCase()));
-    
-    // Non-admin users only see their own keys
-    if (!isAdmin && !isUserKey && !isUserSource) {
+    // Only show usage from dashboard-generated API keys (skip OAuth auth-file indices)
+    if (!isUserKey) {
       continue;
     }
 

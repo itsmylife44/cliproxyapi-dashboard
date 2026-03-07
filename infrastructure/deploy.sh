@@ -73,17 +73,7 @@ trap 'rm -f "$LOCK_FILE"' EXIT
 echo "" > "$LOG_FILE"
 update_status "init" "running" "Starting deployment..."
 
-# Step 1: Git Pull
-update_status "git" "running" "Pulling latest changes from git..."
-cd "$REPO_DIR"
-if git pull >> "$LOG_FILE" 2>&1; then
-    update_status "git" "completed" "Git pull successful"
-else
-    update_status "git" "failed" "Git pull failed"
-    exit 1
-fi
-
-# Step 2: Pull latest image
+# Step 1: Pull latest image
 update_status "pull" "running" "Pulling latest dashboard image from GHCR..."
 cd "$INFRA_DIR"
 if docker compose pull dashboard >> "$LOG_FILE" 2>&1; then
@@ -93,7 +83,7 @@ else
     exit 1
 fi
 
-# Step 3: Ensure docker-proxy is running
+# Step 2: Ensure docker-proxy is running
 update_status "proxy" "running" "Ensuring Docker socket proxy is running..."
 if docker compose up -d docker-proxy >> "$LOG_FILE" 2>&1; then
     update_status "proxy" "completed" "Docker socket proxy is running"
@@ -102,7 +92,7 @@ else
     exit 1
 fi
 
-# Step 4: Docker Up
+# Step 3: Deploy new dashboard container
 update_status "deploy" "running" "Starting new dashboard container..."
 if docker compose up -d --no-deps dashboard >> "$LOG_FILE" 2>&1; then
     update_status "deploy" "completed" "Container started successfully"
@@ -111,7 +101,7 @@ else
     exit 1
 fi
 
-# Step 5: Health Check
+# Step 4: Health Check
 update_status "health" "running" "Waiting for health check..."
 sleep 5
 

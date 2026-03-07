@@ -212,7 +212,7 @@ start_nextjs() {
     echo ""
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${GREEN}  Dashboard:  http://localhost:3000${NC}"
-    echo -e "${BLUE}  PostgreSQL: localhost:5432${NC}"
+    echo -e "${BLUE}  PostgreSQL: localhost:5433${NC}"
     echo -e "${BLUE}  API:        http://localhost:28317${NC}"
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""

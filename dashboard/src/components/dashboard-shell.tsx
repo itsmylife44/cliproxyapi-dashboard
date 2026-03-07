@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, createContext, useContext } from "react";
+import { useState, useEffect, useCallback, useMemo, createContext, useContext } from "react";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { UserPanel } from "@/components/user-panel";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
@@ -59,8 +59,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     setExternalStatus(undefined);
   }, []);
 
+  const contextValue = useMemo(() => ({ provide, clear }), [provide, clear]);
+
   return (
-    <ProxyStatusContext.Provider value={{ provide, clear }}>
+    <ProxyStatusContext.Provider value={contextValue}>
       {user && (
         <DashboardHeader
           username={user.username}

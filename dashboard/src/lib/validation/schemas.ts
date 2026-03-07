@@ -193,3 +193,16 @@ export const AssignProviderGroupSchema = z.object({
   groupId: z.string().nullable(),
 });
 
+export type AssignProviderGroupInput = z.infer<typeof AssignProviderGroupSchema>;
+
+// ============================================================================
+// OAUTH CREDENTIAL IMPORT
+// ============================================================================
+
+export const ImportOAuthCredentialSchema = z.object({
+  provider: z.string().min(1, "Provider is required"),
+  fileName: z.string().min(1, "File name is required").max(500),
+  fileContent: z.string().min(2, "File content is required").max(1024 * 1024, "File content too large (max 1MB)"),
+});
+
+export type ImportOAuthCredentialInput = z.infer<typeof ImportOAuthCredentialSchema>;

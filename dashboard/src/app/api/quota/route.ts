@@ -1151,6 +1151,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    return Errors.badGateway("Failed to fetch quota data", error);
+    return Errors.internal("Failed to fetch quota data", error);
   }
 }

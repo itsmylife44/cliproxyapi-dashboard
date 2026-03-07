@@ -676,12 +676,16 @@ export function OAuthSection({
     if (!file) return;
 
     if (!file.name.endsWith(".json")) {
+      setImportFileName("");
+      setImportJsonContent("");
       setImportErrorMessage("Please select a JSON file.");
       setImportStatus("error");
       return;
     }
 
     if (file.size > 1024 * 1024) {
+      setImportFileName("");
+      setImportJsonContent("");
       setImportErrorMessage("File is too large (max 1MB).");
       setImportStatus("error");
       return;

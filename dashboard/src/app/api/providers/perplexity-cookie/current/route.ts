@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
 import { Errors } from "@/lib/errors";
 import { env } from "@/lib/env";
+
+const HMAC_KEY = Buffer.alloc(32);
+
+function safeTokenCompare(a: string, b: string): boolean {
+  const ha = createHmac("sha256", HMAC_KEY).update(a).digest();
+  const hb = createHmac("sha256", HMAC_KEY).update(b).digest();
+  return timingSafeEqual(ha, hb);
+}
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization") ?? "";
@@ -16,7 +25,8 @@ export async function GET(request: NextRequest) {
     validTokens.push(env.PERPLEXITY_SIDECAR_SECRET);
   }
 
-  if (!validTokens.includes(token)) {
+  const isValid = validTokens.some((valid) => safeTokenCompare(token, valid));
+  if (!isValid) {
     return Errors.unauthorized();
   }
 

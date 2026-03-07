@@ -79,7 +79,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error || "Failed to subscribe", "error");
+        showToast(data.error?.message ?? data.error ?? "Failed to subscribe", "error");
         return;
       }
       setStatus(data);
@@ -103,7 +103,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error || "Failed to toggle status", "error");
+        showToast(data.error?.message ?? data.error ?? "Failed to toggle status", "error");
         return;
       }
       setStatus(data);
@@ -130,7 +130,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error || "Failed to unsubscribe", "error");
+        showToast(data.error?.message ?? data.error ?? "Failed to unsubscribe", "error");
         return;
       }
       setStatus(null);

@@ -3,6 +3,7 @@ import { getUserCount } from "@/lib/auth/dal";
 import { hashPassword } from "@/lib/auth/password";
 import { signToken } from "@/lib/auth/jwt";
 import { createSession } from "@/lib/auth/session";
+import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { Prisma } from "@/generated/prisma/client";
 import {
   PASSWORD_MAX_LENGTH,
@@ -37,6 +38,11 @@ function wait(ms: number): Promise<void> {
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimit = checkRateLimitWithPreset(request, "setup", "SETUP");
+  if (!rateLimit.allowed) {
+    return Errors.rateLimited(rateLimit.retryAfterSeconds);
+  }
+
   try {
     const body = await request.json();
     const { username, password } = body;

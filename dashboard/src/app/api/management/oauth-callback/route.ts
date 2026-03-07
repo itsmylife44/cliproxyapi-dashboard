@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
+import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
+import { Errors } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/lib/logger";
@@ -146,7 +148,7 @@ export async function POST(request: NextRequest) {
   const session = await verifySession();
 
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -154,16 +156,21 @@ export async function POST(request: NextRequest) {
     return originError;
   }
 
+  const rateLimit = checkRateLimitWithPreset(request, "oauth-callback", "OAUTH_CALLBACK");
+  if (!rateLimit.allowed) {
+    return Errors.rateLimited(rateLimit.retryAfterSeconds);
+  }
+
   let rawBody: unknown;
   try {
     rawBody = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return Errors.validation("Invalid JSON");
   }
 
   const parsedBody = parseRequestBody(rawBody);
   if (!parsedBody) {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return Errors.validation("Invalid request body");
   }
 
   const { provider, callbackUrl, state } = parsedBody;
@@ -174,26 +181,17 @@ export async function POST(request: NextRequest) {
 
     if (PROVIDERS_WITH_CALLBACK.has(provider)) {
       if (!callbackUrl) {
-        return NextResponse.json(
-          { error: "Callback URL is required for this provider" },
-          { status: 400 }
-        );
+        return Errors.validation("Callback URL is required for this provider");
       }
 
       const callbackParams = extractCallbackParams(callbackUrl);
       if (!callbackParams) {
-        return NextResponse.json(
-          { error: "Callback URL must include code and state" },
-          { status: 400 }
-        );
+        return Errors.validation("Callback URL must include code and state");
       }
 
       const callbackPath = CALLBACK_PATHS[provider];
       if (!callbackPath) {
-        return NextResponse.json(
-          { error: "OAuth callback endpoint is not configured" },
-          { status: 500 }
-        );
+        return Errors.internal("OAuth callback endpoint is not configured");
       }
 
       const callbackTarget = new URL(callbackPath);
@@ -210,10 +208,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(payload, { status: responseStatus });
       }
     } else if (!resolvedState) {
-      return NextResponse.json(
-        { error: "State is required for this provider" },
-        { status: 400 }
-      );
+      return Errors.validation("State is required for this provider");
     }
 
     let candidateFiles: AuthFileEntry[] = [];
@@ -284,10 +279,7 @@ export async function POST(request: NextRequest) {
     const payload: OAuthCallbackResponse = { status: responseStatus };
 
     return NextResponse.json(payload, { status: responseStatus });
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to relay OAuth callback" },
-      { status: 502 }
-    );
+  } catch (error) {
+    return Errors.internal("Failed to relay OAuth callback", error);
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
+import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { hashPassword } from "@/lib/auth/password";
 import {
   PASSWORD_MAX_LENGTH,
@@ -10,6 +11,7 @@ import {
   isValidUsernameFormat,
 } from "@/lib/auth/validation";
 import { prisma } from "@/lib/db";
+import { Errors } from "@/lib/errors";
 import { cascadeDeleteUserProviders } from "@/lib/providers/cascade";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { logger } from "@/lib/logger";
@@ -17,7 +19,7 @@ import { logger } from "@/lib/logger";
 async function requireAdmin(): Promise<{ userId: string; username: string } | NextResponse> {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const user = await prisma.user.findUnique({
@@ -26,10 +28,7 @@ async function requireAdmin(): Promise<{ userId: string; username: string } | Ne
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden - Admin access required" },
-      { status: 403 }
-    );
+    return Errors.forbidden();
   }
 
   return { userId: session.userId, username: session.username };
@@ -84,11 +83,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error({ err: error }, "Failed to fetch users");
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to fetch users", error);
   }
 }
 
@@ -103,29 +98,25 @@ export async function POST(request: NextRequest) {
     return originError;
   }
 
+  const rateLimit = checkRateLimitWithPreset(request, "admin-users", "ADMIN_USERS");
+  if (!rateLimit.allowed) {
+    return Errors.rateLimited(rateLimit.retryAfterSeconds);
+  }
+
   try {
     const body = await request.json();
     const { username, password, isAdmin } = body;
 
     if (!username || !password) {
-      return NextResponse.json(
-        { error: "Username and password are required" },
-        { status: 400 }
-      );
+      return Errors.missingFields(["username", "password"]);
     }
 
     if (typeof username !== "string" || typeof password !== "string") {
-      return NextResponse.json(
-        { error: "Invalid input types" },
-        { status: 400 }
-      );
+      return Errors.validation("Invalid input types");
     }
 
     if (isAdmin !== undefined && typeof isAdmin !== "boolean") {
-      return NextResponse.json(
-        { error: "isAdmin must be a boolean" },
-        { status: 400 }
-      );
+      return Errors.validation("isAdmin must be a boolean");
     }
 
     if (
@@ -133,11 +124,8 @@ export async function POST(request: NextRequest) {
       username.length > USERNAME_MAX_LENGTH ||
       !isValidUsernameFormat(username)
     ) {
-      return NextResponse.json(
-        {
-          error: `Username must be ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} chars and contain only letters, numbers, _ or -`,
-        },
-        { status: 400 }
+      return Errors.validation(
+        `Username must be ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} chars and contain only letters, numbers, _ or -`
       );
     }
 
@@ -145,11 +133,8 @@ export async function POST(request: NextRequest) {
       password.length < PASSWORD_MIN_LENGTH ||
       password.length > PASSWORD_MAX_LENGTH
     ) {
-      return NextResponse.json(
-        {
-          error: `Password must be between ${PASSWORD_MIN_LENGTH} and ${PASSWORD_MAX_LENGTH} characters`,
-        },
-        { status: 400 }
+      return Errors.validation(
+        `Password must be between ${PASSWORD_MIN_LENGTH} and ${PASSWORD_MAX_LENGTH} characters`
       );
     }
 
@@ -159,10 +144,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: "Username already exists" },
-        { status: 400 }
-      );
+      return Errors.conflict("Username already exists");
     }
 
     const passwordHash = await hashPassword(password);
@@ -196,11 +178,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    logger.error({ err: error }, "User creation error");
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return Errors.internal("User creation error", error);
   }
 }
 
@@ -220,10 +198,7 @@ export async function DELETE(request: NextRequest) {
     const userIdToDelete = searchParams.get("userId");
 
     if (!userIdToDelete || typeof userIdToDelete !== "string") {
-      return NextResponse.json(
-        { error: "userId query parameter is required" },
-        { status: 400 }
-      );
+      return Errors.validation("userId query parameter is required");
     }
 
     const targetUser = await prisma.user.findUnique({
@@ -232,14 +207,11 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!targetUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return Errors.notFound("User");
     }
 
     if (targetUser.id === authResult.userId) {
-      return NextResponse.json(
-        { error: "Cannot delete your own account" },
-        { status: 400 }
-      );
+      return Errors.validation("Cannot delete your own account");
     }
 
     const cascadeResult = await cascadeDeleteUserProviders(userIdToDelete, true);
@@ -280,10 +252,6 @@ export async function DELETE(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error({ err: error }, "User deletion error");
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return Errors.internal("User deletion error", error);
   }
 }

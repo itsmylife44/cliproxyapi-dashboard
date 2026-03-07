@@ -70,6 +70,7 @@ docker exec -it cliproxyapi-dev-postgres psql -U cliproxyapi -d cliproxyapi
 
 ### Build errors after branch switch
 ```bash
+cd dashboard
 npx prisma generate    # Regenerate Prisma client
 npm install            # Reinstall dependencies
 ```

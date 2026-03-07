@@ -8,17 +8,17 @@ GET  /api/auth/me            → lib/auth/session → user info
 POST /api/auth/change-password → lib/auth/password → update hash
 
 ## Admin
-GET|POST       /api/admin/users          → Prisma User CRUD
+GET|POST|DELETE /api/admin/users          → Prisma User CRUD
 GET|PUT        /api/admin/settings       → Prisma SystemSetting
 GET|DELETE     /api/admin/logs           → lib/log-storage
 GET|POST       /api/admin/deploy         → lib/containers
 POST           /api/admin/revoke-sessions → Prisma User.sessionVersion++
-GET            /api/admin/telegram        → lib/telegram
+GET|PUT|POST   /api/admin/telegram        → lib/telegram
 POST           /api/admin/migrate-api-keys → migration script
 
 ## Providers
 GET|POST       /api/providers/keys       → lib/providers/api-key-ops → Prisma
-DELETE         /api/providers/keys/[hash] → cascade delete
+DELETE         /api/providers/keys/[keyHash] → cascade delete
 GET|POST       /api/providers/oauth      → lib/providers/oauth-ops → Prisma
 DELETE|PATCH   /api/providers/oauth/[id]  → ownership check → Prisma
 POST           /api/providers/oauth/import → bulk import
@@ -48,8 +48,8 @@ GET            /api/config-sync/bundle    → lib/config-sync/generate-bundle
 GET            /api/config-sync/version   → version info
 
 ## Config Sharing
-GET|POST       /api/config-sharing/publish   → Prisma ConfigTemplate
-GET|POST       /api/config-sharing/subscribe → Prisma ConfigSubscription
+GET|POST|PATCH|DELETE /api/config-sharing/publish   → Prisma ConfigTemplate
+GET|POST|PATCH|DELETE /api/config-sharing/subscribe → Prisma ConfigSubscription
 
 ## Quota & Usage
 GET            /api/quota                → management proxy + aggregation (1156 lines)

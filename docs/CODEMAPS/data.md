@@ -3,44 +3,53 @@
 
 ## Core Models
 ```
-User (id, username, passwordHash, isAdmin, sessionVersion, createdAt)
+User (id, username, passwordHash, isAdmin, sessionVersion, createdAt, updatedAt)
   ├──< ModelPreference (userId, excludedModels[])
-  ├──< AgentModelOverride (userId, agentConfig JSON)
-  ├──< SyncToken (userId, name, tokenHash, apiKeyId?)
-  ├──< UserApiKey (userId, keyHash, name, isActive)
-  ├──< ConfigTemplate (userId, name, content, shareCode)
-  ├──< ConfigSubscription (userId, templateId)
-  ├──< ProviderKeyOwnership (userId, provider, keyHash, name)
-  ├──< ProviderOAuthOwnership (userId, provider, accountId)
-  ├──< AuditLog (userId, action, target, details, ip)
-  └──< UsageRecord (userId?, apiKeyHash, model, tokens, cost, collectedAt)
+  ├──< AgentModelOverride (userId, overrides JSON)
+  ├──< SyncToken (userId, name, tokenHash, syncApiKey?, lastUsedAt?, revokedAt?)
+  ├──< UserApiKey (userId, key, name, lastUsedAt?)
+  ├──< ConfigTemplate (userId, name, shareCode, isActive)
+  ├──< ConfigSubscription (userId, templateId, isActive, frozenConfig?, previousConfig?)
+  ├──< ProviderKeyOwnership (userId, provider, keyIdentifier, name, keyHash)
+  ├──< ProviderOAuthOwnership (userId, provider, accountName, accountEmail?)
+  ├──< AuditLog (userId, action, target?, metadata?, ipAddress?)
+  └──< UsageRecord (userId?, apiKeyId?, authIndex, model, source, timestamp,
+                     inputTokens, outputTokens, reasoningTokens, cachedTokens,
+                     totalTokens, failed, collectedAt)
 ```
 
 ## Provider Models
 ```
-CustomProvider (id, userId, name, providerId, baseUrl, apiKey, groupId?, position)
-  ├──< CustomProviderModel (providerId, modelId, mappedTo)
-  └──< CustomProviderExcludedModel (providerId, pattern)
+CustomProvider (id, userId, name, providerId, baseUrl, apiKeyHash, groupId?, sortOrder,
+               prefix?, proxyUrl?, headers?)
+  ├──< CustomProviderModel (customProviderId, upstreamName, alias)
+  └──< CustomProviderExcludedModel (customProviderId, pattern)
 
-ProviderGroup (id, userId, name, position, isActive)
+ProviderGroup (id, userId, name, color?, sortOrder, isActive)
   └──< CustomProvider (groupId)
 
-PerplexityCookie (id, userId, cookie, expiresAt, isActive)
+PerplexityCookie (id, userId, cookieData, label, isActive, lastUsedAt?)
 ```
 
 ## System Models
 ```
-SystemSetting (key, value)
-CollectorState (id, lastCollectedAt)
+SystemSetting (id, key, value)
+CollectorState (id, lastCollectedAt, lastStatus, recordsStored, errorMessage?)
 ```
 
 ## Key Indexes
 - User: username (unique)
-- SyncToken: tokenHash (unique)
-- UserApiKey: keyHash (unique)
-- UsageRecord: collectedAt, apiKeyHash
-- AuditLog: target, userId
-- ProviderKeyOwnership: provider+keyHash (composite)
+- SyncToken: userId (index), tokenHash (index)
+- UserApiKey: key (unique), userId (index)
+- UsageRecord: authIndex+model+timestamp+source+totalTokens (unique dedup),
+  userId, authIndex, timestamp, model, source, userId+timestamp,
+  authIndex+timestamp, collectedAt
+- AuditLog: userId, createdAt, action, target
+- ProviderKeyOwnership: keyHash (unique), userId, provider, provider+keyHash (composite)
+- ProviderOAuthOwnership: accountName (unique), userId
+- CustomProvider: providerId (unique), userId, groupId
+- ProviderGroup: userId+name (unique), userId
+- ConfigTemplate: shareCode (unique, indexed)
 
 ## Migrations
 Located in dashboard/prisma/migrations/ (17 migrations)

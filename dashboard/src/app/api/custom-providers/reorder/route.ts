@@ -9,6 +9,7 @@ import { env } from "@/lib/env";
 import { invalidateProxyModelsCache } from "@/lib/cache";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { apiSuccess } from "@/lib/api-response";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -152,7 +153,7 @@ export async function PUT(request: NextRequest) {
       ipAddress: extractIpAddress(request),
     });
 
-    return NextResponse.json({ success: true, syncStatus });
+    return apiSuccess({ syncStatus });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return Errors.zodValidation(error.issues);

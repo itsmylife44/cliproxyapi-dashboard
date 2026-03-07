@@ -4,6 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { removeOAuthAccountByIdOrName, toggleOAuthAccountByIdOrName } from "@/lib/providers/dual-write";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 export async function DELETE(
   request: NextRequest,
@@ -11,7 +12,7 @@ export async function DELETE(
 ) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const originError = validateOrigin(request);
@@ -23,10 +24,7 @@ export async function DELETE(
     const { id } = await params;
 
     if (!id || typeof id !== "string") {
-      return NextResponse.json(
-        { error: "Invalid or missing id parameter" },
-        { status: 400 }
-      );
+      return apiError("Invalid or missing id parameter", 400);
     }
 
     const user = await prisma.user.findUnique({
@@ -40,21 +38,18 @@ export async function DELETE(
 
     if (!result.ok) {
       if (result.error?.includes("Access denied")) {
-        return NextResponse.json({ error: result.error }, { status: 403 });
+        return apiError(result.error, 403);
       }
       if (result.error?.includes("not found")) {
-        return NextResponse.json({ error: result.error }, { status: 404 });
+        return apiError(result.error, 404);
       }
-      return NextResponse.json({ error: result.error }, { status: 500 });
+      return apiError(result.error ?? "Operation failed", 500);
     }
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
     logger.error({ err: error }, "DELETE /api/providers/oauth/[id] error");
-    return NextResponse.json(
-      { error: "Failed to remove OAuth account" },
-      { status: 500 }
-    );
+    return apiError("Failed to remove OAuth account", 500);
   }
 }
 
@@ -64,7 +59,7 @@ export async function PATCH(
 ) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const originError = validateOrigin(request);
@@ -76,18 +71,12 @@ export async function PATCH(
     const { id } = await params;
 
     if (!id || typeof id !== "string") {
-      return NextResponse.json(
-        { error: "Invalid or missing id parameter" },
-        { status: 400 }
-      );
+      return apiError("Invalid or missing id parameter", 400);
     }
 
     const body = await request.json().catch(() => null);
     if (!body || typeof body.disabled !== "boolean") {
-      return NextResponse.json(
-        { error: "Request body must include 'disabled' (boolean)" },
-        { status: 400 }
-      );
+      return apiError("Request body must include 'disabled' (boolean)", 400);
     }
 
     const user = await prisma.user.findUnique({
@@ -101,20 +90,17 @@ export async function PATCH(
 
     if (!result.ok) {
       if (result.error?.includes("Access denied")) {
-        return NextResponse.json({ error: result.error }, { status: 403 });
+        return apiError(result.error, 403);
       }
       if (result.error?.includes("not found")) {
-        return NextResponse.json({ error: result.error }, { status: 404 });
+        return apiError(result.error, 404);
       }
-      return NextResponse.json({ error: result.error }, { status: 500 });
+      return apiError(result.error ?? "Operation failed", 500);
     }
 
-    return NextResponse.json({ success: true, disabled: result.disabled });
+    return apiSuccess({ disabled: result.disabled });
   } catch (error) {
     logger.error({ err: error }, "PATCH /api/providers/oauth/[id] error");
-    return NextResponse.json(
-      { error: "Failed to toggle OAuth account" },
-      { status: 500 }
-    );
+    return apiError("Failed to toggle OAuth account", 500);
   }
 }

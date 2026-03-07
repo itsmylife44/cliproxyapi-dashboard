@@ -1,10 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
+import { UpdateProxySchema } from "@/lib/validation/schemas";
 
 const execFileAsync = promisify(execFile);
 
@@ -136,7 +138,7 @@ export async function POST(request: NextRequest) {
   const session = await verifySession();
 
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const user = await prisma.user.findUnique({
@@ -145,7 +147,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    return apiError("Forbidden: Admin access required", 403);
   }
 
   const originError = validateOrigin(request);
@@ -156,14 +158,15 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { version = "latest", confirm } = body;
-
-    if (confirm !== true) {
-      return NextResponse.json({ error: "Confirmation required" }, { status: 400 });
+    const parsed = UpdateProxySchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError("Confirmation required or invalid version format", 400);
     }
 
-    if (typeof version !== "string" || !isValidImageTag(version)) {
-      return NextResponse.json({ error: "Invalid version format" }, { status: 400 });
+    const { version } = parsed.data;
+
+    if (!isValidImageTag(version)) {
+      return apiError("Invalid version format", 400);
     }
 
     const imageTag = `${IMAGE_NAME}:${version}`;
@@ -184,7 +187,7 @@ export async function POST(request: NextRequest) {
       await recreateWithDockerRun(configSnapshot, imageTag);
     }
 
-    return NextResponse.json({ success: true, message: `Updated to ${version}`, version });
+    return apiSuccess({ success: true, message: `Updated to ${version}`, version });
   } catch (error) {
     logger.error({ err: error }, "Update error");
 
@@ -200,9 +203,6 @@ export async function POST(request: NextRequest) {
       logger.error({ err: restartError }, "Recovery failed");
     }
 
-    return NextResponse.json(
-      { error: "Update failed. Container may need manual restart." },
-      { status: 500 }
-    );
+    return apiError("Update failed. Container may need manual restart.", 500);
   }
 }

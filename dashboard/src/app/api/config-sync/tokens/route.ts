@@ -5,22 +5,17 @@ import { generateSyncToken } from "@/lib/auth/sync-token";
 import { prisma } from "@/lib/db";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 export async function POST(request: NextRequest) {
   const rateLimit = checkRateLimitWithPreset(request, "config-sync-tokens", "CONFIG_SYNC_TOKENS");
   if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: "Too many token creation requests. Try again later." },
-      {
-        status: 429,
-        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
-      }
-    );
+    return apiError("Too many token creation requests. Try again later.", 429);
   }
 
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const originError = validateOrigin(request);
@@ -39,10 +34,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!userApiKey) {
-      return NextResponse.json(
-        { error: "User API key not found. Please create an API key first." },
-        { status: 400 }
-      );
+      return apiError("User API key not found. Please create an API key first.", 400);
     }
 
     const syncToken = await prisma.syncToken.create({
@@ -54,7 +46,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       id: syncToken.id,
       token,
       name: syncToken.name,
@@ -63,17 +55,14 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     logger.error({ err: error }, "Failed to create sync token");
-    return NextResponse.json(
-      { error: "Failed to create token" },
-      { status: 500 }
-    );
+    return apiError("Failed to create token", 500);
   }
 }
 
 export async function GET() {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   try {
@@ -119,12 +108,9 @@ export async function GET() {
       orderBy: { createdAt: "asc" },
     });
 
-    return NextResponse.json({ tokens, apiKeys: allUserKeys });
+    return apiSuccess({ tokens, apiKeys: allUserKeys });
   } catch (error) {
     logger.error({ err: error }, "Failed to fetch sync tokens");
-    return NextResponse.json(
-      { error: "Failed to fetch tokens" },
-      { status: 500 }
-    );
+    return apiError("Failed to fetch tokens", 500);
   }
 }

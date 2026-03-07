@@ -153,9 +153,12 @@ export const LoginSchema = z.object({
   password: z.string().min(1)
 });
 
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MAX_LENGTH = 72;
+
 export const ChangePasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(1)
+  newPassword: z.string().min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters`).max(PASSWORD_MAX_LENGTH, `Password must be at most ${PASSWORD_MAX_LENGTH} characters`),
 });
 
 // ============================================================================
@@ -206,3 +209,199 @@ export const ImportOAuthCredentialSchema = z.object({
 });
 
 export type ImportOAuthCredentialInput = z.infer<typeof ImportOAuthCredentialSchema>;
+
+// ============================================================================
+// ADMIN SETTINGS
+// ============================================================================
+
+const ALLOWED_SETTING_KEYS = [
+  "max_provider_keys_per_user",
+  "telegram_bot_token",
+  "telegram_chat_id",
+  "telegram_quota_threshold",
+  "telegram_alerts_enabled",
+  "telegram_last_alert_time",
+  "telegram_alert_providers",
+  "telegram_check_interval",
+  "telegram_cooldown",
+] as const;
+
+export const UpdateSystemSettingSchema = z.object({
+  key: z.enum(ALLOWED_SETTING_KEYS, { message: "Unknown setting key" }),
+  value: z.string().min(1).max(1000),
+});
+
+// ============================================================================
+// ADMIN DEPLOY
+// ============================================================================
+
+export const DeploySchema = z.object({
+  noCache: z.boolean().optional(),
+});
+
+// ============================================================================
+// ADMIN TELEGRAM
+// ============================================================================
+
+export const UpdateTelegramSettingsSchema = z.object({
+  botToken: z.string().optional(),
+  chatId: z.string().optional(),
+  threshold: z.union([z.number().int().min(1).max(100), z.string()]).optional(),
+  enabled: z.boolean().optional(),
+  providers: z.array(z.string()).optional(),
+  checkInterval: z.number().int().min(1).max(1440).optional(),
+  cooldown: z.number().int().min(1).max(1440).optional(),
+});
+
+// ============================================================================
+// CONFIG SYNC TOKEN UPDATE
+// ============================================================================
+
+export const UpdateSyncTokenSchema = z.object({
+  syncApiKey: z.string().optional().nullable(),
+});
+
+// ============================================================================
+// RESTART / CONFIRM ACTIONS
+// ============================================================================
+
+export const ConfirmActionSchema = z.object({
+  confirm: z.literal(true, {
+    message: "Confirmation required: set confirm to true",
+  }),
+});
+
+// ============================================================================
+// UPDATE PROXY
+// ============================================================================
+
+export const UpdateProxySchema = z.object({
+  version: z.string().default("latest"),
+  confirm: z.literal(true, {
+    message: "Confirmation required: set confirm to true",
+  }),
+});
+
+// ============================================================================
+// UPDATE DASHBOARD
+// ============================================================================
+
+export const UpdateDashboardSchema = z.object({
+  confirm: z.literal(true, {
+    message: "Confirmation required: set confirm to true",
+  }),
+});
+
+// ============================================================================
+// USER API KEYS
+// ============================================================================
+
+export const CreateApiKeySchema = z.object({
+  name: z.string().optional(),
+});
+
+// ============================================================================
+// PROVIDER KEYS
+// ============================================================================
+
+export const ContributeKeySchema = z.object({
+  provider: z.string().min(1),
+  apiKey: z.string().min(1),
+});
+
+// ============================================================================
+// OAUTH ACCOUNTS
+// ============================================================================
+
+export const ContributeOAuthSchema = z.object({
+  provider: z.string().min(1),
+  accountName: z.string().min(1),
+  accountEmail: z.string().optional(),
+});
+
+export const ToggleOAuthSchema = z.object({
+  disabled: z.boolean(),
+});
+
+// ============================================================================
+// PERPLEXITY COOKIE
+// ============================================================================
+
+export const CreatePerplexityCookieSchema = z.object({
+  cookieData: z.string().min(1),
+  label: z.string().optional(),
+});
+
+export const DeletePerplexityCookieSchema = z.object({
+  id: z.string().min(1),
+});
+
+// ============================================================================
+// CONFIG SHARING - PUBLISH
+// ============================================================================
+
+export const CreatePublishSchema = z.object({
+  name: z.string().optional(),
+});
+
+export const UpdatePublishSchema = z.object({
+  name: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+
+// ============================================================================
+// CONFIG SHARING - SUBSCRIBE
+// ============================================================================
+
+export const SubscribeSchema = z.object({
+  shareCode: z.string().min(1),
+});
+
+export const UpdateSubscriptionSchema = z.object({
+  isActive: z.boolean(),
+});
+
+// ============================================================================
+// OAUTH CALLBACK
+// ============================================================================
+
+export const OAuthCallbackSchema = z.object({
+  provider: z.string().min(1),
+  callbackUrl: z.string().optional(),
+  state: z.string().optional(),
+});
+
+// ============================================================================
+// ADMIN USERS
+// ============================================================================
+
+export const CreateUserSchema = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1),
+  isAdmin: z.boolean().optional(),
+});
+
+// ============================================================================
+// USER CONFIG
+// ============================================================================
+
+const UserConfigMcpLocalSchema = z.object({
+  name: z.string().min(1),
+  type: z.literal("local"),
+  command: z.array(z.string()).min(1),
+  enabled: z.boolean().optional(),
+  environment: z.record(z.string(), z.string()).optional(),
+});
+
+const UserConfigMcpRemoteSchema = z.object({
+  name: z.string().min(1),
+  type: z.literal("remote"),
+  url: z.string().min(1),
+  enabled: z.boolean().optional(),
+  environment: z.record(z.string(), z.string()).optional(),
+});
+
+export const UserConfigSchema = z.object({
+  mcpServers: z.array(z.union([UserConfigMcpLocalSchema, UserConfigMcpRemoteSchema])).optional(),
+  customPlugins: z.array(z.string().min(1)).optional(),
+});

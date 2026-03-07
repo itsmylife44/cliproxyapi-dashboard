@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { deleteSession, verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 export async function POST(request: NextRequest) {
   const originError = validateOrigin(request);
@@ -21,12 +22,9 @@ export async function POST(request: NextRequest) {
       logger.info({ userId: session.userId, username: session.username, ip }, "User logged out");
     }
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ loggedOut: true });
   } catch (error) {
     logger.error({ err: error }, "Logout error");
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return apiError("Internal server error", 500);
   }
 }

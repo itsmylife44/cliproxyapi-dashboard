@@ -5,6 +5,7 @@ import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { randomUUID, timingSafeEqual } from "crypto";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -194,7 +195,7 @@ export async function POST(request: NextRequest) {
   if (!isCronAuth) {
     const session = await verifySession();
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError("Unauthorized", 401);
     }
 
     const user = await prisma.user.findUnique({
@@ -203,7 +204,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user?.isAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return apiError("Forbidden", 403);
     }
 
     const originError = validateOrigin(request);
@@ -212,10 +213,7 @@ export async function POST(request: NextRequest) {
 
   if (!MANAGEMENT_API_KEY) {
     logger.error("MANAGEMENT_API_KEY is not configured");
-    return NextResponse.json(
-      { error: "Server configuration error" },
-      { status: 500 }
-    );
+    return apiError("Server configuration error", 500);
   }
 
   const runId = randomUUID();
@@ -226,17 +224,11 @@ export async function POST(request: NextRequest) {
     const leaseAcquired = await tryAcquireCollectorLease(leaseAcquiredAt);
     if (!leaseAcquired) {
       logger.warn({ runId }, "Usage collection skipped: collector already running");
-      return NextResponse.json(
-        { error: "Collector already running", runId },
-        { status: 202 }
-      );
+      return apiError("Collector already running", 202);
     }
   } catch (error) {
     logger.error({ err: error, runId }, "Failed to acquire collector lease");
-    return NextResponse.json(
-      { error: "Failed to acquire collector lock", runId },
-      { status: 500 }
-    );
+    return apiError("Failed to acquire collector lock", 500);
   }
 
   try {
@@ -258,10 +250,7 @@ export async function POST(request: NextRequest) {
     } catch (fetchError) {
       logger.error({ err: fetchError }, "Failed to connect to CLIProxyAPI");
       await markCollectorError(runId, "Proxy service unavailable");
-      return NextResponse.json(
-        { error: "Proxy service unavailable" },
-        { status: 503 }
-      );
+      return apiError("Proxy service unavailable", 503);
     }
 
     interface AuthFileEntry {
@@ -302,10 +291,7 @@ export async function POST(request: NextRequest) {
         "CLIProxyAPI usage endpoint returned error"
       );
       await markCollectorError(runId, "Failed to fetch usage data");
-      return NextResponse.json(
-        { error: "Failed to fetch usage data" },
-        { status: 502 }
-      );
+      return apiError("Failed to fetch usage data", 502);
     }
 
     const responseJson: unknown = await usageResponse.json();
@@ -323,10 +309,7 @@ export async function POST(request: NextRequest) {
         "Unexpected usage response format from CLIProxyAPI"
       );
       await markCollectorError(runId, "Invalid usage data format");
-      return NextResponse.json(
-        { error: "Invalid usage data format" },
-        { status: 502 }
-      );
+      return apiError("Invalid usage data format", 502);
     }
 
     const syncResult = await syncKeysToCliProxyApi();
@@ -482,7 +465,7 @@ export async function POST(request: NextRequest) {
       "Usage collection completed"
     );
 
-    return NextResponse.json({
+    return apiSuccess({
       runId,
       processed: candidates.length,
       stored: totalStored,
@@ -515,6 +498,6 @@ export async function POST(request: NextRequest) {
       /* state update failed, continue */
     }
 
-    return NextResponse.json({ error: "Internal error", runId }, { status: 500 });
+    return apiError("Internal error", 500);
   }
 }

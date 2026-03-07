@@ -14,6 +14,8 @@ import {
 import { ERROR_CODE, Errors, apiErrorWithHeaders } from "@/lib/errors";
 import { AUDIT_ACTION, logAuditAsync } from "@/lib/audit";
 import { logger } from "@/lib/logger";
+import { apiSuccess } from "@/lib/api-response";
+import { LoginSchema } from "@/lib/validation/schemas";
 
 const LOGIN_ATTEMPTS_LIMIT = 10;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -41,15 +43,13 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { username, password } = body;
+    const parsed = LoginSchema.safeParse(body);
 
-    if (!username || !password) {
-      return Errors.missingFields(["username", "password"]);
+    if (!parsed.success) {
+      return Errors.zodValidation(parsed.error.issues);
     }
 
-    if (typeof username !== "string" || typeof password !== "string") {
-      return Errors.validation("Invalid input types");
-    }
+    const { username, password } = parsed.data;
 
     if (
       username.length < USERNAME_MIN_LENGTH ||
@@ -98,8 +98,7 @@ export async function POST(request: NextRequest) {
       ipAddress: ipAddress,
     });
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       user: {
         id: user.id,
         username: user.username,

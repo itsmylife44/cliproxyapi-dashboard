@@ -4,11 +4,12 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { getLogs, clearLogs, getLogStats, type LogEntry } from "@/lib/log-storage";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 async function requireAdmin(): Promise<{ userId: string } | NextResponse> {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const user = await prisma.user.findUnique({
@@ -17,10 +18,7 @@ async function requireAdmin(): Promise<{ userId: string } | NextResponse> {
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden - Admin access required" },
-      { status: 403 }
-    );
+    return apiError("Forbidden - Admin access required", 403);
   }
 
   return { userId: session.userId };
@@ -44,7 +42,7 @@ export async function GET(request: NextRequest) {
   const stats = getLogStats();
   const total = Math.max(stats.memoryCount, stats.fileCount);
 
-  return NextResponse.json({
+  return apiSuccess({
     logs,
     total,
     stats: {
@@ -71,5 +69,5 @@ export async function DELETE(request: NextRequest) {
   clearLogs();
   logger.info({ adminId: authResult.userId }, "Logs cleared by admin");
 
-  return NextResponse.json({ success: true });
+  return apiSuccess({ cleared: true });
 }

@@ -5,6 +5,7 @@ import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { generateShareCode } from "@/lib/share-code";
 import { Errors } from "@/lib/errors";
 import { prisma } from "@/lib/db";
+import { apiSuccess } from "@/lib/api-response";
 
 interface PublishResponse {
   id: string;
@@ -78,7 +79,7 @@ export async function GET() {
       updatedAt: template.updatedAt.toISOString(),
     };
 
-    return NextResponse.json(response);
+    return apiSuccess(response);
   } catch (error) {
     return Errors.internal("Failed to fetch config template", error);
   }
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
       updatedAt: template.updatedAt.toISOString(),
     };
 
-    return NextResponse.json(response, { status: 201 });
+    return apiSuccess(response, undefined, 201);
   } catch (error) {
     return Errors.internal("Failed to create config template", error);
   }
@@ -203,7 +204,7 @@ export async function PATCH(request: NextRequest) {
       updatedAt: template.updatedAt.toISOString(),
     };
 
-    return NextResponse.json(response);
+    return apiSuccess(response);
   } catch (error) {
     return Errors.internal("Failed to update config template", error);
   }
@@ -233,7 +234,7 @@ export async function DELETE(request: NextRequest) {
       where: { userId: session.userId },
     });
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
     return Errors.internal("Failed to delete config template", error);
   }

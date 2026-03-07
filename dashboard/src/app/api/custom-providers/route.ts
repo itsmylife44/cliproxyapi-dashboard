@@ -9,11 +9,12 @@ import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
 import { CreateCustomProviderSchema } from "@/lib/validation/schemas";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 export async function GET() {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   try {
@@ -26,7 +27,7 @@ export async function GET() {
       orderBy: { sortOrder: "asc" }
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       providers: providers.map(p => ({
         id: p.id,
         name: p.name,
@@ -45,25 +46,19 @@ export async function GET() {
     });
   } catch (error) {
     logger.error({ err: error }, "GET /api/custom-providers error");
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return apiError("Internal Server Error", 500);
   }
 }
 
 export async function POST(request: NextRequest) {
   const rateLimit = checkRateLimitWithPreset(request, "custom-providers", "CUSTOM_PROVIDERS");
   if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: "Too many custom provider creation requests. Try again later." },
-      {
-        status: 429,
-        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
-      }
-    );
+    return apiError("Too many custom provider creation requests. Try again later.", 429);
   }
 
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const originError = validateOrigin(request);
@@ -81,7 +76,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingName) {
-      return NextResponse.json({ error: "Provider name already exists" }, { status: 409 });
+      return apiError("Provider name already exists", 409);
     }
 
     const existingId = await prisma.customProvider.findUnique({
@@ -89,7 +84,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingId) {
-      return NextResponse.json({ error: "Provider ID already taken" }, { status: 409 });
+      return apiError("Provider ID already taken", 409);
     }
 
     const provider = await prisma.customProvider.create({
@@ -142,13 +137,13 @@ export async function POST(request: NextRequest) {
       excludedModels: provider.excludedModels
     }, "create");
 
-    return NextResponse.json({ provider, syncStatus, syncMessage }, { status: 201 });
+    return apiSuccess({ provider, syncStatus, syncMessage }, undefined, 201);
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues }, { status: 400 });
+      return apiError("Validation failed", 400, error.issues);
     }
     logger.error({ err: error }, "POST /api/custom-providers error");
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return apiError("Internal Server Error", 500);
   }
 }

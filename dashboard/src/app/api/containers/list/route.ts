@@ -5,6 +5,7 @@ import { CONTAINER_CONFIG, getAllowedActions, type ContainerAction } from "@/lib
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 const execFileAsync = promisify(execFile);
 const DOCKER_COMMAND_TIMEOUT_MS = 8000;
@@ -33,10 +34,7 @@ export async function GET() {
   const session = await verifySession();
 
   if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return apiError("Unauthorized", 401);
   }
 
   const user = await prisma.user.findUnique({
@@ -45,10 +43,7 @@ export async function GET() {
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden: Admin access required" },
-      { status: 403 }
-    );
+    return apiError("Forbidden: Admin access required", 403);
   }
 
   try {
@@ -127,12 +122,9 @@ export async function GET() {
 
     const containers = results.filter((c): c is ContainerInfo => c !== null);
 
-    return NextResponse.json(containers);
+    return apiSuccess(containers);
   } catch (error) {
     logger.error({ err: error }, "Container list error");
-    return NextResponse.json(
-      { error: "Failed to list containers" },
-      { status: 500 }
-    );
+    return apiError("Failed to list containers", 500);
   }
 }

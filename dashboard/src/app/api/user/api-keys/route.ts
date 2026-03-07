@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 interface ApiKeyResponse {
   id: string;
@@ -39,7 +40,7 @@ function maskApiKey(key: string): string {
 export async function GET() {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   try {
@@ -63,31 +64,22 @@ export async function GET() {
       lastUsedAt: apiKey.lastUsedAt?.toISOString() || null,
     }));
 
-    return NextResponse.json({ apiKeys: response });
+    return apiSuccess({ apiKeys: response });
   } catch (error) {
     logger.error({ err: error }, "Failed to fetch API keys");
-    return NextResponse.json(
-      { error: "Failed to fetch API keys" },
-      { status: 500 }
-    );
+    return apiError("Failed to fetch API keys", 500);
   }
 }
 
 export async function POST(request: NextRequest) {
   const rateLimit = checkRateLimitWithPreset(request, "api-keys", "API_KEYS");
   if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: "Too many API key creation requests. Try again later." },
-      {
-        status: 429,
-        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
-      }
-    );
+    return apiError("Too many API key creation requests. Try again later.", 429);
   }
 
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const originError = validateOrigin(request);
@@ -100,10 +92,7 @@ export async function POST(request: NextRequest) {
     const parsed = CreateApiKeyRequestSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 }
-      );
+      return apiError("Invalid request body", 400);
     }
 
     const key = generateApiKey();
@@ -134,20 +123,17 @@ export async function POST(request: NextRequest) {
       syncMessage: "Key created - backend sync in progress",
     };
 
-    return NextResponse.json(response, { status: 201 });
+    return apiSuccess(response, undefined, 201);
   } catch (error) {
     logger.error({ err: error }, "Failed to create API key");
-    return NextResponse.json(
-      { error: "Failed to create API key" },
-      { status: 500 }
-    );
+    return apiError("Failed to create API key", 500);
   }
 }
 
 export async function DELETE(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const originError = validateOrigin(request);
@@ -160,10 +146,7 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get("id");
 
     if (!id || typeof id !== "string") {
-      return NextResponse.json(
-        { error: "Missing or invalid id parameter" },
-        { status: 400 }
-      );
+      return apiError("Missing or invalid id parameter", 400);
     }
 
     const existingKey = await prisma.userApiKey.findFirst({
@@ -175,10 +158,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!existingKey) {
-      return NextResponse.json(
-        { error: "API key not found or access denied" },
-        { status: 404 }
-      );
+      return apiError("API key not found or access denied", 404);
     }
 
     await prisma.userApiKey.delete({
@@ -190,16 +170,13 @@ export async function DELETE(request: NextRequest) {
       logger.error({ error: syncResult.error }, "Sync failed after API key deletion");
     }
 
-    return NextResponse.json({
+    return apiSuccess({
       success: true,
       syncStatus: syncResult.ok ? "ok" : "failed",
       syncMessage: syncResult.ok ? undefined : "Backend sync pending - key deleted but may still work temporarily",
     });
   } catch (error) {
     logger.error({ err: error }, "Failed to delete API key");
-    return NextResponse.json(
-      { error: "Failed to delete API key" },
-      { status: 500 }
-    );
+    return apiError("Failed to delete API key", 500);
   }
 }

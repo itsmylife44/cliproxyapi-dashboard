@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
+import { apiSuccess } from "@/lib/api-response";
 
 const HEALTH_CHECK_TIMEOUT_MS = 5000;
 
@@ -59,5 +60,5 @@ export async function GET() {
 
   const statusCode = healthStatus.status === "ok" ? 200 : 503;
 
-  return NextResponse.json(healthStatus, { status: statusCode });
+  return apiSuccess(healthStatus, undefined, statusCode);
 }

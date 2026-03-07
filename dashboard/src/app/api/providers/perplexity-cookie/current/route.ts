@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
 import { Errors } from "@/lib/errors";
 import { env } from "@/lib/env";
+import { apiSuccess } from "@/lib/api-response";
 
 const HMAC_KEY = Buffer.alloc(32);
 
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!activeCookie) {
-      return NextResponse.json({ cookies: null });
+      return apiSuccess({ cookies: null });
     }
 
     await prisma.perplexityCookie.update({
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
       data: { lastUsedAt: new Date() },
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       cookies: JSON.parse(activeCookie.cookieData),
       updatedAt: activeCookie.updatedAt.toISOString(),
     });

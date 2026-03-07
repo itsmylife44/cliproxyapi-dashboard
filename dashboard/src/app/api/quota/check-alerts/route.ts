@@ -4,6 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { Errors } from "@/lib/errors";
 import { runAlertCheck } from "@/lib/quota-alerts";
+import { apiSuccess } from "@/lib/api-response";
 
 const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
 
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     };
 
     const result = await runAlertCheck(quotaFetcher, baseUrl);
-    return NextResponse.json(result);
+    return apiSuccess(result);
   } catch (error) {
     return Errors.internal("check quota alerts", error);
   }

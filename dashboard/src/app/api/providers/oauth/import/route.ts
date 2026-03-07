@@ -7,6 +7,7 @@ import { OAUTH_PROVIDER, type OAuthProvider } from "@/lib/providers/constants";
 import { ImportOAuthCredentialSchema } from "@/lib/validation/schemas";
 import { ERROR_CODE, Errors, apiError } from "@/lib/errors";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
+import { apiSuccess } from "@/lib/api-response";
 
 function isValidOAuthProvider(provider: string): provider is OAuthProvider {
   return Object.values(OAUTH_PROVIDER).includes(provider as OAuthProvider);
@@ -83,15 +84,10 @@ export async function POST(request: NextRequest) {
       ipAddress: extractIpAddress(request),
     });
 
-    return NextResponse.json(
-      {
-        data: {
-          id: result.id,
-          accountName: result.accountName,
-        },
-      },
-      { status: 201 }
-    );
+    return apiSuccess({
+      id: result.id,
+      accountName: result.accountName,
+    }, undefined, 201);
   } catch (error) {
     return Errors.internal("POST /api/providers/oauth/import error", error);
   }

@@ -6,6 +6,7 @@ import { contributeOAuthAccount, listOAuthWithOwnership } from "@/lib/providers/
 import { OAUTH_PROVIDER, type OAuthProvider } from "@/lib/providers/constants";
 import { ERROR_CODE, Errors, apiError } from "@/lib/errors";
 import { prisma } from "@/lib/db";
+import { apiSuccess } from "@/lib/api-response";
 
 interface ContributeOAuthRequest {
   provider: string;
@@ -49,7 +50,7 @@ export async function GET() {
       return apiError(ERROR_CODE.PROVIDER_ERROR, result.error ?? "Provider error", 500);
     }
 
-    return NextResponse.json({ accounts: result.accounts });
+    return apiSuccess({ accounts: result.accounts });
   } catch (error) {
     return Errors.internal("GET /api/providers/oauth error", error);
   }
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
       return apiError(ERROR_CODE.PROVIDER_ERROR, result.error ?? "Provider error", 500);
     }
 
-    return NextResponse.json({ id: result.id }, { status: 201 });
+    return apiSuccess({ id: result.id }, undefined, 201);
   } catch (error) {
     return Errors.internal("POST /api/providers/oauth error", error);
   }

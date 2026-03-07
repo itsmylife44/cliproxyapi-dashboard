@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 export async function GET() {
   try {
     const session = await verifySession();
     
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError("Unauthorized", 401);
     }
 
     const user = await prisma.user.findUnique({
@@ -22,10 +23,10 @@ export async function GET() {
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError("User not found", 404);
     }
 
-    return NextResponse.json({
+    return apiSuccess({
       id: user.id,
       username: user.username,
       isAdmin: user.isAdmin,
@@ -33,9 +34,6 @@ export async function GET() {
     });
   } catch (error) {
     logger.error({ err: error }, "Failed to fetch current user");
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return apiError("Internal server error", 500);
   }
 }

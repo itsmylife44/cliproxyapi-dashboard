@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { fetchWithRetry } from "@/lib/fetch-utils";
+import { apiError } from "@/lib/api-response";
 
 const BACKEND_API_URL = env.CLIPROXYAPI_MANAGEMENT_URL;
 const MANAGEMENT_API_KEY = env.MANAGEMENT_API_KEY;
@@ -121,10 +122,7 @@ async function proxyRequest(
   const session = await verifySession();
 
   if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return apiError("Unauthorized", 401);
   }
 
   // CSRF protection: validate Origin header on mutating methods
@@ -143,32 +141,20 @@ async function proxyRequest(
   const normalizedPath = normalizeAndValidateManagementPath(rawPath);
   if (!normalizedPath) {
     logger.warn({ method, rawPath, userId: session.userId }, "Blocked invalid management proxy path");
-    return NextResponse.json(
-      { error: "Invalid request path" },
-      { status: 400 }
-    );
+    return apiError("Invalid request path", 400);
   }
 
   if (!user) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return apiError("Unauthorized", 401);
   }
 
   if (!user.isAdmin && !isNonAdminAllowedManagementRequest(method, normalizedPath)) {
-    return NextResponse.json(
-      { error: "Forbidden: Admin access required" },
-      { status: 403 }
-    );
+    return apiError("Forbidden: Admin access required", 403);
   }
 
   if (!MANAGEMENT_API_KEY) {
     logger.error("MANAGEMENT_API_KEY is not configured");
-    return NextResponse.json(
-      { error: "Server configuration error" },
-      { status: 500 }
-    );
+    return apiError("Server configuration error", 500);
   }
 
   const incomingUrl = new URL(request.url);
@@ -182,18 +168,12 @@ async function proxyRequest(
     parsedUrl = new URL(targetUrl.toString());
   } catch {
     logger.error({ targetUrl: targetUrl.toString() }, "Invalid target URL");
-    return NextResponse.json(
-      { error: "Invalid request path" },
-      { status: 400 }
-    );
+    return apiError("Invalid request path", 400);
   }
 
   if (parsedUrl.host !== ALLOWED_HOST) {
     logger.error({ attemptedHost: parsedUrl.host, allowedHost: ALLOWED_HOST }, "SSRF attempt blocked");
-    return NextResponse.json(
-      { error: "Forbidden" },
-      { status: 403 }
-    );
+    return apiError("Forbidden", 403);
   }
 
   try {
@@ -202,10 +182,7 @@ async function proxyRequest(
     if (contentLength) {
       const parsedLength = parseInt(contentLength, 10);
       if (Number.isNaN(parsedLength) || parsedLength > MAX_BODY_SIZE) {
-        return NextResponse.json(
-          { error: "Payload too large" },
-          { status: 413 }
-        );
+        return apiError("Payload too large", 413);
       }
     }
 
@@ -224,10 +201,7 @@ async function proxyRequest(
       if (rawBody) {
         const byteLength = new TextEncoder().encode(rawBody).length;
         if (byteLength > MAX_BODY_SIZE) {
-          return NextResponse.json(
-            { error: "Payload too large" },
-            { status: 413 }
-          );
+          return apiError("Payload too large", 413);
         }
         body = rawBody;
       }
@@ -246,10 +220,7 @@ async function proxyRequest(
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         logger.error({ err: error, path: normalizedPath, timeoutMs: FETCH_TIMEOUT_MS }, "Proxy request timeout");
-        return NextResponse.json(
-          { error: "Request timeout" },
-          { status: 504 }
-        );
+        return apiError("Request timeout", 504);
       }
       throw error;
     }
@@ -261,10 +232,7 @@ async function proxyRequest(
       if (!Number.isNaN(parsedLength) && parsedLength > RESPONSE_SIZE_LIMIT_BYTES) {
         logger.warn({ path: normalizedPath, method, contentLength: parsedLength }, "Proxy response too large");
         await response.body?.cancel();
-        return NextResponse.json(
-          { error: "Response too large" },
-          { status: 502 }
-        );
+        return apiError("Response too large", 502);
       }
     }
 
@@ -272,10 +240,7 @@ async function proxyRequest(
     const responseSize = new TextEncoder().encode(responseData).length;
     if (responseSize > RESPONSE_SIZE_LIMIT_BYTES) {
       logger.warn({ path: normalizedPath, method, responseSize }, "Proxy response exceeded size budget");
-      return NextResponse.json(
-        { error: "Response too large" },
-        { status: 502 }
-      );
+      return apiError("Response too large", 502);
     }
 
     logger.info(
@@ -298,10 +263,7 @@ async function proxyRequest(
     });
   } catch (error) {
     logger.error({ err: error, method, path: rawPath, userId: session.userId, durationMs: Date.now() - startedAt }, "Proxy request error");
-    return NextResponse.json(
-      { error: "Failed to proxy request" },
-      { status: 502 }
-    );
+    return apiError("Failed to proxy request", 502);
   }
 }
 

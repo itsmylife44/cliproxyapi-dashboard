@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth/validation";
 import { prisma } from "@/lib/db";
 import { ERROR_CODE, Errors, apiError } from "@/lib/errors";
+import { apiSuccess } from "@/lib/api-response";
 
 const MAX_SETUP_RETRIES = 5;
 
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
       token
     );
 
-    return NextResponse.json(
+    return apiSuccess(
       {
         success: true,
         user: {
@@ -153,7 +154,8 @@ export async function POST(request: NextRequest) {
           username: user.username,
         },
       },
-      { status: 201 }
+      undefined,
+      201
     );
   } catch (error) {
     return Errors.internal("Setup error", error);
@@ -164,7 +166,7 @@ export async function GET() {
   try {
     const userCount = await getUserCount();
 
-    return NextResponse.json({
+    return apiSuccess({
       data: { setupRequired: userCount === 0 },
     });
   } catch (error) {

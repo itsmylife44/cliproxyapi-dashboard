@@ -3,6 +3,7 @@ import { timingSafeEqual } from "crypto";
 import { verifySession } from "@/lib/auth/session";
 import { logger } from "@/lib/logger";
 import { quotaCache, CACHE_TTL } from "@/lib/cache";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -938,22 +939,19 @@ export async function GET(request: NextRequest) {
   if (!isInternalCall) {
     const session = await verifySession();
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError("Unauthorized", 401);
     }
   }
 
   if (!MANAGEMENT_API_KEY) {
     logger.error("MANAGEMENT_API_KEY is not configured");
-    return NextResponse.json(
-      { error: "Server configuration error" },
-      { status: 500 }
-    );
+    return apiError("Server configuration error", 500);
   }
 
   const CACHE_KEY = "quota:all";
   const cached = quotaCache.get(CACHE_KEY);
   if (cached) {
-    return NextResponse.json(cached);
+    return apiSuccess(cached);
   }
 
   try {
@@ -973,10 +971,7 @@ export async function GET(request: NextRequest) {
         { status: authFilesResponse.status },
         "Failed to fetch auth files"
       );
-      return NextResponse.json(
-        { error: "Failed to fetch auth files" },
-        { status: 502 }
-      );
+      return apiError("Failed to fetch auth files", 502);
     }
 
     const authFilesData =
@@ -1154,12 +1149,9 @@ export async function GET(request: NextRequest) {
 
     quotaCache.set(CACHE_KEY, response, CACHE_TTL.QUOTA);
 
-    return NextResponse.json(response);
+    return apiSuccess(response);
   } catch (error) {
     logger.error({ err: error }, "Quota fetch error");
-    return NextResponse.json(
-      { error: "Failed to fetch quota data" },
-      { status: 502 }
-    );
+    return apiError("Failed to fetch quota data", 502);
   }
 }

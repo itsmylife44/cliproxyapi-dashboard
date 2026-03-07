@@ -5,6 +5,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { logger } from "@/lib/logger";
 import { updateCheckCache, CACHE_TTL } from "@/lib/cache";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 const execFileAsync = promisify(execFile);
 
@@ -110,10 +111,7 @@ export async function GET() {
   const session = await verifySession();
 
   if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return apiError("Unauthorized", 401);
   }
 
   const user = await prisma.user.findUnique({
@@ -122,10 +120,7 @@ export async function GET() {
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden: Admin access required" },
-      { status: 403 }
-    );
+    return apiError("Forbidden: Admin access required", 403);
   }
 
   try {
@@ -181,12 +176,9 @@ export async function GET() {
       availableVersions: versionNames.slice(0, 10),
     };
 
-    return NextResponse.json(versionInfo);
+    return apiSuccess(versionInfo);
   } catch (error) {
     logger.error({ err: error }, "Update check error");
-    return NextResponse.json(
-      { error: "Failed to check for updates" },
-      { status: 500 }
-    );
+    return apiError("Failed to check for updates", 500);
   }
 }

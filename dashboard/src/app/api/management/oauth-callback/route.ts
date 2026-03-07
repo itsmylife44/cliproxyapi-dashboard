@@ -4,6 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { Errors } from "@/lib/errors";
 import { prisma } from "@/lib/db";
+import { apiSuccess } from "@/lib/api-response";
 import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/lib/logger";
 
@@ -205,7 +206,7 @@ export async function POST(request: NextRequest) {
       if (!response.ok) {
         await response.body?.cancel();
         const payload: OAuthCallbackResponse = { status: responseStatus };
-        return NextResponse.json(payload, { status: responseStatus });
+        return apiSuccess(payload, undefined, responseStatus);
       }
     } else if (!resolvedState) {
       return Errors.validation("State is required for this provider");
@@ -249,7 +250,7 @@ export async function POST(request: NextRequest) {
         { provider, state: resolvedState || null },
         "OAuth callback: auth file not yet available, client should retry"
       );
-      return NextResponse.json({ status: 202 }, { status: 202 });
+      return apiSuccess({ status: 202 }, undefined, 202);
     }
 
     let claimed = false;
@@ -278,7 +279,7 @@ export async function POST(request: NextRequest) {
 
     const payload: OAuthCallbackResponse = { status: responseStatus };
 
-    return NextResponse.json(payload, { status: responseStatus });
+    return apiSuccess(payload, undefined, responseStatus);
   } catch (error) {
     return Errors.internal("Failed to relay OAuth callback", error);
   }

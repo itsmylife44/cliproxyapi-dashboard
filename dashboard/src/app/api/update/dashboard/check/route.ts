@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { updateCheckCache, CACHE_TTL } from "@/lib/cache";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 const GITHUB_REPO = process.env.GITHUB_REPO || "itsmylife44/cliproxyapi-dashboard";
 const DASHBOARD_VERSION = process.env.DASHBOARD_VERSION || "dev";
@@ -71,10 +72,7 @@ export async function GET() {
   const session = await verifySession();
 
   if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return apiError("Unauthorized", 401);
   }
 
   const user = await prisma.user.findUnique({
@@ -83,10 +81,7 @@ export async function GET() {
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden: Admin access required" },
-      { status: 403 }
-    );
+    return apiError("Forbidden: Admin access required", 403);
   }
 
   try {
@@ -108,12 +103,9 @@ export async function GET() {
       releaseNotes: remote?.releaseNotes?.slice(0, 2000) ?? null,
     };
 
-    return NextResponse.json(versionInfo);
+    return apiSuccess(versionInfo);
   } catch (error) {
     logger.error({ err: error }, "Update check error");
-    return NextResponse.json(
-      { error: "Failed to check for updates" },
-      { status: 500 }
-    );
+    return apiError("Failed to check for updates", 500);
   }
 }

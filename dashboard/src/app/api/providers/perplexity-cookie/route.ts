@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
 import { hashProviderKey } from "@/lib/providers/hash";
 import { logger } from "@/lib/logger";
+import { apiSuccess } from "@/lib/api-response";
 
 const REQUIRED_COOKIE_KEYS = ["next-auth.session-token"];
 
@@ -158,7 +159,7 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ cookies });
+    return apiSuccess({ cookies });
   } catch (error) {
     return Errors.internal("fetch perplexity cookies", error);
   }
@@ -228,7 +229,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ cookie, providerProvisioned, modelsUpdated }, { status: 201 });
+    return apiSuccess({ cookie, providerProvisioned, modelsUpdated }, undefined, 201);
   } catch (error) {
     return Errors.internal("save perplexity cookie", error);
   }
@@ -264,7 +265,7 @@ export async function DELETE(request: NextRequest) {
 
     await prisma.perplexityCookie.delete({ where: { id } });
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
     return Errors.internal("delete perplexity cookie", error);
   }

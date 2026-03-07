@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/auth/session";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 const execFileAsync = promisify(execFile);
 const CONTAINER_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/;
@@ -21,10 +22,7 @@ export async function GET() {
   const session = await verifySession();
 
   if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return apiError("Unauthorized", 401);
   }
 
   try {
@@ -58,19 +56,16 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({
+    return apiSuccess({
       running: isRunning,
       containerName,
       uptime,
     });
   } catch (error) {
     logger.error({ err: error }, "Status check error");
-    return NextResponse.json(
-      { 
-        running: false,
-        error: "Failed to check container status"
-      },
-      { status: 200 }
-    );
+    return apiSuccess({
+      running: false,
+      error: "Failed to check container status"
+    });
   }
 }

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { PROVIDER, type Provider } from "@/lib/providers/constants";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 function isValidProvider(provider: string): provider is Provider {
   return Object.values(PROVIDER).includes(provider as Provider);
@@ -17,7 +18,7 @@ export async function DELETE(
 ) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const originError = validateOrigin(request);
@@ -31,10 +32,7 @@ export async function DELETE(
     const provider = searchParams.get("provider");
 
     if (!keyHash || typeof keyHash !== "string") {
-      return NextResponse.json(
-        { error: "Invalid or missing keyHash parameter" },
-        { status: 400 }
-      );
+      return apiError("Invalid or missing keyHash parameter", 400);
     }
 
     const user = await prisma.user.findUnique({
@@ -58,12 +56,12 @@ export async function DELETE(
 
     if (!result.ok) {
       if (result.error?.includes("Access denied")) {
-        return NextResponse.json({ error: result.error }, { status: 403 });
+        return apiError(result.error, 403);
       }
       if (result.error?.includes("not found")) {
-        return NextResponse.json({ error: result.error }, { status: 404 });
+        return apiError(result.error, 404);
       }
-      return NextResponse.json({ error: result.error }, { status: 500 });
+      return apiError(result.error ?? "Failed to remove key", 500);
     }
 
     logAuditAsync({
@@ -77,12 +75,9 @@ export async function DELETE(
       ipAddress: extractIpAddress(request),
     });
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
     logger.error({ err: error }, "DELETE /api/providers/keys/[keyHash] error");
-    return NextResponse.json(
-      { error: "Failed to remove provider key" },
-      { status: 500 }
-    );
+    return apiError("Failed to remove provider key", 500);
   }
 }

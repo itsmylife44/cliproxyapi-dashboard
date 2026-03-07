@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { Errors } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { apiSuccess } from "@/lib/api-response";
 import {
   sendTelegramMessage,
   validateBotToken,
@@ -85,7 +86,7 @@ export async function GET() {
     const checkIntervalRaw = parseInt(settingMap.get(SETTING_KEYS.CHECK_INTERVAL) ?? "", 10);
     const cooldownRaw = parseInt(settingMap.get(SETTING_KEYS.COOLDOWN) ?? "", 10);
 
-    return NextResponse.json({
+    return apiSuccess({
       botToken: rawToken ? maskToken(rawToken) : "",
       chatId,
       threshold: Number.isNaN(threshold) ? 20 : threshold,
@@ -254,7 +255,7 @@ export async function PUT(request: NextRequest) {
       "Telegram settings updated"
     );
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
     return Errors.internal("update telegram settings", error);
   }
@@ -306,7 +307,7 @@ export async function POST(request: NextRequest) {
       "Telegram test message sent successfully"
     );
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
     return Errors.internal("send telegram test message", error);
   }

@@ -3,13 +3,14 @@ import { validateSyncTokenFromHeader } from "@/lib/auth/sync-token";
 import { generateConfigBundle } from "@/lib/config-sync/generate-bundle";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
   const authResult = await validateSyncTokenFromHeader(request);
 
   if (!authResult.ok) {
     const errorMessage = authResult.reason === "expired" ? "Sync token expired" : "Unauthorized";
-    return NextResponse.json({ error: errorMessage }, { status: 401 });
+    return apiError(errorMessage, 401);
   }
 
   try {
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
       data: { lastSyncedAt: new Date() },
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       version: bundle.version,
       opencode: bundle.opencode,
       ohMyOpencode: bundle.ohMyOpencode,
@@ -32,9 +33,6 @@ export async function GET(request: NextRequest) {
     logger.error({ err: error }, "Config sync bundle error");
     const isSyncTokenError =
       error instanceof Error && error.message.includes("sync token");
-    return NextResponse.json(
-      { error: isSyncTokenError ? error.message : "Internal server error" },
-      { status: isSyncTokenError ? 400 : 500 }
-    );
+    return apiError(isSyncTokenError ? error.message : "Internal server error", isSyncTokenError ? 400 : 500);
   }
 }

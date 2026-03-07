@@ -12,6 +12,7 @@ import {
 } from "@/lib/auth/validation";
 import { prisma } from "@/lib/db";
 import { Errors } from "@/lib/errors";
+import { apiSuccess } from "@/lib/api-response";
 import { cascadeDeleteUserProviders } from "@/lib/providers/cascade";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { logger } from "@/lib/logger";
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
       apiKeyCount: user._count.apiKeys,
     }));
 
-    return NextResponse.json({
+    return apiSuccess({
       data: usersResponse,
       pagination: {
         page,
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
       ipAddress: extractIpAddress(request),
     });
 
-    return NextResponse.json(
+    return apiSuccess(
       {
         success: true,
         user: {
@@ -175,7 +176,8 @@ export async function POST(request: NextRequest) {
           createdAt: user.createdAt.toISOString(),
         },
       },
-      { status: 201 }
+      undefined,
+      201
     );
   } catch (error) {
     return Errors.internal("User creation error", error);
@@ -240,7 +242,7 @@ export async function DELETE(request: NextRequest) {
       "Admin deleted user"
     );
 
-    return NextResponse.json({
+    return apiSuccess({
       success: true,
       username: targetUser.username,
       cascade: {

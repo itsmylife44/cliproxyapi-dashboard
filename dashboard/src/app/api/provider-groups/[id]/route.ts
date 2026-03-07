@@ -6,6 +6,7 @@ import { Errors } from "@/lib/errors";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { UpdateProviderGroupSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
+import { apiSuccess } from "@/lib/api-response";
 
 export async function PATCH(
   request: NextRequest,
@@ -87,7 +88,7 @@ export async function PATCH(
       ipAddress: extractIpAddress(request),
     });
 
-    return NextResponse.json({ group });
+    return apiSuccess({ group });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return Errors.zodValidation(error.issues);
@@ -138,7 +139,7 @@ export async function DELETE(
       ipAddress: extractIpAddress(request),
     });
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
     return Errors.internal("DELETE /api/provider-groups/[id]", error);
   }

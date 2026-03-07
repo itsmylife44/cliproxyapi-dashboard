@@ -5,6 +5,7 @@ import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { normalizeShareCode } from "@/lib/share-code";
 import { Errors } from "@/lib/errors";
 import { prisma } from "@/lib/db";
+import { apiSuccess } from "@/lib/api-response";
 
 interface SubscriptionResponse {
   templateName: string;
@@ -67,7 +68,7 @@ export async function GET() {
     });
 
     if (!subscription) {
-      return NextResponse.json(null);
+      return apiSuccess(null);
     }
 
     const response: SubscriptionResponse = {
@@ -79,7 +80,7 @@ export async function GET() {
       lastSyncedAt: subscription.lastSyncedAt?.toISOString() || null,
     };
 
-    return NextResponse.json(response);
+    return apiSuccess(response);
   } catch (error) {
     return Errors.internal("Failed to fetch subscription", error);
   }
@@ -200,7 +201,7 @@ export async function POST(request: NextRequest) {
       lastSyncedAt: subscription.lastSyncedAt?.toISOString() || null,
     };
 
-    return NextResponse.json(response, { status: 201 });
+    return apiSuccess(response, undefined, 201);
   } catch (error) {
     return Errors.internal("Failed to create subscription", error);
   }
@@ -260,7 +261,7 @@ export async function PATCH(request: NextRequest) {
       lastSyncedAt: subscription.lastSyncedAt?.toISOString() || null,
     };
 
-    return NextResponse.json(response);
+    return apiSuccess(response);
   } catch (error) {
     return Errors.internal("Failed to update subscription", error);
   }
@@ -290,7 +291,7 @@ export async function DELETE(request: NextRequest) {
       where: { userId: session.userId },
     });
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
     return Errors.internal("Failed to delete subscription", error);
   }

@@ -4,11 +4,13 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
+import { UpdateSystemSettingSchema } from "@/lib/validation/schemas";
 
 async function requireAdmin(): Promise<{ userId: string; username: string } | NextResponse> {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const user = await prisma.user.findUnique({
@@ -17,10 +19,7 @@ async function requireAdmin(): Promise<{ userId: string; username: string } | Ne
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden - Admin access required" },
-      { status: 403 }
-    );
+    return apiError("Forbidden - Admin access required", 403);
   }
 
   return { userId: session.userId, username: session.username };
@@ -41,13 +40,10 @@ export async function GET() {
       value: setting.value,
     }));
 
-    return NextResponse.json({ settings: settingsResponse });
+    return apiSuccess({ settings: settingsResponse });
   } catch (error) {
     logger.error({ err: error }, "Failed to fetch system settings");
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return apiError("Internal server error", 500);
   }
 }
 
@@ -64,35 +60,13 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { key, value } = body;
+    const parsed = UpdateSystemSettingSchema.safeParse(body);
 
-    if (!key || !value) {
-      return NextResponse.json(
-        { error: "Key and value are required" },
-        { status: 400 }
-      );
+    if (!parsed.success) {
+      return apiError("Validation failed", 400, parsed.error.issues);
     }
 
-    if (typeof key !== "string" || typeof value !== "string") {
-      return NextResponse.json(
-        { error: "Key and value must be strings" },
-        { status: 400 }
-      );
-    }
-
-    if (key.length === 0 || key.length > 255) {
-      return NextResponse.json(
-        { error: "Key must be between 1 and 255 characters" },
-        { status: 400 }
-      );
-    }
-
-    if (value.length === 0 || value.length > 1000) {
-      return NextResponse.json(
-        { error: "Value must be between 1 and 1000 characters" },
-        { status: 400 }
-      );
-    }
+    const { key, value } = parsed.data;
 
     const setting = await prisma.systemSetting.upsert({
       where: { key },
@@ -108,22 +82,15 @@ export async function PUT(request: NextRequest) {
       ipAddress: extractIpAddress(request),
     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        setting: {
-          id: setting.id,
-          key: setting.key,
-          value: setting.value,
-        },
+    return apiSuccess({
+      setting: {
+        id: setting.id,
+        key: setting.key,
+        value: setting.value,
       },
-      { status: 200 }
-    );
+    });
   } catch (error) {
     logger.error({ err: error }, "Failed to update system setting");
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return apiError("Internal server error", 500);
   }
 }

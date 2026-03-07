@@ -4,6 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 /**
  * POST /api/admin/migrate-api-keys
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // 1. Verify authentication
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   // 2. Verify admin status
@@ -42,10 +43,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden - Admin access required" },
-      { status: 403 }
-    );
+    return apiError("Forbidden - Admin access required", 403);
   }
 
   // 3. Validate origin
@@ -58,13 +56,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // 4. Check idempotency: if any UserApiKey exists, migration is already done
     const existingKeyCount = await prisma.userApiKey.count();
     if (existingKeyCount > 0) {
-      return NextResponse.json(
-        {
-          error: "Migration already completed",
-          details: `Found ${existingKeyCount} existing UserApiKey records`,
-        },
-        { status: 409 }
-      );
+      return apiError("Migration already completed", 409, `Found ${existingKeyCount} existing UserApiKey records`);
     }
 
     // 5. Fetch existing API keys from CLIProxyAPI
@@ -75,10 +67,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (!managementApiKey) {
       logger.error("MANAGEMENT_API_KEY not set");
-      return NextResponse.json(
-        { error: "Management API not configured" },
-        { status: 500 }
-      );
+      return apiError("Management API not configured", 500);
     }
 
     const response = await fetch(`${managementUrl}/api-keys`, {
@@ -92,10 +81,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { status: response.status },
         "Failed to fetch existing API keys"
       );
-      return NextResponse.json(
-        { error: "Failed to fetch existing API keys from CLIProxyAPI" },
-        { status: 500 }
-      );
+      return apiError("Failed to fetch existing API keys from CLIProxyAPI", 500);
     }
 
     const data = (await response.json()) as unknown;
@@ -113,16 +99,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     if (!firstAdmin) {
-      return NextResponse.json(
-        { error: "No admin user found in database" },
-        { status: 400 }
-      );
+      return apiError("No admin user found in database", 400);
     }
 
     // 7. If no keys to migrate, return success
     if (apiKeysArray.length === 0) {
-      return NextResponse.json({
-        success: true,
+      return apiSuccess({
         keysAssigned: 0,
         userId: firstAdmin.id,
       });
@@ -159,8 +141,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Don't fail the migration response - keys are in DB (source of truth)
     }
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       keysAssigned: apiKeysArray.length,
       userId: firstAdmin.id,
     });
@@ -168,9 +149,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const message =
       error instanceof Error ? error.message : "Unknown error during migration";
     logger.error({ err: error, message }, "Migration error");
-    return NextResponse.json(
-      { error: "Internal server error during migration" },
-      { status: 500 }
-    );
+    return apiError("Internal server error during migration", 500);
   }
 }

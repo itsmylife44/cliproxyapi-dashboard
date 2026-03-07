@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/auth/validation";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { ERROR_CODE, Errors, apiError } from "@/lib/errors";
+import { apiSuccess } from "@/lib/api-response";
+import { ChangePasswordSchema } from "@/lib/validation/schemas";
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,15 +29,13 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { currentPassword, newPassword } = body;
+    const parsed = ChangePasswordSchema.safeParse(body);
 
-    if (!currentPassword || !newPassword) {
-      return Errors.missingFields(["currentPassword", "newPassword"]);
+    if (!parsed.success) {
+      return Errors.zodValidation(parsed.error.issues);
     }
 
-    if (typeof currentPassword !== "string" || typeof newPassword !== "string") {
-      return Errors.validation("Invalid input types");
-    }
+    const { currentPassword, newPassword } = parsed.data;
 
     if (
       newPassword.length < PASSWORD_MIN_LENGTH ||
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ data: { success: true } });
+    return apiSuccess({ passwordChanged: true });
   } catch (error) {
     return Errors.internal("Change password error", error);
   }

@@ -1,10 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
+import { ConfirmActionSchema } from "@/lib/validation/schemas";
 
 const execFileAsync = promisify(execFile);
 
@@ -14,10 +16,7 @@ export async function POST(request: NextRequest) {
   const session = await verifySession();
 
   if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return apiError("Unauthorized", 401);
   }
 
   const user = await prisma.user.findUnique({
@@ -26,10 +25,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden: Admin access required" },
-      { status: 403 }
-    );
+    return apiError("Forbidden: Admin access required", 403);
   }
 
   const originError = validateOrigin(request);
@@ -39,26 +35,19 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { confirm } = body;
-
-    if (confirm !== true) {
-      return NextResponse.json(
-        { error: "Confirmation required" },
-        { status: 400 }
-      );
+    const parsed = ConfirmActionSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError("Confirmation required", 400);
     }
 
     await execFileAsync("docker", ["restart", CONTAINER_NAME]);
 
-    return NextResponse.json({
+    return apiSuccess({
       success: true,
       message: "Restart completed",
     });
   } catch (error) {
     logger.error({ err: error }, "Restart endpoint error");
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return apiError("Internal server error", 500);
   }
 }

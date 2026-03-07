@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 const WEBHOOK_HOST = process.env.WEBHOOK_HOST || "http://localhost:9000";
 const DEPLOY_SECRET = process.env.DEPLOY_SECRET || "";
@@ -11,10 +12,7 @@ export async function POST(request: NextRequest) {
   const session = await verifySession();
 
   if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return apiError("Unauthorized", 401);
   }
 
   const user = await prisma.user.findUnique({
@@ -23,10 +21,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden: Admin access required" },
-      { status: 403 }
-    );
+    return apiError("Forbidden: Admin access required", 403);
   }
 
   const originError = validateOrigin(request);
@@ -39,17 +34,11 @@ export async function POST(request: NextRequest) {
     const { confirm } = body;
 
     if (confirm !== true) {
-      return NextResponse.json(
-        { error: "Confirmation required" },
-        { status: 400 }
-      );
+      return apiError("Confirmation required", 400);
     }
 
     if (!DEPLOY_SECRET) {
-      return NextResponse.json(
-        { error: "DEPLOY_SECRET not configured. Set up the webhook deploy service first." },
-        { status: 500 }
-      );
+      return apiError("DEPLOY_SECRET not configured. Set up the webhook deploy service first.", 500);
     }
 
     const response = await fetch(`${WEBHOOK_HOST}/hooks/deploy-dashboard`, {
@@ -64,23 +53,17 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const text = await response.text();
       logger.error({ status: response.status, body: text }, "Webhook trigger failed");
-      return NextResponse.json(
-        { error: "Failed to trigger update. Check webhook service." },
-        { status: 502 }
-      );
+      return apiError("Failed to trigger update. Check webhook service.", 502);
     }
 
     await response.body?.cancel();
 
-    return NextResponse.json({
+    return apiSuccess({
       success: true,
       message: "Dashboard update triggered. The container will restart shortly.",
     });
   } catch (error) {
     logger.error({ err: error }, "Dashboard update error");
-    return NextResponse.json(
-      { error: "Failed to reach webhook service. Is it running?" },
-      { status: 500 }
-    );
+    return apiError("Failed to reach webhook service. Is it running?", 500);
   }
 }

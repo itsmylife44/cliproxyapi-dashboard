@@ -7,6 +7,7 @@ import { Errors } from "@/lib/errors";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { CreateProviderGroupSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
+import { apiSuccess } from "@/lib/api-response";
 
 interface ProviderRecord {
   id: string;
@@ -84,7 +85,7 @@ export async function GET() {
     }));
     const safeUngrouped = ungrouped.map(sanitizeProvider);
 
-    return NextResponse.json({ groups: safeGroups, ungrouped: safeUngrouped });
+    return apiSuccess({ groups: safeGroups, ungrouped: safeUngrouped });
   } catch (error) {
     return Errors.internal("GET /api/provider-groups", error);
   }
@@ -147,7 +148,7 @@ export async function POST(request: NextRequest) {
       ipAddress: extractIpAddress(request),
     });
 
-    return NextResponse.json({ group }, { status: 201 });
+    return apiSuccess({ group }, undefined, 201);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return Errors.zodValidation(error.issues);

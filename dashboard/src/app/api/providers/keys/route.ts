@@ -6,6 +6,7 @@ import { PROVIDER, type Provider } from "@/lib/providers/constants";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { ERROR_CODE, Errors, apiError } from "@/lib/errors";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
+import { apiSuccess } from "@/lib/api-response";
 
 interface ContributeKeyRequest {
   provider: string;
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
       return apiError(ERROR_CODE.PROVIDER_ERROR, result.error ?? "Provider error", 500);
     }
 
-    return NextResponse.json({ data: { keys: result.keys } });
+    return apiSuccess({ keys: result.keys });
   } catch (error) {
     return Errors.internal("GET /api/providers/keys error", error);
   }
@@ -104,15 +105,10 @@ export async function POST(request: NextRequest) {
       ipAddress: extractIpAddress(request),
     });
 
-    return NextResponse.json(
-      {
-        data: {
-          keyHash: result.keyHash,
-          keyIdentifier: result.keyIdentifier,
-        },
-      },
-      { status: 201 }
-    );
+    return apiSuccess({
+      keyHash: result.keyHash,
+      keyIdentifier: result.keyIdentifier,
+    }, undefined, 201);
   } catch (error) {
     return Errors.internal("POST /api/providers/keys error", error);
   }

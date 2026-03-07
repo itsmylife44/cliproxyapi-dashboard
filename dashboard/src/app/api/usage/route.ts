@@ -9,6 +9,7 @@ import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { usageCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";
 import { logger } from "@/lib/logger";
+import { apiSuccess, apiError } from "@/lib/api-response";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -346,15 +347,12 @@ function filterAndLabelApis(
 export async function GET() {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   if (!MANAGEMENT_API_KEY) {
     logger.error("MANAGEMENT_API_KEY is not configured");
-    return NextResponse.json(
-      { error: "Server configuration error: management API key not set" },
-      { status: 500 }
-    );
+    return apiError("Server configuration error: management API key not set", 500);
   }
 
   try {
@@ -367,7 +365,7 @@ export async function GET() {
     const cacheKey = `${CACHE_KEYS.usage(session.userId)}:${isAdmin}`;
     const cached = usageCache.get(cacheKey);
     if (cached) {
-      return NextResponse.json(cached);
+      return apiSuccess(cached);
     }
 
     const [usageResponse, userKeys] = await Promise.all([
@@ -411,10 +409,7 @@ export async function GET() {
         { status: usageResponse.status, statusText: usageResponse.statusText },
         "CLIProxyAPI usage endpoint returned error"
       );
-      return NextResponse.json(
-        { error: "Failed to fetch usage data from CLIProxyAPI" },
-        { status: 502 }
-      );
+      return apiError("Failed to fetch usage data from CLIProxyAPI", 502);
     }
 
     const responseJson: unknown = await usageResponse.json();
@@ -428,10 +423,7 @@ export async function GET() {
 
     if (!isRawUsageResponse(rawData)) {
       logger.error({ response: JSON.stringify(responseJson).slice(0, 200) }, "Unexpected usage response format from CLIProxyAPI");
-      return NextResponse.json(
-        { error: "Invalid usage data format from CLIProxyAPI" },
-        { status: 502 }
-      );
+      return apiError("Invalid usage data format from CLIProxyAPI", 502);
     }
 
     const { apis: filteredApis, totals } = filterAndLabelApis(
@@ -460,12 +452,9 @@ export async function GET() {
 
     usageCache.set(cacheKey, responseData, CACHE_TTL.USAGE);
 
-    return NextResponse.json(responseData);
+    return apiSuccess(responseData);
   } catch (error) {
     logger.error({ err: error }, "Failed to fetch usage data");
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return apiError("Internal server error", 500);
   }
 }

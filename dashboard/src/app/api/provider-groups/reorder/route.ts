@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { Errors } from "@/lib/errors";
 import { ReorderProviderGroupsSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
+import { apiSuccess } from "@/lib/api-response";
 
 export async function PUT(request: NextRequest) {
   const session = await verifySession();
@@ -42,7 +43,7 @@ export async function PUT(request: NextRequest) {
       )
     );
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return Errors.zodValidation(error.issues);

@@ -7,6 +7,7 @@ import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync"
 import { hashProviderKey } from "@/lib/providers/hash";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { apiSuccess } from "@/lib/api-response";
 
 const SIDECAR_BASE_URL = "http://perplexity-sidecar:8766/v1";
 const SIDECAR_FETCH_TIMEOUT_MS = 5_000;
@@ -89,7 +90,7 @@ export async function PUT(request: NextRequest) {
   try {
     const result = await syncModelsCore();
     logger.info({ result }, "Sidecar-triggered model sync completed");
-    return NextResponse.json(result);
+    return apiSuccess(result);
   } catch (error) {
     return Errors.internal("sidecar-triggered sync perplexity models", error);
   }
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
         "create"
       );
 
-      return NextResponse.json({
+      return apiSuccess({
         synced: true,
         created: true,
         modelCount: models.length,
@@ -155,7 +156,7 @@ export async function POST(request: NextRequest) {
       models.some((m) => !existingNames.has(m.upstreamName));
 
     if (!hasChanges) {
-      return NextResponse.json({
+      return apiSuccess({
         synced: true,
         created: false,
         modelCount: models.length,
@@ -190,7 +191,7 @@ export async function POST(request: NextRequest) {
       (name) => !models.some((m) => m.upstreamName === name)
     );
 
-    return NextResponse.json({
+    return apiSuccess({
       synced: true,
       created: false,
       modelCount: models.length,

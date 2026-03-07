@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { CopyBlock } from "@/components/copy-block";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface PublishStatus {
   id: string;
@@ -30,7 +31,7 @@ export function ConfigPublisher() {
   const fetchStatus = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/config-sharing/publish");
+      const res = await fetch(API_ENDPOINTS.CONFIG_SHARING.PUBLISH);
       if (res.status === 404) {
         setStatus(null);
         setLoading(false);
@@ -58,7 +59,7 @@ export function ConfigPublisher() {
   const handlePublish = async () => {
     setActionLoading(true);
     try {
-      const res = await fetch("/api/config-sharing/publish", {
+      const res = await fetch(API_ENDPOINTS.CONFIG_SHARING.PUBLISH, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: templateName || "My Config" }),
@@ -85,7 +86,7 @@ export function ConfigPublisher() {
     }
     setActionLoading(true);
     try {
-      const res = await fetch("/api/config-sharing/publish", {
+      const res = await fetch(API_ENDPOINTS.CONFIG_SHARING.PUBLISH, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: templateName.trim() }),
@@ -109,7 +110,7 @@ export function ConfigPublisher() {
     if (!status) return;
     setActionLoading(true);
     try {
-      const res = await fetch("/api/config-sharing/publish", {
+      const res = await fetch(API_ENDPOINTS.CONFIG_SHARING.PUBLISH, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !status.isActive }),
@@ -138,7 +139,7 @@ export function ConfigPublisher() {
   const handleUnpublish = async () => {
     setActionLoading(true);
     try {
-      const res = await fetch("/api/config-sharing/publish", {
+      const res = await fetch(API_ENDPOINTS.CONFIG_SHARING.PUBLISH, {
         method: "DELETE",
       });
       const data = await res.json();

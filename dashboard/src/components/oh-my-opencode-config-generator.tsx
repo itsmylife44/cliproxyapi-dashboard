@@ -9,6 +9,7 @@ import { TierAssignments } from "@/components/oh-my-opencode/tier-assignments";
 import { ToggleSections } from "@/components/oh-my-opencode/toggle-sections";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import {
   AGENT_ROLES,
   CATEGORY_ROLES,
@@ -43,8 +44,10 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   const [isExpanded, setIsExpanded] = useState(false);
   const [overrides, setOverrides] = useState<OhMyOpenCodeFullConfig>(initialOverrides ?? { agents: {}, categories: {} });
   const [saving, setSaving] = useState(false);
-  const [providerConcurrencyRows, setProviderConcurrencyRows] = useState<Array<{ key: string; value: number }>>([]);
-  const [modelConcurrencyRows, setModelConcurrencyRows] = useState<Array<{ key: string; value: number }>>([]);
+  const nextIdRef = useRef(0);
+  const nextId = () => `row-${nextIdRef.current++}`;
+  const [providerConcurrencyRows, setProviderConcurrencyRows] = useState<Array<{ _id: string; key: string; value: number }>>([]);
+  const [modelConcurrencyRows, setModelConcurrencyRows] = useState<Array<{ _id: string; key: string; value: number }>>([]);
   const tmuxDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const { showToast } = useToast();
 
@@ -60,11 +63,11 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   useEffect(() => {
     if (initialOverrides?.background_task?.providerConcurrency) {
       const entries = Object.entries(initialOverrides.background_task.providerConcurrency);
-      setProviderConcurrencyRows(entries.map(([key, value]) => ({ key, value })));
+      setProviderConcurrencyRows(entries.map(([key, value]) => ({ _id: nextId(), key, value })));
     }
     if (initialOverrides?.background_task?.modelConcurrency) {
       const entries = Object.entries(initialOverrides.background_task.modelConcurrency);
-      setModelConcurrencyRows(entries.map(([key, value]) => ({ key, value })));
+      setModelConcurrencyRows(entries.map(([key, value]) => ({ _id: nextId(), key, value })));
     }
   }, [initialOverrides]);
 
@@ -76,7 +79,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
       latestSaveRef.current = newOverrides;
       setSaving(true);
       try {
-        const res = await fetch("/api/agent-config", {
+        const res = await fetch(API_ENDPOINTS.AGENT_CONFIG, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ overrides: newOverrides }),
@@ -238,11 +241,23 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     saveOverrides(newOverrides);
   };
 
+  const TMUX_FIELD_RANGES: Partial<Record<keyof TmuxConfig, { min: number; max?: number }>> = {
+    main_pane_size: { min: 20, max: 80 },
+    main_pane_min_width: { min: 0 },
+    agent_pane_min_width: { min: 0 },
+  };
+
   const handleTmuxNumberChange = (field: keyof TmuxConfig, value: number) => {
     if (tmuxDebounceRef.current) clearTimeout(tmuxDebounceRef.current);
     tmuxDebounceRef.current = setTimeout(() => {
+      const range = TMUX_FIELD_RANGES[field];
+      let clamped = value;
+      if (range) {
+        clamped = Math.max(range.min, clamped);
+        if (range.max !== undefined) clamped = Math.min(range.max, clamped);
+      }
       const currentTmux = overrides.tmux ?? { enabled: true };
-      const newTmux = { ...currentTmux, [field]: value };
+      const newTmux = { ...currentTmux, [field]: clamped };
       const newOverrides = { ...overrides, tmux: newTmux };
       setOverrides(newOverrides);
       saveOverrides(newOverrides);
@@ -277,7 +292,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   };
 
   const handleProviderConcurrencyAdd = () => {
-    setProviderConcurrencyRows([...providerConcurrencyRows, { key: "", value: 1 }]);
+    setProviderConcurrencyRows([...providerConcurrencyRows, { _id: nextId(), key: "", value: 1 }]);
   };
 
   const handleProviderConcurrencyRemove = (index: number) => {
@@ -306,7 +321,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   };
 
   const handleModelConcurrencyAdd = () => {
-    setModelConcurrencyRows([...modelConcurrencyRows, { key: "", value: 1 }]);
+    setModelConcurrencyRows([...modelConcurrencyRows, { _id: nextId(), key: "", value: 1 }]);
   };
 
   const handleModelConcurrencyRemove = (index: number) => {

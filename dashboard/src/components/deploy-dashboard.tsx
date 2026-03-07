@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { extractApiError } from "@/lib/utils";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface DeployStatus {
   status: "idle" | "running" | "success" | "error" | "completed" | "failed";
@@ -42,7 +43,7 @@ export function DeployDashboard() {
 
   const fetchStatus = useCallback(async (shouldStartPolling = false) => {
     try {
-      const res = await fetch("/api/admin/deploy");
+      const res = await fetch(API_ENDPOINTS.ADMIN.DEPLOY);
       if (res.ok) {
         const data = await res.json();
         const normalized = normalizeStatus(data.status ?? data);
@@ -117,7 +118,7 @@ export function DeployDashboard() {
     setStatus({ status: "running", step: "init", message: "Starting deployment..." });
 
     try {
-      const res = await fetch("/api/admin/deploy", {
+      const res = await fetch(API_ENDPOINTS.ADMIN.DEPLOY, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ noCache }),

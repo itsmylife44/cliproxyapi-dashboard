@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { extractApiError } from "@/lib/utils";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import {
   API_KEY_PROVIDERS,
   ApiKeySection,
@@ -23,7 +24,7 @@ interface CurrentUser {
   isAdmin: boolean;
 }
 
-const loadProvidersData = async (): Promise<Record<ProviderId, ProviderState>> => {
+const loadProvidersData = async (signal?: AbortSignal): Promise<Record<ProviderId, ProviderState>> => {
   const newConfigs: Record<ProviderId, ProviderState> = {
     [PROVIDER_IDS.CLAUDE]: { keys: [] },
     [PROVIDER_IDS.GEMINI]: { keys: [] },
@@ -33,7 +34,7 @@ const loadProvidersData = async (): Promise<Record<ProviderId, ProviderState>> =
 
   for (const provider of PROVIDERS) {
     try {
-      const res = await fetch(`/api/providers/keys?provider=${provider.id}`);
+      const res = await fetch(`${API_ENDPOINTS.PROVIDERS.KEYS}?provider=${provider.id}`, { signal });
       if (res.ok) {
         const data = await res.json();
         const keys = data.data?.keys ?? data.keys;
@@ -41,7 +42,9 @@ const loadProvidersData = async (): Promise<Record<ProviderId, ProviderState>> =
           newConfigs[provider.id] = { keys };
         }
       }
-    } catch {}
+    } catch (err) {
+      if (signal?.aborted) break;
+    }
   }
 
   return newConfigs;
@@ -61,23 +64,25 @@ export default function ProvidersPage() {
   const [customProviderCount, setCustomProviderCount] = useState(0);
   const { showToast } = useToast();
 
-  const loadCurrentUser = useCallback(async (): Promise<CurrentUser | null> => {
+  const loadCurrentUser = useCallback(async (signal?: AbortSignal): Promise<CurrentUser | null> => {
     try {
-      const res = await fetch("/api/auth/me");
+      const res = await fetch(API_ENDPOINTS.AUTH.ME, { signal });
       if (res.ok) {
         const data = await res.json();
         const user = { id: data.id, username: data.username, isAdmin: data.isAdmin };
         setCurrentUser(user);
         return user;
       }
-    } catch {}
+    } catch (err) {
+      if (signal?.aborted) return null;
+    }
     return null;
   }, []);
 
-  const loadMaxKeysPerUser = useCallback(async (isAdminUser: boolean) => {
+  const loadMaxKeysPerUser = useCallback(async (isAdminUser: boolean, signal?: AbortSignal) => {
     if (!isAdminUser) return;
     try {
-      const res = await fetch("/api/admin/settings");
+      const res = await fetch(API_ENDPOINTS.ADMIN.SETTINGS, { signal });
       if (res.ok) {
         const data = await res.json();
         const setting = data.settings?.find((s: { key: string; value: string }) => s.key === "max_provider_keys_per_user");
@@ -88,7 +93,9 @@ export default function ProvidersPage() {
           }
         }
       }
-    } catch {}
+    } catch (err) {
+      if (signal?.aborted) return;
+    }
   }, []);
 
   const refreshProviders = async () => {
@@ -99,16 +106,16 @@ export default function ProvidersPage() {
   };
 
   useEffect(() => {
-    let isMounted = true;
+    const controller = new AbortController();
     const load = async () => {
-      const user = await loadCurrentUser();
-      const newConfigs = await loadProvidersData();
-      if (!isMounted) return;
+      const user = await loadCurrentUser(controller.signal);
+      const newConfigs = await loadProvidersData(controller.signal);
+      if (controller.signal.aborted) return;
       setConfigs(newConfigs);
       setLoading(false);
 
       if (user?.isAdmin) {
-        await loadMaxKeysPerUser(true);
+        await loadMaxKeysPerUser(true, controller.signal);
       }
     };
     const timeoutId = window.setTimeout(() => {
@@ -116,7 +123,7 @@ export default function ProvidersPage() {
     }, 0);
     return () => {
       window.clearTimeout(timeoutId);
-      isMounted = false;
+      controller.abort();
     };
   }, [loadCurrentUser, loadMaxKeysPerUser]);
 
@@ -235,7 +242,7 @@ export default function ProvidersPage() {
                     className="mt-6"
                     onClick={async () => {
                       try {
-                        const res = await fetch("/api/admin/settings", {
+                        const res = await fetch(API_ENDPOINTS.ADMIN.SETTINGS, {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({

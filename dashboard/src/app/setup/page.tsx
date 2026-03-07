@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 export default function SetupPage() {
   const [username, setUsername] = useState("");
@@ -30,7 +31,7 @@ export default function SetupPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/setup", {
+      const res = await fetch(API_ENDPOINTS.SETUP.BASE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),

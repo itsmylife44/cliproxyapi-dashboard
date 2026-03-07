@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 const LOGS_PER_PAGE = 50;
 
@@ -30,6 +31,7 @@ interface FetchLogsParams {
   after?: number | null;
   append?: boolean;
   currentLogs?: string[];
+  signal?: AbortSignal;
 }
 
 async function fetchLogs({
@@ -40,6 +42,7 @@ async function fetchLogs({
   after,
   append,
   currentLogs,
+  signal,
 }: FetchLogsParams) {
   setLoading(true);
   try {
@@ -48,7 +51,7 @@ async function fetchLogs({
     if (after) {
       params.set("after", String(after));
     }
-    const res = await fetch(`/api/management/logs?${params.toString()}`);
+    const res = await fetch(`${API_ENDPOINTS.MANAGEMENT.LOGS}?${params.toString()}`, { signal });
     if (!res.ok) {
       const errorData = await res.json().catch(() => null);
       const errorMsg = errorData?.error;
@@ -69,6 +72,7 @@ async function fetchLogs({
     setLatestTimestamp(data["latest-timestamp"] ?? null);
     setLoading(false);
   } catch {
+    if (signal?.aborted) return;
     showToast("Network error", "error");
     setLoading(false);
   }
@@ -114,7 +118,9 @@ export default function LogsPage() {
   );
 
   useEffect(() => {
-    void fetchLogs({ setLogs, setLatestTimestamp, setLoading, showToast });
+    const controller = new AbortController();
+    void fetchLogs({ setLogs, setLatestTimestamp, setLoading, showToast, signal: controller.signal });
+    return () => controller.abort();
   }, [showToast]);
 
   useEffect(() => {
@@ -130,6 +136,7 @@ export default function LogsPage() {
   }, [loading]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const interval = window.setInterval(() => {
       if (loadingRef.current) return;
       void fetchLogs({
@@ -140,10 +147,14 @@ export default function LogsPage() {
         after: latestTimestampRef.current,
         append: true,
         currentLogs: logsRef.current,
+        signal: controller.signal,
       });
     }, 10000);
 
-    return () => window.clearInterval(interval);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+    };
   }, [showToast]);
 
   const handleRefresh = () => {
@@ -166,7 +177,7 @@ export default function LogsPage() {
   const handleClearLogs = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/management/logs", { method: "DELETE" });
+      const res = await fetch(API_ENDPOINTS.MANAGEMENT.LOGS, { method: "DELETE" });
       if (!res.ok) {
         showToast("Failed to clear logs", "error");
         setLoading(false);

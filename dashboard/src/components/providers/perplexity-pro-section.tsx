@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 type ShowToast = ReturnType<typeof useToast>["showToast"];
 
@@ -34,7 +35,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
   const loadPerplexityCookies = useCallback(async () => {
     setPerplexityCookiesLoading(true);
     try {
-      const res = await fetch("/api/providers/perplexity-cookie");
+      const res = await fetch(API_ENDPOINTS.PROVIDERS.PERPLEXITY_COOKIE);
       if (!res.ok) {
         showToast("Failed to load Perplexity cookies", "error");
         setPerplexityCookiesLoading(false);
@@ -63,7 +64,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
     const cookieData = JSON.stringify(cookieObj);
     setPerplexityCookieSaving(true);
     try {
-      const res = await fetch("/api/providers/perplexity-cookie", {
+      const res = await fetch(API_ENDPOINTS.PROVIDERS.PERPLEXITY_COOKIE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -95,7 +96,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
   const handlePerplexityModelSync = async () => {
     setPerplexityModelSyncing(true);
     try {
-      const res = await fetch("/api/providers/perplexity-cookie/sync-models", {
+      const res = await fetch(API_ENDPOINTS.PROVIDERS.PERPLEXITY_COOKIE_SYNC_MODELS, {
         method: "POST",
       });
       const data = await res.json();
@@ -122,7 +123,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
 
   const handlePerplexityCookieDelete = async (id: string) => {
     try {
-      const res = await fetch("/api/providers/perplexity-cookie", {
+      const res = await fetch(API_ENDPOINTS.PROVIDERS.PERPLEXITY_COOKIE, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),

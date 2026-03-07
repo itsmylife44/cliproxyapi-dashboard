@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface UpdateOverlayProps {
   isVisible: boolean;
@@ -78,7 +79,7 @@ export function UpdateOverlay({
       while (!cancelled && attempts < maxAttempts) {
         attempts++;
         try {
-          const res = await fetch("/api/health", {
+          const res = await fetch(API_ENDPOINTS.HEALTH, {
             cache: "no-store",
             signal: AbortSignal.timeout(3000),
           });

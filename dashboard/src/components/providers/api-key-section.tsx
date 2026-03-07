@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Modal, ModalContent, ModalFooter, ModalHeader, ModalTitle } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 type ShowToast = ReturnType<typeof useToast>["showToast"];
 
@@ -138,7 +139,7 @@ export function ApiKeySection({
     setSaving(true);
 
     try {
-      const res = await fetch("/api/providers/keys", {
+      const res = await fetch(API_ENDPOINTS.PROVIDERS.KEYS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -182,7 +183,7 @@ export function ApiKeySection({
     const { keyHash, provider } = pendingKeyDelete;
 
     try {
-      const res = await fetch(`/api/providers/keys/${keyHash}?provider=${provider}`, {
+      const res = await fetch(`${API_ENDPOINTS.PROVIDERS.KEYS}/${keyHash}?provider=${provider}`, {
         method: "DELETE",
       });
       if (!res.ok) {

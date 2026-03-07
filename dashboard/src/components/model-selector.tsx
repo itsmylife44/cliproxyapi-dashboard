@@ -6,6 +6,7 @@ import {
   type ModelProviderName,
   groupModelsByProvider,
 } from "@/lib/providers/model-grouping";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface ModelSelectorProps {
   availableModels: string[];
@@ -133,7 +134,7 @@ export function ModelSelector({
       
       const saveData = async () => {
         try {
-          const response = await fetch("/api/model-preferences", {
+          const response = await fetch(API_ENDPOINTS.MODEL_PREFERENCES, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { cn, extractApiError } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface ContainerInfo {
   name: string;
@@ -58,9 +59,11 @@ export default function ContainersPage() {
   }, [logLines.length]);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchContainers = async () => {
       try {
-        const res = await fetch("/api/containers/list");
+        const res = await fetch(API_ENDPOINTS.CONTAINERS.LIST, { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
           setContainers(Array.isArray(data) ? data : []);
@@ -73,16 +76,23 @@ export default function ContainersPage() {
               : `Failed to load containers (${res.status})`;
           setFetchError(message);
         }
-      } catch {
-        setFetchError("Network error while loading containers.");
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          setFetchError("Network error while loading containers.");
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchContainers();
     const interval = setInterval(fetchContainers, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
   }, []);
 
   const confirmAction = (containerName: string, displayName: string, action: string) => {
@@ -106,7 +116,7 @@ export default function ContainersPage() {
         const data = await res.json();
         showToast(extractApiError(data, "Action failed"), "error");
       }
-      const refreshRes = await fetch("/api/containers/list");
+      const refreshRes = await fetch(API_ENDPOINTS.CONTAINERS.LIST);
       if (refreshRes.ok) {
         const data = await refreshRes.json();
         setContainers(Array.isArray(data) ? data : []);

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface UserPanelProps {
   isOpen: boolean;
@@ -78,7 +79,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
     setError(null);
 
     try {
-      const res = await fetch("/api/auth/change-password", {
+      const res = await fetch(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword }),
@@ -103,7 +104,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
   };
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch(API_ENDPOINTS.AUTH.LOGOUT, { method: "POST" });
     router.push("/login");
     router.refresh();
   };

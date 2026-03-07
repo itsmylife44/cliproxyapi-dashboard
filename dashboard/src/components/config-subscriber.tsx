@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface SubscriptionStatus {
   templateName: string;
@@ -31,7 +32,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
   const fetchStatus = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/config-sharing/subscribe");
+      const res = await fetch(API_ENDPOINTS.CONFIG_SHARING.SUBSCRIBE);
       if (res.status === 404 || res.status === 204) {
         setStatus(null);
         setLoading(false);
@@ -72,7 +73,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
 
     setActionLoading(true);
     try {
-      const res = await fetch("/api/config-sharing/subscribe", {
+      const res = await fetch(API_ENDPOINTS.CONFIG_SHARING.SUBSCRIBE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ shareCode: shareCode.trim() }),
@@ -96,7 +97,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
     if (!status) return;
     setActionLoading(true);
     try {
-      const res = await fetch("/api/config-sharing/subscribe", {
+      const res = await fetch(API_ENDPOINTS.CONFIG_SHARING.SUBSCRIBE, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !status.isActive }),
@@ -125,7 +126,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
   const handleUnsubscribe = async () => {
     setActionLoading(true);
     try {
-      const res = await fetch("/api/config-sharing/subscribe", {
+      const res = await fetch(API_ENDPOINTS.CONFIG_SHARING.SUBSCRIBE, {
         method: "DELETE",
       });
       const data = await res.json();

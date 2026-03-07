@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { type ReactNode, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -25,6 +26,8 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   variant = "warning"
 }: ConfirmDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, dialogRef as React.RefObject<HTMLElement | null>);
   const previousOverflowRef = useRef<string>("");
 
   useEffect(() => {
@@ -88,6 +91,7 @@ export function ConfirmDialog({
       tabIndex={-1}
     >
       <div
+        ref={dialogRef}
         className="animate-modal-card relative w-full max-w-md bg-slate-900 border border-slate-700/70 rounded-xl p-6 shadow-2xl"
         onClick={handleContentClick}
         onKeyDown={handleContentKeyDown}

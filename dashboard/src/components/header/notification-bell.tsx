@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import type { Notification, NotificationType } from "@/hooks/use-header-notifications";
 
 interface NotificationBellProps {
@@ -52,38 +53,122 @@ function NotificationItem({ notification }: { notification: Notification }) {
   return content;
 }
 
-export function NotificationBell({ notifications, criticalCount, totalCount }: NotificationBellProps) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+interface DropdownPosition {
+  top: number;
+  right: number;
+}
+
+function NotificationDropdown({
+  notifications,
+  totalCount,
+  position,
+  onClose,
+}: {
+  notifications: Notification[];
+  totalCount: number;
+  position: DropdownPosition;
+  onClose: () => void;
+}) {
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
-
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        onClose();
       }
     }
 
     function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") onClose();
     }
 
-    document.addEventListener("mousedown", handleClickOutside);
+    // Delay listener to avoid closing on the same click that opened
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 0);
     document.addEventListener("keydown", handleEscape);
+
     return () => {
+      clearTimeout(timer);
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [open]);
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      ref={dropdownRef}
+      className="fixed z-[9999] w-80 overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/95 shadow-2xl backdrop-blur-lg"
+      style={{ top: position.top, right: position.right }}
+    >
+      <div className="flex items-center justify-between border-b border-slate-700/50 px-4 py-2.5">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Notifications
+        </h3>
+        {totalCount > 0 && (
+          <span className="text-[11px] tabular-nums text-slate-500">{totalCount}</span>
+        )}
+      </div>
+
+      <div className="max-h-80 overflow-y-auto">
+        {notifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="text-slate-600">
+              <BellIcon hasNotifications={false} />
+            </div>
+            <p className="mt-2 text-xs text-slate-500">All clear — no notifications</p>
+          </div>
+        ) : (
+          <div className="space-y-1.5 p-2">
+            {notifications.map((n) => (
+              <NotificationItem key={n.id} notification={n} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+export function NotificationBell({ notifications, criticalCount, totalCount }: NotificationBellProps) {
+  const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [position, setPosition] = useState<DropdownPosition>({ top: 0, right: 0 });
+
+  const updatePosition = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setPosition({
+      top: rect.bottom + 8,
+      right: window.innerWidth - rect.right,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, updatePosition]);
+
+  const handleClose = useCallback(() => setOpen(false), []);
 
   const badgeColor = criticalCount > 0 ? "bg-red-500" : "bg-amber-500";
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => {
+          updatePosition();
+          setOpen((prev) => !prev);
+        }}
         aria-label={`Notifications${totalCount > 0 ? ` (${totalCount})` : ""}`}
         className="relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-600/50 bg-slate-800/60 transition-all hover:border-slate-500/70 hover:bg-slate-700/60"
       >
@@ -96,34 +181,13 @@ export function NotificationBell({ notifications, criticalCount, totalCount }: N
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/95 shadow-xl backdrop-blur-lg">
-          <div className="flex items-center justify-between border-b border-slate-700/50 px-4 py-2.5">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Notifications
-            </h3>
-            {totalCount > 0 && (
-              <span className="text-[11px] tabular-nums text-slate-500">{totalCount}</span>
-            )}
-          </div>
-
-          <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <div className="text-slate-600">
-                  <BellIcon hasNotifications={false} />
-                </div>
-                <p className="mt-2 text-xs text-slate-500">All clear — no notifications</p>
-              </div>
-            ) : (
-              <div className="space-y-1.5 p-2">
-                {notifications.map((n) => (
-                  <NotificationItem key={n.id} notification={n} />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <NotificationDropdown
+          notifications={notifications}
+          totalCount={totalCount}
+          position={position}
+          onClose={handleClose}
+        />
       )}
-    </div>
+    </>
   );
 }

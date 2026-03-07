@@ -6,8 +6,8 @@ import { CONTAINER_CONFIG, isValidContainerName } from "@/lib/containers";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { z } from "zod";
-import { ContainerActionSchema, formatZodError } from "@/lib/validation/schemas";
-import { logger } from "@/lib/logger";
+import { ContainerActionSchema } from "@/lib/validation/schemas";
+import { Errors, apiSuccess } from "@/lib/errors";
 
 const execFileAsync = promisify(execFile);
 
@@ -20,10 +20,7 @@ export async function POST(
   const session = await verifySession();
 
   if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return Errors.unauthorized();
   }
 
   const user = await prisma.user.findUnique({
@@ -32,10 +29,7 @@ export async function POST(
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden: Admin access required" },
-      { status: 403 }
-    );
+    return Errors.forbidden();
   }
 
   const originError = validateOrigin(request);
@@ -46,10 +40,7 @@ export async function POST(
   const { name } = await params;
 
   if (!isValidContainerName(name)) {
-    return NextResponse.json(
-      { error: "Invalid or unrecognized container name" },
-      { status: 400 }
-    );
+    return Errors.validation("Invalid or unrecognized container name");
   }
 
   try {
@@ -65,27 +56,18 @@ export async function POST(
       | "allowRestart";
 
     if (!config[permissionKey]) {
-      return NextResponse.json(
-        { error: `Action '${typedAction}' is not allowed on container '${config.displayName}'` },
-        { status: 403 }
-      );
+      return Errors.forbidden();
     }
 
     await execFileAsync("docker", [typedAction, name]);
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       message: `Container '${config.displayName}' ${typedAction} completed`,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(formatZodError(error), { status: 400 });
+      return Errors.zodValidation(error.issues);
     }
-    logger.error({ err: error, containerName: name }, "Container action error");
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json(
-      { error: `Failed to perform action: ${message}` },
-      { status: 500 }
-    );
+    return Errors.internal("Container action failed", error);
   }
 }

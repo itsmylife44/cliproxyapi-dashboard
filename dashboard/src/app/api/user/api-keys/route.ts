@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { Errors, apiSuccess } from "@/lib/errors";
 
 interface ApiKeyResponse {
   id: string;
@@ -39,7 +40,7 @@ function maskApiKey(key: string): string {
 export async function GET() {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   try {
@@ -65,29 +66,19 @@ export async function GET() {
 
     return NextResponse.json({ apiKeys: response });
   } catch (error) {
-    logger.error({ err: error }, "Failed to fetch API keys");
-    return NextResponse.json(
-      { error: "Failed to fetch API keys" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to fetch API keys", error);
   }
 }
 
 export async function POST(request: NextRequest) {
   const rateLimit = checkRateLimitWithPreset(request, "api-keys", "API_KEYS");
   if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: "Too many API key creation requests. Try again later." },
-      {
-        status: 429,
-        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
-      }
-    );
+    return Errors.rateLimited(rateLimit.retryAfterSeconds);
   }
 
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -100,10 +91,7 @@ export async function POST(request: NextRequest) {
     const parsed = CreateApiKeyRequestSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 }
-      );
+      return Errors.zodValidation(parsed.error.issues);
     }
 
     const key = generateApiKey();
@@ -136,18 +124,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    logger.error({ err: error }, "Failed to create API key");
-    return NextResponse.json(
-      { error: "Failed to create API key" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to create API key", error);
   }
 }
 
 export async function DELETE(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -160,10 +144,7 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get("id");
 
     if (!id || typeof id !== "string") {
-      return NextResponse.json(
-        { error: "Missing or invalid id parameter" },
-        { status: 400 }
-      );
+      return Errors.missingFields(["id"]);
     }
 
     const existingKey = await prisma.userApiKey.findFirst({
@@ -175,10 +156,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!existingKey) {
-      return NextResponse.json(
-        { error: "API key not found or access denied" },
-        { status: 404 }
-      );
+      return Errors.notFound("API key");
     }
 
     await prisma.userApiKey.delete({
@@ -190,16 +168,11 @@ export async function DELETE(request: NextRequest) {
       logger.error({ error: syncResult.error }, "Sync failed after API key deletion");
     }
 
-    return NextResponse.json({
-      success: true,
-      syncStatus: syncResult.ok ? "ok" : "failed",
+    return apiSuccess({
+      syncStatus: syncResult.ok ? "ok" : ("failed" as const),
       syncMessage: syncResult.ok ? undefined : "Backend sync pending - key deleted but may still work temporarily",
     });
   } catch (error) {
-    logger.error({ err: error }, "Failed to delete API key");
-    return NextResponse.json(
-      { error: "Failed to delete API key" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to delete API key", error);
   }
 }

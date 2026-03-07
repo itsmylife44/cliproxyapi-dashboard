@@ -9,6 +9,7 @@ import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { usageCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";
 import { logger } from "@/lib/logger";
+import { Errors } from "@/lib/errors";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -346,15 +347,12 @@ function filterAndLabelApis(
 export async function GET() {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   if (!MANAGEMENT_API_KEY) {
     logger.error("MANAGEMENT_API_KEY is not configured");
-    return NextResponse.json(
-      { error: "Server configuration error: management API key not set" },
-      { status: 500 }
-    );
+    return Errors.internal("Server configuration error");
   }
 
   try {
@@ -411,10 +409,7 @@ export async function GET() {
         { status: usageResponse.status, statusText: usageResponse.statusText },
         "CLIProxyAPI usage endpoint returned error"
       );
-      return NextResponse.json(
-        { error: "Failed to fetch usage data from CLIProxyAPI" },
-        { status: 502 }
-      );
+      return Errors.internal("Failed to fetch usage data from CLIProxyAPI");
     }
 
     const responseJson: unknown = await usageResponse.json();
@@ -428,10 +423,7 @@ export async function GET() {
 
     if (!isRawUsageResponse(rawData)) {
       logger.error({ response: JSON.stringify(responseJson).slice(0, 200) }, "Unexpected usage response format from CLIProxyAPI");
-      return NextResponse.json(
-        { error: "Invalid usage data format from CLIProxyAPI" },
-        { status: 502 }
-      );
+      return Errors.internal("Invalid usage data format from CLIProxyAPI");
     }
 
     const { apis: filteredApis, totals } = filterAndLabelApis(
@@ -462,10 +454,6 @@ export async function GET() {
 
     return NextResponse.json(responseData);
   } catch (error) {
-    logger.error({ err: error }, "Failed to fetch usage data");
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to fetch usage data", error);
   }
 }

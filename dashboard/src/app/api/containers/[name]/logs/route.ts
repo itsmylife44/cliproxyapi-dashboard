@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { CONTAINER_CONFIG, isValidContainerName } from "@/lib/containers";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { Errors, apiSuccess } from "@/lib/errors";
 
 const execFileAsync = promisify(execFile);
 
@@ -18,10 +19,7 @@ export async function GET(
   const session = await verifySession();
 
   if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return Errors.unauthorized();
   }
 
   const user = await prisma.user.findUnique({
@@ -30,19 +28,13 @@ export async function GET(
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden: Admin access required" },
-      { status: 403 }
-    );
+    return Errors.forbidden();
   }
 
   const { name } = await params;
 
   if (!isValidContainerName(name)) {
-    return NextResponse.json(
-      { error: "Invalid or unrecognized container name" },
-      { status: 400 }
-    );
+    return Errors.validation("Invalid or unrecognized container name");
   }
 
   const linesParam = request.nextUrl.searchParams.get("lines");
@@ -51,10 +43,7 @@ export async function GET(
   if (linesParam !== null) {
     const parsed = parseInt(linesParam, 10);
     if (isNaN(parsed) || parsed < 1) {
-      return NextResponse.json(
-        { error: "Parameter 'lines' must be a positive integer" },
-        { status: 400 }
-      );
+      return Errors.validation("Parameter 'lines' must be a positive integer");
     }
     lines = Math.min(parsed, MAX_LINES);
   }
@@ -75,15 +64,11 @@ export async function GET(
     const logLines = allOutput ? allOutput.split("\n") : [];
     const config = CONTAINER_CONFIG[name];
 
-    return NextResponse.json({
+    return apiSuccess({
       lines: logLines,
       containerName: config.displayName,
     });
   } catch (error) {
-    logger.error({ err: error, containerName: name }, "Container logs error");
-    return NextResponse.json(
-      { error: "Failed to fetch container logs" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to fetch container logs", error);
   }
 }

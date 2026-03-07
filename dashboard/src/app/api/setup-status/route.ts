@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { getInternalProxyUrl } from "@/lib/config-generators/opencode";
 import { fetchProxyModels } from "@/lib/config-generators/shared";
+import { Errors } from "@/lib/errors";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -78,7 +79,7 @@ async function fetchProviderCount(): Promise<number> {
 export async function GET(): Promise<NextResponse> {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const [apiKeyCount, providerCount] = await Promise.all([

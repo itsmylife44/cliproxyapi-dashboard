@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { usageCache } from "@/lib/cache";
+import { Errors } from "@/lib/errors";
 
 const USAGE_HISTORY_CACHE_TTL_MS = 15_000;
 const USAGE_RECORD_LIMIT = 25_000;
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
   const requestStartedAt = Date.now();
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const searchParams = request.nextUrl.searchParams;
@@ -48,27 +49,18 @@ export async function GET(request: NextRequest) {
   const toParam = searchParams.get("to");
 
   if (!fromParam || !toParam) {
-    return NextResponse.json(
-      { error: "Missing required parameters: from and to" },
-      { status: 400 }
-    );
+    return Errors.missingFields(["from", "to"]);
   }
 
   if (!isValidDateParam(fromParam) || !isValidDateParam(toParam)) {
-    return NextResponse.json(
-      { error: "Invalid date format. Use YYYY-MM-DD." },
-      { status: 400 }
-    );
+    return Errors.validation("Invalid date format. Use YYYY-MM-DD.");
   }
 
   const fromDate = new Date(fromParam + "T00:00:00.000Z");
   const toDate = new Date(toParam + "T23:59:59.999Z");
 
   if (fromDate > toDate) {
-    return NextResponse.json(
-      { error: "from date must be before to date" },
-      { status: 400 }
-    );
+    return Errors.validation("from date must be before to date");
   }
 
   try {
@@ -304,9 +296,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responseData);
   } catch (error) {
     logger.error({ err: error, userId: session.userId, durationMs: Date.now() - requestStartedAt }, "Failed to fetch usage history");
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to fetch usage history");
   }
 }

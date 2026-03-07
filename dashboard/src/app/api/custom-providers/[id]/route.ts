@@ -9,6 +9,7 @@ import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
+import { Errors } from "@/lib/errors";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -58,7 +59,7 @@ export async function PATCH(
   const { id } = await params;
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -74,11 +75,11 @@ export async function PATCH(
     });
 
     if (!existingProvider) {
-      return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+      return Errors.notFound("Provider");
     }
 
     if (existingProvider.userId !== session.userId) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      return Errors.forbidden();
     }
 
     if (validated.name) {
@@ -91,7 +92,7 @@ export async function PATCH(
       });
 
       if (nameConflict) {
-        return NextResponse.json({ error: "Provider name already exists" }, { status: 409 });
+        return Errors.conflict("Provider name already exists");
       }
     }
 
@@ -101,7 +102,7 @@ export async function PATCH(
         select: { id: true },
       });
       if (!groupExists) {
-        return NextResponse.json({ error: "Provider group not found" }, { status: 404 });
+        return Errors.notFound("Provider group");
       }
     }
 
@@ -223,10 +224,9 @@ export async function PATCH(
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues }, { status: 400 });
+      return Errors.zodValidation(error.issues);
     }
-    logger.error({ err: error }, "PATCH /api/custom-providers/[id] error");
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return Errors.internal("PATCH /api/custom-providers/[id] error", error);
   }
 }
 
@@ -237,7 +237,7 @@ export async function DELETE(
   const { id } = await params;
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -249,11 +249,11 @@ export async function DELETE(
     });
 
     if (!existingProvider) {
-      return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+      return Errors.notFound("Provider");
     }
 
     if (existingProvider.userId !== session.userId) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      return Errors.forbidden();
     }
 
     await prisma.customProvider.delete({
@@ -328,7 +328,6 @@ export async function DELETE(
     return NextResponse.json({ success: true, syncStatus, syncMessage });
 
   } catch (error) {
-    logger.error({ err: error }, "DELETE /api/custom-providers/[id] error");
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return Errors.internal("DELETE /api/custom-providers/[id] error", error);
   }
 }

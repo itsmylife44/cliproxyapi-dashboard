@@ -9,11 +9,12 @@ import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
 import { CreateCustomProviderSchema } from "@/lib/validation/schemas";
+import { Errors } from "@/lib/errors";
 
 export async function GET() {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   try {
@@ -44,26 +45,19 @@ export async function GET() {
       }))
     });
   } catch (error) {
-    logger.error({ err: error }, "GET /api/custom-providers error");
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return Errors.internal("GET /api/custom-providers error", error);
   }
 }
 
 export async function POST(request: NextRequest) {
   const rateLimit = checkRateLimitWithPreset(request, "custom-providers", "CUSTOM_PROVIDERS");
   if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: "Too many custom provider creation requests. Try again later." },
-      {
-        status: 429,
-        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
-      }
-    );
+    return Errors.rateLimited(rateLimit.retryAfterSeconds);
   }
 
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -81,7 +75,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingName) {
-      return NextResponse.json({ error: "Provider name already exists" }, { status: 409 });
+      return Errors.conflict("Provider name already exists");
     }
 
     const existingId = await prisma.customProvider.findUnique({
@@ -89,7 +83,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingId) {
-      return NextResponse.json({ error: "Provider ID already taken" }, { status: 409 });
+      return Errors.conflict("Provider ID already taken");
     }
 
     const provider = await prisma.customProvider.create({
@@ -146,9 +140,8 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues }, { status: 400 });
+      return Errors.zodValidation(error.issues);
     }
-    logger.error({ err: error }, "POST /api/custom-providers error");
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return Errors.internal("POST /api/custom-providers error", error);
   }
 }

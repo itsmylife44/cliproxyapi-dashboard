@@ -216,6 +216,16 @@ export function apiErrorWithHeaders(
   );
 }
 
+/**
+ * Create a standard success response with consistent envelope
+ */
+export function apiSuccess<T extends Record<string, unknown>>(
+  data: T,
+  status = 200
+): NextResponse {
+  return NextResponse.json({ success: true, ...data }, { status });
+}
+
 // ============================================
 // Convenience factories for common errors
 // ============================================

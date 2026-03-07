@@ -580,8 +580,7 @@ export function OAuthSection({
     const currentProvider = selectedOAuthProviderIdRef.current;
     const currentState = authStateRef.current;
     if (!currentProvider || !currentState) {
-      console.warn("[OAuth] Submit failed - provider:", currentProvider, "state:", currentState,
-                   "stateFromState:", selectedOAuthProviderId, "providerFromState:", authState);
+      console.warn("[OAuth] Submit failed - missing provider or state");
       setOauthModalStatus(MODAL_STATUS.ERROR);
       setOauthErrorMessage("Missing provider or state. Please restart the flow.");
       return;

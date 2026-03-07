@@ -4,23 +4,17 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { generateSyncToken } from "@/lib/auth/sync-token";
 import { prisma } from "@/lib/db";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
-import { logger } from "@/lib/logger";
+import { Errors } from "@/lib/errors";
 
 export async function POST(request: NextRequest) {
   const rateLimit = checkRateLimitWithPreset(request, "config-sync-tokens", "CONFIG_SYNC_TOKENS");
   if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: "Too many token creation requests. Try again later." },
-      {
-        status: 429,
-        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
-      }
-    );
+    return Errors.rateLimited(rateLimit.retryAfterSeconds);
   }
 
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -39,10 +33,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!userApiKey) {
-      return NextResponse.json(
-        { error: "User API key not found. Please create an API key first." },
-        { status: 400 }
-      );
+      return Errors.validation("User API key not found. Please create an API key first.");
     }
 
     const syncToken = await prisma.syncToken.create({
@@ -62,18 +53,14 @@ export async function POST(request: NextRequest) {
       createdAt: syncToken.createdAt.toISOString(),
     });
   } catch (error) {
-    logger.error({ err: error }, "Failed to create sync token");
-    return NextResponse.json(
-      { error: "Failed to create token" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to create sync token", error);
   }
 }
 
 export async function GET() {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   try {
@@ -121,10 +108,6 @@ export async function GET() {
 
     return NextResponse.json({ tokens, apiKeys: allUserKeys });
   } catch (error) {
-    logger.error({ err: error }, "Failed to fetch sync tokens");
-    return NextResponse.json(
-      { error: "Failed to fetch tokens" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to fetch sync tokens", error);
   }
 }

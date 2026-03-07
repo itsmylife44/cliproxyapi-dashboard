@@ -1035,7 +1035,7 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      if (account.provider === "antigravity") {
+      if (account.provider === "antigravity" || account.provider === "gemini-cli" || account.provider === "gemini") {
         const result = await fetchAntigravityQuota(authIndex);
         
         if ("error" in result) {

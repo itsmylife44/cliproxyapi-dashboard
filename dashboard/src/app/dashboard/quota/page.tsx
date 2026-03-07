@@ -281,6 +281,8 @@ interface TelegramSettings {
 const ALERT_PROVIDERS = [
   { key: "claude", label: "Claude" },
   { key: "antigravity", label: "Antigravity" },
+  { key: "gemini-cli", label: "Gemini CLI" },
+  { key: "gemini", label: "Gemini" },
   { key: "codex", label: "Codex" },
   { key: "github-copilot", label: "Copilot" },
   { key: "kimi", label: "Kimi" },

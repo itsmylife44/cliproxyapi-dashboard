@@ -224,7 +224,7 @@ export async function POST(request: NextRequest) {
     const leaseAcquired = await tryAcquireCollectorLease(leaseAcquiredAt);
     if (!leaseAcquired) {
       logger.warn({ runId }, "Usage collection skipped: collector already running");
-      return NextResponse.json({ success: false, error: "Collector already running", runId }, { status: 202 });
+      return NextResponse.json({ success: false, message: "Collector already running", runId }, { status: 202 });
     }
   } catch (error) {
     logger.error({ err: error, runId }, "Failed to acquire collector lease");
@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
     } catch (fetchError) {
       logger.error({ err: fetchError }, "Failed to connect to CLIProxyAPI");
       await markCollectorError(runId, "Proxy service unavailable");
-      return NextResponse.json({ success: false, error: { code: "SERVICE_UNAVAILABLE", message: "Proxy service unavailable" } }, { status: 503 });
+      return Errors.serviceUnavailable("Proxy service unavailable during usage collection");
     }
 
     interface AuthFileEntry {
@@ -291,10 +291,7 @@ export async function POST(request: NextRequest) {
         "CLIProxyAPI usage endpoint returned error"
       );
       await markCollectorError(runId, "Failed to fetch usage data");
-      return NextResponse.json(
-        { error: "Failed to fetch usage data" },
-        { status: 502 }
-      );
+      return Errors.badGateway("Failed to fetch usage data from CLIProxyAPI");
     }
 
     const responseJson: unknown = await usageResponse.json();
@@ -312,7 +309,7 @@ export async function POST(request: NextRequest) {
         "Unexpected usage response format from CLIProxyAPI"
       );
       await markCollectorError(runId, "Invalid usage data format");
-      return NextResponse.json({ success: false, error: { code: "BAD_GATEWAY", message: "Invalid usage data format" } }, { status: 502 });
+      return Errors.badGateway("Invalid usage data format from CLIProxyAPI");
     }
 
     const syncResult = await syncKeysToCliProxyApi();

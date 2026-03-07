@@ -128,9 +128,10 @@ export function DeployDashboard() {
         startPolling();
       } else {
         const data = await res.json();
-        showToast(extractApiError(data, "Failed to start deployment"), "error");
+        const errorMessage = extractApiError(data, "Failed to start deployment");
+        showToast(errorMessage, "error");
         setDeploying(false);
-        setStatus({ status: "error", error: data.error });
+        setStatus({ status: "error", error: errorMessage });
       }
     } catch {
       showToast("Network error", "error");

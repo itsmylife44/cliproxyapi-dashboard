@@ -106,6 +106,9 @@ export const ERROR_CODE = {
 
   /** Configuration error */
   CONFIG_ERROR: "CONFIG_ERROR",
+
+  /** Upstream/external service failure */
+  UPSTREAM_ERROR: "UPSTREAM_ERROR",
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODE)[keyof typeof ERROR_CODE];
@@ -293,7 +296,7 @@ export const Errors = {
       logger.error({ err: error, context }, context);
     }
     return apiError(
-      ERROR_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_CODE.UPSTREAM_ERROR,
       "Upstream service error",
       502
     );
@@ -302,13 +305,13 @@ export const Errors = {
   /** 503 - Service temporarily unavailable */
   serviceUnavailable: (context: string) => {
     logger.warn({ context }, "Service unavailable");
-    return apiError(ERROR_CODE.INTERNAL_SERVER_ERROR, "Service temporarily unavailable", 503);
+    return apiError(ERROR_CODE.UPSTREAM_ERROR, "Service temporarily unavailable", 503);
   },
 
   /** 504 - Gateway timeout */
   gatewayTimeout: (context: string) => {
     logger.warn({ context }, "Gateway timeout");
-    return apiError(ERROR_CODE.INTERNAL_SERVER_ERROR, "Request timed out", 504);
+    return apiError(ERROR_CODE.UPSTREAM_ERROR, "Request timed out", 504);
   },
 
   /** 500 - Internal server error */

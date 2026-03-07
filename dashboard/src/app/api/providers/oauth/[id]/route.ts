@@ -42,7 +42,7 @@ export async function DELETE(
       if (result.error?.includes("not found")) {
         return Errors.notFound("OAuth account");
       }
-      return Errors.internal(result.error || "Failed to remove OAuth account");
+      return Errors.internal("Failed to remove OAuth account", result.error ? new Error(result.error) : undefined);
     }
 
     return apiSuccess({});
@@ -93,7 +93,7 @@ export async function PATCH(
       if (result.error?.includes("not found")) {
         return Errors.notFound("OAuth account");
       }
-      return Errors.internal(result.error || "Failed to toggle OAuth account");
+      return Errors.internal("Failed to toggle OAuth account", result.error ? new Error(result.error) : undefined);
     }
 
     return apiSuccess({ disabled: result.disabled });

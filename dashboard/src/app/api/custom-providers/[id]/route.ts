@@ -9,7 +9,7 @@ import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
-import { Errors } from "@/lib/errors";
+import { Errors, apiSuccess } from "@/lib/errors";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -220,7 +220,7 @@ export async function PATCH(
       ipAddress: extractIpAddress(request),
     });
 
-    return NextResponse.json({ provider, syncStatus, syncMessage });
+    return apiSuccess({ provider, syncStatus, syncMessage });
 
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -325,7 +325,7 @@ export async function DELETE(
       syncMessage = "Backend sync unavailable - management API key not configured";
     }
 
-    return NextResponse.json({ success: true, syncStatus, syncMessage });
+    return apiSuccess({ syncStatus, syncMessage });
 
   } catch (error) {
     return Errors.internal("DELETE /api/custom-providers/[id] error", error);

@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const isSyncTokenError =
       error instanceof Error && error.message.includes("sync token");
     if (isSyncTokenError) {
-      return Errors.validation(error.message);
+      return Errors.validation("Invalid or expired sync token");
     }
     return Errors.internal("Config sync bundle error", error);
   }

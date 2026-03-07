@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { extractApiError } from "@/lib/utils";
 
 interface UpdateInfo {
   currentVersion: string;
@@ -118,7 +119,7 @@ export function useUpdateCheck() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Update failed");
+        throw new Error(extractApiError(data, "Update failed"));
       }
 
       if (updateInfo?.latestVersion) {

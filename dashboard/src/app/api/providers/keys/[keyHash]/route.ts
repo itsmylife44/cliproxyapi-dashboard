@@ -60,7 +60,7 @@ export async function DELETE(
       if (result.error?.includes("not found")) {
         return Errors.notFound("Provider key");
       }
-      return Errors.internal(result.error || "Failed to remove provider key");
+      return Errors.internal("Failed to remove provider key", result.error ? new Error(result.error) : undefined);
     }
 
     logAuditAsync({

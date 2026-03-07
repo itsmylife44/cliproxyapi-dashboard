@@ -166,6 +166,8 @@ export const ChangePasswordSchema = z.object({
 // ADMIN SETTINGS
 // ============================================================================
 
+// Authoritative gate: only these keys can be written via PUT /api/admin/settings.
+// Update this set when adding new systemSetting keys to the application.
 const SETTINGS_ALLOWLIST = new Set([
   "max_provider_keys_per_user",
   "telegram_bot_token",
@@ -218,14 +220,6 @@ export const UpdateProxySchema = z.object({
 export const DeploySchema = z.object({
   noCache: z.boolean().optional(),
 });
-
-// ============================================================================
-// ERROR RESPONSE HELPER
-// ============================================================================
-
-export function formatZodError(error: z.ZodError): { error: z.ZodIssue[] } {
-  return { error: error.issues };
-}
 
 // ============================================================================
 // PROVIDER GROUPS

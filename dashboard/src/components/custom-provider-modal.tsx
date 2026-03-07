@@ -3,8 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { BasicFields } from "@/components/custom-providers/basic-fields";
+import { HeadersSection } from "@/components/custom-providers/headers-section";
+import { ModelDiscovery } from "@/components/custom-providers/model-discovery";
+import { ModelMappings } from "@/components/custom-providers/model-mappings";
+import { ExcludedModels } from "@/components/custom-providers/excluded-models";
+import { GroupSelect } from "@/components/custom-providers/group-select";
 
 interface ModelMapping {
   _id: number;
@@ -91,13 +97,12 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
   useEffect(() => {
     const fetchGroups = async () => {
       try {
-        const res = await fetch("/api/provider-groups");
+        const res = await fetch(API_ENDPOINTS.PROVIDER_GROUPS.BASE);
         if (res.ok) {
           const data = await res.json();
           setGroups(data.groups || []);
         }
       } catch {
-        // silently fail for group fetch in modal
       }
     };
     void fetchGroups();
@@ -253,7 +258,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     setExcludedModels(updated);
   };
 
-  const fetchModels = async () => {
+  const fetchModelsHandler = async () => {
     if (!baseUrl.startsWith("https://") || apiKey.length === 0) {
       showToast("Please enter a valid Base URL (https) and API Key first", "error");
       return;
@@ -264,7 +269,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     setShowFetchedModels(false);
 
     try {
-      const response = await fetch("/api/custom-providers/fetch-models", {
+      const response = await fetch(API_ENDPOINTS.CUSTOM_PROVIDERS.FETCH_MODELS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ baseUrl, apiKey })
@@ -273,7 +278,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
       if (response.ok) {
         const data = await response.json();
         const existingModelIds = new Set(models.filter(m => m.upstreamName).map(m => m.upstreamName));
-        
+
         const fetchedList: FetchedModel[] = data.models.map((model: { id: string }) => ({
           id: model.id,
           selected: existingModelIds.has(model.id)
@@ -294,8 +299,8 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
   };
 
   const toggleFetchedModel = (id: string) => {
-    setFetchedModels(prev => 
-      prev.map(model => 
+    setFetchedModels(prev =>
+      prev.map(model =>
         model.id === id ? { ...model, selected: !model.selected } : model
       )
     );
@@ -309,7 +314,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
   const addSelectedModels = () => {
     const selectedModels = fetchedModels.filter(m => m.selected);
     const existingModelIds = new Set(models.filter(m => m.upstreamName).map(m => m.upstreamName));
-    
+
     const newModels = selectedModels
       .filter(model => !existingModelIds.has(model.id))
       .map(model => ({
@@ -320,7 +325,6 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
 
     if (newModels.length > 0) {
       setModels(prev => {
-        // Keep all existing rows (including partially filled ones) — only drop fully empty rows
         const existing = prev.filter(m => m.upstreamName || m.alias);
         return [...existing, ...newModels];
       });
@@ -339,305 +343,69 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
 
       <ModalContent>
         <div className="space-y-5 max-h-[65vh] overflow-y-auto pr-2">
-          {/* Name */}
-          <div>
-            <label htmlFor="name" className="mb-2 block text-sm font-semibold text-white">
-              Name <span className="text-red-400">*</span>
-            </label>
-            <Input
-              type="text"
-              name="name"
-              value={name}
-              onChange={handleNameChange}
-              placeholder="My Custom Provider"
-              required
-              disabled={saving}
-            />
-            {errors.name && <p className="mt-1.5 text-xs text-red-400">{errors.name}</p>}
-          </div>
+          <BasicFields
+            name={name}
+            providerId={providerId}
+            baseUrl={baseUrl}
+            apiKey={apiKey}
+            prefix={prefix}
+            proxyUrl={proxyUrl}
+            isEdit={isEdit}
+            saving={saving}
+            errors={errors}
+            onNameChange={handleNameChange}
+            onProviderIdChange={setProviderId}
+            onBaseUrlChange={setBaseUrl}
+            onApiKeyChange={setApiKey}
+            onPrefixChange={setPrefix}
+            onProxyUrlChange={setProxyUrl}
+          />
 
-          {/* Provider ID */}
-          <div>
-            <label htmlFor="providerId" className="mb-2 block text-sm font-semibold text-white">
-              Provider ID <span className="text-red-400">*</span>
-            </label>
-            <Input
-              type="text"
-              name="providerId"
-              value={providerId}
-              onChange={setProviderId}
-              placeholder="my-custom-provider"
-              required
-              disabled={saving || isEdit}
-              className={isEdit ? "opacity-60 cursor-not-allowed" : ""}
-            />
-            {errors.providerId && <p className="mt-1.5 text-xs text-red-400">{errors.providerId}</p>}
-            {!errors.providerId && <p className="mt-1.5 text-xs text-white/50">Lowercase alphanumeric with hyphens. {isEdit ? "Cannot be changed." : "Auto-generated from name."}</p>}
-          </div>
+          <HeadersSection
+            headers={headers}
+            saving={saving}
+            onAddHeader={addHeader}
+            onRemoveHeader={removeHeader}
+            onUpdateHeader={updateHeader}
+          />
 
-          {/* Base URL */}
-          <div>
-            <label htmlFor="baseUrl" className="mb-2 block text-sm font-semibold text-white">
-              Base URL <span className="text-red-400">*</span>
-            </label>
-            <Input
-              type="text"
-              name="baseUrl"
-              value={baseUrl}
-              onChange={setBaseUrl}
-              placeholder="https://api.example.com/v1"
-              required
-              disabled={saving}
-            />
-            {errors.baseUrl && <p className="mt-1.5 text-xs text-red-400">{errors.baseUrl}</p>}
-          </div>
+          <ModelDiscovery
+            baseUrl={baseUrl}
+            apiKey={apiKey}
+            fetchingModels={fetchingModels}
+            saving={saving}
+            fetchedModels={fetchedModels}
+            showFetchedModels={showFetchedModels}
+            onFetchModels={fetchModelsHandler}
+            onToggleFetchedModel={toggleFetchedModel}
+            onToggleAllFetchedModels={toggleAllFetchedModels}
+            onAddSelectedModels={addSelectedModels}
+          />
 
-          {/* API Key */}
-          <div>
-            <label htmlFor="apiKey" className="mb-2 block text-sm font-semibold text-white">
-              API Key {!isEdit && <span className="text-red-400">*</span>}
-            </label>
-            <Input
-              type="password"
-              name="apiKey"
-              value={apiKey}
-              onChange={setApiKey}
-              placeholder={isEdit ? "Leave empty to keep existing key" : "sk-..."}
-              required={!isEdit}
-              disabled={saving}
-            />
-            {errors.apiKey && <p className="mt-1.5 text-xs text-red-400">{errors.apiKey}</p>}
-            {!errors.apiKey && isEdit && <p className="mt-1.5 text-xs text-white/50">Leave empty to keep existing API key</p>}
-          </div>
+          <ModelMappings
+            models={models}
+            saving={saving}
+            error={errors.models}
+            onAddModelMapping={addModelMapping}
+            onRemoveModelMapping={removeModelMapping}
+            onUpdateModelMapping={updateModelMapping}
+          />
 
-          {/* Prefix */}
-          <div>
-            <label htmlFor="prefix" className="mb-2 block text-sm font-semibold text-white">
-              Prefix (Optional)
-            </label>
-            <Input
-              type="text"
-              name="prefix"
-              value={prefix}
-              onChange={setPrefix}
-              placeholder="custom/"
-              disabled={saving}
-            />
-            <p className="mt-1.5 text-xs text-white/50">Model name prefix for routing</p>
-          </div>
+          <ExcludedModels
+            excludedModels={excludedModels}
+            excludedModelIds={excludedModelIds.current}
+            saving={saving}
+            onAddExcludedModel={addExcludedModel}
+            onRemoveExcludedModel={removeExcludedModel}
+            onUpdateExcludedModel={updateExcludedModel}
+          />
 
-          {/* Proxy URL */}
-          <div>
-            <label htmlFor="proxyUrl" className="mb-2 block text-sm font-semibold text-white">
-              Proxy URL (Optional)
-            </label>
-            <Input
-              type="text"
-              name="proxyUrl"
-              value={proxyUrl}
-              onChange={setProxyUrl}
-              placeholder="http://proxy.example.com:8080"
-              disabled={saving}
-            />
-          </div>
-
-          {/* Headers */}
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label htmlFor="headers" className="text-sm font-semibold text-white">Headers (Optional)</label>
-              <Button variant="ghost" onClick={addHeader} className="px-3 py-1.5 text-xs" disabled={saving}>
-                + Add Header
-              </Button>
-            </div>
-            {headers.length > 0 && (
-              <div className="space-y-2">
-                {headers.map((header, idx) => (
-                  <div key={header._id} className="flex gap-2">
-                    <Input
-                      type="text"
-                      name={`header-key-${idx}`}
-                      value={header.key}
-                      onChange={(val) => updateHeader(idx, 'key', val)}
-                      placeholder="Header-Name"
-                      disabled={saving}
-                      className="flex-1"
-                    />
-                    <Input
-                      type="text"
-                      name={`header-value-${idx}`}
-                      value={header.value}
-                      onChange={(val) => updateHeader(idx, 'value', val)}
-                      placeholder="Header-Value"
-                      disabled={saving}
-                      className="flex-1"
-                    />
-                    <Button variant="danger" onClick={() => removeHeader(idx)} className="px-3 shrink-0" disabled={saving}>
-                      ✕
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Fetch Models */}
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-semibold text-white">Auto-Discover Models</span>
-              <Button 
-                variant="secondary" 
-                onClick={fetchModels} 
-                disabled={!baseUrl.startsWith("https://") || apiKey.length === 0 || fetchingModels || saving}
-                className="px-3 py-1.5 text-xs"
-              >
-                {fetchingModels ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Fetching...
-                  </span>
-                ) : "Fetch Models"}
-              </Button>
-            </div>
-            {showFetchedModels && fetchedModels.length > 0 && (
-              <div className="bg-white/5 border border-white/10 rounded-lg p-3 mb-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-white">Available Models ({fetchedModels.length})</span>
-                    <span className="text-xs text-white/70 bg-white/10 px-2 py-0.5 rounded">
-                      {fetchedModels.filter(m => m.selected).length} selected
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={toggleAllFetchedModels}
-                    className="text-xs text-white/70 hover:text-white transition-colors"
-                  >
-                    {fetchedModels.every(m => m.selected) ? "Deselect All" : "Select All"}
-                  </button>
-                </div>
-                <div className="max-h-48 overflow-y-auto space-y-1.5 mb-3">
-                  {fetchedModels.map((model) => (
-                    <label key={model.id} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 rounded px-2 py-1.5 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={model.selected}
-                        onChange={() => toggleFetchedModel(model.id)}
-                        className="w-4 h-4 rounded border-white/20 bg-white/5 checked:bg-blue-500 focus:ring-2 focus:ring-blue-500/50"
-                      />
-                      <span className="text-sm text-white/70">{model.id}</span>
-                    </label>
-                  ))}
-                </div>
-                <Button 
-                  onClick={addSelectedModels}
-                  disabled={fetchedModels.filter(m => m.selected).length === 0}
-                  className="w-full"
-                >
-                  Add Selected ({fetchedModels.filter(m => m.selected).length})
-                </Button>
-              </div>
-            )}
-            <p className="text-xs text-white/50 mb-2">Or manually add model mappings below</p>
-          </div>
-
-          {/* Model Mappings */}
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label htmlFor="models" className="text-sm font-semibold text-white">
-                Model Mappings <span className="text-red-400">*</span>
-              </label>
-              <Button variant="ghost" onClick={addModelMapping} className="px-3 py-1.5 text-xs" disabled={saving}>
-                + Add Model
-              </Button>
-            </div>
-            <div className="space-y-2">
-              {models.map((model, idx) => (
-                <div key={model._id} className="flex gap-2">
-                  <Input
-                    type="text"
-                    name={`model-upstream-${idx}`}
-                    value={model.upstreamName}
-                    onChange={(val) => updateModelMapping(idx, 'upstreamName', val)}
-                    placeholder="gpt-4"
-                    disabled={saving}
-                    className="flex-1"
-                  />
-                  <Input
-                    type="text"
-                    name={`model-alias-${idx}`}
-                    value={model.alias}
-                    onChange={(val) => updateModelMapping(idx, 'alias', val)}
-                    placeholder="custom-gpt-4"
-                    disabled={saving}
-                    className="flex-1"
-                  />
-                  {models.length > 1 && (
-                    <Button variant="danger" onClick={() => removeModelMapping(idx)} className="px-3 shrink-0" disabled={saving}>
-                      ✕
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-            {errors.models && <p className="mt-1.5 text-xs text-red-400">{errors.models}</p>}
-            {!errors.models && <p className="mt-1.5 text-xs text-white/50">Map upstream model names to aliases</p>}
-          </div>
-
-          {/* Excluded Models */}
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label htmlFor="excludedModels" className="text-sm font-semibold text-white">Excluded Models (Optional)</label>
-              <Button variant="ghost" onClick={addExcludedModel} className="px-3 py-1.5 text-xs" disabled={saving}>
-                + Add Exclusion
-              </Button>
-            </div>
-            {excludedModels.length > 0 && (
-              <div className="space-y-2">
-                {excludedModels.map((pattern, idx) => (
-                  <div key={excludedModelIds.current[idx]} className="flex gap-2">
-                    <Input
-                      type="text"
-                      name={`excluded-${idx}`}
-                      value={pattern}
-                      onChange={(val) => updateExcludedModel(idx, val)}
-                      placeholder="gpt-4-* or specific-model"
-                      disabled={saving}
-                      className="flex-1"
-                    />
-                    <Button variant="danger" onClick={() => removeExcludedModel(idx)} className="px-3 shrink-0" disabled={saving}>
-                      ✕
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-            {excludedModels.length === 0 && (
-              <p className="text-xs text-white/50">Supports wildcards: gpt-4, claude-*, *-mini</p>
-            )}
-          </div>
-
-          {/* Group Assignment */}
-          <div>
-            <label htmlFor="group-select" className="mb-2 block text-sm font-semibold text-white">
-              Group (Optional)
-            </label>
-            <select
-              id="group-select"
-              value={groupId ?? ""}
-              onChange={(e) => setGroupId(e.target.value || null)}
-              disabled={saving}
-              className="w-full px-3 py-2 text-sm rounded-md glass-input text-white focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 bg-slate-900 border border-slate-700/70"
-            >
-              <option value="" className="bg-slate-900 text-white">No group</option>
-              {groups.map(g => (
-                <option key={g.id} value={g.id} className="bg-slate-900 text-white">{g.name}</option>
-              ))}
-            </select>
-            <p className="mt-1.5 text-xs text-white/50">Assign this provider to a group for organization</p>
-          </div>
+          <GroupSelect
+            groupId={groupId}
+            groups={groups}
+            saving={saving}
+            onGroupIdChange={setGroupId}
+          />
         </div>
       </ModalContent>
 

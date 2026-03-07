@@ -1,11 +1,11 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { ChartContainer, ChartEmpty, CHART_COLORS, SERIES_PALETTE, TOOLTIP_STYLE, AXIS_TICK_STYLE, formatCompact } from "@/components/ui/chart-theme";
 import { useState, useEffect, useRef } from "react";
-import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ServiceStatus } from "@/components/monitoring/service-status";
+import { UsageStats } from "@/components/monitoring/usage-stats";
+import { LiveLogs } from "@/components/monitoring/live-logs";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface StatusResponse {
   running: boolean;
@@ -60,21 +60,6 @@ function shouldPollDashboard(): boolean {
   return document.visibilityState === "visible";
 }
 
-function formatUptime(seconds: number): string {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-
-  const parts = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-  if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
-
-  return parts.join(" ");
-}
-
 let logIdCounter = 0;
 
 function parseLogLine(line: string, index: number): LogLine {
@@ -106,20 +91,12 @@ export default function MonitoringPage() {
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [restarting, setRestarting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const logsEndRef = useRef<HTMLDivElement>(null);
-  const logsContainerRef = useRef<HTMLDivElement>(null);
-  const [autoScroll, setAutoScroll] = useState(true);
   const [loggingState, setLoggingState] = useState<LoggingState>(LOGGING_STATE.CHECKING);
   const [loggingError, setLoggingError] = useState<string | null>(null);
   const [enablingLogging, setEnablingLogging] = useState(false);
   const logsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (autoScroll && logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [autoScroll]);
+  const lastTimestampRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -134,7 +111,7 @@ export default function MonitoringPage() {
     const fetchStatus = async () => {
       if (!shouldPollDashboard()) return;
       try {
-        const res = await fetch("/api/proxy/status");
+        const res = await fetch(API_ENDPOINTS.PROXY.STATUS);
         if (res.ok) {
           const data = await res.json();
           setStatus(data);
@@ -152,7 +129,7 @@ export default function MonitoringPage() {
     const fetchUsage = async () => {
       if (!shouldPollDashboard()) return;
       try {
-        const res = await fetch("/api/management/usage");
+        const res = await fetch(API_ENDPOINTS.MANAGEMENT.USAGE);
         if (res.ok) {
           const data = await res.json();
           setUsage(data);
@@ -169,7 +146,7 @@ export default function MonitoringPage() {
   useEffect(() => {
     const checkLoggingStatus = async () => {
       try {
-        const res = await fetch("/api/management/logging-to-file");
+        const res = await fetch(API_ENDPOINTS.MANAGEMENT.LOGGING_TO_FILE);
         if (res.ok) {
           const data = await res.json();
           if (data["logging-to-file"]) {
@@ -190,8 +167,6 @@ export default function MonitoringPage() {
     checkLoggingStatus();
   }, []);
 
-  const lastTimestampRef = useRef(0);
-
   useEffect(() => {
     if (loggingState !== LOGGING_STATE.ENABLED) {
       if (logsIntervalRef.current) {
@@ -205,8 +180,8 @@ export default function MonitoringPage() {
       if (!shouldPollDashboard()) return;
       try {
         const url = lastTimestampRef.current > 0
-          ? `/api/management/logs?after=${lastTimestampRef.current}`
-          : "/api/management/logs";
+          ? `${API_ENDPOINTS.MANAGEMENT.LOGS}?after=${lastTimestampRef.current}`
+          : API_ENDPOINTS.MANAGEMENT.LOGS;
 
         const res = await fetch(url);
         if (res.ok) {
@@ -251,7 +226,7 @@ export default function MonitoringPage() {
   const handleEnableLogging = async () => {
     setEnablingLogging(true);
     try {
-      const res = await fetch("/api/management/logging-to-file", {
+      const res = await fetch(API_ENDPOINTS.MANAGEMENT.LOGGING_TO_FILE, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ value: true }),
@@ -280,7 +255,7 @@ export default function MonitoringPage() {
 
     const recheckLogging = async () => {
       try {
-        const res = await fetch("/api/management/logging-to-file");
+        const res = await fetch(API_ENDPOINTS.MANAGEMENT.LOGGING_TO_FILE);
         if (res.ok) {
           const data = await res.json();
           if (data["logging-to-file"]) {
@@ -301,14 +276,10 @@ export default function MonitoringPage() {
     recheckLogging();
   };
 
-  const confirmRestart = () => {
-    setShowConfirm(true);
-  };
-
   const handleRestart = async () => {
     setRestarting(true);
     try {
-      const res = await fetch("/api/restart", {
+      const res = await fetch(API_ENDPOINTS.RESTART, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirm: true }),
@@ -327,78 +298,17 @@ export default function MonitoringPage() {
     }
   };
 
-  const clearLogs = () => {
-    setLogs([]);
-  };
-
-  const handleScroll = () => {
-    if (logsContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = logsContainerRef.current;
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
-      setAutoScroll(isAtBottom);
-    }
-  };
-
-  const modelStats = usage?.usage.apis
-    ? Object.entries(usage.usage.apis).flatMap(([, data]) =>
-        data.models
-          ? Object.entries(data.models).map(([model, stats]) => ({
-              model,
-              requests: stats.total_requests,
-              tokens: stats.total_tokens,
-            }))
-          : []
-      )
-    : [];
-
-  const hourlyData = usage?.usage.requests_by_hour
-    ? Object.entries(usage.usage.requests_by_hour).map(([hour, count]) => ({
-        hour: `${hour}:00`,
-        count,
-      }))
-    : [];
-
   return (
     <div className="space-y-4">
       <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <h1 className="text-xl font-semibold tracking-tight text-slate-100">Monitoring</h1>
       </section>
 
-      <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-100">Service Status</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-white/90">CLIProxyAPI</span>
-              {status?.running ? (
-                <span className="rounded-sm border border-emerald-400/40 bg-emerald-500/20 px-2 py-1 text-xs font-medium text-emerald-200">
-                  RUNNING
-                </span>
-              ) : (
-                <span className="rounded-sm border border-rose-400/40 bg-rose-500/20 px-2 py-1 text-xs font-medium text-rose-200">
-                  STOPPED
-                </span>
-              )}
-            </div>
-
-            {status?.uptime !== null && status?.uptime !== undefined && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-white/90">Uptime</span>
-                <span className="text-sm text-white/70">{formatUptime(status.uptime)}</span>
-              </div>
-            )}
-
-             <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-               <Button
-                 variant="primary"
-                 onClick={confirmRestart}
-                 disabled={restarting}
-                 className="flex-1 py-2 text-sm"
-               >
-                 {restarting ? "Restarting..." : "Restart Service"}
-               </Button>
-             </div>
-          </div>
-      </section>
+      <ServiceStatus
+        status={status}
+        restarting={restarting}
+        onConfirmRestart={() => setShowConfirm(true)}
+      />
 
       <ConfirmDialog
         isOpen={showConfirm}
@@ -411,214 +321,17 @@ export default function MonitoringPage() {
         variant="warning"
       />
 
-      <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-100">Usage Statistics</h2>
-           {usage ? (
-             <div className="space-y-4">
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-                <div className="rounded-md border border-slate-700/70 bg-slate-900/30 px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Requests</p>
-                  <p className="mt-0.5 text-xs font-semibold text-slate-100">
-                    {(usage.usage?.total_requests ?? 0).toLocaleString()}
-                  </p>
-                </div>
-                <div className="rounded-md border border-slate-700/70 bg-slate-900/30 px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Success</p>
-                  <p className="mt-0.5 text-xs font-semibold text-emerald-300">
-                    {(usage.usage?.success_count ?? 0).toLocaleString()}
-                  </p>
-                </div>
-                <div className="rounded-md border border-slate-700/70 bg-slate-900/30 px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Failed</p>
-                  <p className="mt-0.5 text-xs font-semibold text-rose-300">
-                    {(usage.usage?.failure_count ?? 0).toLocaleString()}
-                  </p>
-                </div>
-                <div className="rounded-md border border-slate-700/70 bg-slate-900/30 px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Tokens</p>
-                  <p className="mt-0.5 text-xs font-semibold text-slate-100">
-                  {(usage.usage?.total_tokens ?? 0).toLocaleString()}
-                  </p>
-                </div>
-              </div>
+      <UsageStats usage={usage} />
 
-              {modelStats.length > 0 ? (
-                <ChartContainer title="Requests by Model">
-                  <ResponsiveContainer width="100%" height={200} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
-                    <BarChart
-                      layout="vertical"
-                      data={modelStats}
-                      margin={{ top: 0, right: 8, left: 4, bottom: 0 }}
-                    >
-                      <CartesianGrid horizontal={false} stroke={CHART_COLORS.grid} />
-                      <YAxis
-                        type="category"
-                        dataKey="model"
-                        tick={AXIS_TICK_STYLE}
-                        width={80}
-                        tickFormatter={(v) => v.length > 12 ? v.slice(0, 12) + "…" : v}
-                      />
-                      <XAxis
-                        type="number"
-                        tick={AXIS_TICK_STYLE}
-                        tickFormatter={formatCompact}
-                      />
-                      <Tooltip
-                        {...TOOLTIP_STYLE}
-                        formatter={(value) => [formatCompact(value as number), "Requests"]}
-                      />
-                      <Bar dataKey="requests" radius={[0, 3, 3, 0]}>
-                        {modelStats.map((_, i) => (
-                          <Cell key={i} fill={SERIES_PALETTE[i % SERIES_PALETTE.length]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              ) : null}
-
-              {hourlyData.length > 0 ? (
-                <ChartContainer title="Requests by Hour">
-                  <ResponsiveContainer width="100%" height={200} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
-                    <BarChart
-                      data={hourlyData}
-                      margin={{ top: 0, right: 8, left: 4, bottom: 0 }}
-                    >
-                      <CartesianGrid vertical={false} stroke={CHART_COLORS.grid} />
-                      <XAxis
-                        dataKey="hour"
-                        tick={AXIS_TICK_STYLE}
-                      />
-                      <YAxis
-                        tick={AXIS_TICK_STYLE}
-                        tickFormatter={formatCompact}
-                      />
-                      <Tooltip
-                        {...TOOLTIP_STYLE}
-                        formatter={(value) => [formatCompact(value as number), "Requests"]}
-                      />
-                      <Bar dataKey="count" fill={CHART_COLORS.primary} radius={[3, 3, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              ) : null}
-            </div>
-          ) : (
-            <div className="text-sm text-slate-400">Loading usage statistics...</div>
-          )}
-      </section>
-
-      <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-100">Live Logs</h2>
-          {loggingState === LOGGING_STATE.ENABLED && (
-            <Button
-              variant="ghost"
-              onClick={clearLogs}
-              className="px-3 py-1 text-xs"
-            >
-              Clear
-            </Button>
-          )}
-        </div>
-          {loggingState === LOGGING_STATE.CHECKING && (
-            <div className="flex items-center justify-center py-6">
-              <div className="flex items-center gap-3 text-slate-400">
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                <span className="text-sm">Checking logging status...</span>
-              </div>
-            </div>
-          )}
-
-          {loggingState === LOGGING_STATE.DISABLED && (
-            <div className="flex flex-col items-center justify-center py-6 gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-amber-400/30 bg-amber-500/15">
-                <span className="text-xl">&#128196;</span>
-              </div>
-              <div className="text-center space-y-2">
-                <p className="text-sm font-medium text-white/90">File logging is disabled</p>
-                <p className="text-xs text-white/60 max-w-sm">
-                  Enable file logging in CLIProxyAPI to view live logs here.
-                </p>
-              </div>
-              <Button
-                variant="primary"
-                onClick={handleEnableLogging}
-                disabled={enablingLogging}
-                className="mt-2"
-              >
-                {enablingLogging ? "Enabling..." : "Enable File Logging"}
-              </Button>
-            </div>
-          )}
-
-          {loggingState === LOGGING_STATE.ERROR && (
-            <div className="flex flex-col items-center justify-center py-6 gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-rose-400/30 bg-rose-500/15">
-                <span className="text-xl">&#9888;</span>
-              </div>
-              <div className="text-center space-y-2">
-                <p className="text-sm font-medium text-white/90">Logs unavailable</p>
-                <p className="text-xs text-white/60 max-w-sm">
-                  {loggingError}
-                </p>
-              </div>
-              <Button
-                variant="secondary"
-                onClick={handleRetryLogging}
-                className="mt-2"
-              >
-                Retry
-              </Button>
-            </div>
-          )}
-
-          {loggingState === LOGGING_STATE.ENABLED && (
-            <>
-              <div
-                ref={logsContainerRef}
-                onScroll={handleScroll}
-                className="h-96 overflow-auto rounded-sm border border-slate-700/70 bg-black/40 p-3 font-mono text-[10px] sm:p-4 sm:text-xs"
-              >
-                {logs.length === 0 ? (
-                  <div className="text-slate-500">Waiting for logs...</div>
-                ) : (
-                  logs.map((log) => (
-                    <div
-                      key={log.id}
-                      className={cn(
-                        "mb-1 break-all",
-                        log.level === "error" && "text-red-400",
-                        log.level === "warn" && "text-yellow-400",
-                        log.level === "info" && "text-white/90",
-                        log.level === "debug" && "text-blue-400"
-                      )}
-                    >
-                      {log.timestamp && (
-                        <span className="text-white/50">{log.timestamp} </span>
-                      )}
-                      {log.level && (
-                        <span className="font-semibold uppercase">
-                          [{log.level}]{" "}
-                        </span>
-                      )}
-                      <span>{log.message}</span>
-                    </div>
-                  ))
-                )}
-                <div ref={logsEndRef} />
-              </div>
-              {!autoScroll && (
-                <div className="mt-2 text-center text-xs text-slate-500">
-                  Scroll to bottom to enable auto-scroll
-                </div>
-              )}
-            </>
-          )}
-      </section>
+      <LiveLogs
+        logs={logs}
+        loggingState={loggingState}
+        loggingError={loggingError}
+        enablingLogging={enablingLogging}
+        onClearLogs={() => setLogs([])}
+        onEnableLogging={handleEnableLogging}
+        onRetryLogging={handleRetryLogging}
+      />
     </div>
   );
 }

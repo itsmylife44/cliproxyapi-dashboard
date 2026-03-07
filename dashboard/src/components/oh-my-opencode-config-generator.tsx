@@ -9,6 +9,7 @@ import { TierAssignments } from "@/components/oh-my-opencode/tier-assignments";
 import { ToggleSections } from "@/components/oh-my-opencode/toggle-sections";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import {
   AGENT_ROLES,
   CATEGORY_ROLES,
@@ -76,7 +77,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
       latestSaveRef.current = newOverrides;
       setSaving(true);
       try {
-        const res = await fetch("/api/agent-config", {
+        const res = await fetch(API_ENDPOINTS.AGENT_CONFIG, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ overrides: newOverrides }),

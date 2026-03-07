@@ -26,7 +26,12 @@ export function PluginSection({
           type="text"
           value={pluginInput}
           onChange={(e) => onPluginInputChange(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onAddPlugin()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              onAddPlugin();
+            }
+          }}
           placeholder="plugin-name@version"
           className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
         />

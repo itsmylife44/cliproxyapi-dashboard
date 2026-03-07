@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { ChartContainer, CHART_COLORS, SERIES_PALETTE, AXIS_TICK_STYLE, TOOLTIP_STYLE, formatCompact, formatDateShort } from "@/components/ui/chart-theme";
 
@@ -35,6 +36,9 @@ interface UsageChartsProps {
 }
 
 export function UsageCharts({ dailyBreakdown, modelBreakdown, totals }: UsageChartsProps) {
+  const uid = useId();
+  const gradInputId = `${uid}-gradInput`;
+  const gradOutputId = `${uid}-gradOutput`;
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       {dailyBreakdown && dailyBreakdown.length > 0 ? (
@@ -60,11 +64,11 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, totals }: UsageCha
           <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
             <AreaChart data={dailyBreakdown} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
               <defs>
-                <linearGradient id="gradInput" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={gradInputId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={CHART_COLORS.primary} stopOpacity={0.3} />
                   <stop offset="100%" stopColor={CHART_COLORS.primary} stopOpacity={0} />
                 </linearGradient>
-                <linearGradient id="gradOutput" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={gradOutputId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={CHART_COLORS.success} stopOpacity={0.3} />
                   <stop offset="100%" stopColor={CHART_COLORS.success} stopOpacity={0} />
                 </linearGradient>
@@ -78,8 +82,8 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, totals }: UsageCha
                 formatter={(value) => [formatCompact(Number(value)), ""]}
               />
               <Legend wrapperStyle={{ fontSize: 10, color: CHART_COLORS.text.muted }} />
-              <Area type="monotone" dataKey="inputTokens" name="Input" stackId="1" stroke={CHART_COLORS.primary} fill="url(#gradInput)" strokeWidth={1.5} />
-              <Area type="monotone" dataKey="outputTokens" name="Output" stackId="1" stroke={CHART_COLORS.success} fill="url(#gradOutput)" strokeWidth={1.5} />
+              <Area type="monotone" dataKey="inputTokens" name="Input" stackId="1" stroke={CHART_COLORS.primary} fill={`url(#${gradInputId})`} strokeWidth={1.5} />
+              <Area type="monotone" dataKey="outputTokens" name="Output" stackId="1" stroke={CHART_COLORS.success} fill={`url(#${gradOutputId})`} strokeWidth={1.5} />
             </AreaChart>
           </ResponsiveContainer>
         </ChartContainer>

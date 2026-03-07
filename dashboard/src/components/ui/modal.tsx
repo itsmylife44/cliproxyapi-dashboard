@@ -44,7 +44,12 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
           className
         )}
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            onClose();
+          }
+          e.stopPropagation();
+        }}
         role="document"
       >
         <button

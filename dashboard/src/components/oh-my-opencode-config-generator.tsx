@@ -44,8 +44,10 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   const [isExpanded, setIsExpanded] = useState(false);
   const [overrides, setOverrides] = useState<OhMyOpenCodeFullConfig>(initialOverrides ?? { agents: {}, categories: {} });
   const [saving, setSaving] = useState(false);
-  const [providerConcurrencyRows, setProviderConcurrencyRows] = useState<Array<{ key: string; value: number }>>([]);
-  const [modelConcurrencyRows, setModelConcurrencyRows] = useState<Array<{ key: string; value: number }>>([]);
+  const nextIdRef = useRef(0);
+  const nextId = () => `row-${nextIdRef.current++}`;
+  const [providerConcurrencyRows, setProviderConcurrencyRows] = useState<Array<{ _id: string; key: string; value: number }>>([]);
+  const [modelConcurrencyRows, setModelConcurrencyRows] = useState<Array<{ _id: string; key: string; value: number }>>([]);
   const tmuxDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const { showToast } = useToast();
 
@@ -61,11 +63,11 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   useEffect(() => {
     if (initialOverrides?.background_task?.providerConcurrency) {
       const entries = Object.entries(initialOverrides.background_task.providerConcurrency);
-      setProviderConcurrencyRows(entries.map(([key, value]) => ({ key, value })));
+      setProviderConcurrencyRows(entries.map(([key, value]) => ({ _id: nextId(), key, value })));
     }
     if (initialOverrides?.background_task?.modelConcurrency) {
       const entries = Object.entries(initialOverrides.background_task.modelConcurrency);
-      setModelConcurrencyRows(entries.map(([key, value]) => ({ key, value })));
+      setModelConcurrencyRows(entries.map(([key, value]) => ({ _id: nextId(), key, value })));
     }
   }, [initialOverrides]);
 
@@ -278,7 +280,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   };
 
   const handleProviderConcurrencyAdd = () => {
-    setProviderConcurrencyRows([...providerConcurrencyRows, { key: "", value: 1 }]);
+    setProviderConcurrencyRows([...providerConcurrencyRows, { _id: nextId(), key: "", value: 1 }]);
   };
 
   const handleProviderConcurrencyRemove = (index: number) => {
@@ -307,7 +309,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   };
 
   const handleModelConcurrencyAdd = () => {
-    setModelConcurrencyRows([...modelConcurrencyRows, { key: "", value: 1 }]);
+    setModelConcurrencyRows([...modelConcurrencyRows, { _id: nextId(), key: "", value: 1 }]);
   };
 
   const handleModelConcurrencyRemove = (index: number) => {

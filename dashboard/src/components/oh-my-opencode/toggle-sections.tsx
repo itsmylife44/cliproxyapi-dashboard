@@ -30,8 +30,8 @@ import {
 
 interface ToggleSectionsProps {
   overrides: OhMyOpenCodeFullConfig;
-  providerConcurrencyRows: Array<{ key: string; value: number }>;
-  modelConcurrencyRows: Array<{ key: string; value: number }>;
+  providerConcurrencyRows: Array<{ _id: string; key: string; value: number }>;
+  modelConcurrencyRows: Array<{ _id: string; key: string; value: number }>;
   onDisabledAgentToggle: (agent: string) => void;
   onDisabledSkillToggle: (skill: string) => void;
   onDisabledCommandToggle: (command: string) => void;

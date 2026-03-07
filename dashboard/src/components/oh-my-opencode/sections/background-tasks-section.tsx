@@ -3,6 +3,7 @@
 import type { BackgroundTaskConfig, OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 
 interface ConcurrencyRow {
+  _id: string;
   key: string;
   value: number;
 }
@@ -84,7 +85,7 @@ export function BackgroundTasksSection({
               defaultValue={overrides.background_task?.staleTimeoutMs ?? 180000}
               onChange={(e) => {
                 const parsed = Number(e.target.value);
-                if (e.target.value !== "" && Number.isFinite(parsed) && parsed > 0) {
+                if (e.target.value !== "" && Number.isFinite(parsed) && parsed >= 60000) {
                   onBgTaskNumberChange("staleTimeoutMs", parsed);
                 }
               }}
@@ -103,7 +104,7 @@ export function BackgroundTasksSection({
               </button>
             </div>
             {providerConcurrencyRows.map((row, idx) => (
-              <div key={`provider-${idx}`} className="flex gap-2">
+              <div key={row._id} className="flex gap-2">
                 <input
                   type="text"
                   placeholder="Provider"
@@ -145,7 +146,7 @@ export function BackgroundTasksSection({
               </button>
             </div>
             {modelConcurrencyRows.map((row, idx) => (
-              <div key={`model-${idx}`} className="flex gap-2">
+              <div key={row._id} className="flex gap-2">
                 <input
                   type="text"
                   placeholder="Model"

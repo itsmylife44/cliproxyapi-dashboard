@@ -300,12 +300,16 @@ export const Errors = {
   },
 
   /** 503 - Service temporarily unavailable */
-  serviceUnavailable: (context: string) =>
-    apiError(ERROR_CODE.INTERNAL_SERVER_ERROR, context, 503),
+  serviceUnavailable: (context: string) => {
+    logger.warn({ context }, "Service unavailable");
+    return apiError(ERROR_CODE.INTERNAL_SERVER_ERROR, "Service temporarily unavailable", 503);
+  },
 
   /** 504 - Gateway timeout */
-  gatewayTimeout: (context: string) =>
-    apiError(ERROR_CODE.INTERNAL_SERVER_ERROR, context, 504),
+  gatewayTimeout: (context: string) => {
+    logger.warn({ context }, "Gateway timeout");
+    return apiError(ERROR_CODE.INTERNAL_SERVER_ERROR, "Request timed out", 504);
+  },
 
   /** 500 - Internal server error */
   internal: (context: string, error?: unknown) => {

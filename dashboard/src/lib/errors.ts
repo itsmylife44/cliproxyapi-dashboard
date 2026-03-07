@@ -223,7 +223,7 @@ export function apiSuccess<T extends Record<string, unknown>>(
   data: T,
   status = 200
 ): NextResponse {
-  return NextResponse.json({ success: true, ...data }, { status });
+  return NextResponse.json({ success: true, ...Object.fromEntries(Object.entries(data).filter(([k]) => k !== "success")) }, { status });
 }
 
 // ============================================
@@ -286,6 +286,26 @@ export const Errors = {
       undefined,
       { "Retry-After": String(retryAfterSeconds) }
     ),
+
+  /** 502 - Upstream dependency failure */
+  badGateway: (context: string, error?: unknown) => {
+    if (error) {
+      logger.error({ err: error, context }, context);
+    }
+    return apiError(
+      ERROR_CODE.INTERNAL_SERVER_ERROR,
+      "Upstream service error",
+      502
+    );
+  },
+
+  /** 503 - Service temporarily unavailable */
+  serviceUnavailable: (context: string) =>
+    apiError(ERROR_CODE.INTERNAL_SERVER_ERROR, context, 503),
+
+  /** 504 - Gateway timeout */
+  gatewayTimeout: (context: string) =>
+    apiError(ERROR_CODE.INTERNAL_SERVER_ERROR, context, 504),
 
   /** 500 - Internal server error */
   internal: (context: string, error?: unknown) => {

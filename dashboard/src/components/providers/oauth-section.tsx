@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Modal, ModalContent, ModalFooter, ModalHeader, ModalTitle } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
-import { cn } from "@/lib/utils";
+import { cn, extractApiError } from "@/lib/utils";
 import { OwnerBadge, type CurrentUserLike } from "@/components/providers/api-key-section";
 
 type ShowToast = ReturnType<typeof useToast>["showToast"];
@@ -328,7 +328,7 @@ export function OAuthSection({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        showToast(data.error || "Failed to update account", "error");
+        showToast(extractApiError(data, "Failed to update account"), "error");
       } else {
         showToast(`OAuth account ${!currentlyDisabled ? "disabled" : "enabled"}`, "success");
         await loadAccounts();
@@ -404,7 +404,7 @@ export function OAuthSection({
         if (data.status === "error") {
           stopPolling();
           setOauthModalStatus(MODAL_STATUS.ERROR);
-          setOauthErrorMessage(data.error || "OAuth authorization failed.");
+          setOauthErrorMessage(extractApiError(data, "OAuth authorization failed."));
           return;
         }
       } catch {
@@ -466,7 +466,7 @@ export function OAuthSection({
         stopNoCallbackClaimPolling();
         stopPolling();
         setOauthModalStatus(MODAL_STATUS.ERROR);
-        setOauthErrorMessage(data.error || "Failed to complete OAuth ownership claim.");
+        setOauthErrorMessage(extractApiError(data, "Failed to complete OAuth ownership claim."));
         return;
       }
 
@@ -610,7 +610,7 @@ export function OAuthSection({
       if (!res.ok) {
         setOauthModalStatus(MODAL_STATUS.ERROR);
         setOauthErrorMessage(
-          data.error || "Failed to relay the OAuth callback URL."
+          extractApiError(data, "Failed to relay the OAuth callback URL.")
         );
         return;
       }
@@ -641,7 +641,7 @@ export function OAuthSection({
       });
       if (!res.ok) {
         const data = await res.json();
-        showToast(data.error || "Failed to remove OAuth account", "error");
+        showToast(extractApiError(data, "Failed to remove OAuth account"), "error");
         return;
       }
       showToast("OAuth account removed", "success");
@@ -759,7 +759,7 @@ export function OAuthSection({
 
       if (!res.ok) {
         setImportStatus("error");
-        setImportErrorMessage(data.error || "Failed to import credential.");
+        setImportErrorMessage(extractApiError(data, "Failed to import credential."));
         return;
       }
 

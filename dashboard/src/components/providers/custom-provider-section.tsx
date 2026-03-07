@@ -6,6 +6,7 @@ import { CustomProviderModal } from "@/components/custom-provider-modal";
 import { useToast } from "@/components/ui/toast";
 import { ProviderGroupModal } from "@/components/providers/provider-group-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { extractApiError } from "@/lib/utils";
 
 type ShowToast = ReturnType<typeof useToast>["showToast"];
 
@@ -118,7 +119,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
       });
       if (!res.ok) {
         const data = await res.json();
-        showToast(data.error || "Failed to delete custom provider", "error");
+        showToast(extractApiError(data, "Failed to delete custom provider"), "error");
         return;
       }
       showToast("Custom provider deleted", "success");
@@ -175,7 +176,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
       
       if (!res.ok) {
         const data = await res.json();
-        showToast(data.error || "Failed to update group", "error");
+        showToast(extractApiError(data, "Failed to update group"), "error");
         return;
       }
       
@@ -200,7 +201,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
       
       if (!res.ok) {
         const data = await res.json();
-        showToast(data.error || "Failed to delete group", "error");
+        showToast(extractApiError(data, "Failed to delete group"), "error");
         return;
       }
       

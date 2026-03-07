@@ -177,8 +177,6 @@ export async function POST(request: NextRequest) {
 
     return apiSuccess({ message: `Updated to ${version}`, version });
   } catch (error) {
-    logger.error({ err: error }, "Update error");
-
     try {
       if (composeAvailable) {
         await runCompose(["up", "-d", "--no-deps", CONTAINER_NAME]);

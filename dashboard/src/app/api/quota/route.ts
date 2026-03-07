@@ -971,7 +971,7 @@ export async function GET(request: NextRequest) {
         { status: authFilesResponse.status },
         "Failed to fetch auth files"
       );
-      return Errors.internal("Failed to fetch auth files");
+      return Errors.badGateway("Failed to fetch auth files");
     }
 
     const authFilesData =

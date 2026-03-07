@@ -409,7 +409,7 @@ export async function GET() {
         { status: usageResponse.status, statusText: usageResponse.statusText },
         "CLIProxyAPI usage endpoint returned error"
       );
-      return Errors.internal("Failed to fetch usage data from CLIProxyAPI");
+      return Errors.badGateway("Failed to fetch usage data from CLIProxyAPI");
     }
 
     const responseJson: unknown = await usageResponse.json();
@@ -423,7 +423,7 @@ export async function GET() {
 
     if (!isRawUsageResponse(rawData)) {
       logger.error({ response: JSON.stringify(responseJson).slice(0, 200) }, "Unexpected usage response format from CLIProxyAPI");
-      return Errors.internal("Invalid usage data format from CLIProxyAPI");
+      return Errors.badGateway("Invalid usage data format from CLIProxyAPI");
     }
 
     const { apis: filteredApis, totals } = filterAndLabelApis(

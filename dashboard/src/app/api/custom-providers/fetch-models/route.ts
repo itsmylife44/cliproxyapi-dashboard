@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
           return Errors.notFound("Models endpoint");
         }
         logger.error({ status: response.status, url: modelsEndpoint }, "Failed to fetch models from provider");
-        return Errors.internal(`Failed to fetch models (HTTP ${response.status})`);
+        return Errors.badGateway(`Failed to fetch models (HTTP ${response.status})`);
       }
 
       const responseData: OpenAIModelsResponse = await response.json();
@@ -219,11 +219,11 @@ export async function POST(request: NextRequest) {
       if (fetchError instanceof Error) {
         if (fetchError.name === "AbortError") {
           logger.error({ url: modelsEndpoint }, "Fetch models request timed out");
-          return Errors.internal("Request timed out. The provider may be unreachable.");
+          return Errors.gatewayTimeout("Request timed out. The provider may be unreachable.");
         }
 
         logger.error({ err: fetchError, url: modelsEndpoint }, "Failed to fetch models from provider");
-        return Errors.internal("Network error: unable to reach the provider");
+        return Errors.serviceUnavailable("Network error: unable to reach the provider");
       }
 
       return Errors.internal("Failed to fetch models from provider", fetchError);

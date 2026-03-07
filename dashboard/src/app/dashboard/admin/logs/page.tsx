@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface LogEntry {
   level: number;
@@ -80,7 +81,7 @@ export default function AdminLogsPage() {
   const { showToast } = useToast();
   const router = useRouter();
 
-  const fetchLogs = useCallback(async () => {
+  const fetchLogs = useCallback(async (signal?: AbortSignal) => {
     try {
       const params = new URLSearchParams();
       if (levelFilter !== "all") {
@@ -88,7 +89,7 @@ export default function AdminLogsPage() {
       }
       params.set("limit", "200");
 
-      const res = await fetch(`/api/admin/logs?${params.toString()}`);
+      const res = await fetch(`${API_ENDPOINTS.ADMIN.LOGS}?${params.toString()}`, { signal });
 
       if (res.status === 401) {
         router.push("/login");
@@ -115,25 +116,30 @@ export default function AdminLogsPage() {
       }
       setLoading(false);
     } catch {
+      if (signal?.aborted) return;
       showToast("Network error", "error");
       setLoading(false);
     }
   }, [levelFilter, router, showToast]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
-      void fetchLogs();
+      void fetchLogs(controller.signal);
     }, 0);
 
     return () => {
       window.clearTimeout(timeoutId);
+      controller.abort();
     };
   }, [fetchLogs]);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     if (autoRefresh) {
       refreshIntervalRef.current = setInterval(() => {
-        void fetchLogs();
+        void fetchLogs(controller.signal);
       }, 5000);
     } else {
       if (refreshIntervalRef.current) {
@@ -143,6 +149,7 @@ export default function AdminLogsPage() {
     }
 
     return () => {
+      controller.abort();
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
       }
@@ -156,7 +163,7 @@ export default function AdminLogsPage() {
   const handleClearLogs = async () => {
     setClearing(true);
     try {
-      const res = await fetch("/api/admin/logs", { method: "DELETE" });
+      const res = await fetch(API_ENDPOINTS.ADMIN.LOGS, { method: "DELETE" });
 
       if (!res.ok) {
         showToast("Failed to clear logs", "error");

@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { HelpTooltip } from "@/components/ui/tooltip";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface ApiKey {
   id: string;
@@ -71,10 +72,10 @@ export default function ApiKeysPage() {
   const { showToast } = useToast();
   const { copiedKey, copy } = useCopyToClipboard();
 
-  const fetchApiKeys = useCallback(async () => {
+  const fetchApiKeys = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/user/api-keys");
+      const res = await fetch(API_ENDPOINTS.USER.API_KEYS, { signal });
       if (!res.ok) {
         showToast("Failed to load API keys", "error");
         setLoading(false);
@@ -86,18 +87,21 @@ export default function ApiKeysPage() {
       setApiKeys(keys);
       setLoading(false);
     } catch {
+      if (signal?.aborted) return;
       showToast("Network error", "error");
       setLoading(false);
     }
   }, [showToast]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
-      void fetchApiKeys();
+      void fetchApiKeys(controller.signal);
     }, 0);
 
     return () => {
       window.clearTimeout(timeoutId);
+      controller.abort();
     };
   }, [fetchApiKeys]);
 
@@ -105,7 +109,7 @@ export default function ApiKeysPage() {
     setCreating(true);
 
     try {
-      const res = await fetch("/api/user/api-keys", {
+      const res = await fetch(API_ENDPOINTS.USER.API_KEYS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: keyNameInput.trim() || "Default" }),
@@ -141,7 +145,7 @@ export default function ApiKeysPage() {
 
     try {
       const res = await fetch(
-        `/api/user/api-keys?id=${encodeURIComponent(id)}`,
+        `${API_ENDPOINTS.USER.API_KEYS}?id=${encodeURIComponent(id)}`,
         {
         method: "DELETE",
         }

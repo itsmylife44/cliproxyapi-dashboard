@@ -8,6 +8,7 @@ import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/com
 import { useToast } from "@/components/ui/toast";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { extractApiError } from "@/lib/utils";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface User {
   id: string;
@@ -34,23 +35,23 @@ export default function AdminUsersPage() {
   const { showToast } = useToast();
   const router = useRouter();
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setFetchError(false);
     try {
-      const res = await fetch("/api/admin/users");
-      
+      const res = await fetch(API_ENDPOINTS.ADMIN.USERS, { signal });
+
       if (res.status === 401) {
         router.push("/login");
         return;
       }
-      
+
       if (res.status === 403) {
         showToast("Admin access required", "error");
         router.push("/dashboard");
         return;
       }
-      
+
       if (!res.ok) {
         setFetchError(true);
         setLoading(false);
@@ -62,18 +63,21 @@ export default function AdminUsersPage() {
       setUsers(userList);
       setLoading(false);
     } catch {
+      if (signal?.aborted) return;
       setFetchError(true);
       setLoading(false);
     }
   }, [showToast, router]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
-      void fetchUsers();
+      void fetchUsers(controller.signal);
     }, 0);
 
     return () => {
       window.clearTimeout(timeoutId);
+      controller.abort();
     };
   }, [fetchUsers]);
 
@@ -96,7 +100,7 @@ export default function AdminUsersPage() {
     setCreating(true);
 
     try {
-      const res = await fetch("/api/admin/users", {
+      const res = await fetch(API_ENDPOINTS.ADMIN.USERS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password, isAdmin }),

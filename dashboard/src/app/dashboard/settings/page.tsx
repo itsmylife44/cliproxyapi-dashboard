@@ -72,38 +72,40 @@ export default function SettingsPage() {
 
   const { showToast } = useToast();
 
-  const fetchProxyUpdateInfo = useCallback(async () => {
+  const fetchProxyUpdateInfo = useCallback(async (signal?: AbortSignal) => {
     setProxyUpdateLoading(true);
     try {
-      const res = await fetch(API_ENDPOINTS.UPDATE.CHECK);
+      const res = await fetch(API_ENDPOINTS.UPDATE.CHECK, { signal });
       if (res.ok) {
         const data = await res.json();
         setProxyUpdateInfo(data);
       }
-    } catch {
+    } catch (err) {
+      if (signal?.aborted) return;
     } finally {
       setProxyUpdateLoading(false);
     }
   }, []);
 
-  const fetchDashboardUpdateInfo = useCallback(async () => {
+  const fetchDashboardUpdateInfo = useCallback(async (signal?: AbortSignal) => {
     setDashboardUpdateLoading(true);
     try {
-      const res = await fetch(API_ENDPOINTS.UPDATE.DASHBOARD_CHECK);
+      const res = await fetch(API_ENDPOINTS.UPDATE.DASHBOARD_CHECK, { signal });
       if (res.ok) {
         const data = await res.json();
         setDashboardUpdateInfo(data);
       }
-    } catch {
+    } catch (err) {
+      if (signal?.aborted) return;
     } finally {
       setDashboardUpdateLoading(false);
     }
   }, []);
 
-  const fetchSyncTokens = useCallback(async () => {
+  const fetchSyncTokens = useCallback(async (signal?: AbortSignal) => {
     setSyncTokensLoading(true);
     try {
-      const res = await fetch(API_ENDPOINTS.CONFIG_SYNC.TOKENS);
+      const res = await fetch(API_ENDPOINTS.CONFIG_SYNC.TOKENS, { signal });
       if (res.ok) {
         const data = await res.json();
         setSyncTokens(data.tokens || []);
@@ -111,17 +113,20 @@ export default function SettingsPage() {
           setAvailableApiKeys(data.apiKeys);
         }
       }
-    } catch {
+    } catch (err) {
+      if (signal?.aborted) return;
     } finally {
       setSyncTokensLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchVersion = async () => {
       setCliProxyLoading(true);
       try {
-        const res = await fetch(API_ENDPOINTS.MANAGEMENT.LATEST_VERSION);
+        const res = await fetch(API_ENDPOINTS.MANAGEMENT.LATEST_VERSION, { signal: controller.signal });
         if (!res.ok) {
           setCliProxyVersion(null);
           setCliProxyLoading(false);
@@ -133,15 +138,18 @@ export default function SettingsPage() {
         setCliProxyVersion(version);
         setCliProxyLoading(false);
       } catch {
+        if (controller.signal.aborted) return;
         setCliProxyVersion(null);
         setCliProxyLoading(false);
       }
     };
 
     fetchVersion();
-    fetchProxyUpdateInfo();
-    fetchDashboardUpdateInfo();
-    fetchSyncTokens();
+    fetchProxyUpdateInfo(controller.signal);
+    fetchDashboardUpdateInfo(controller.signal);
+    fetchSyncTokens(controller.signal);
+
+    return () => controller.abort();
   }, [fetchProxyUpdateInfo, fetchDashboardUpdateInfo, fetchSyncTokens]);
 
   const confirmProxyUpdate = (version: string = "latest") => {

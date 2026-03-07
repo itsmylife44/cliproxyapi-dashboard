@@ -1,7 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 interface ModalProps {
   isOpen: boolean;
@@ -11,6 +12,9 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, children, className }: ModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, modalRef as React.RefObject<HTMLElement | null>);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -34,6 +38,7 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
       aria-modal="true"
     >
       <div
+        ref={modalRef}
         className={cn(
           "animate-modal-card relative max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-slate-900 border border-slate-700/70 rounded-xl p-5 shadow-2xl",
           className

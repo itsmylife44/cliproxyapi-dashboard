@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { extractApiError } from "@/lib/utils";
 
 interface DeployStatus {
   status: "idle" | "running" | "success" | "error" | "completed" | "failed";
@@ -127,9 +128,10 @@ export function DeployDashboard() {
         startPolling();
       } else {
         const data = await res.json();
-        showToast(data.error || "Failed to start deployment", "error");
+        const errorMessage = extractApiError(data, "Failed to start deployment");
+        showToast(errorMessage, "error");
         setDeploying(false);
-        setStatus({ status: "error", error: data.error });
+        setStatus({ status: "error", error: errorMessage });
       }
     } catch {
       showToast("Network error", "error");

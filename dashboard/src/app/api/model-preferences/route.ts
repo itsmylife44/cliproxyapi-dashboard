@@ -3,15 +3,15 @@ import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
-import { ModelPreferencesSchema, formatZodError } from "@/lib/validation/schemas";
-import { logger } from "@/lib/logger";
+import { ModelPreferencesSchema } from "@/lib/validation/schemas";
+import { Errors, apiSuccess } from "@/lib/errors";
 
 export async function GET() {
   try {
     const session = await verifySession();
 
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return Errors.unauthorized();
     }
 
     const modelPreference = await prisma.modelPreference.findUnique({
@@ -24,8 +24,7 @@ export async function GET() {
 
     return NextResponse.json({ excludedModels: modelPreference.excludedModels });
   } catch (error) {
-    logger.error({ err: error }, "Get model preferences error");
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return Errors.internal("Get model preferences error", error);
   }
 }
 
@@ -34,7 +33,7 @@ export async function PUT(request: NextRequest) {
     const session = await verifySession();
 
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return Errors.unauthorized();
     }
 
     const originError = validateOrigin(request);
@@ -51,7 +50,7 @@ export async function PUT(request: NextRequest) {
     });
     
     if (!userExists) {
-      return NextResponse.json({ error: "User not found - please log in again" }, { status: 401 });
+      return Errors.notFound("User");
     }
 
     const modelPreference = await prisma.modelPreference.upsert({
@@ -65,15 +64,13 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       excludedModels: modelPreference.excludedModels,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(formatZodError(error), { status: 400 });
+      return Errors.zodValidation(error.issues);
     }
-    logger.error({ err: error }, "Update model preferences error");
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return Errors.internal("Update model preferences error", error);
   }
 }

@@ -4,6 +4,8 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { Errors, apiSuccess } from "@/lib/errors";
+import { UpdateProxySchema } from "@/lib/validation/schemas";
 import { logger } from "@/lib/logger";
 
 const execFileAsync = promisify(execFile);
@@ -11,7 +13,6 @@ const execFileAsync = promisify(execFile);
 const CONTAINER_NAME = "cliproxyapi";
 const COMPOSE_FILE = "/opt/cliproxyapi/infrastructure/docker-compose.yml";
 const IMAGE_NAME = "eceasy/cli-proxy-api-plus";
-const DOCKER_TAG_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/;
 
 interface PortBinding {
   HostIp: string;
@@ -31,14 +32,6 @@ function getCommandErrorText(error: unknown): string {
     return error.message;
   }
   return String(error);
-}
-
-function isValidImageTag(tag: string): boolean {
-  if (tag === "latest") {
-    return true;
-  }
-
-  return DOCKER_TAG_PATTERN.test(tag);
 }
 
 async function getContainerConfig(): Promise<ContainerConfig> {
@@ -136,7 +129,7 @@ export async function POST(request: NextRequest) {
   const session = await verifySession();
 
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const user = await prisma.user.findUnique({
@@ -145,7 +138,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    return Errors.forbidden();
   }
 
   const originError = validateOrigin(request);
@@ -156,15 +149,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { version = "latest", confirm } = body;
+    const result = UpdateProxySchema.safeParse(body);
 
-    if (confirm !== true) {
-      return NextResponse.json({ error: "Confirmation required" }, { status: 400 });
+    if (!result.success) {
+      return Errors.zodValidation(result.error.issues);
     }
 
-    if (typeof version !== "string" || !isValidImageTag(version)) {
-      return NextResponse.json({ error: "Invalid version format" }, { status: 400 });
-    }
+    const { version } = result.data;
 
     const imageTag = `${IMAGE_NAME}:${version}`;
     configSnapshot = await getContainerConfig();
@@ -184,10 +175,8 @@ export async function POST(request: NextRequest) {
       await recreateWithDockerRun(configSnapshot, imageTag);
     }
 
-    return NextResponse.json({ success: true, message: `Updated to ${version}`, version });
+    return apiSuccess({ message: `Updated to ${version}`, version });
   } catch (error) {
-    logger.error({ err: error }, "Update error");
-
     try {
       if (composeAvailable) {
         await runCompose(["up", "-d", "--no-deps", CONTAINER_NAME]);
@@ -200,9 +189,6 @@ export async function POST(request: NextRequest) {
       logger.error({ err: restartError }, "Recovery failed");
     }
 
-    return NextResponse.json(
-      { error: "Update failed. Container may need manual restart." },
-      { status: 500 }
-    );
+    return Errors.internal("Update failed", error);
   }
 }

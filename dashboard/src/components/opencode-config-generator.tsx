@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { CopyBlock } from "@/components/copy-block";
 import { Button } from "@/components/ui/button";
+import { extractApiError } from "@/lib/utils";
 import {
   type OAuthAccount,
   type ConfigData,
@@ -117,7 +118,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
         });
         if (!response.ok) {
           const errorData = await response.json();
-          setSaveError(errorData.error || "Failed to save config");
+          setSaveError(extractApiError(errorData, "Failed to save config"));
         }
       } catch {
         setSaveError("Network error while saving config");

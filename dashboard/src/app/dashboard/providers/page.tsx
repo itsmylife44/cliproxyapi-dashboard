@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { extractApiError } from "@/lib/utils";
 import {
   API_KEY_PROVIDERS,
   ApiKeySection,
@@ -246,7 +247,7 @@ export default function ProvidersPage() {
                           showToast("Setting updated successfully", "success");
                         } else {
                           const data = await res.json();
-                          showToast(data.error || "Failed to update setting", "error");
+                          showToast(extractApiError(data, "Failed to update setting"), "error");
                         }
                       } catch {
                         showToast("Network error", "error");

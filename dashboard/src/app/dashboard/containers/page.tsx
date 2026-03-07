@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
-import { cn } from "@/lib/utils";
+import { cn, extractApiError } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 
@@ -104,7 +104,7 @@ export default function ContainersPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        showToast(data.error || "Action failed", "error");
+        showToast(extractApiError(data, "Action failed"), "error");
       }
       const refreshRes = await fetch("/api/containers/list");
       if (refreshRes.ok) {

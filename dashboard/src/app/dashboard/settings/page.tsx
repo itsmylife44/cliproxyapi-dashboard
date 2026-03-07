@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { DeployDashboard } from "@/components/deploy-dashboard";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { extractApiError } from "@/lib/utils";
 
 interface ProxyUpdateInfo {
   currentVersion: string;
@@ -163,7 +164,7 @@ export default function SettingsPage() {
         }, 10000);
       } else {
         const data = await res.json();
-        showToast(data.error || "Update failed", "error");
+        showToast(extractApiError(data, "Update failed"), "error");
       }
     } catch {
       showToast("Network error during update", "error");
@@ -194,7 +195,7 @@ export default function SettingsPage() {
           fetchDashboardUpdateInfo();
         }, 10000);
       } else {
-        const errMsg = typeof data?.error === "string" ? data.error : "Update failed";
+        const errMsg = extractApiError(data, "Update failed");
         showToast(errMsg, "error");
       }
     } catch {
@@ -214,7 +215,7 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        showToast(data.error || "Failed to generate token", "error");
+        showToast(extractApiError(data, "Failed to generate token"), "error");
         setGeneratingToken(false);
         return;
       }
@@ -246,7 +247,7 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        showToast(data.error || "Failed to revoke token", "error");
+        showToast(extractApiError(data, "Failed to revoke token"), "error");
         return;
       }
 
@@ -273,7 +274,7 @@ export default function SettingsPage() {
         );
       } else {
         const data = await res.json();
-        showToast(data.error || "Failed to update API key", "error");
+        showToast(extractApiError(data, "Failed to update API key"), "error");
       }
     } catch {
       showToast("Network error", "error");
@@ -302,7 +303,7 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        showToast(data.error || "Failed to revoke sessions", "error");
+        showToast(extractApiError(data, "Failed to revoke sessions"), "error");
         setRevokingSessions(false);
         return;
       }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
+import { Errors, apiSuccess } from "@/lib/errors";
+import { DeploySchema } from "@/lib/validation/schemas";
 import { logger } from "@/lib/logger";
 
 const WEBHOOK_HOST = process.env.WEBHOOK_HOST || "http://localhost:9000";
@@ -19,28 +21,26 @@ export async function POST(request: NextRequest) {
   try {
     const session = await verifySession();
     if (!session?.userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return Errors.unauthorized();
     }
 
     const originError = validateOrigin(request);
     if (originError) return originError;
 
     if (!(await isAdmin(session.userId))) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+      return Errors.forbidden();
     }
 
     if (!DEPLOY_SECRET) {
-      return NextResponse.json(
-        { error: "DEPLOY_SECRET not configured on server" },
-        { status: 500 }
-      );
+      return Errors.internal("Deploy secret not configured");
     }
 
     const body = await request.json().catch(() => ({}));
-    const noCache = body.noCache === true;
-    
+    const result = DeploySchema.safeParse(body);
+    const noCache = result.success ? (result.data.noCache ?? false) : false;
+
     const endpoint = noCache ? "deploy-dashboard-nocache" : "deploy-dashboard";
-    
+
     const response = await fetch(`${WEBHOOK_HOST}/hooks/${endpoint}`, {
       method: "POST",
       headers: {
@@ -53,50 +53,43 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const text = await response.text();
       logger.error({ status: response.status, response: text }, "Webhook error");
-      return NextResponse.json(
-        { error: "Failed to trigger deployment" },
-        { status: response.status }
-      );
+      return Errors.internal("Failed to trigger deployment");
     }
 
     await response.body?.cancel();
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       message: noCache ? "Full rebuild started" : "Quick update started",
     });
   } catch (error) {
     logger.error({ err: error }, "Deploy error");
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Deploy failed" },
-      { status: 500 }
-    );
+    return Errors.internal("Deploy failed");
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const session = await verifySession();
     if (!session?.userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return Errors.unauthorized();
     }
 
+    const originError = validateOrigin(request);
+    if (originError) return originError;
+
     if (!(await isAdmin(session.userId))) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+      return Errors.forbidden();
     }
 
     if (!DEPLOY_SECRET) {
-      return NextResponse.json(
-        { error: "DEPLOY_SECRET not configured" },
-        { status: 500 }
-      );
+      return Errors.internal("Deploy secret not configured");
     }
 
     const url = new URL(request.url);
     const type = url.searchParams.get("type") || "status";
-    
+
     const endpoint = type === "log" ? "deploy-log" : "deploy-status";
-    
+
     const response = await fetch(`${WEBHOOK_HOST}/hooks/${endpoint}`, {
       method: "POST",
       headers: {
@@ -108,36 +101,30 @@ export async function GET(request: Request) {
     if (!response.ok) {
       if (response.status === 404) {
         await response.body?.cancel();
-        return NextResponse.json({
+        return apiSuccess({
           status: { status: "idle", message: "No deployment in progress" },
         });
       }
       await response.body?.cancel();
-      return NextResponse.json(
-        { error: "Failed to get deploy status" },
-        { status: response.status }
-      );
+      return Errors.internal("Failed to get deploy status");
     }
 
     const text = await response.text();
-    
+
     if (type === "log") {
-      return NextResponse.json({ log: text });
+      return apiSuccess({ log: text });
     }
-    
+
     try {
       const status = JSON.parse(text);
-      return NextResponse.json({ status });
+      return apiSuccess({ status });
     } catch {
-      return NextResponse.json({
+      return apiSuccess({
         status: { status: "idle", message: "No deployment in progress" },
       });
     }
   } catch (error) {
     logger.error({ err: error }, "Deploy status error");
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to get status" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to get deploy status");
   }
 }

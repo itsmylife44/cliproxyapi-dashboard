@@ -106,6 +106,9 @@ export const ERROR_CODE = {
 
   /** Configuration error */
   CONFIG_ERROR: "CONFIG_ERROR",
+
+  /** Upstream/external service failure */
+  UPSTREAM_ERROR: "UPSTREAM_ERROR",
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODE)[keyof typeof ERROR_CODE];
@@ -216,6 +219,16 @@ export function apiErrorWithHeaders(
   );
 }
 
+/**
+ * Create a standard success response with consistent envelope
+ */
+export function apiSuccess<T extends Record<string, unknown>>(
+  data: T,
+  status = 200
+): NextResponse {
+  return NextResponse.json({ success: true, ...Object.fromEntries(Object.entries(data).filter(([k]) => k !== "success")) }, { status });
+}
+
 // ============================================
 // Convenience factories for common errors
 // ============================================
@@ -276,6 +289,30 @@ export const Errors = {
       undefined,
       { "Retry-After": String(retryAfterSeconds) }
     ),
+
+  /** 502 - Upstream dependency failure */
+  badGateway: (context: string, error?: unknown) => {
+    if (error) {
+      logger.error({ err: error, context }, context);
+    }
+    return apiError(
+      ERROR_CODE.UPSTREAM_ERROR,
+      "Upstream service error",
+      502
+    );
+  },
+
+  /** 503 - Service temporarily unavailable */
+  serviceUnavailable: (context: string) => {
+    logger.warn({ context }, "Service unavailable");
+    return apiError(ERROR_CODE.UPSTREAM_ERROR, "Service temporarily unavailable", 503);
+  },
+
+  /** 504 - Gateway timeout */
+  gatewayTimeout: (context: string) => {
+    logger.warn({ context }, "Gateway timeout");
+    return apiError(ERROR_CODE.UPSTREAM_ERROR, "Request timed out", 504);
+  },
 
   /** 500 - Internal server error */
   internal: (context: string, error?: unknown) => {

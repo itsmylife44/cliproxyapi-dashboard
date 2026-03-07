@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
-import { logger } from "@/lib/logger";
+import { Errors, apiSuccess } from "@/lib/errors";
 
 export async function PATCH(
   request: NextRequest,
@@ -10,7 +10,7 @@ export async function PATCH(
 ) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -30,11 +30,11 @@ export async function PATCH(
     });
 
     if (!existingToken) {
-      return NextResponse.json({ error: "Token not found" }, { status: 404 });
+      return Errors.notFound("Token");
     }
 
     if (existingToken.userId !== session.userId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return Errors.forbidden();
     }
 
     if (syncApiKeyId) {
@@ -44,7 +44,7 @@ export async function PATCH(
       });
 
       if (!ownedKey) {
-        return NextResponse.json({ error: "API key not found or not owned by you" }, { status: 403 });
+        return Errors.forbidden();
       }
     }
 
@@ -53,13 +53,9 @@ export async function PATCH(
       data: { syncApiKey: syncApiKeyId },
     });
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({});
   } catch (error) {
-    logger.error({ err: error }, "Failed to update sync token");
-    return NextResponse.json(
-      { error: "Failed to update token" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to update sync token", error);
   }
 }
 
@@ -69,7 +65,7 @@ export async function DELETE(
 ) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -86,11 +82,11 @@ export async function DELETE(
     });
 
     if (!existingToken) {
-      return NextResponse.json({ error: "Token not found" }, { status: 404 });
+      return Errors.notFound("Token");
     }
 
     if (existingToken.userId !== session.userId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return Errors.forbidden();
     }
 
     await prisma.syncToken.update({
@@ -98,12 +94,8 @@ export async function DELETE(
       data: { revokedAt: new Date() },
     });
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({});
   } catch (error) {
-    logger.error({ err: error }, "Failed to revoke sync token");
-    return NextResponse.json(
-      { error: "Failed to revoke token" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to revoke sync token", error);
   }
 }

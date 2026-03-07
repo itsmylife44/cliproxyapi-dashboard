@@ -13,8 +13,8 @@ import type { ConfigData } from "@/lib/config-generators/shared";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { validateFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { z } from "zod";
-import { AgentConfigSchema, formatZodError } from "@/lib/validation/schemas";
-import { logger } from "@/lib/logger";
+import { AgentConfigSchema } from "@/lib/validation/schemas";
+import { Errors, apiSuccess } from "@/lib/errors";
 
 async function fetchManagementJson(path: string) {
   try {
@@ -82,7 +82,7 @@ export async function GET() {
   try {
     const session = await verifySession();
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return Errors.unauthorized();
     }
 
     const [agentOverride, managementConfig, authFilesData, modelPreference] =
@@ -120,8 +120,7 @@ export async function GET() {
       defaults,
     });
   } catch (error) {
-    logger.error({ err: error }, "Get agent config error");
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return Errors.internal("Get agent config error", error);
   }
 }
 
@@ -129,7 +128,7 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await verifySession();
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return Errors.unauthorized();
     }
 
     const originError = validateOrigin(request);
@@ -153,15 +152,13 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      overrides: agentOverride.overrides,
+    return apiSuccess({
+      overrides: agentOverride.overrides as Record<string, unknown>,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(formatZodError(error), { status: 400 });
+      return Errors.zodValidation(error.issues);
     }
-    logger.error({ err: error }, "Update agent config error");
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return Errors.internal("Update agent config error", error);
   }
 }

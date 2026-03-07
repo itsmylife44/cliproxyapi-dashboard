@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { extractApiError } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -103,7 +104,7 @@ export default function AdminUsersPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        showToast(data.error || "Failed to create user", "error");
+        showToast(extractApiError(data, "Failed to create user"), "error");
         setCreating(false);
         return;
       }

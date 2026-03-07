@@ -4,12 +4,12 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { signToken } from "@/lib/auth/jwt";
 import { prisma } from "@/lib/db";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
-import { logger } from "@/lib/logger";
+import { Errors, apiSuccess } from "@/lib/errors";
 
 export async function POST(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const user = await prisma.user.findUnique({
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!user?.isAdmin) {
-    return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
+    return Errors.forbidden();
   }
 
   const originError = validateOrigin(request);
@@ -86,13 +86,11 @@ export async function POST(request: NextRequest) {
       ipAddress: extractIpAddress(request),
     });
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       revokedUsers: result.revokedUsers,
       message: `Revoked sessions for ${result.revokedUsers} user(s).`,
     });
   } catch (error) {
-    logger.error({ err: error, userId: user.id }, "Failed to revoke all sessions");
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return Errors.internal("Failed to revoke sessions", error);
   }
 }

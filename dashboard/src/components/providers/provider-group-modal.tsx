@@ -5,6 +5,7 @@ import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { extractApiError } from "@/lib/utils";
 
 interface ProviderGroup {
   id: string;
@@ -83,7 +84,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || `Failed to ${isEditing ? "update" : "create"} group`);
+        throw new Error(extractApiError(data, `Failed to ${isEditing ? "update" : "create"} group`));
       }
 
       showToast(`Group ${isEditing ? "updated" : "created"} successfully`, "success");

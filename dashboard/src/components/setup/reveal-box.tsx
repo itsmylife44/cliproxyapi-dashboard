@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 
 interface CreatedKey {
   id: string;
@@ -33,13 +33,22 @@ export function RevealBox({ createdKey }: RevealBoxProps) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleCopy = useCallback(() => {
-    void navigator.clipboard.writeText(createdKey.key).then(() => {
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(createdKey.key);
       setCopied(true);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => setCopied(false), 2000);
-    });
+    } catch {
+      // Clipboard write can fail (e.g. permissions denied, non-secure context)
+    }
   }, [createdKey.key]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   return (
     <div className="mt-3 space-y-2">

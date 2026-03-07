@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -35,19 +35,19 @@ export function LiveLogs({
 }: LiveLogsProps) {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const logsContainerRef = useRef<HTMLDivElement>(null);
-  const autoScrollRef = useRef(true);
+  const [autoScroll, setAutoScroll] = useState(true);
 
   useEffect(() => {
-    if (autoScrollRef.current && logsEndRef.current) {
+    if (autoScroll && logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [logs]);
+  }, [logs, autoScroll]);
 
   const handleScroll = () => {
     if (logsContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = logsContainerRef.current;
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
-      autoScrollRef.current = isAtBottom;
+      setAutoScroll(isAtBottom);
     }
   };
 
@@ -155,7 +155,7 @@ export function LiveLogs({
               )}
               <div ref={logsEndRef} />
             </div>
-            {!autoScrollRef.current && (
+            {!autoScroll && (
               <div className="mt-2 text-center text-xs text-slate-500">
                 Scroll to bottom to enable auto-scroll
               </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 
 export function SuccessBanner() {
   return (
@@ -33,10 +32,11 @@ export function SuccessBanner() {
             Your CLIProxyAPI instance is fully configured and ready to use.
           </p>
         </div>
-        <Link href="/dashboard">
-          <Button variant="primary" className="flex-shrink-0 whitespace-nowrap">
-            Go to Dashboard
-          </Button>
+        <Link
+          href="/dashboard"
+          className="flex-shrink-0 whitespace-nowrap px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md border glass-button-primary text-white shadow-[0_8px_20px_rgba(37,99,235,0.2)]"
+        >
+          Go to Dashboard
         </Link>
       </div>
     </div>

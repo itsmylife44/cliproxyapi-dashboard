@@ -83,7 +83,7 @@ export default function SettingsPage() {
     } catch (err) {
       if (signal?.aborted) return;
     } finally {
-      setProxyUpdateLoading(false);
+      if (!signal?.aborted) setProxyUpdateLoading(false);
     }
   }, []);
 
@@ -98,7 +98,7 @@ export default function SettingsPage() {
     } catch (err) {
       if (signal?.aborted) return;
     } finally {
-      setDashboardUpdateLoading(false);
+      if (!signal?.aborted) setDashboardUpdateLoading(false);
     }
   }, []);
 
@@ -116,7 +116,7 @@ export default function SettingsPage() {
     } catch (err) {
       if (signal?.aborted) return;
     } finally {
-      setSyncTokensLoading(false);
+      if (!signal?.aborted) setSyncTokensLoading(false);
     }
   }, []);
 

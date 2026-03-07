@@ -208,24 +208,29 @@ export default function QuotaPage() {
   const [selectedProvider, setSelectedProvider] = useState<ProviderType>(PROVIDERS.ALL);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
 
-  const fetchQuota = async () => {
+  const fetchQuota = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const res = await fetch(API_ENDPOINTS.QUOTA.BASE);
+      const res = await fetch(API_ENDPOINTS.QUOTA.BASE, { signal });
       if (res.ok) {
         const data = await res.json();
         setQuotaData(data);
       }
     } catch {
+      if (signal?.aborted) return;
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchQuota();
-    const interval = setInterval(fetchQuota, 120_000);
-    return () => clearInterval(interval);
+    const controller = new AbortController();
+    fetchQuota(controller.signal);
+    const interval = setInterval(() => fetchQuota(controller.signal), 120_000);
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
   }, []);
 
   const filteredAccounts = quotaData?.accounts.filter((account) => {

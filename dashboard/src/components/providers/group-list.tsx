@@ -61,6 +61,7 @@ export function GroupList({
 
               <div className="flex items-center gap-3">
                 <button
+                  type="button"
                   onClick={() => onToggleGroupActive(group.id, group.isActive)}
                   className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-sm transition-colors ${group.isActive ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}
                 >
@@ -69,6 +70,7 @@ export function GroupList({
 
                 <div className="flex items-center gap-0.5">
                   <button
+                    type="button"
                     onClick={() => onMoveGroupUp(group.id, groupIndex)}
                     disabled={groupIndex === 0}
                     className="text-slate-400 hover:text-white disabled:opacity-30 p-1"
@@ -77,6 +79,7 @@ export function GroupList({
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
                   </button>
                   <button
+                    type="button"
                     onClick={() => onMoveGroupDown(group.id, groupIndex)}
                     disabled={groupIndex === groups.length - 1}
                     className="text-slate-400 hover:text-white disabled:opacity-30 p-1"
@@ -94,6 +97,7 @@ export function GroupList({
                     Delete
                   </Button>
                   <button
+                    type="button"
                     onClick={() => onToggleCollapse(group.id)}
                     className="p-1 ml-1 text-slate-400 hover:text-white transition-transform"
                     style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0)' }}

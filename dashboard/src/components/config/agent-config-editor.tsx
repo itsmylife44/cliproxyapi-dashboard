@@ -253,7 +253,7 @@ export default function AgentConfigEditor({
                     </div>
                   )}
                   {entries.map((entry, index) => (
-                    <div key={index} className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 items-center">
+                    <div key={entry._id ?? index} className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 items-center">
                       <input type="text" value={entry.name} onChange={(e) => updateOAuthAliasEntry(provider, index, "name", e.target.value)} placeholder="model-name" className="rounded-sm border border-slate-700/70 bg-slate-900/50 px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30" />
                       <input type="text" value={entry.alias} onChange={(e) => updateOAuthAliasEntry(provider, index, "alias", e.target.value)} placeholder="alias-name" className="rounded-sm border border-slate-700/70 bg-slate-900/50 px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30" />
                       <input type="checkbox" checked={entry.fork ?? false} onChange={(e) => updateOAuthAliasEntry(provider, index, "fork", e.target.checked)} className="size-4 rounded accent-emerald-500" />

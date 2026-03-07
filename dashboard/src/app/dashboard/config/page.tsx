@@ -61,6 +61,8 @@ export interface OAuthModelAliasEntry {
   name: string;
   alias: string;
   fork?: boolean;
+  /** Stable client-side key for React list rendering; stripped before saving. */
+  _id?: string;
 }
 
 export interface Config {
@@ -94,6 +96,40 @@ export interface Config {
   "oauth-model-alias": Record<string, OAuthModelAliasEntry[]>;
 }
 
+let idCounter = 0;
+function nextStableId(): string {
+  return `oauth-alias-${Date.now()}-${++idCounter}`;
+}
+
+/** Assign stable `_id` to every OAuth alias entry that lacks one. */
+function stampOAuthIds(cfg: Config): Config {
+  const aliases = cfg["oauth-model-alias"];
+  if (!aliases || Object.keys(aliases).length === 0) return cfg;
+
+  const stamped: Record<string, OAuthModelAliasEntry[]> = {};
+  let changed = false;
+  for (const [provider, entries] of Object.entries(aliases)) {
+    stamped[provider] = entries.map((e) => {
+      if (e._id) return e;
+      changed = true;
+      return { ...e, _id: nextStableId() };
+    });
+  }
+  return changed ? { ...cfg, "oauth-model-alias": stamped } : cfg;
+}
+
+/** Strip client-only `_id` fields before sending config to the API. */
+function stripOAuthIds(cfg: Config): Config {
+  const aliases = cfg["oauth-model-alias"];
+  if (!aliases || Object.keys(aliases).length === 0) return cfg;
+
+  const cleaned: Record<string, OAuthModelAliasEntry[]> = {};
+  for (const [provider, entries] of Object.entries(aliases)) {
+    cleaned[provider] = entries.map(({ _id: _, ...rest }) => rest);
+  }
+  return { ...cfg, "oauth-model-alias": cleaned };
+}
+
 export default function ConfigPage() {
   const [config, setConfig] = useState<Config | null>(null);
   const [originalConfig, setOriginalConfig] = useState<Config | null>(null);
@@ -119,8 +155,9 @@ export default function ConfigPage() {
       if (!data["auth-dir"]) {
         data["auth-dir"] = "~/.cli-proxy-api";
       }
-      setConfig(data as Config);
-      setOriginalConfig(data as Config);
+      const stamped = stampOAuthIds(data as Config);
+      setConfig(stamped);
+      setOriginalConfig(stamped);
       setRawJson(JSON.stringify(data, null, 2));
       setLoading(false);
     } catch {
@@ -145,10 +182,11 @@ export default function ConfigPage() {
     setSaving(true);
 
     try {
+      const cleanedConfig = stripOAuthIds(config);
       const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
         method: "PUT",
         headers: { "Content-Type": "text/yaml" },
-        body: yaml.dump(config, { lineWidth: -1, noRefs: true }),
+        body: yaml.dump(cleanedConfig, { lineWidth: -1, noRefs: true }),
       });
 
       if (!res.ok) {
@@ -159,7 +197,7 @@ export default function ConfigPage() {
 
       showToast("Configuration saved successfully", "success");
       setOriginalConfig(config);
-      setRawJson(JSON.stringify(config, null, 2));
+      setRawJson(JSON.stringify(stripOAuthIds(config), null, 2));
       setSaving(false);
     } catch {
       showToast("Failed to save configuration", "error");
@@ -170,7 +208,7 @@ export default function ConfigPage() {
   const handleDiscard = () => {
     if (originalConfig) {
       setConfig(originalConfig);
-      setRawJson(JSON.stringify(originalConfig, null, 2));
+      setRawJson(JSON.stringify(stripOAuthIds(originalConfig), null, 2));
       showToast("Changes discarded", "info");
     }
   };
@@ -261,7 +299,7 @@ export default function ConfigPage() {
   const addOAuthAliasEntry = (provider: string) => {
     if (!config) return;
     const aliases = config["oauth-model-alias"] ?? {};
-    const entries = [...(aliases[provider] ?? []), { name: "", alias: "" }];
+    const entries = [...(aliases[provider] ?? []), { name: "", alias: "", _id: nextStableId() }];
     setConfig({
       ...config,
       "oauth-model-alias": { ...aliases, [provider]: entries },

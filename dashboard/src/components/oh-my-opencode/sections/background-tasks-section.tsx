@@ -67,7 +67,12 @@ export function BackgroundTasksSection({
               type="number"
               min={1}
               defaultValue={overrides.background_task?.defaultConcurrency ?? 5}
-              onChange={(e) => onBgTaskNumberChange("defaultConcurrency", Number(e.target.value))}
+              onChange={(e) => {
+                const parsed = Number(e.target.value);
+                if (e.target.value !== "" && Number.isFinite(parsed) && parsed > 0) {
+                  onBgTaskNumberChange("defaultConcurrency", parsed);
+                }
+              }}
               className="w-full px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
             />
           </div>
@@ -77,7 +82,12 @@ export function BackgroundTasksSection({
               type="number"
               min={60000}
               defaultValue={overrides.background_task?.staleTimeoutMs ?? 180000}
-              onChange={(e) => onBgTaskNumberChange("staleTimeoutMs", Number(e.target.value))}
+              onChange={(e) => {
+                const parsed = Number(e.target.value);
+                if (e.target.value !== "" && Number.isFinite(parsed) && parsed > 0) {
+                  onBgTaskNumberChange("staleTimeoutMs", parsed);
+                }
+              }}
               className="w-full px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
             />
           </div>
@@ -93,7 +103,7 @@ export function BackgroundTasksSection({
               </button>
             </div>
             {providerConcurrencyRows.map((row, idx) => (
-              <div key={`${row.key}-${idx}`} className="flex gap-2">
+              <div key={`provider-${idx}`} className="flex gap-2">
                 <input
                   type="text"
                   placeholder="Provider"
@@ -105,7 +115,12 @@ export function BackgroundTasksSection({
                   type="number"
                   min={1}
                   value={row.value}
-                  onChange={(e) => onProviderConcurrencyChange(idx, "value", Number(e.target.value))}
+                  onChange={(e) => {
+                    const parsed = Number(e.target.value);
+                    if (e.target.value !== "" && Number.isFinite(parsed) && parsed > 0) {
+                      onProviderConcurrencyChange(idx, "value", parsed);
+                    }
+                  }}
                   className="w-20 px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
                 />
                 <button
@@ -130,7 +145,7 @@ export function BackgroundTasksSection({
               </button>
             </div>
             {modelConcurrencyRows.map((row, idx) => (
-              <div key={`${row.key}-${idx}`} className="flex gap-2">
+              <div key={`model-${idx}`} className="flex gap-2">
                 <input
                   type="text"
                   placeholder="Model"
@@ -142,7 +157,12 @@ export function BackgroundTasksSection({
                   type="number"
                   min={1}
                   value={row.value}
-                  onChange={(e) => onModelConcurrencyChange(idx, "value", Number(e.target.value))}
+                  onChange={(e) => {
+                    const parsed = Number(e.target.value);
+                    if (e.target.value !== "" && Number.isFinite(parsed) && parsed > 0) {
+                      onModelConcurrencyChange(idx, "value", parsed);
+                    }
+                  }}
                   className="w-20 px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
                 />
                 <button

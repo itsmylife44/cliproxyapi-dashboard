@@ -88,7 +88,7 @@ export function TmuxSection({
                   type="number"
                   min={20}
                   max={80}
-                  defaultValue={overrides.tmux.main_pane_size ?? 60}
+                  value={overrides.tmux.main_pane_size ?? 60}
                   onChange={(e) => onTmuxNumberChange("main_pane_size", Number(e.target.value))}
                   className="w-full px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
                 />
@@ -98,7 +98,7 @@ export function TmuxSection({
                 <input
                   type="number"
                   min={0}
-                  defaultValue={overrides.tmux.main_pane_min_width ?? 120}
+                  value={overrides.tmux.main_pane_min_width ?? 120}
                   onChange={(e) => onTmuxNumberChange("main_pane_min_width", Number(e.target.value))}
                   className="w-full px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
                 />
@@ -108,7 +108,7 @@ export function TmuxSection({
                 <input
                   type="number"
                   min={0}
-                  defaultValue={overrides.tmux.agent_pane_min_width ?? 40}
+                  value={overrides.tmux.agent_pane_min_width ?? 40}
                   onChange={(e) => onTmuxNumberChange("agent_pane_min_width", Number(e.target.value))}
                   className="w-full px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
                 />

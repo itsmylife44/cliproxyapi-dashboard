@@ -57,6 +57,7 @@ function formatRelativeTime(isoDate: string | null): string {
 
   try {
     const resetDate = new Date(isoDate);
+    if (Number.isNaN(resetDate.getTime())) return "Unknown";
     const now = new Date();
     const diffMs = resetDate.getTime() - now.getTime();
 
@@ -156,30 +157,30 @@ export function QuotaDetails({ filteredAccounts, expandedCards, onToggleCard, lo
                 <span className="truncate text-xs text-slate-200">{maskEmail(account.email)}</span>
                 <span className="truncate text-xs capitalize text-slate-300">{account.provider}</span>
                 <span className={cn("text-xs", account.error ? "text-rose-300" : account.supported ? "text-emerald-300" : "text-amber-300")}>{statusLabel}</span>
-                <div className="pr-3">
+                <span className="block pr-3">
                   {longMin !== null ? (
                     <>
                       <span className="text-xs text-slate-300">{Math.round(longMin * 100)}%</span>
-                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-700/70">
-                        <div className={cn("h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
-                      </div>
+                      <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-slate-700/70">
+                        <span className={cn("block h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
+                      </span>
                     </>
                   ) : (
                     <span className="text-xs text-slate-500">-</span>
                   )}
-                </div>
-                <div className="pr-3">
+                </span>
+                <span className="block pr-3">
                   {shortMin !== null ? (
                     <>
                       <span className="text-xs text-slate-300">{Math.round(shortMin * 100)}%</span>
-                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-700/70">
-                        <div className={cn("h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
-                      </div>
+                      <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-slate-700/70">
+                        <span className={cn("block h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
+                      </span>
                     </>
                   ) : (
                     <span className="text-xs text-slate-500">-</span>
                   )}
-                </div>
+                </span>
                </button>
 
                 {isRowExpanded && (

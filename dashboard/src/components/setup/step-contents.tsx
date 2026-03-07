@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
@@ -50,10 +50,9 @@ export function Step1Content({ done }: { done: boolean }) {
         href="/dashboard/providers"
         target="_blank"
         rel="noopener noreferrer"
+        className="inline-block text-xs px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md border glass-button-primary text-white shadow-[0_8px_20px_rgba(37,99,235,0.2)]"
       >
-        <Button variant="primary" className="text-xs">
-          Open Providers
-        </Button>
+        Open Providers
       </a>
     </div>
   );
@@ -115,6 +114,12 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
       copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
     });
   }, [createdKey]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   if (done && !createdKey) return null;
 

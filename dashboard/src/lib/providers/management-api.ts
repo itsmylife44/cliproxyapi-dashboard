@@ -23,15 +23,20 @@ export class AsyncMutex {
     while (this.locks.has(key)) {
       await this.locks.get(key);
     }
-    let release!: () => void;
-    const promise = new Promise<void>((resolve) => {
-      release = () => {
-        this.locks.delete(key);
-        resolve();
-      };
+    let released = false;
+    let resolve!: () => void;
+    const promise = new Promise<void>((r) => {
+      resolve = r;
     });
     this.locks.set(key, promise);
-    return release;
+    return () => {
+      if (released) return;
+      released = true;
+      if (this.locks.get(key) === promise) {
+        this.locks.delete(key);
+      }
+      resolve();
+    };
   }
 }
 

@@ -98,13 +98,14 @@ export async function contributeKey(
 
     let updatedPayload: unknown;
 
+    if (!isRecord(getData)) {
+      await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
+      return { ok: false, error: `Invalid Management API response for ${provider}` };
+    }
+
     if (provider === PROVIDER.OPENAI_COMPAT) {
       const responseKey = "openai-compatibility";
       const rawData = getData[responseKey];
-      if (!isRecord(getData)) {
-        await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
-        return { ok: false, error: "Invalid Management API response for OpenAI compatibility" };
-      }
       if (rawData === null || (Array.isArray(rawData) && rawData.length === 0)) {
         updatedPayload = [];
       } else if (!isOpenAICompatArray(rawData)) {
@@ -116,10 +117,6 @@ export async function contributeKey(
     } else {
       const responseKey = `${provider}-api-key`;
       const rawData = getData[responseKey];
-      if (!isRecord(getData)) {
-        await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
-        return { ok: false, error: `Invalid Management API response for ${provider}` };
-      }
 
       if (rawData === null || (Array.isArray(rawData) && rawData.length === 0)) {
         updatedPayload = [{ "api-key": trimmedKey }];

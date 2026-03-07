@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { UserPanel } from "@/components/user-panel";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface UserInfo {
   username: string;
@@ -16,7 +17,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch("/api/auth/me");
+        const res = await fetch(API_ENDPOINTS.AUTH.ME);
         if (res.ok) {
           const data = await res.json();
           setUser({ username: data.username, isAdmin: data.isAdmin ?? false });

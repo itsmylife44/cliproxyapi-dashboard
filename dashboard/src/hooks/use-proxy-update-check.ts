@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { extractApiError } from "@/lib/utils";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface ProxyVersionInfo {
   currentVersion: string;
@@ -45,7 +46,7 @@ export function useProxyUpdateCheck() {
   const checkForUpdate = useCallback(async () => {
     try {
       // Check admin status
-      const meRes = await fetch("/api/auth/me");
+      const meRes = await fetch(API_ENDPOINTS.AUTH.ME);
       if (!meRes.ok) {
         setIsAdmin(false);
         setShowPopup(false);
@@ -63,7 +64,7 @@ export function useProxyUpdateCheck() {
       setIsAdmin(true);
 
       // Check for proxy updates
-      const updateRes = await fetch("/api/update/check");
+      const updateRes = await fetch(API_ENDPOINTS.UPDATE.CHECK);
       if (!updateRes.ok) return;
       const data: ProxyVersionInfo = await updateRes.json();
 
@@ -112,7 +113,7 @@ export function useProxyUpdateCheck() {
       setIsUpdating(true);
       setUpdateError(null);
       try {
-        const res = await fetch("/api/update", {
+        const res = await fetch(API_ENDPOINTS.UPDATE.BASE, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ version, confirm: true }),

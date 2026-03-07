@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { extractApiError } from "@/lib/utils";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface UpdateInfo {
   currentVersion: string;
@@ -45,7 +46,7 @@ export function useUpdateCheck() {
   const checkForUpdate = useCallback(async () => {
     try {
       // Check admin status
-      const meRes = await fetch("/api/auth/me");
+      const meRes = await fetch(API_ENDPOINTS.AUTH.ME);
       if (!meRes.ok) {
         setIsAdmin(false);
         setShowPopup(false);
@@ -63,7 +64,7 @@ export function useUpdateCheck() {
       setIsAdmin(true);
 
       // Check for updates
-      const updateRes = await fetch("/api/update/dashboard/check");
+      const updateRes = await fetch(API_ENDPOINTS.UPDATE.DASHBOARD_CHECK);
       if (!updateRes.ok) return;
       const data: UpdateInfo = await updateRes.json();
       
@@ -111,7 +112,7 @@ export function useUpdateCheck() {
     setIsUpdating(true);
     setUpdateError(null);
     try {
-      const res = await fetch("/api/update/dashboard", {
+      const res = await fetch(API_ENDPOINTS.UPDATE.DASHBOARD, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ version, confirm: true }),

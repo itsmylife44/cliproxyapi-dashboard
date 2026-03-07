@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -14,7 +15,7 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetch("/api/setup")
+    fetch(API_ENDPOINTS.SETUP.BASE)
       .then((res) => res.json())
       .then((data) => {
         const setupRequired = data.data?.setupRequired ?? data.setupRequired;
@@ -33,7 +34,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),

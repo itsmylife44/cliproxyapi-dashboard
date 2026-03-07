@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface DashboardHeaderProps {
   onUserClick: () => void;
@@ -38,7 +39,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin }: DashboardHea
 
     async function fetchStatus() {
       try {
-        const res = await fetch("/api/proxy/status");
+        const res = await fetch(API_ENDPOINTS.PROXY.STATUS);
         if (!res.ok) throw new Error("Failed to fetch status");
         const data = await res.json();
         if (mounted) {

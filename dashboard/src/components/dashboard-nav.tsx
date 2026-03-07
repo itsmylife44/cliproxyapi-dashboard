@@ -2,9 +2,11 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useMobileSidebar } from "@/components/mobile-sidebar-context";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 function IconPlayCircle({ className }: { className?: string }) {
   return (
@@ -140,7 +142,7 @@ export function DashboardNav() {
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const res = await fetch("/api/auth/me");
+        const res = await fetch(API_ENDPOINTS.AUTH.ME);
         if (res.ok) {
           const data = await res.json();
           setIsAdmin(data.isAdmin ?? false);
@@ -195,10 +197,9 @@ export function DashboardNav() {
         <div className="mb-4">
           <div className={cn("flex", isCollapsed ? "flex-col items-center gap-2" : "items-center justify-between")}> 
             <div className={cn("flex items-center gap-3", isCollapsed && "lg:flex-col lg:gap-1")}> 
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img 
-              src="/icon.png" 
-              alt="CLIProxy Logo" 
+            <Image
+              src="/icon.png"
+              alt="CLIProxy Logo"
               width={isCollapsed ? 38 : 32}
               height={isCollapsed ? 38 : 32}
               className="rounded-md"

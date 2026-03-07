@@ -241,11 +241,23 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     saveOverrides(newOverrides);
   };
 
+  const TMUX_FIELD_RANGES: Partial<Record<keyof TmuxConfig, { min: number; max?: number }>> = {
+    main_pane_size: { min: 20, max: 80 },
+    main_pane_min_width: { min: 0 },
+    agent_pane_min_width: { min: 0 },
+  };
+
   const handleTmuxNumberChange = (field: keyof TmuxConfig, value: number) => {
     if (tmuxDebounceRef.current) clearTimeout(tmuxDebounceRef.current);
     tmuxDebounceRef.current = setTimeout(() => {
+      const range = TMUX_FIELD_RANGES[field];
+      let clamped = value;
+      if (range) {
+        clamped = Math.max(range.min, clamped);
+        if (range.max !== undefined) clamped = Math.min(range.max, clamped);
+      }
       const currentTmux = overrides.tmux ?? { enabled: true };
-      const newTmux = { ...currentTmux, [field]: value };
+      const newTmux = { ...currentTmux, [field]: clamped };
       const newOverrides = { ...overrides, tmux: newTmux };
       setOverrides(newOverrides);
       saveOverrides(newOverrides);

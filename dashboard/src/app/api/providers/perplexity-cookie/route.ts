@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
+import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { Errors } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
@@ -169,6 +170,11 @@ export async function POST(request: NextRequest) {
 
   const originError = validateOrigin(request);
   if (originError) return originError;
+
+  const rateLimit = checkRateLimitWithPreset(request, "perplexity-cookie", "PERPLEXITY_COOKIE");
+  if (!rateLimit.allowed) {
+    return Errors.rateLimited(rateLimit.retryAfterSeconds);
+  }
 
   try {
     const body: unknown = await request.json();

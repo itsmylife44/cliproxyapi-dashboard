@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
+import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { normalizeShareCode } from "@/lib/share-code";
+import { Errors } from "@/lib/errors";
 import { prisma } from "@/lib/db";
-import { logger } from "@/lib/logger";
 
 interface SubscriptionResponse {
   templateName: string;
@@ -45,7 +46,7 @@ function isUpdateSubscriptionRequest(body: unknown): body is UpdateSubscriptionR
 export async function GET() {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   try {
@@ -80,18 +81,14 @@ export async function GET() {
 
     return NextResponse.json(response);
   } catch (error) {
-    logger.error({ err: error }, "Failed to fetch subscription");
-    return NextResponse.json(
-      { error: "Failed to fetch subscription" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to fetch subscription", error);
   }
 }
 
 export async function POST(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -99,21 +96,20 @@ export async function POST(request: NextRequest) {
     return originError;
   }
 
+  const rateLimit = checkRateLimitWithPreset(request, "config-subscribe", "CONFIG_SHARING");
+  if (!rateLimit.allowed) {
+    return Errors.rateLimited(rateLimit.retryAfterSeconds);
+  }
+
   try {
     const body = await request.json();
-    
+
     if (!isSubscribeRequest(body)) {
-      return NextResponse.json(
-        { error: "Invalid request body: shareCode is required" },
-        { status: 400 }
-      );
+      return Errors.validation("shareCode is required");
     }
 
     if (!body.shareCode) {
-      return NextResponse.json(
-        { error: "shareCode is required" },
-        { status: 400 }
-      );
+      return Errors.missingFields(["shareCode"]);
     }
 
     const normalizedCode = normalizeShareCode(body.shareCode);
@@ -131,24 +127,15 @@ export async function POST(request: NextRequest) {
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found with provided share code" },
-        { status: 404 }
-      );
+      return Errors.notFound("Template");
     }
 
     if (!template.isActive) {
-      return NextResponse.json(
-        { error: "Template is not active" },
-        { status: 400 }
-      );
+      return Errors.validation("Template is not active");
     }
 
     if (template.userId === session.userId) {
-      return NextResponse.json(
-        { error: "Cannot subscribe to your own template" },
-        { status: 403 }
-      );
+      return Errors.validation("Cannot subscribe to your own template");
     }
 
     const userApiKeys = await prisma.userApiKey.findMany({
@@ -158,10 +145,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (userApiKeys.length === 0) {
-      return NextResponse.json(
-        { error: "Cannot subscribe without at least one API key. Please add an API key first." },
-        { status: 400 }
-      );
+      return Errors.validation("Cannot subscribe without at least one API key. Please add an API key first.");
     }
 
     const modelPref = await prisma.modelPreference.findUnique({
@@ -218,18 +202,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    logger.error({ err: error }, "Failed to create subscription");
-    return NextResponse.json(
-      { error: "Failed to create subscription" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to create subscription", error);
   }
 }
 
 export async function PATCH(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -241,10 +221,7 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     
     if (!isUpdateSubscriptionRequest(body)) {
-      return NextResponse.json(
-        { error: "Invalid request body: isActive is required" },
-        { status: 400 }
-      );
+      return Errors.validation("isActive is required");
     }
 
     const existingSubscription = await prisma.configSubscription.findUnique({
@@ -252,10 +229,7 @@ export async function PATCH(request: NextRequest) {
     });
 
     if (!existingSubscription) {
-      return NextResponse.json(
-        { error: "Subscription not found" },
-        { status: 404 }
-      );
+      return Errors.notFound("Subscription");
     }
 
     const subscription = await prisma.configSubscription.update({
@@ -288,18 +262,14 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    logger.error({ err: error }, "Failed to update subscription");
-    return NextResponse.json(
-      { error: "Failed to update subscription" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to update subscription", error);
   }
 }
 
 export async function DELETE(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -313,10 +283,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!existingSubscription) {
-      return NextResponse.json(
-        { error: "Subscription not found" },
-        { status: 404 }
-      );
+      return Errors.notFound("Subscription");
     }
 
     await prisma.configSubscription.delete({
@@ -325,10 +292,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error({ err: error }, "Failed to delete subscription");
-    return NextResponse.json(
-      { error: "Failed to delete subscription" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to delete subscription", error);
   }
 }

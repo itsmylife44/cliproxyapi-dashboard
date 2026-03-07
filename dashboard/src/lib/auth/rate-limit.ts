@@ -20,6 +20,14 @@ export const RATE_LIMITS = {
   API_KEYS: { limit: 10, windowMs: 60 * 1000 },             // 10 requests / 1 min
   CUSTOM_PROVIDERS: { limit: 10, windowMs: 60 * 1000 },     // 10 requests / 1 min
   CONFIG_SYNC_TOKENS: { limit: 5, windowMs: 60 * 1000 },    // 5 requests / 1 min
+  PROVIDER_KEYS: { limit: 10, windowMs: 60 * 1000 },        // 10 requests / 1 min
+  OAUTH_ACCOUNTS: { limit: 5, windowMs: 60 * 1000 },        // 5 requests / 1 min
+  OAUTH_IMPORT: { limit: 5, windowMs: 60 * 1000 },          // 5 requests / 1 min
+  CONFIG_SHARING: { limit: 5, windowMs: 60 * 1000 },        // 5 requests / 1 min
+  ADMIN_USERS: { limit: 5, windowMs: 60 * 1000 },           // 5 requests / 1 min
+  SETUP: { limit: 3, windowMs: 15 * 60 * 1000 },            // 3 attempts / 15 min
+  OAUTH_CALLBACK: { limit: 10, windowMs: 60 * 1000 },       // 10 requests / 1 min
+  PERPLEXITY_COOKIE: { limit: 5, windowMs: 60 * 1000 },     // 5 requests / 1 min
 } as const;
 
 export type RateLimitPreset = keyof typeof RATE_LIMITS;

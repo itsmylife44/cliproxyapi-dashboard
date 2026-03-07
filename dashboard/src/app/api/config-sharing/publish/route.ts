@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
+import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { generateShareCode } from "@/lib/share-code";
+import { Errors } from "@/lib/errors";
 import { prisma } from "@/lib/db";
-import { logger } from "@/lib/logger";
 
 interface PublishResponse {
   id: string;
@@ -50,7 +51,7 @@ function isUpdatePublishRequest(body: unknown): body is UpdatePublishRequest {
 export async function GET() {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   try {
@@ -64,10 +65,7 @@ export async function GET() {
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 }
-      );
+      return Errors.notFound("Template");
     }
 
     const response: PublishResponse = {
@@ -82,18 +80,14 @@ export async function GET() {
 
     return NextResponse.json(response);
   } catch (error) {
-    logger.error({ err: error }, "Failed to fetch config template");
-    return NextResponse.json(
-      { error: "Failed to fetch config template" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to fetch config template", error);
   }
 }
 
 export async function POST(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -101,14 +95,16 @@ export async function POST(request: NextRequest) {
     return originError;
   }
 
+  const rateLimit = checkRateLimitWithPreset(request, "config-publish", "CONFIG_SHARING");
+  if (!rateLimit.allowed) {
+    return Errors.rateLimited(rateLimit.retryAfterSeconds);
+  }
+
   try {
     const body = await request.json();
-    
+
     if (!isCreatePublishRequest(body)) {
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 }
-      );
+      return Errors.validation("Invalid request body");
     }
 
     const existingTemplate = await prisma.configTemplate.findUnique({
@@ -116,10 +112,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingTemplate) {
-      return NextResponse.json(
-        { error: "User already has a published template" },
-        { status: 409 }
-      );
+      return Errors.conflict("User already has a published template");
     }
 
     const shareCode = generateShareCode();
@@ -150,18 +143,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    logger.error({ err: error }, "Failed to create config template");
-    return NextResponse.json(
-      { error: "Failed to create config template" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to create config template", error);
   }
 }
 
 export async function PATCH(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -173,10 +162,7 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     
     if (!isUpdatePublishRequest(body)) {
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 }
-      );
+      return Errors.validation("Invalid request body");
     }
 
     const existingTemplate = await prisma.configTemplate.findUnique({
@@ -184,10 +170,7 @@ export async function PATCH(request: NextRequest) {
     });
 
     if (!existingTemplate) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 }
-      );
+      return Errors.notFound("Template");
     }
 
     const updateData: { name?: string; isActive?: boolean } = {};
@@ -222,18 +205,14 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    logger.error({ err: error }, "Failed to update config template");
-    return NextResponse.json(
-      { error: "Failed to update config template" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to update config template", error);
   }
 }
 
 export async function DELETE(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -247,22 +226,15 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!existingTemplate) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 }
-      );
+      return Errors.notFound("Template");
     }
 
     await prisma.configTemplate.delete({
       where: { userId: session.userId },
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ data: { success: true } });
   } catch (error) {
-    logger.error({ err: error }, "Failed to delete config template");
-    return NextResponse.json(
-      { error: "Failed to delete config template" },
-      { status: 500 }
-    );
+    return Errors.internal("Failed to delete config template", error);
   }
 }

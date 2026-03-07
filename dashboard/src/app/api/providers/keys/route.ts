@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { contributeKey, listKeysWithOwnership } from "@/lib/providers/dual-write";
 import { PROVIDER, type Provider } from "@/lib/providers/constants";
+import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { ERROR_CODE, Errors, apiError } from "@/lib/errors";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 
@@ -65,6 +66,11 @@ export async function POST(request: NextRequest) {
   const originError = validateOrigin(request);
   if (originError) {
     return originError;
+  }
+
+  const rateLimit = checkRateLimitWithPreset(request, "provider-keys", "PROVIDER_KEYS");
+  if (!rateLimit.allowed) {
+    return Errors.rateLimited(rateLimit.retryAfterSeconds);
   }
 
   try {

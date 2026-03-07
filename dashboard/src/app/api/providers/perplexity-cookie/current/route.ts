@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
 import { Errors } from "@/lib/errors";
 import { env } from "@/lib/env";
+
+function safeTokenCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization") ?? "";
@@ -16,7 +22,8 @@ export async function GET(request: NextRequest) {
     validTokens.push(env.PERPLEXITY_SIDECAR_SECRET);
   }
 
-  if (!validTokens.includes(token)) {
+  const isValid = validTokens.some((valid) => safeTokenCompare(token, valid));
+  if (!isValid) {
     return Errors.unauthorized();
   }
 

@@ -3,6 +3,21 @@ import { cookies, headers } from "next/headers";
 import { cache } from "react";
 import { verifyToken, type SessionPayload } from "./jwt";
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
+
+function parseExpiry(expiresIn: string): number {
+  const match = expiresIn.match(/^(\d+)([smhd])$/);
+  if (!match) return 7 * 24 * 60 * 60 * 1000;
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+  switch (unit) {
+    case "s": return value * 1000;
+    case "m": return value * 60 * 1000;
+    case "h": return value * 60 * 60 * 1000;
+    case "d": return value * 24 * 60 * 60 * 1000;
+    default: return 7 * 24 * 60 * 60 * 1000;
+  }
+}
 
 const SESSION_COOKIE_NAME = "session";
 
@@ -44,7 +59,7 @@ export const verifySession = cache(async (): Promise<SessionPayload | null> => {
 });
 
 export async function createSession(_payload: SessionPayload, token: string): Promise<void> {
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + parseExpiry(env.JWT_EXPIRES_IN));
   const cookieStore = await cookies();
 
   // Determine secure flag from actual request protocol.

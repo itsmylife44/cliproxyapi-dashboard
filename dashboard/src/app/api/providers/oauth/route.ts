@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
+import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { contributeOAuthAccount, listOAuthWithOwnership } from "@/lib/providers/dual-write";
 import { OAUTH_PROVIDER, type OAuthProvider } from "@/lib/providers/constants";
+import { ERROR_CODE, Errors, apiError } from "@/lib/errors";
 import { prisma } from "@/lib/db";
-import { logger } from "@/lib/logger";
 
 interface ContributeOAuthRequest {
   provider: string;
@@ -31,7 +32,7 @@ function isValidOAuthProvider(provider: string): provider is OAuthProvider {
 export async function GET() {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   try {
@@ -45,23 +46,19 @@ export async function GET() {
     const result = await listOAuthWithOwnership(session.userId, isAdmin);
 
     if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
+      return apiError(ERROR_CODE.PROVIDER_ERROR, result.error ?? "Provider error", 500);
     }
 
     return NextResponse.json({ accounts: result.accounts });
   } catch (error) {
-    logger.error({ err: error }, "GET /api/providers/oauth error");
-    return NextResponse.json(
-      { error: "Failed to fetch OAuth accounts" },
-      { status: 500 }
-    );
+    return Errors.internal("GET /api/providers/oauth error", error);
   }
 }
 
 export async function POST(request: NextRequest) {
   const session = await verifySession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Errors.unauthorized();
   }
 
   const originError = validateOrigin(request);
@@ -69,21 +66,20 @@ export async function POST(request: NextRequest) {
     return originError;
   }
 
+  const rateLimit = checkRateLimitWithPreset(request, "oauth-accounts", "OAUTH_ACCOUNTS");
+  if (!rateLimit.allowed) {
+    return Errors.rateLimited(rateLimit.retryAfterSeconds);
+  }
+
   try {
     const body = await request.json();
 
     if (!isContributeOAuthRequest(body)) {
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 }
-      );
+      return Errors.validation("Invalid request body");
     }
 
     if (!isValidOAuthProvider(body.provider)) {
-      return NextResponse.json(
-        { error: "Invalid OAuth provider" },
-        { status: 400 }
-      );
+      return apiError(ERROR_CODE.PROVIDER_INVALID, "Invalid OAuth provider", 400);
     }
 
     const result = await contributeOAuthAccount(
@@ -95,17 +91,13 @@ export async function POST(request: NextRequest) {
 
     if (!result.ok) {
       if (result.error?.includes("already registered")) {
-        return NextResponse.json({ error: result.error }, { status: 409 });
+        return Errors.conflict(result.error);
       }
-      return NextResponse.json({ error: result.error }, { status: 500 });
+      return apiError(ERROR_CODE.PROVIDER_ERROR, result.error ?? "Provider error", 500);
     }
 
     return NextResponse.json({ id: result.id }, { status: 201 });
   } catch (error) {
-    logger.error({ err: error }, "POST /api/providers/oauth error");
-    return NextResponse.json(
-      { error: "Failed to register OAuth account" },
-      { status: 500 }
-    );
+    return Errors.internal("POST /api/providers/oauth error", error);
   }
 }

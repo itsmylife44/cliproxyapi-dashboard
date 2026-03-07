@@ -45,6 +45,7 @@ const QUOTA_CRITICAL_THRESHOLD = 0.05; // 5%
 const QUOTA_WARNING_THRESHOLD = 0.20; // 20%
 
 function isDebugMode(): boolean {
+  if (process.env.NODE_ENV !== "development") return false;
   if (typeof window === "undefined") return false;
   return new URLSearchParams(window.location.search).has("debug-notifications");
 }

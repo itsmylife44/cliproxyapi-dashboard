@@ -24,12 +24,11 @@ export function LatencyIndicator() {
     let mounted = true;
 
     async function measureLatency() {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10_000);
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10_000);
         const start = performance.now();
         const res = await fetch(API_ENDPOINTS.HEALTH, { cache: "no-store", signal: controller.signal });
-        clearTimeout(timeoutId);
         const end = performance.now();
 
         if (mounted && res.ok) {
@@ -39,6 +38,8 @@ export function LatencyIndicator() {
         }
       } catch {
         if (mounted) setLatency(-1);
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 

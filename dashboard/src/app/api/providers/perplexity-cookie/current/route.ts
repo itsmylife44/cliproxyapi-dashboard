@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
 import { Errors } from "@/lib/errors";
 import { env } from "@/lib/env";
 
+const HMAC_KEY = Buffer.alloc(32);
+
 function safeTokenCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  const ha = createHmac("sha256", HMAC_KEY).update(a).digest();
+  const hb = createHmac("sha256", HMAC_KEY).update(b).digest();
+  return timingSafeEqual(ha, hb);
 }
 
 export async function GET(request: NextRequest) {

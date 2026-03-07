@@ -65,7 +65,7 @@ export function ConfigPublisher() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error || "Failed to publish config", "error");
+        showToast(data.error?.message ?? data.error ?? "Failed to publish config", "error");
         return;
       }
       setStatus(data);
@@ -92,7 +92,7 @@ export function ConfigPublisher() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error || "Failed to update name", "error");
+        showToast(data.error?.message ?? data.error ?? "Failed to update name", "error");
         return;
       }
       setStatus(data);
@@ -116,7 +116,7 @@ export function ConfigPublisher() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error || "Failed to toggle status", "error");
+        showToast(data.error?.message ?? data.error ?? "Failed to toggle status", "error");
         return;
       }
       setStatus(data);
@@ -143,7 +143,7 @@ export function ConfigPublisher() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error || "Failed to unpublish", "error");
+        showToast(data.error?.message ?? data.error ?? "Failed to unpublish", "error");
         return;
       }
       setStatus(null);

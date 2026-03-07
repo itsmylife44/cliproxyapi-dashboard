@@ -233,7 +233,7 @@ export async function DELETE(request: NextRequest) {
       where: { userId: session.userId },
     });
 
-    return NextResponse.json({ data: { success: true } });
+    return NextResponse.json({ success: true });
   } catch (error) {
     return Errors.internal("Failed to delete config template", error);
   }

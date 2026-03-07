@@ -7,6 +7,7 @@ interface DashboardHeaderProps {
   onUserClick: () => void;
   username: string;
   isAdmin: boolean;
+  externalStatus?: ProxyStatus | null;
 }
 
 interface ProxyStatus {
@@ -30,11 +31,14 @@ function formatUptime(seconds: number): string {
   return parts.join(" ");
 }
 
-export function DashboardHeader({ onUserClick, username, isAdmin }: DashboardHeaderProps) {
-  const [status, setStatus] = useState<ProxyStatus | null>(null);
+export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus }: DashboardHeaderProps) {
+  const [internalStatus, setInternalStatus] = useState<ProxyStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const hasExternalStatus = externalStatus !== undefined;
 
   useEffect(() => {
+    if (hasExternalStatus) return;
+
     let mounted = true;
 
     async function fetchStatus() {
@@ -43,12 +47,12 @@ export function DashboardHeader({ onUserClick, username, isAdmin }: DashboardHea
         if (!res.ok) throw new Error("Failed to fetch status");
         const data = await res.json();
         if (mounted) {
-          setStatus(data);
+          setInternalStatus(data);
           setLoading(false);
         }
       } catch {
         if (mounted) {
-          setStatus({ running: false });
+          setInternalStatus({ running: false });
           setLoading(false);
         }
       }
@@ -61,7 +65,10 @@ export function DashboardHeader({ onUserClick, username, isAdmin }: DashboardHea
       mounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [hasExternalStatus]);
+
+  const status = hasExternalStatus ? externalStatus : internalStatus;
+  const isLoading = hasExternalStatus ? status === null : loading;
 
   const initial = username ? username.charAt(0).toUpperCase() : "?";
 
@@ -70,7 +77,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin }: DashboardHea
       {/* Left Side: Status */}
       <div className="flex items-center gap-3 text-sm">
         <div className="flex items-center gap-2">
-          {loading ? (
+          {isLoading ? (
             <>
               <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
               <span className="text-slate-400">Checking...</span>

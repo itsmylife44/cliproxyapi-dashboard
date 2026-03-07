@@ -58,6 +58,9 @@ export default function AgentConfigEditor({
           <ConfigField label="Upstream Proxy" description="Optional SOCKS5/HTTP/HTTPS proxy for outbound requests to AI providers. Leave empty for direct connection.">
             <Input type="text" name="proxy-url" value={config["proxy-url"]} onChange={(value) => updateConfig("proxy-url", value)} placeholder="socks5://proxy:1080 or http://proxy:8080" className="font-mono" />
           </ConfigField>
+          <ConfigField label="Auth Directory" description="Directory where OAuth credential files are stored.">
+            <Input type="text" name="auth-dir" value={config["auth-dir"]} onChange={(value) => updateConfig("auth-dir", value)} placeholder="~/.cli-proxy-api" className="font-mono" />
+          </ConfigField>
           <ConfigField label="Force Model Prefix" description="Require model names to include a provider prefix">
             <Toggle enabled={config["force-model-prefix"]} onChange={(value) => updateConfig("force-model-prefix", value)} />
           </ConfigField>

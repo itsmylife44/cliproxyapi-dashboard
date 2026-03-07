@@ -121,7 +121,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
     };
   }, []);
 
-  if (done && !createdKey) return null;
+  if (done) return null;
 
   if (locked) {
     return (

@@ -6,6 +6,7 @@ import { ServiceStatus } from "@/components/monitoring/service-status";
 import { UsageStats } from "@/components/monitoring/usage-stats";
 import { LiveLogs } from "@/components/monitoring/live-logs";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useProxyStatusProvider } from "@/components/dashboard-shell";
 
 interface StatusResponse {
   running: boolean;
@@ -86,6 +87,7 @@ function parseLogLine(line: string, index: number): LogLine {
 }
 
 export default function MonitoringPage() {
+  const { provide: provideProxyStatus, clear: clearProxyStatus } = useProxyStatusProvider();
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [logs, setLogs] = useState<LogLine[]>([]);
@@ -115,6 +117,7 @@ export default function MonitoringPage() {
         if (res.ok) {
           const data = await res.json();
           setStatus(data);
+          provideProxyStatus(data);
         }
       } catch {}
     };
@@ -122,8 +125,11 @@ export default function MonitoringPage() {
     fetchStatus();
     const statusInterval = setInterval(fetchStatus, 5000);
 
-    return () => clearInterval(statusInterval);
-  }, []);
+    return () => {
+      clearInterval(statusInterval);
+      clearProxyStatus();
+    };
+  }, [provideProxyStatus, clearProxyStatus]);
 
   useEffect(() => {
     const fetchUsage = async () => {

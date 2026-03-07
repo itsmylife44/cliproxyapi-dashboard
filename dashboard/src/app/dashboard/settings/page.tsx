@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { DeployDashboard } from "@/components/deploy-dashboard";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { extractApiError } from "@/lib/utils";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { TelegramSettings } from "@/components/settings/telegram-settings";
+import { ProviderSettings } from "@/components/settings/provider-settings";
+import { PasswordSettings } from "@/components/settings/password-settings";
 
 interface ProxyUpdateInfo {
   currentVersion: string;
@@ -43,7 +46,7 @@ interface AvailableApiKey {
 export default function SettingsPage() {
   const [cliProxyVersion, setCliProxyVersion] = useState<string | null>(null);
   const [cliProxyLoading, setCliProxyLoading] = useState(true);
-  
+
   const [proxyUpdateInfo, setProxyUpdateInfo] = useState<ProxyUpdateInfo | null>(null);
   const [proxyUpdateLoading, setProxyUpdateLoading] = useState(true);
   const [proxyUpdating, setProxyUpdating] = useState(false);
@@ -52,7 +55,7 @@ export default function SettingsPage() {
   const [dashboardUpdateLoading, setDashboardUpdateLoading] = useState(true);
   const [dashboardUpdating, setDashboardUpdating] = useState(false);
   const [revokingSessions, setRevokingSessions] = useState(false);
-  
+
   const [syncTokens, setSyncTokens] = useState<SyncToken[]>([]);
   const [syncTokensLoading, setSyncTokensLoading] = useState(true);
   const [generatingToken, setGeneratingToken] = useState(false);
@@ -66,13 +69,13 @@ export default function SettingsPage() {
   const [showConfirmRevokeToken, setShowConfirmRevokeToken] = useState(false);
   const [pendingRevokeTokenId, setPendingRevokeTokenId] = useState<string | null>(null);
   const [showConfirmRevokeSessions, setShowConfirmRevokeSessions] = useState(false);
-  
+
   const { showToast } = useToast();
 
   const fetchProxyUpdateInfo = useCallback(async () => {
     setProxyUpdateLoading(true);
     try {
-      const res = await fetch("/api/update/check");
+      const res = await fetch(API_ENDPOINTS.UPDATE.CHECK);
       if (res.ok) {
         const data = await res.json();
         setProxyUpdateInfo(data);
@@ -86,7 +89,7 @@ export default function SettingsPage() {
   const fetchDashboardUpdateInfo = useCallback(async () => {
     setDashboardUpdateLoading(true);
     try {
-      const res = await fetch("/api/update/dashboard/check");
+      const res = await fetch(API_ENDPOINTS.UPDATE.DASHBOARD_CHECK);
       if (res.ok) {
         const data = await res.json();
         setDashboardUpdateInfo(data);
@@ -100,7 +103,7 @@ export default function SettingsPage() {
   const fetchSyncTokens = useCallback(async () => {
     setSyncTokensLoading(true);
     try {
-      const res = await fetch("/api/config-sync/tokens");
+      const res = await fetch(API_ENDPOINTS.CONFIG_SYNC.TOKENS);
       if (res.ok) {
         const data = await res.json();
         setSyncTokens(data.tokens || []);
@@ -118,7 +121,7 @@ export default function SettingsPage() {
     const fetchVersion = async () => {
       setCliProxyLoading(true);
       try {
-        const res = await fetch("/api/management/latest-version");
+        const res = await fetch(API_ENDPOINTS.MANAGEMENT.LATEST_VERSION);
         if (!res.ok) {
           setCliProxyVersion(null);
           setCliProxyLoading(false);
@@ -141,7 +144,6 @@ export default function SettingsPage() {
     fetchSyncTokens();
   }, [fetchProxyUpdateInfo, fetchDashboardUpdateInfo, fetchSyncTokens]);
 
-
   const confirmProxyUpdate = (version: string = "latest") => {
     setPendingProxyVersion(version);
     setShowConfirmProxyUpdate(true);
@@ -151,7 +153,7 @@ export default function SettingsPage() {
     const version = pendingProxyVersion;
     setProxyUpdating(true);
     try {
-      const res = await fetch("/api/update", {
+      const res = await fetch(API_ENDPOINTS.UPDATE.BASE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ version, confirm: true }),
@@ -180,7 +182,7 @@ export default function SettingsPage() {
   const handleDashboardUpdate = async () => {
     setDashboardUpdating(true);
     try {
-      const res = await fetch("/api/update/dashboard", {
+      const res = await fetch(API_ENDPOINTS.UPDATE.DASHBOARD, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirm: true }),
@@ -208,7 +210,7 @@ export default function SettingsPage() {
   const handleGenerateToken = async () => {
     setGeneratingToken(true);
     try {
-      const res = await fetch("/api/config-sync/tokens", {
+      const res = await fetch(API_ENDPOINTS.CONFIG_SYNC.TOKENS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -241,7 +243,7 @@ export default function SettingsPage() {
     const id = pendingRevokeTokenId;
 
     try {
-      const res = await fetch(`/api/config-sync/tokens/${id}`, {
+      const res = await fetch(`${API_ENDPOINTS.CONFIG_SYNC.TOKENS}/${id}`, {
         method: "DELETE",
       });
 
@@ -260,7 +262,7 @@ export default function SettingsPage() {
 
   const handleUpdateTokenApiKey = async (tokenId: string, apiKeyId: string) => {
     try {
-      const res = await fetch(`/api/config-sync/tokens/${tokenId}`, {
+      const res = await fetch(`${API_ENDPOINTS.CONFIG_SYNC.TOKENS}/${tokenId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ syncApiKey: apiKeyId || null }),
@@ -297,7 +299,7 @@ export default function SettingsPage() {
   const handleRevokeAllSessions = async () => {
     setRevokingSessions(true);
     try {
-      const res = await fetch("/api/admin/revoke-sessions", {
+      const res = await fetch(API_ENDPOINTS.ADMIN.REVOKE_SESSIONS, {
         method: "POST",
       });
 
@@ -324,370 +326,49 @@ export default function SettingsPage() {
         <p className="mt-1 text-sm text-slate-400">Manage account, security, config sync, and system operations.</p>
       </section>
 
+      <TelegramSettings
+        syncTokens={syncTokens}
+        syncTokensLoading={syncTokensLoading}
+        generatingToken={generatingToken}
+        generatedToken={generatedToken}
+        showInstructions={showInstructions}
+        availableApiKeys={availableApiKeys}
+        onGenerateToken={handleGenerateToken}
+        onClearGeneratedToken={() => setGeneratedToken(null)}
+        onCopyToken={handleCopyToken}
+        onToggleInstructions={() => setShowInstructions(!showInstructions)}
+        onConfirmRevokeToken={confirmRevokeToken}
+        onUpdateTokenApiKey={handleUpdateTokenApiKey}
+      />
 
-      {/* Config Sync Section */}
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-400">Config Sync</h2>
-        </div>
-
-        <div className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
-          <h3 className="text-sm font-semibold text-slate-100">Sync Tokens</h3>
-               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                 <p className="text-sm text-slate-400">
-                    Generate tokens to sync OpenCode configurations
-                  </p>
-                 <Button onClick={handleGenerateToken} disabled={generatingToken}>
-                   {generatingToken ? "Generating..." : "Generate Token"}
-                 </Button>
-               </div>
-
-               {generatedToken && (
-                 <div className="space-y-3 rounded-sm border border-emerald-500/40 bg-emerald-500/10 p-4">
-                   <div className="flex items-center justify-between">
-                     <span className="text-sm font-medium text-emerald-300">New Token Generated</span>
-                     <button
-                       type="button"
-                       onClick={() => setGeneratedToken(null)}
-                       className="text-slate-400 hover:text-slate-200"
-                     >
-                       ✕
-                     </button>
-                   </div>
-                   <div className="space-y-2">
-                     <div className="break-all rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 font-mono text-xs text-slate-200">
-                       {generatedToken}
-                     </div>
-                     <Button variant="secondary" onClick={() => handleCopyToken(generatedToken)}>
-                       Copy to Clipboard
-                     </Button>
-                   </div>
-                    <div className="rounded-sm border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-                      <span className="text-amber-200">
-                        This token will only be shown once. Copy it now.
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-               {syncTokensLoading ? (
-                 <div className="p-4 text-center text-slate-400">Loading tokens...</div>
-                ) : syncTokens.length === 0 ? (
-                 <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4 text-sm text-slate-400">
-                   No sync tokens configured. Generate one to get started.
-                 </div>
-                ) : (
-                 <div className="overflow-hidden rounded-sm border border-slate-700/70 bg-slate-900/25">
-                   {syncTokens.map((token) => (
-                      <div
-                        key={token.id}
-                        className="space-y-3 border-b border-slate-700/60 px-3 py-3 last:border-b-0"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <div className="text-sm font-medium text-slate-100">{token.name}</div>
-                              {token.isRevoked && (
-                                <span className="rounded-sm border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-300">
-                                  Revoked
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-slate-400">
-                              Created: {new Date(token.createdAt).toLocaleDateString()}
-                            </div>
-                            {token.lastUsedAt && (
-                              <div className="text-xs text-slate-500">
-                                Last used: {new Date(token.lastUsedAt).toLocaleDateString()}
-                              </div>
-                            )}
-                         </div>
-                         {!token.isRevoked && (
-                           <Button
-                             variant="danger"
-                             onClick={() => confirmRevokeToken(token.id)}
-                           >
-                             Revoke
-                           </Button>
-                         )}
-                       </div>
-                        {!token.isRevoked && (
-                           <div className="flex flex-col gap-2 border-t border-slate-700/70 pt-2 sm:flex-row sm:items-center sm:gap-3 sm:pt-1">
-                             <label htmlFor={`sync-api-key-${token.id}`} className="whitespace-nowrap text-xs font-medium text-slate-500">
-                               Sync API Key
-                             </label>
-                             <select
-                               id={`sync-api-key-${token.id}`}
-                               value={token.syncApiKeyId || ""}
-                               onChange={(e) => handleUpdateTokenApiKey(token.id, e.target.value)}
-                               className="flex-1 rounded-sm border border-slate-700/70 bg-slate-900/50 px-3 py-1.5 font-mono text-xs text-slate-200 transition-colors focus:border-blue-400/50 focus:outline-none"
-                             >
-                               {availableApiKeys.length > 0 ? (
-                                 <>
-                                   <option value="" className="bg-[#0f172a] text-slate-100">
-                                     Auto (first available)
-                                   </option>
-                                   {availableApiKeys.map((apiKey) => (
-                                     <option key={apiKey.id} value={apiKey.id} className="bg-[#0f172a] text-slate-100">
-                                       {apiKey.name}
-                                     </option>
-                                   ))}
-                                 </>
-                               ) : (
-                                 <option value="" className="bg-[#0f172a] text-slate-100">
-                                   No API keys — create one first
-                                 </option>
-                               )}
-                            </select>
-                          </div>
-                        )}
-                     </div>
-                   ))}
-                 </div>
-               )}
-             </div>
-
-              <div className="border-t border-slate-700/70 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowInstructions(!showInstructions)}
-                  className="flex items-center gap-2 text-sm font-medium text-slate-200 hover:text-slate-100"
-                >
-                 <span>{showInstructions ? "▼" : "▶"}</span>
-                 Setup Instructions
-               </button>
-               {showInstructions && (
-                  <div className="mt-3 space-y-4 rounded-sm border border-slate-700/70 bg-slate-900/30 p-4 text-sm text-slate-300">
-                    <div>
-                      <div className="font-medium text-slate-100">1. Add to opencode.jsonc plugin array:</div>
-                      <div className="mt-2 rounded-sm border border-slate-700/70 bg-slate-900/40 p-2 font-mono text-xs">
-                       {`"plugin": ["opencode-cliproxyapi-sync@latest", ...]`}
-                     </div>
-                   </div>
-                   
-                   <div>
-                     <div className="font-medium text-white mb-3">2. Create config file:</div>
-                     
-                     <div className="space-y-4">
-                        <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
-                          <div className="mb-2 text-xs font-medium text-slate-200">Standard:</div>
-                          <div className="mb-2 font-mono text-xs text-slate-400">
-                           ~/.config/opencode-cliproxyapi-sync/config.json
-                         </div>
-                          <div className="rounded-sm border border-slate-700/70 bg-slate-900/40 p-2 font-mono text-xs">
-                           {`{
-  "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
-  "syncToken": "paste-token-here",
-  "lastKnownVersion": null
-}`}
-                         </div>
-                       </div>
-
-                        <div className="rounded-sm border border-emerald-500/30 bg-emerald-500/5 p-3">
-                          <div className="mb-2 text-xs font-medium text-emerald-300">With OCX Profile:</div>
-                          <div className="mb-2 font-mono text-xs text-emerald-200/70">
-                           ~/.config/opencode/profiles/&lt;profilename&gt;/opencode-cliproxyapi-sync/config.json
-                         </div>
-                          <div className="rounded-sm border border-slate-700/70 bg-slate-900/40 p-2 font-mono text-xs">
-                           {`{
-  "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
-  "syncToken": "paste-token-here",
-  "lastKnownVersion": null
-}`}
-                         </div>
-                       </div>
-                     </div>
-                   </div>
-                   
-                    <div className="border-t border-slate-700/70 pt-2 text-xs text-slate-500">
-                      The plugin will be auto-installed from npm when opencode starts.
-                    </div>
-                  </div>
-                )}
-              </div>
-        </div>
-      </section>
-
-      {/* System Section */}
       <section className="space-y-3">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-400">System</h2>
         </div>
 
         <div className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
-                CLIProxyAPI Updates
-                {proxyUpdateInfo?.updateAvailable && (
-                  <span className="rounded-sm border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
-                    Update Available
-                  </span>
-                )}
-              </h3>
-              <div className="space-y-4">
-                {proxyUpdateLoading ? (
-                  <div className="text-slate-400">Checking for updates...</div>
-                ) : proxyUpdateInfo ? (
-                  <>
-                     <div className="grid gap-4 sm:grid-cols-2">
-                       <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-                         <div className="text-sm font-medium text-slate-400">Current Version</div>
-                         <div className="mt-1 break-all text-lg font-semibold text-slate-100">
-                           {proxyUpdateInfo.currentVersion}
-                         </div>
-                         <div className="mt-1 break-all text-xs text-slate-400">
-                           Digest: <span className="font-mono text-slate-200">{proxyUpdateInfo.currentDigest}</span>
-                         </div>
-                       </div>
-                       <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-                         <div className="text-sm font-medium text-slate-400">Latest Version</div>
-                         <div className="mt-1 break-all text-lg font-semibold text-slate-100">
-                           {proxyUpdateInfo.latestVersion}
-                         </div>
-                         <div className="mt-1 break-all text-xs text-slate-400">
-                           Digest: <span className="font-mono text-slate-200">{proxyUpdateInfo.latestDigest}</span>
-                         </div>
-                       </div>
-                     </div>
-
-                    <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-                      <Button
-                        onClick={() => confirmProxyUpdate("latest")}
-                        disabled={proxyUpdating || !proxyUpdateInfo.updateAvailable}
-                      >
-                        {proxyUpdating ? "Updating..." : proxyUpdateInfo.updateAvailable ? "Update to Latest" : "Up to Date"}
-                      </Button>
-                      <Button variant="secondary" onClick={() => fetchProxyUpdateInfo()} disabled={proxyUpdateLoading}>
-                        Refresh
-                      </Button>
-                    </div>
-
-                    {proxyUpdateInfo.availableVersions.length > 0 && (
-                      <div className="border-t border-slate-700/70 pt-4">
-                        <div className="mb-2 text-sm font-medium text-slate-400">Available Versions</div>
-                        <div className="flex flex-wrap gap-2">
-                          {proxyUpdateInfo.availableVersions.slice(0, 5).map((v) => (
-                            <button
-                              key={v}
-                              type="button"
-                              onClick={() => confirmProxyUpdate(v)}
-                              disabled={proxyUpdating}
-                              className="rounded-sm border border-slate-700/70 bg-slate-800/60 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-700/70 disabled:opacity-50"
-                            >
-                              {v}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-slate-400">Failed to check for updates</div>
-                )}
-              </div>
-
-              <div className="border-t border-slate-700/70 pt-4">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
-                  Dashboard Updates
-                  {dashboardUpdateInfo?.updateAvailable && (
-                    <span className="rounded-sm border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
-                      Update Available
-                    </span>
-                  )}
-                </h3>
-                 <div className="mt-3 space-y-4">
-                   {dashboardUpdateLoading ? (
-                     <div className="text-slate-400">Checking for updates...</div>
-                   ) : dashboardUpdateInfo ? (
-                     <>
-                       <div className="grid gap-4 sm:grid-cols-2">
-                         <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-                           <div className="text-sm font-medium text-slate-400">Current Version</div>
-                           <div className="mt-1 break-all text-lg font-semibold text-slate-100">
-                             {dashboardUpdateInfo.currentVersion}
-                           </div>
-                         </div>
-                         <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-                           <div className="text-sm font-medium text-slate-400">Latest Version</div>
-                           <div className="mt-1 break-all text-lg font-semibold text-slate-100">
-                             {dashboardUpdateInfo.latestVersion}
-                           </div>
-                           {dashboardUpdateInfo.releaseNotes && (
-                             <details className="mt-2">
-                               <summary className="cursor-pointer text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                                 View release notes
-                               </summary>
-                               <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 text-xs text-slate-300 font-mono">
-                                 {dashboardUpdateInfo.releaseNotes}
-                               </pre>
-                             </details>
-                           )}
-                         </div>
-                       </div>
-
-                      <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-                        <Button
-                          onClick={() => confirmDashboardUpdate()}
-                          disabled={dashboardUpdating || !dashboardUpdateInfo.updateAvailable}
-                        >
-                          {dashboardUpdating ? "Updating..." : dashboardUpdateInfo.updateAvailable ? "Update to Latest" : "Up to Date"}
-                        </Button>
-                        <Button variant="secondary" onClick={() => fetchDashboardUpdateInfo()} disabled={dashboardUpdateLoading}>
-                          Refresh
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-slate-400">Failed to check for updates</div>
-                  )}
-                </div>
-              </div>
+          <ProviderSettings
+            proxyUpdateInfo={proxyUpdateInfo}
+            proxyUpdateLoading={proxyUpdateLoading}
+            proxyUpdating={proxyUpdating}
+            dashboardUpdateInfo={dashboardUpdateInfo}
+            dashboardUpdateLoading={dashboardUpdateLoading}
+            dashboardUpdating={dashboardUpdating}
+            onConfirmProxyUpdate={confirmProxyUpdate}
+            onConfirmDashboardUpdate={confirmDashboardUpdate}
+            onRefreshProxyUpdate={fetchProxyUpdateInfo}
+            onRefreshDashboardUpdate={fetchDashboardUpdateInfo}
+          />
 
           <DeployDashboard />
 
-          <div className="space-y-3 rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-              <h3 className="text-sm font-semibold text-slate-100">Session Control</h3>
-              <p className="text-sm text-slate-400">
-                Immediately revoke all active user sessions across all devices.
-              </p>
-              <Button variant="danger" onClick={confirmRevokeSessions} disabled={revokingSessions}>
-                {revokingSessions ? "Revoking..." : "Force Logout All Users"}
-              </Button>
-            </div>
-
-             <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-               <h3 className="mb-3 text-sm font-semibold text-slate-100">System Information</h3>
-              <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
-                  <div className="font-medium text-slate-400">Environment</div>
-                  <div className="mt-1 text-slate-100">{process.env.NODE_ENV || "production"}</div>
-                </div>
-                <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
-                  <div className="font-medium text-slate-400">Next.js</div>
-                  <div className="mt-1 text-slate-100">16.1.6</div>
-                </div>
-                <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
-                  <div className="font-medium text-slate-400">React</div>
-                  <div className="mt-1 text-slate-100">19.2.3</div>
-                </div>
-              </div>
-
-             <div className="mt-4 border-t border-slate-700/70 pt-4">
-               <h3 className="mb-3 text-sm font-medium text-slate-400">Version Details</h3>
-               <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between text-slate-300">
-                    <span>Dashboard Version:</span>
-                    <span className="font-mono">{dashboardUpdateInfo?.currentVersion || "dev"}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-slate-300">
-                    <span>CLIProxyAPI:</span>
-                    <span className="font-mono">
-                     {cliProxyLoading ? "Loading..." : cliProxyVersion || "Unknown"}
-                   </span>
-                 </div>
-               </div>
-             </div>
-            </div>
+          <PasswordSettings
+            cliProxyVersion={cliProxyVersion}
+            cliProxyLoading={cliProxyLoading}
+            dashboardUpdateInfo={dashboardUpdateInfo}
+            revokingSessions={revokingSessions}
+            onConfirmRevokeSessions={confirmRevokeSessions}
+          />
         </div>
       </section>
 

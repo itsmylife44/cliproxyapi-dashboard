@@ -91,9 +91,15 @@ export function TmuxSection({
                   value={overrides.tmux.main_pane_size ?? 60}
                   onChange={(e) => {
                     const parsed = Number(e.target.value);
-                    if (e.target.value !== "" && Number.isFinite(parsed) && parsed >= 20 && parsed <= 80) {
+                    if (e.target.value !== "" && Number.isFinite(parsed)) {
                       onTmuxNumberChange("main_pane_size", parsed);
                     }
+                  }}
+                  onBlur={(e) => {
+                    const parsed = Number(e.target.value);
+                    if (e.target.value === "" || !Number.isFinite(parsed)) return;
+                    const clamped = Math.min(80, Math.max(20, parsed));
+                    if (clamped !== parsed) onTmuxNumberChange("main_pane_size", clamped);
                   }}
                   className="w-full px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
                 />

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import type { Notification, NotificationType } from "@/hooks/use-header-notifications";
 
 interface NotificationBellProps {
@@ -35,7 +36,7 @@ const TYPE_STYLES: Record<NotificationType, { dot: string; border: string; bg: s
   info: { dot: "bg-blue-500", border: "border-blue-500/30", bg: "bg-blue-500/5" },
 };
 
-function NotificationItem({ notification }: { notification: Notification }) {
+function NotificationItem({ notification, onNavigate }: { notification: Notification; onNavigate: () => void }) {
   const style = TYPE_STYLES[notification.type];
   const content = (
     <div className={`flex items-start gap-2.5 rounded-md border ${style.border} ${style.bg} px-3 py-2.5 transition-colors hover:brightness-125`}>
@@ -48,7 +49,7 @@ function NotificationItem({ notification }: { notification: Notification }) {
   );
 
   if (notification.link) {
-    return <a href={notification.link}>{content}</a>;
+    return <Link href={notification.link} onClick={onNavigate}>{content}</Link>;
   }
   return content;
 }
@@ -121,7 +122,7 @@ function NotificationDropdown({
         ) : (
           <div className="space-y-1.5 p-2">
             {notifications.map((n) => (
-              <NotificationItem key={n.id} notification={n} />
+              <NotificationItem key={n.id} notification={n} onNavigate={onClose} />
             ))}
           </div>
         )}

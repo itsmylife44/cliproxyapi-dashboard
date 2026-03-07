@@ -44,10 +44,62 @@ const CHECK_INTERVAL = 60_000; // 1 minute
 const QUOTA_CRITICAL_THRESHOLD = 0.05; // 5%
 const QUOTA_WARNING_THRESHOLD = 0.20; // 20%
 
+function isDebugMode(): boolean {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).has("debug-notifications");
+}
+
+const MOCK_NOTIFICATIONS: Notification[] = [
+  {
+    id: "mock-health-db",
+    type: "critical",
+    title: "Database Unreachable",
+    message: "The database connection has failed. Some features may not work.",
+    timestamp: Date.now(),
+  },
+  {
+    id: "mock-quota-critical",
+    type: "critical",
+    title: "claude Quota Exhausted",
+    message: "user@example.com — 5h Session at 2%",
+    link: "/dashboard/quota",
+    timestamp: Date.now(),
+  },
+  {
+    id: "mock-quota-warn",
+    type: "warning",
+    title: "gemini Quota Low",
+    message: "user@example.com — Daily Limit at 15%",
+    link: "/dashboard/quota",
+    timestamp: Date.now(),
+  },
+  {
+    id: "mock-update-proxy",
+    type: "info",
+    title: "Proxy Update Available",
+    message: "v1.2.3 → v1.3.0",
+    link: "/dashboard/settings",
+    timestamp: Date.now(),
+  },
+  {
+    id: "mock-update-dashboard",
+    type: "info",
+    title: "Dashboard Update Available",
+    message: "v0.9.0 → v1.0.0",
+    link: "/dashboard/settings",
+    timestamp: Date.now(),
+  },
+];
+
 export function useHeaderNotifications(isAdmin: boolean) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const checkAll = useCallback(async () => {
+    if (isDebugMode()) {
+      setNotifications(MOCK_NOTIFICATIONS);
+      return;
+    }
+
     const items: Notification[] = [];
 
     // 1. Health check (DB + Proxy connectivity)
@@ -92,7 +144,7 @@ export function useHeaderNotifications(isAdmin: boolean) {
           for (const group of account.groups) {
             if (group.remainingFraction <= QUOTA_CRITICAL_THRESHOLD) {
               items.push({
-                id: `quota-critical-${account.provider}-${group.id}`,
+                id: `quota-critical-${account.provider}-${account.auth_index}-${group.id}`,
                 type: "critical",
                 title: `${account.provider} Quota Exhausted`,
                 message: `${account.email} — ${group.label} at ${Math.round(group.remainingFraction * 100)}%`,
@@ -101,7 +153,7 @@ export function useHeaderNotifications(isAdmin: boolean) {
               });
             } else if (group.remainingFraction <= QUOTA_WARNING_THRESHOLD) {
               items.push({
-                id: `quota-warn-${account.provider}-${group.id}`,
+                id: `quota-warn-${account.provider}-${account.auth_index}-${group.id}`,
                 type: "warning",
                 title: `${account.provider} Quota Low`,
                 message: `${account.email} — ${group.label} at ${Math.round(group.remainingFraction * 100)}%`,

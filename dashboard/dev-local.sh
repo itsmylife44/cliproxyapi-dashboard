@@ -120,7 +120,7 @@ run_migrations() {
     log_info "Running Prisma migrations..."
     
     # Export DATABASE_URL for Prisma
-    export DATABASE_URL="postgresql://cliproxyapi:devpassword@localhost:5432/cliproxyapi"
+    export DATABASE_URL="postgresql://cliproxyapi:devpassword@localhost:5433/cliproxyapi"
     
     # Bootstrap: push full schema to ensure all tables exist, then mark migrations applied.
     # This is needed because the project started with db push before adopting migrations.
@@ -165,12 +165,45 @@ generate_prisma() {
     fi
 }
 
+# Function to detect the correct DOCKER_HOST for the current platform
+detect_docker_host() {
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*|Windows_NT)
+            # Windows: use Docker Desktop named pipe
+            if [ -S //./pipe/dockerDesktopLinuxEngine ] 2>/dev/null || docker context inspect desktop-linux >/dev/null 2>&1; then
+                echo "npipe:////./pipe/dockerDesktopLinuxEngine"
+            else
+                echo "npipe:////./pipe/docker_engine"
+            fi
+            ;;
+        Darwin)
+            # macOS: Docker Desktop socket
+            if [ -S "$HOME/.docker/run/docker.sock" ]; then
+                echo "unix://$HOME/.docker/run/docker.sock"
+            else
+                echo "unix:///var/run/docker.sock"
+            fi
+            ;;
+        *)
+            # Linux
+            echo "unix:///var/run/docker.sock"
+            ;;
+    esac
+}
+
 # Function to write .env.local file
 write_env_local() {
     log_info "Writing .env.local..."
-    
+
     cp "$ENV_FILE" "$ENV_LOCAL_FILE"
-    log_success ".env.local updated"
+
+    # Replace DOCKER_HOST placeholder with detected value
+    local docker_host
+    docker_host="$(detect_docker_host)"
+    sed -i.bak "s|DOCKER_HOST=.*|DOCKER_HOST=${docker_host}|" "$ENV_LOCAL_FILE"
+    rm -f "${ENV_LOCAL_FILE}.bak"
+
+    log_success ".env.local updated (DOCKER_HOST=${docker_host})"
 }
 
 # Function to start Next.js dev server

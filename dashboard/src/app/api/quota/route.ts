@@ -816,7 +816,7 @@ async function fetchClaudeQuota(
           "User-Agent": "claude-cli/1.0.83 (external, cli)",
         },
         data: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
+          model: "claude-sonnet-4-6",
           max_tokens: 1,
           messages: [{ role: "user", content: "1" }],
         }),
@@ -842,6 +842,8 @@ async function fetchClaudeQuota(
     const unified5hReset = getHeaderValue(headers, "anthropic-ratelimit-unified-5h-reset");
     const unified7dUtilization = getHeaderValue(headers, "anthropic-ratelimit-unified-7d-utilization");
     const unified7dReset = getHeaderValue(headers, "anthropic-ratelimit-unified-7d-reset");
+    const unified7dSonnetUtilization = getHeaderValue(headers, "anthropic-ratelimit-unified-7d_sonnet-utilization");
+    const unified7dSonnetReset = getHeaderValue(headers, "anthropic-ratelimit-unified-7d_sonnet-reset");
 
     if (unified5hUtilization || unified7dUtilization) {
       const unifiedGroups: QuotaGroup[] = [];
@@ -872,6 +874,7 @@ async function fetchClaudeQuota(
 
       pushUnifiedGroup("five-hour", "5h Session", unified5hUtilization, unified5hReset);
       pushUnifiedGroup("seven-day", "7d Weekly", unified7dUtilization, unified7dReset);
+      pushUnifiedGroup("seven-day-sonnet", "7d Sonnet", unified7dSonnetUtilization, unified7dSonnetReset);
 
       if (unifiedGroups.length > 0) {
         return unifiedGroups;

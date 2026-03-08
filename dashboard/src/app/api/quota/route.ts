@@ -718,9 +718,9 @@ async function fetchClaudeQuota(
     );
 
     if (usageStatusCode === 429) {
-      // 429 on the usage endpoint = API rate limit on the check itself, not actual quota exhaustion.
-      // Return a transient error so the UI can show "temporarily unavailable" instead of broken state.
-      return { error: "Rate limited by provider — quota data temporarily unavailable" };
+      // 429 on the usage endpoint = API rate limit on the check itself.
+      // Fall through to the messages endpoint below to extract quota from rate-limit headers.
+      logger.warn({ authIndex }, "Claude OAuth usage endpoint returned 429, falling back to messages endpoint");
     }
 
     if (usageStatusCode >= 200 && usageStatusCode < 300) {
@@ -806,30 +806,17 @@ async function fetchClaudeQuota(
       body: JSON.stringify({
         auth_index: authIndex,
         method: "POST",
-        url: "https://api.anthropic.com/v1/messages?beta=true",
+        url: "https://api.anthropic.com/v1/messages",
         header: {
           Authorization: "Bearer $TOKEN$",
           "anthropic-version": "2023-06-01",
-          "anthropic-beta":
-            "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14,prompt-caching-2024-07-31",
+          "anthropic-beta": "claude-code-20250219,oauth-2025-04-20",
           "anthropic-dangerous-direct-browser-access": "true",
-          "x-app": "cli",
-          "x-stainless-helper-method": "stream",
-          "x-stainless-retry-count": "0",
-          "x-stainless-runtime-version": "v24.3.0",
-          "x-stainless-package-version": "0.55.1",
-          "x-stainless-runtime": "node",
-          "x-stainless-lang": "js",
-          "x-stainless-arch": "arm64",
-          "x-stainless-os": "MacOS",
-          "x-stainless-timeout": "60",
-          "User-Agent": "claude-cli/1.0.83 (external, cli)",
-          Accept: "application/json",
-          "Accept-Encoding": "gzip, deflate, br, zstd",
           "Content-Type": "application/json",
+          "User-Agent": "claude-cli/1.0.83 (external, cli)",
         },
         data: JSON.stringify({
-          model: "claude-3-5-haiku-20241022",
+          model: "claude-haiku-4-5-20251001",
           max_tokens: 1,
           messages: [{ role: "user", content: "1" }],
         }),
@@ -850,6 +837,48 @@ async function fetchClaudeQuota(
 
     const headers = apiCallResult.header ?? apiCallResult.headers;
 
+    // Try new unified rate limit headers first (Anthropic-Ratelimit-Unified-*)
+    const unified5hUtilization = getHeaderValue(headers, "anthropic-ratelimit-unified-5h-utilization");
+    const unified5hReset = getHeaderValue(headers, "anthropic-ratelimit-unified-5h-reset");
+    const unified7dUtilization = getHeaderValue(headers, "anthropic-ratelimit-unified-7d-utilization");
+    const unified7dReset = getHeaderValue(headers, "anthropic-ratelimit-unified-7d-reset");
+
+    if (unified5hUtilization || unified7dUtilization) {
+      const unifiedGroups: QuotaGroup[] = [];
+
+      const pushUnifiedGroup = (
+        id: string,
+        label: string,
+        utilization: string | null,
+        resetEpoch: string | null
+      ) => {
+        if (!utilization) return;
+        const util = parseFloat(utilization);
+        if (isNaN(util)) return;
+
+        const remainingFraction = Math.max(0, Math.min(1, 1 - util));
+        const resetTime = resetEpoch
+          ? new Date(Number(resetEpoch) * 1000).toISOString()
+          : null;
+
+        unifiedGroups.push({
+          id,
+          label,
+          remainingFraction,
+          resetTime,
+          models: [{ id, displayName: label, remainingFraction, resetTime }],
+        });
+      };
+
+      pushUnifiedGroup("five-hour", "5h Session", unified5hUtilization, unified5hReset);
+      pushUnifiedGroup("seven-day", "7d Weekly", unified7dUtilization, unified7dReset);
+
+      if (unifiedGroups.length > 0) {
+        return unifiedGroups;
+      }
+    }
+
+    // Fallback to legacy per-resource rate limit headers
     const requestRemaining = getHeaderValue(headers, "anthropic-ratelimit-requests-remaining");
     const requestLimit = getHeaderValue(headers, "anthropic-ratelimit-requests-limit");
     const requestReset = getHeaderValue(headers, "anthropic-ratelimit-requests-reset");

@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.54](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.53...dashboard-v0.1.54) (2026-03-08)
+
+
+### Features
+
+* notification bell and latency indicator in header ([#130](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/130)) ([56d7196](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/56d719637c94196d6225601ecbbddb664be8dbe5))
+
+
+### Bug Fixes
+
+* add Gemini CLI quota support to dashboard ([#127](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/127)) ([e3f6704](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/e3f6704584c3aba512c54980bc6ae96b6899dbb9))
+* Claude OAuth quota fallback — handle 429, update model, parse unified headers ([a06327e](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a06327ee827df20797973c25549a2204475c5929))
+* remove git pull from deploy script to prevent update failures ([f9501f7](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/f9501f7ead9f0cf2f3acd9210859960189109a0e))
+* retry Claude OAuth usage endpoint before falling back to messages ([a43522a](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a43522a11a0f63ebce1fbfc04d593e00edc4fd73))
+* use Sonnet model for quota fallback, parse 7d_sonnet unified header ([6cfc219](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6cfc219fc906bdbae70e62e4929463f32af0bcaa))
+
 ## [0.1.53](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.52...dashboard-v0.1.53) (2026-03-07)
 
 

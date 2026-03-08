@@ -116,7 +116,6 @@ export default function AdminLogsPage() {
       if (data.stats) {
         setStats(data.stats);
       }
-      setCurrentPage(1);
       setLoading(false);
     } catch {
       if (signal?.aborted) return;
@@ -124,6 +123,11 @@ export default function AdminLogsPage() {
       setLoading(false);
     }
   }, [levelFilter, router, showToast]);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [levelFilter]);
 
   const totalPages = Math.ceil(logs.length / LOGS_PER_PAGE);
   const pagedLogs = logs.slice(

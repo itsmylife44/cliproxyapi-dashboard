@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { extractApiError } from "@/lib/utils";
@@ -166,133 +165,134 @@ export function DeployDashboard() {
 
   if (webhookConfigured === false) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Dashboard Deployment</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="border-l-4 border-yellow-400/60 bg-yellow-500/10 p-4 rounded-r-xl">
-              <div className="font-medium text-yellow-400 mb-2">Webhook Not Configured</div>
-              <p className="text-sm text-white/70">
-                The deployment webhook is not set up. To enable dashboard deployments from the UI,
-                you need to configure the webhook server on your host machine.
-              </p>
-            </div>
-            
-            <div className="space-y-3 text-sm text-white/80">
-              <div className="font-medium text-white">Setup Instructions:</div>
-              <ol className="list-decimal list-inside space-y-2 text-white/70">
-                <li>Install webhook: <code className="bg-white/10 px-1 rounded">apt install webhook</code></li>
-                <li>Copy webhook config from <code className="bg-white/10 px-1 rounded">infrastructure/webhook.yaml</code></li>
-                <li>Set environment variables: <code className="bg-white/10 px-1 rounded">WEBHOOK_HOST</code>, <code className="bg-white/10 px-1 rounded">DEPLOY_SECRET</code></li>
-                <li>Start webhook service: <code className="bg-white/10 px-1 rounded">webhook -hooks /path/to/webhook.yaml -port 9000</code></li>
-              </ol>
-            </div>
+      <section className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-100">Dashboard Deployment</h2>
+          <p className="text-xs text-slate-400">Deploy the latest dashboard changes from the repository</p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="rounded-sm border border-amber-500/40 bg-amber-500/10 p-3">
+            <div className="text-sm font-medium text-amber-200">Webhook Not Configured</div>
+            <p className="mt-1 text-xs text-slate-400">
+              The deployment webhook is not set up. To enable dashboard deployments from the UI,
+              you need to configure the webhook server on your host machine.
+            </p>
           </div>
-        </CardContent>
-      </Card>
+
+          <div className="space-y-3 text-sm text-slate-300">
+            <div className="font-medium text-slate-100">Setup Instructions:</div>
+            <ol className="list-decimal list-inside space-y-2 text-slate-400">
+              <li>Install webhook: <code className="rounded-sm bg-slate-800 px-1">apt install webhook</code></li>
+              <li>Copy webhook config from <code className="rounded-sm bg-slate-800 px-1">infrastructure/webhook.yaml</code></li>
+              <li>Set environment variables: <code className="rounded-sm bg-slate-800 px-1">WEBHOOK_HOST</code>, <code className="rounded-sm bg-slate-800 px-1">DEPLOY_SECRET</code></li>
+              <li>Start webhook service: <code className="rounded-sm bg-slate-800 px-1">webhook -hooks /path/to/webhook.yaml -port 9000</code></li>
+            </ol>
+          </div>
+        </div>
+      </section>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          Dashboard Deployment
+    <section className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-100">Dashboard Deployment</h2>
+          <p className="text-xs text-slate-400">Deploy the latest dashboard changes from the repository</p>
+        </div>
+        <div className="flex items-center gap-2">
           {status.status === "running" && (
-            <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-xs font-medium text-blue-400 animate-pulse">
+            <span className="rounded-sm border border-blue-500/40 bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-300 animate-pulse">
               Deploying...
             </span>
           )}
           {(status.status === "success" || status.status === "completed") && (
-            <span className="rounded-full bg-green-500/20 px-2 py-0.5 text-xs font-medium text-green-400">
+            <span className="rounded-sm border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
               Success
             </span>
           )}
           {(status.status === "error" || status.status === "failed") && (
-            <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400">
+            <span className="rounded-sm border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-300">
               Failed
             </span>
           )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-white/70">
-          Deploy the latest dashboard changes from the repository. Quick Update uses Docker cache
-          for faster builds. Full Rebuild rebuilds everything from scratch.
-        </p>
-
-        <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={() => handleDeploy(false)}
-            disabled={deploying}
-          >
-            {deploying ? "Deploying..." : "Quick Update"}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => handleDeploy(true)}
-            disabled={deploying}
-          >
-            Full Rebuild (no-cache)
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={fetchStatus}
-            disabled={deploying}
-          >
-            Refresh Status
-          </Button>
         </div>
+      </div>
 
-        {status.status !== "idle" && (
-          <div className="space-y-3 pt-4 border-t border-white/10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className={`font-medium ${getStatusColor(status.status)}`}>
-                  {status.status === "running" && (
-                    <span className="inline-block w-2 h-2 bg-blue-400 rounded-full animate-pulse mr-2" />
-                  )}
-                  {getStepLabel(status.step)}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowLog(!showLog)}
-                className="text-xs text-white/50 hover:text-white/80"
-              >
-                {showLog ? "Hide Log" : "Show Log"}
-              </button>
+      <p className="text-xs text-slate-400">
+        Quick Update uses Docker cache for faster builds. Full Rebuild rebuilds everything from scratch.
+      </p>
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          onClick={() => handleDeploy(false)}
+          disabled={deploying}
+        >
+          {deploying ? "Deploying..." : "Quick Update"}
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => handleDeploy(true)}
+          disabled={deploying}
+        >
+          Full Rebuild (no-cache)
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={fetchStatus}
+          disabled={deploying}
+        >
+          Refresh Status
+        </Button>
+      </div>
+
+      {status.status !== "idle" && (
+        <div className="space-y-3 border-t border-slate-700/70 pt-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className={`text-sm font-medium ${getStatusColor(status.status)}`}>
+                {status.status === "running" && (
+                  <span className="mr-2 inline-block size-2 animate-pulse rounded-full bg-blue-400" />
+                )}
+                {getStepLabel(status.step)}
+              </span>
             </div>
-
-            {status.message && (
-              <div className="text-sm text-white/60">{status.message}</div>
-            )}
-
-            {status.error && (
-              <div className="border-l-4 border-red-400/60 bg-red-500/10 p-3 rounded-r-xl text-sm text-red-300">
-                {status.error}
-              </div>
-            )}
-
-            {showLog && log && (
-              <pre
-                ref={logRef}
-                className="max-h-64 overflow-auto rounded-lg bg-black/50 p-3 text-xs font-mono text-white/80 whitespace-pre-wrap"
-              >
-                {log}
-              </pre>
-            )}
-
-            {status.completedAt && (
-              <div className="text-xs text-white/50">
-                Completed: {new Date(status.completedAt).toLocaleString()}
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowLog(!showLog)}
+              className="text-xs text-slate-500 hover:text-slate-300"
+            >
+              {showLog ? "Hide Log" : "Show Log"}
+            </button>
           </div>
-        )}
-      </CardContent>
+
+          {status.message && (
+            <div className="text-xs text-slate-400">{status.message}</div>
+          )}
+
+          {status.error && (
+            <div className="rounded-sm border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">
+              {status.error}
+            </div>
+          )}
+
+          {showLog && log && (
+            <pre
+              ref={logRef}
+              className="max-h-64 overflow-auto rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 font-mono text-xs text-slate-300 whitespace-pre-wrap"
+            >
+              {log}
+            </pre>
+          )}
+
+          {status.completedAt && (
+            <div className="text-xs text-slate-500">
+              Completed: {new Date(status.completedAt).toLocaleString()}
+            </div>
+          )}
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={showConfirm}
@@ -307,6 +307,6 @@ export function DeployDashboard() {
         cancelLabel="Cancel"
         variant="warning"
       />
-    </Card>
+    </section>
   );
 }

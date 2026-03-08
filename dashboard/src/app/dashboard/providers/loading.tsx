@@ -8,7 +8,7 @@ export default function ProvidersLoading() {
 
       <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, idx) => (
-          <div key={`stat-${idx}`} className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+          <div key={`stat-${idx}`} className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
             <div className="h-3 w-16 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
             <div className="mt-2 h-4 w-20 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
           </div>
@@ -63,7 +63,7 @@ export default function ProvidersLoading() {
             <div className="h-3 w-40 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
             <div className="h-3 w-64 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
           </div>
-          <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-8">
+          <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-8">
             <div className="flex items-center justify-center">
               <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-blue-500" />
             </div>
@@ -80,7 +80,7 @@ export default function ProvidersLoading() {
           <div className="h-8 w-40 animate-pulse rounded-md bg-white/5 backdrop-blur-sm" />
         </div>
 
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-3">
           <div className="h-32 animate-pulse rounded-md bg-white/5 backdrop-blur-sm" />
         </div>
       </section>

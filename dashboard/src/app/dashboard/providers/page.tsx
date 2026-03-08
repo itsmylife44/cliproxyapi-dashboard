@@ -143,28 +143,28 @@ export default function ProvidersPage() {
       </section>
 
       <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">API Keys</p>
           <p className="mt-0.5 text-xs font-semibold text-slate-100">
             {totalApiKeys} configured{currentUser ? ` · ${ownApiKeyCount} yours` : ""}
           </p>
         </div>
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Active Providers</p>
           <p className="mt-0.5 text-xs font-semibold text-slate-100">{activeApiProviders}/{API_KEY_PROVIDERS.length}</p>
         </div>
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">OAuth Accounts</p>
           <p className="mt-0.5 text-xs font-semibold text-slate-100">{oauthAccountCount} connected</p>
         </div>
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Custom Providers</p>
           <p className="mt-0.5 text-xs font-semibold text-slate-100">{customProviderCount} configured</p>
         </div>
       </section>
 
       {loading ? (
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/30 p-6">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6">
           <div className="flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
               <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-blue-500"></div>

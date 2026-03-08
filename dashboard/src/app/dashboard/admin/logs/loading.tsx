@@ -36,7 +36,7 @@ export default function AdminLogsLoading() {
       </div>
 
       {/* Log entries table */}
-      <section className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+      <section className="overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/40">
         {/* Table title bar */}
         <div className="flex items-center justify-between border-b border-slate-700/70 bg-slate-900/60 px-3 py-2">
           <div className="h-2.5 w-24 animate-pulse rounded bg-white/5 backdrop-blur-sm" />

@@ -13,7 +13,7 @@ export default function LogsLoading() {
       </section>
 
       {/* Log viewer section */}
-      <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <div className="mb-3 h-4 w-28 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
         {/* Monospace log lines */}
         <div className="rounded-sm border border-slate-700/70 bg-black/50 p-4">

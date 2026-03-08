@@ -27,7 +27,12 @@ export function PasswordSettings({
   onConfirmRevokeSessions,
 }: PasswordSettingsProps) {
   return (
-    <>
+    <section className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+      <div>
+        <h2 className="text-sm font-semibold text-slate-100">Security & System</h2>
+        <p className="text-xs text-slate-400">Session management and system information</p>
+      </div>
+
       <div className="space-y-3 rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
         <h3 className="text-sm font-semibold text-slate-100">Session Control</h3>
         <p className="text-sm text-slate-400">
@@ -71,6 +76,6 @@ export function PasswordSettings({
           </div>
         </div>
       </div>
-    </>
+    </section>
   );
 }

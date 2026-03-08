@@ -183,9 +183,9 @@ export default function ApiKeysPage() {
       </section>
 
       {loading ? (
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">Loading...</div>
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6 text-center text-sm text-slate-400">Loading...</div>
       ) : apiKeys.length === 0 ? (
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-8">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-8">
           <div className="flex flex-col items-center justify-center gap-4 text-center">
             <div className="flex size-14 items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/30">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400" aria-hidden="true">
@@ -206,7 +206,7 @@ export default function ApiKeysPage() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <section className="min-w-[600px] overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+          <section className="min-w-[600px] overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/40">
             <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1fr)_180px_160px_110px] border-b border-slate-700/70 bg-slate-900/95 backdrop-blur-sm px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
               <span>Name</span>
               <span>Created</span>

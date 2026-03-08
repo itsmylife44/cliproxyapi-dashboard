@@ -37,6 +37,7 @@ const LEVEL_COLORS: Record<string, string> = {
 const LEVEL_FILTERS = ["all", "error", "warn", "info", "debug"] as const;
 type LevelFilter = (typeof LEVEL_FILTERS)[number];
 
+const LOGS_PER_PAGE = 50;
 const EMPTY_LOGS: LogEntry[] = [];
 
 function formatRelativeTime(timestamp: number): string {
@@ -76,6 +77,7 @@ export default function AdminLogsPage() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { showToast } = useToast();
@@ -121,6 +123,17 @@ export default function AdminLogsPage() {
       setLoading(false);
     }
   }, [levelFilter, router, showToast]);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [levelFilter]);
+
+  const totalPages = Math.ceil(logs.length / LOGS_PER_PAGE);
+  const pagedLogs = logs.slice(
+    (currentPage - 1) * LOGS_PER_PAGE,
+    currentPage * LOGS_PER_PAGE
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -263,11 +276,13 @@ export default function AdminLogsPage() {
         </div>
       )}
 
-      <section className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
-        <div className="flex items-center justify-between border-b border-slate-700/70 bg-slate-900/60 px-3 py-2">
+      <section className="overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/40">
+        <div className="flex items-center justify-between border-b border-slate-700/70 bg-slate-900/50 px-3 py-2">
           <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Log Entries</span>
           <span className="text-xs text-slate-400">
-            Showing {logs.length} of {total} logs
+            {logs.length > 0
+              ? `Showing ${(currentPage - 1) * LOGS_PER_PAGE + 1}–${Math.min(currentPage * LOGS_PER_PAGE, logs.length)} of ${logs.length} logs`
+              : `${total} logs`}
           </span>
         </div>
 
@@ -280,7 +295,7 @@ export default function AdminLogsPage() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="max-h-[clamp(300px,60vh,700px)] overflow-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="sticky top-0 z-10 border-b border-slate-700/70 bg-slate-900/95 backdrop-blur-sm">
@@ -299,11 +314,13 @@ export default function AdminLogsPage() {
                 </tr>
               </thead>
               <tbody>
-                {logs.map((log, index) => (
-                  <React.Fragment key={`log-${log.time}-${index}`}>
+                {pagedLogs.map((log, index) => {
+                  const globalIndex = (currentPage - 1) * LOGS_PER_PAGE + index;
+                  return (
+                  <React.Fragment key={`log-${log.time}-${globalIndex}`}>
                     <tr
                       className="border-b border-slate-700/60 last:border-b-0 hover:bg-slate-800/30 transition-colors cursor-pointer"
-                      onClick={() => toggleRowExpansion(index)}
+                      onClick={() => toggleRowExpansion(globalIndex)}
                     >
                       <td className="px-3 py-2">
                         <div className="flex flex-col">
@@ -330,11 +347,11 @@ export default function AdminLogsPage() {
                           type="button"
                           className="text-blue-400 hover:text-blue-300 text-xs underline"
                         >
-                          {expandedRow === index ? "Hide" : "Show"}
+                          {expandedRow === globalIndex ? "Hide" : "Show"}
                         </button>
                       </td>
                     </tr>
-                    {expandedRow === index && (
+                    {expandedRow === globalIndex && (
                       <tr>
                         <td
                           colSpan={4}
@@ -347,9 +364,34 @@ export default function AdminLogsPage() {
                       </tr>
                     )}
                   </React.Fragment>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-slate-700/70 px-3 py-2">
+            <Button
+              variant="ghost"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-2.5 py-1 text-xs"
+            >
+              Previous
+            </Button>
+            <span className="text-xs text-slate-400">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="ghost"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-2.5 py-1 text-xs"
+            >
+              Next
+            </Button>
           </div>
         )}
       </section>

@@ -221,7 +221,7 @@ export default function LogsPage() {
         variant="danger"
       />
 
-      <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <h2 className="mb-3 text-sm font-semibold text-slate-100">Recent Logs</h2>
           {loading ? (
             <div className="p-4 text-center text-slate-400">Loading logs...</div>
@@ -271,7 +271,7 @@ export default function LogsPage() {
           )}
       </section>
 
-      <div className="rounded-sm border border-slate-700/70 bg-slate-900/25 p-4 text-xs text-slate-400">
+      <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4 text-xs text-slate-400">
         <strong>TIP:</strong> Logs are fetched from the CLIProxyAPI service. Recent entries are shown here.
         For complete logs, check the Docker container logs.
       </div>

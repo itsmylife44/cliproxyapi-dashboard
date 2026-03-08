@@ -349,36 +349,28 @@ export default function SettingsPage() {
         onUpdateTokenApiKey={handleUpdateTokenApiKey}
       />
 
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-400">System</h2>
-        </div>
+      <ProviderSettings
+        proxyUpdateInfo={proxyUpdateInfo}
+        proxyUpdateLoading={proxyUpdateLoading}
+        proxyUpdating={proxyUpdating}
+        dashboardUpdateInfo={dashboardUpdateInfo}
+        dashboardUpdateLoading={dashboardUpdateLoading}
+        dashboardUpdating={dashboardUpdating}
+        onConfirmProxyUpdate={confirmProxyUpdate}
+        onConfirmDashboardUpdate={confirmDashboardUpdate}
+        onRefreshProxyUpdate={fetchProxyUpdateInfo}
+        onRefreshDashboardUpdate={fetchDashboardUpdateInfo}
+      />
 
-        <div className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
-          <ProviderSettings
-            proxyUpdateInfo={proxyUpdateInfo}
-            proxyUpdateLoading={proxyUpdateLoading}
-            proxyUpdating={proxyUpdating}
-            dashboardUpdateInfo={dashboardUpdateInfo}
-            dashboardUpdateLoading={dashboardUpdateLoading}
-            dashboardUpdating={dashboardUpdating}
-            onConfirmProxyUpdate={confirmProxyUpdate}
-            onConfirmDashboardUpdate={confirmDashboardUpdate}
-            onRefreshProxyUpdate={fetchProxyUpdateInfo}
-            onRefreshDashboardUpdate={fetchDashboardUpdateInfo}
-          />
+      <DeployDashboard />
 
-          <DeployDashboard />
-
-          <PasswordSettings
-            cliProxyVersion={cliProxyVersion}
-            cliProxyLoading={cliProxyLoading}
-            dashboardUpdateInfo={dashboardUpdateInfo}
-            revokingSessions={revokingSessions}
-            onConfirmRevokeSessions={confirmRevokeSessions}
-          />
-        </div>
-      </section>
+      <PasswordSettings
+        cliProxyVersion={cliProxyVersion}
+        cliProxyLoading={cliProxyLoading}
+        dashboardUpdateInfo={dashboardUpdateInfo}
+        revokingSessions={revokingSessions}
+        onConfirmRevokeSessions={confirmRevokeSessions}
+      />
 
       <ConfirmDialog
         isOpen={showConfirmProxyUpdate}

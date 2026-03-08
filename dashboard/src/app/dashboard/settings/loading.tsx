@@ -8,7 +8,7 @@ export default function SettingsLoading() {
 
       <section className="space-y-3">
         <div className="h-3 w-40 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-3">
           <div className="mb-3 h-4 w-32 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
@@ -26,7 +26,7 @@ export default function SettingsLoading() {
 
       <section className="space-y-3">
         <div className="h-3 w-24 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
-        <div className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
+        <div className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-3">
           <div className="h-4 w-24 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -42,7 +42,7 @@ export default function SettingsLoading() {
 
       <section className="space-y-3">
         <div className="h-3 w-16 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
-        <div className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
+        <div className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-3">
           <div className="flex items-center gap-2">
             <div className="h-4 w-48 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
             <div className="h-5 w-32 animate-pulse rounded-sm bg-white/5 backdrop-blur-sm" />

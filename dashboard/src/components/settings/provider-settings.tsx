@@ -47,7 +47,12 @@ export function ProviderSettings({
   onRefreshDashboardUpdate,
 }: ProviderSettingsProps) {
   return (
-    <>
+    <section className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+      <div>
+        <h2 className="text-sm font-semibold text-slate-100">Software Updates</h2>
+        <p className="text-xs text-slate-400">Manage CLIProxyAPI and Dashboard versions</p>
+      </div>
+
       <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
         CLIProxyAPI Updates
         {proxyUpdateInfo?.updateAvailable && (
@@ -174,6 +179,6 @@ export function ProviderSettings({
           )}
         </div>
       </div>
-    </>
+    </section>
   );
 }

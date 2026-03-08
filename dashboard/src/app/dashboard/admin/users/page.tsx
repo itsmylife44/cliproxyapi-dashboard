@@ -161,7 +161,7 @@ export default function AdminUsersPage() {
       </section>
 
       {loading ? (
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">Loading...</div>
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6 text-center text-sm text-slate-400">Loading...</div>
       ) : fetchError ? (
         <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-4 text-center text-sm text-rose-200">
           Failed to load users.
@@ -170,11 +170,11 @@ export default function AdminUsersPage() {
           </button>
         </div>
       ) : users.length === 0 ? (
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4 text-sm text-slate-400">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4 text-sm text-slate-400">
           No users found. Create one to get started.
         </div>
       ) : (
-        <section className="overflow-x-auto rounded-md border border-slate-700/70 bg-slate-900/25">
+        <section className="overflow-x-auto rounded-lg border border-slate-700/70 bg-slate-900/40">
           <table className="min-w-[600px] w-full text-sm">
             <thead>
               <tr className="sticky top-0 z-10 border-b border-slate-700/70 bg-slate-900/95 backdrop-blur-sm">

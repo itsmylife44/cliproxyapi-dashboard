@@ -682,48 +682,69 @@ function toFraction(remaining: string | null, limit: string | null): number {
   return Math.max(0, Math.min(1, remainingNum / limitNum));
 }
 
-async function fetchClaudeQuota(
+const USAGE_MAX_RETRIES = 2;
+const USAGE_RETRY_DELAY_MS = 1000;
+
+async function callClaudeUsageEndpoint(
   authIndex: string
-): Promise<QuotaGroup[] | { error: string }> {
-  try {
-    const usageResponse = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/api-call`, {
+): Promise<ApiCallResponse | null> {
+  const body = JSON.stringify({
+    auth_index: authIndex,
+    method: "GET",
+    url: "https://api.anthropic.com/api/oauth/usage",
+    header: {
+      Authorization: "Bearer $TOKEN$",
+      Accept: "application/json",
+      "anthropic-version": "2023-06-01",
+      "anthropic-beta": "oauth-2025-04-20",
+      "User-Agent": "claude-cli/1.0.83 (external, cli)",
+    },
+  });
+
+  for (let attempt = 0; attempt <= USAGE_MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, USAGE_RETRY_DELAY_MS));
+    }
+
+    const res = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/api-call`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
         "Content-Type": "application/json",
       },
       signal: AbortSignal.timeout(30_000),
-      body: JSON.stringify({
-        auth_index: authIndex,
-        method: "GET",
-        url: "https://api.anthropic.com/api/oauth/usage",
-        header: {
-          Authorization: "Bearer $TOKEN$",
-          Accept: "application/json",
-          "anthropic-version": "2023-06-01",
-          "anthropic-beta": "oauth-2025-04-20",
-          "User-Agent": "claude-cli/1.0.83 (external, cli)",
-        },
-      }),
+      body,
     });
 
-    if (!usageResponse.ok) {
-      await usageResponse.body?.cancel();
-      return { error: `API call failed: ${usageResponse.status}` };
+    if (!res.ok) {
+      await res.body?.cancel();
+      return null;
     }
 
-    const usageResult = (await usageResponse.json()) as ApiCallResponse;
-    const usageStatusCode = Number(
-      usageResult.status_code ?? usageResult.statusCode ?? 0
-    );
+    const result = (await res.json()) as ApiCallResponse;
+    const statusCode = Number(result.status_code ?? result.statusCode ?? 0);
 
-    if (usageStatusCode === 429) {
-      // 429 on the usage endpoint = API rate limit on the check itself.
-      // Fall through to the messages endpoint below to extract quota from rate-limit headers.
-      logger.warn({ authIndex }, "Claude OAuth usage endpoint returned 429, falling back to messages endpoint");
+    if (statusCode !== 429) {
+      return result;
     }
 
-    if (usageStatusCode >= 200 && usageStatusCode < 300) {
+    logger.warn({ authIndex, attempt }, "Claude OAuth usage endpoint returned 429, retrying");
+  }
+
+  logger.warn({ authIndex }, "Claude OAuth usage endpoint persistently 429, falling back to messages endpoint");
+  return null;
+}
+
+async function fetchClaudeQuota(
+  authIndex: string
+): Promise<QuotaGroup[] | { error: string }> {
+  try {
+    const usageResult = await callClaudeUsageEndpoint(authIndex);
+    const usageStatusCode = usageResult
+      ? Number(usageResult.status_code ?? usageResult.statusCode ?? 0)
+      : 0;
+
+    if (usageResult && usageStatusCode >= 200 && usageStatusCode < 300) {
       const usageBody = parseApiCallBody(usageResult);
       if (typeof usageBody === "object" && usageBody !== null) {
         const usageData = usageBody as ClaudeOAuthUsageResponse;

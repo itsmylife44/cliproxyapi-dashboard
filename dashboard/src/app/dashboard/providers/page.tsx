@@ -12,6 +12,7 @@ import {
   ApiKeySection,
   PROVIDERS,
   PROVIDER_IDS,
+  type KeyWithOwnership,
   type ProviderId,
   type ProviderState,
 } from "@/components/providers/api-key-section";
@@ -33,18 +34,19 @@ const loadProvidersData = async (signal?: AbortSignal): Promise<Record<ProviderI
     [PROVIDER_IDS.OPENAI]: { keys: [] },
   };
 
-  for (const provider of PROVIDERS) {
-    try {
+  const results = await Promise.allSettled(
+    PROVIDERS.map(async (provider) => {
       const res = await fetch(`${API_ENDPOINTS.PROVIDERS.KEYS}?provider=${provider.id}`, { signal });
-      if (res.ok) {
-        const data = await res.json();
-        const keys = data.data?.keys ?? data.keys;
-        if (Array.isArray(keys)) {
-          newConfigs[provider.id] = { keys };
-        }
-      }
-    } catch (err) {
-      if (signal?.aborted) break;
+      if (!res.ok) return { id: provider.id, keys: [] as KeyWithOwnership[] };
+      const data = await res.json();
+      const keys = data.data?.keys ?? data.keys;
+      return { id: provider.id, keys: Array.isArray(keys) ? keys : [] };
+    })
+  );
+
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      newConfigs[result.value.id as ProviderId] = { keys: result.value.keys };
     }
   }
 
@@ -195,13 +197,13 @@ export default function ProvidersPage() {
           <PerplexityProSection showToast={showToast} />
 
           {currentUser?.isAdmin && (
-            <section id="provider-admin" className="space-y-3">
+            <section id="provider-admin" className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
               <div>
                 <h2 className="text-sm font-semibold text-slate-100">Admin Settings</h2>
                 <p className="text-xs text-slate-400">Provider limits and policies</p>
               </div>
 
-              <div className="rounded-md border border-slate-700/70 bg-slate-900/30 p-4">
+              <div className="rounded-md border border-slate-700/60 bg-slate-900/30 p-4">
                 <h3 className="text-sm font-semibold text-slate-100">Key Contribution Limits</h3>
                 <p className="mt-1 text-sm text-slate-400">
                   Control how many provider keys each user can contribute

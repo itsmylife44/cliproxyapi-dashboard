@@ -206,7 +206,7 @@ export function ApiKeySection({
 
   return (
     <>
-      <section id="provider-api-keys" className="space-y-3">
+      <section id="provider-api-keys" className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-slate-100">API Key Providers</h2>

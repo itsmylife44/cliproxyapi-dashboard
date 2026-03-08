@@ -334,7 +334,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
 
   return (
     <>
-      <section id="provider-custom" className="space-y-3">
+      <section id="provider-custom" className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-slate-100">Custom Providers</h2>
@@ -350,62 +350,56 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
           </div>
         </div>
 
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-3">
-          {loading ? (
-            <div className="rounded-md border border-slate-700/70 bg-slate-900/30 p-8">
-              <div className="flex items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-blue-500"></div>
-                  <p className="text-sm text-white/70">Loading custom providers...</p>
-                </div>
-              </div>
+        {loading ? (
+          <div className="flex items-center justify-center p-8">
+            <div className="flex flex-col items-center gap-3">
+              <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-blue-500"></div>
+              <p className="text-sm text-white/70">Loading custom providers...</p>
             </div>
-          ) : groups.length === 0 && ungroupedProviders.length === 0 ? (
-            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-8">
-              <div className="flex flex-col items-center justify-center gap-4 text-center">
-                <div className="flex size-14 items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/30">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="8" x2="12" y2="12" />
-                    <line x1="12" y1="16" x2="12.01" y2="16" />
-                  </svg>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-slate-100">No custom providers configured</h3>
-                  <p className="text-xs text-slate-400">Add an OpenAI-compatible provider to extend your AI capabilities</p>
-                </div>
-                <Button onClick={() => setShowCustomProviderModal(true)} className="px-3 py-1.5 text-xs">
-                  Add Custom Provider
-                </Button>
-              </div>
+          </div>
+        ) : groups.length === 0 && ungroupedProviders.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
+            <div className="flex size-14 items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/30">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <GroupList
-                groups={groups}
-                collapsedGroups={collapsedGroups}
-                onToggleCollapse={toggleCollapse}
-                onToggleGroupActive={handleToggleGroupActive}
-                onEditGroup={handleGroupEdit}
-                onDeleteGroup={(groupId) => setDeleteGroupDialog({ isOpen: true, groupId })}
-                onMoveGroupUp={handleMoveGroupUp}
-                onMoveGroupDown={handleMoveGroupDown}
-                onEditProvider={handleCustomProviderEdit}
-                onDeleteProvider={handleCustomProviderDelete}
-                onMoveProviderUp={handleMoveProviderUp}
-                onMoveProviderDown={handleMoveProviderDown}
-              />
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-slate-100">No custom providers configured</h3>
+              <p className="text-xs text-slate-400">Add an OpenAI-compatible provider to extend your AI capabilities</p>
+            </div>
+            <Button onClick={() => setShowCustomProviderModal(true)} className="px-3 py-1.5 text-xs">
+              Add Custom Provider
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <GroupList
+              groups={groups}
+              collapsedGroups={collapsedGroups}
+              onToggleCollapse={toggleCollapse}
+              onToggleGroupActive={handleToggleGroupActive}
+              onEditGroup={handleGroupEdit}
+              onDeleteGroup={(groupId) => setDeleteGroupDialog({ isOpen: true, groupId })}
+              onMoveGroupUp={handleMoveGroupUp}
+              onMoveGroupDown={handleMoveGroupDown}
+              onEditProvider={handleCustomProviderEdit}
+              onDeleteProvider={handleCustomProviderDelete}
+              onMoveProviderUp={handleMoveProviderUp}
+              onMoveProviderDown={handleMoveProviderDown}
+            />
 
-              <UngroupedList
-                providers={ungroupedProviders}
-                onEditProvider={handleCustomProviderEdit}
-                onDeleteProvider={handleCustomProviderDelete}
-                onMoveProviderUp={handleMoveProviderUp}
-                onMoveProviderDown={handleMoveProviderDown}
-              />
-            </div>
-          )}
-        </div>
+            <UngroupedList
+              providers={ungroupedProviders}
+              onEditProvider={handleCustomProviderEdit}
+              onDeleteProvider={handleCustomProviderDelete}
+              onMoveProviderUp={handleMoveProviderUp}
+              onMoveProviderDown={handleMoveProviderDown}
+            />
+          </div>
+        )}
       </section>
 
       <CustomProviderModal

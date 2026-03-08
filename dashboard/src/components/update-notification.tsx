@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Markdown from "react-markdown";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { useUpdateCheck } from "@/hooks/use-update-check";
@@ -84,8 +85,8 @@ export function UpdateNotification() {
               {updateInfo.releaseNotes && (
                 <div className="rounded-xl bg-white/5 border border-white/10 p-3">
                   <p className="text-[11px] uppercase tracking-wider text-white/40 mb-2">What&apos;s New</p>
-                  <div className="text-white/60 text-xs leading-relaxed whitespace-pre-line max-h-40 overflow-y-auto scrollbar-thin">
-                    {updateInfo.releaseNotes}
+                  <div className="prose prose-invert prose-xs max-w-none max-h-40 overflow-y-auto scrollbar-thin text-white/60 text-xs leading-relaxed [&_h1]:text-sm [&_h1]:font-semibold [&_h1]:text-white/80 [&_h2]:text-xs [&_h2]:font-semibold [&_h2]:text-white/80 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:text-white/70 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:my-0.5 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded [&_a]:text-blue-400 [&_a]:underline [&_p]:my-1">
+                    <Markdown>{updateInfo.releaseNotes}</Markdown>
                   </div>
                 </div>
               )}

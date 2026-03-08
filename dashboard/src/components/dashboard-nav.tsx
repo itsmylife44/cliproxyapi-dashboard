@@ -3,10 +3,10 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useMobileSidebar } from "@/components/mobile-sidebar-context";
-import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useAuth } from "@/hooks/use-auth";
 
 function IconPlayCircle({ className }: { className?: string }) {
   return (
@@ -138,22 +138,8 @@ const NAV_ITEMS = [
 export function DashboardNav() {
   const pathname = usePathname();
   const { isOpen, isCollapsed, toggleCollapsed, close } = useMobileSidebar();
-  const [isAdmin, setIsAdmin] = useState(false);
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      try {
-        const res = await fetch(API_ENDPOINTS.AUTH.ME);
-        if (res.ok) {
-          const data = await res.json();
-          setIsAdmin(data.isAdmin ?? false);
-        }
-      } catch {
-        setIsAdmin(false);
-      }
-    };
-
-    fetchUserInfo();
-  }, []);
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin ?? false;
 
   const handleNavClick = () => {
     close();

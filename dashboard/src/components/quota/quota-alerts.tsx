@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useAuth } from "@/hooks/use-auth";
 
 interface TelegramSettings {
   botToken: string;
@@ -44,7 +45,8 @@ interface CheckAlertResult {
 
 export function QuotaAlerts() {
   const { showToast } = useToast();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin ?? false;
   const [loaded, setLoaded] = useState(false);
   const [settings, setSettings] = useState<TelegramSettings>({
     botToken: "",
@@ -62,14 +64,13 @@ export function QuotaAlerts() {
   const [checkResult, setCheckResult] = useState<CheckAlertResult | null>(null);
 
   useEffect(() => {
+    if (!isAdmin) {
+      setLoaded(true);
+      return;
+    }
+
     const init = async () => {
       try {
-        const meRes = await fetch(API_ENDPOINTS.AUTH.ME);
-        if (!meRes.ok) return;
-        const meData = await meRes.json();
-        if (!meData.isAdmin) return;
-        setIsAdmin(true);
-
         const res = await fetch(API_ENDPOINTS.ADMIN.TELEGRAM);
         if (res.ok) {
           const data = await res.json();
@@ -89,7 +90,7 @@ export function QuotaAlerts() {
       }
     };
     init();
-  }, []);
+  }, [isAdmin]);
 
   if (!loaded || !isAdmin) return null;
 

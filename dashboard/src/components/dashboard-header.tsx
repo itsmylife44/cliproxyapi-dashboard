@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import useSWR from "swr";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { NotificationBell } from "@/components/header/notification-bell";
 import { LatencyIndicator } from "@/components/header/latency-indicator";
@@ -34,45 +34,24 @@ function formatUptime(seconds: number): string {
   return parts.join(" ");
 }
 
+const statusFetcher = (url: string) =>
+  fetch(url).then((res) => {
+    if (!res.ok) throw new Error("Failed to fetch status");
+    return res.json();
+  });
+
 export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus }: DashboardHeaderProps) {
-  const [internalStatus, setInternalStatus] = useState<ProxyStatus | null>(null);
-  const [loading, setLoading] = useState(true);
   const hasExternalStatus = externalStatus !== undefined;
   const { notifications, criticalCount, totalCount } = useHeaderNotifications(isAdmin);
 
-  useEffect(() => {
-    if (hasExternalStatus) return;
+  const { data: swrStatus, isLoading: swrLoading } = useSWR<ProxyStatus>(
+    hasExternalStatus ? null : API_ENDPOINTS.PROXY.STATUS,
+    statusFetcher,
+    { refreshInterval: 30_000, dedupingInterval: 10_000, revalidateOnFocus: false, fallbackData: undefined }
+  );
 
-    let mounted = true;
-
-    async function fetchStatus() {
-      try {
-        const res = await fetch(API_ENDPOINTS.PROXY.STATUS);
-        if (!res.ok) throw new Error("Failed to fetch status");
-        const data = await res.json();
-        if (mounted) {
-          setInternalStatus(data);
-          setLoading(false);
-        }
-      } catch {
-        if (mounted) {
-          setInternalStatus({ running: false });
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 30000);
-
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, [hasExternalStatus]);
-
-  const status = hasExternalStatus ? externalStatus : internalStatus;
-  const isLoading = hasExternalStatus ? status === null : loading;
+  const status = hasExternalStatus ? externalStatus : (swrStatus ?? null);
+  const isLoading = hasExternalStatus ? status === null : swrLoading;
 
   const initial = username ? username.charAt(0).toUpperCase() : "?";
 

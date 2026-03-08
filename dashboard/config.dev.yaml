@@ -1,14 +1,112 @@
 host: ""
 port: 8317
-auth-dir: "/root/.cli-proxy-api"
 remote-management:
   allow-remote: true
   secret-key: "devmanagementkey"
+proxy-url: ''
+force-model-prefix: false
+request-log: false
 api-keys:
-  - "sk-dev-local-testing"
+  - sk-128246479c34abf9503fcb283385081752b72a77f0fa9b5ae07a84f7eef0f436
+passthrough-headers: false
+streaming: {}
+tls:
+  enable: false
+  cert: ''
+  key: ''
+debug: false
+pprof:
+  enable: false
+  addr: 127.0.0.1:8316
+commercial-mode: false
+logging-to-file: false
+logs-max-total-size-mb: 0
+error-logs-max-files: 10
+usage-statistics-enabled: false
+disable-cooling: false
 request-retry: 3
+max-retry-credentials: 0
+max-retry-interval: 0
 quota-exceeded:
   switch-project: true
-  switch-preview-model: true
+  switch-preview-model: false
 routing:
-  strategy: "round-robin"
+  strategy: round-robin
+ws-auth: false
+gemini-api-key: null
+kiro: null
+kiro-preferred-endpoint: ''
+codex-api-key: null
+claude-api-key: null
+claude-header-defaults:
+  user-agent: ''
+  package-version: ''
+  runtime-version: ''
+  timeout: ''
+openai-compatibility: null
+vertex-api-key: null
+ampcode:
+  upstream-url: ''
+  upstream-api-key: ''
+  restrict-management-to-localhost: false
+  model-mappings: null
+  force-model-mappings: false
+oauth-model-alias:
+  github-copilot:
+    - name: claude-haiku-4.5
+      alias: claude-haiku-4-5
+      fork: true
+    - name: claude-opus-4.1
+      alias: claude-opus-4-1
+      fork: true
+    - name: claude-opus-4.5
+      alias: claude-opus-4-5
+      fork: true
+    - name: claude-opus-4.6
+      alias: claude-opus-4-6
+      fork: true
+    - name: claude-sonnet-4.5
+      alias: claude-sonnet-4-5
+      fork: true
+    - name: claude-sonnet-4.6
+      alias: claude-sonnet-4-6
+      fork: true
+  kiro:
+    - name: kiro-claude-sonnet-4-6
+      alias: claude-sonnet-4-6
+      fork: true
+    - name: kiro-claude-sonnet-4-5
+      alias: claude-sonnet-4-5-20250929
+      fork: true
+    - name: kiro-claude-sonnet-4-5
+      alias: claude-sonnet-4-5
+      fork: true
+    - name: kiro-claude-sonnet-4
+      alias: claude-sonnet-4-20250514
+      fork: true
+    - name: kiro-claude-sonnet-4
+      alias: claude-sonnet-4
+      fork: true
+    - name: kiro-claude-opus-4-6
+      alias: claude-opus-4-6
+      fork: true
+    - name: kiro-claude-opus-4-5
+      alias: claude-opus-4-5-20251101
+      fork: true
+    - name: kiro-claude-opus-4-5
+      alias: claude-opus-4-5
+      fork: true
+    - name: kiro-claude-haiku-4-5
+      alias: claude-haiku-4-5-20251001
+      fork: true
+    - name: kiro-claude-haiku-4-5
+      alias: claude-haiku-4-5
+      fork: true
+payload:
+  default: null
+  default-raw: null
+  override: null
+  override-raw: null
+  filter: null
+incognito-browser: false
+auth-dir: ~/.cli-proxy-api

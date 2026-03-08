@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, createContext, useContext } from "react";
+import { useState, useCallback, useMemo, createContext, useContext } from "react";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { UserPanel } from "@/components/user-panel";
-import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ProxyStatus {
   running: boolean;
@@ -25,31 +25,10 @@ export function useProxyStatusProvider() {
   return useContext(ProxyStatusContext);
 }
 
-interface UserInfo {
-  username: string;
-  isAdmin: boolean;
-}
-
 export function DashboardShell({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserInfo | null>(null);
+  const { user } = useAuth();
   const [panelOpen, setPanelOpen] = useState(false);
   const [externalStatus, setExternalStatus] = useState<ProxyStatus | null | undefined>(undefined);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await fetch(API_ENDPOINTS.AUTH.ME);
-        if (res.ok) {
-          const data = await res.json();
-          setUser({ username: data.username, isAdmin: data.isAdmin ?? false });
-        }
-      } catch {
-        setUser(null);
-      }
-    };
-
-    fetchUser();
-  }, []);
 
   const provide = useCallback((status: ProxyStatus | null) => {
     setExternalStatus(status);

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import useSWR from "swr";
 import { extractApiError } from "@/lib/utils";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useAuth } from "@/hooks/use-auth";
 
-interface ProxyVersionInfo {
+export interface ProxyVersionInfo {
   currentVersion: string;
   currentDigest: string;
   latestVersion: string;
@@ -16,6 +18,12 @@ interface ProxyVersionInfo {
 
 const DISMISSED_KEY = "proxy_update_dismissed";
 const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+const fetcher = (url: string) =>
+  fetch(url).then((res) => {
+    if (!res.ok) throw new Error("Failed to check updates");
+    return res.json();
+  });
 
 function getDismissedVersion(): string | null {
   if (typeof window === "undefined") return null;
@@ -36,70 +44,38 @@ function setDismissedVersion(version: string): void {
 }
 
 export function useProxyUpdateCheck() {
-  const [updateInfo, setUpdateInfo] = useState<ProxyVersionInfo | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin ?? false;
   const [showPopup, setShowPopup] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
 
-  const checkForUpdate = useCallback(async () => {
-    try {
-      // Check admin status
-      const meRes = await fetch(API_ENDPOINTS.AUTH.ME);
-      if (!meRes.ok) {
-        setIsAdmin(false);
-        setShowPopup(false);
-        setUpdateInfo(null);
-        return;
-      }
-      const meData = await meRes.json();
-
-      if (!meData.isAdmin) {
-        setIsAdmin(false);
-        setShowPopup(false);
-        setUpdateInfo(null);
-        return;
-      }
-      setIsAdmin(true);
-
-      // Check for proxy updates
-      const updateRes = await fetch(API_ENDPOINTS.UPDATE.CHECK);
-      if (!updateRes.ok) return;
-      const data: ProxyVersionInfo = await updateRes.json();
-
-      setUpdateInfo(data);
-
-      if (data.buildInProgress) {
-        setShowPopup(false);
-        return;
-      }
-
-      if (data.updateAvailable) {
-        const dismissedVersion = getDismissedVersion();
-        if (dismissedVersion !== data.latestVersion) {
-          setShowPopup(true);
-        }
-      } else {
-        setShowPopup(false);
-      }
-    } catch {
-      // Silently fail - don't bother user with update check errors
+  const { data: updateInfo = null } = useSWR<ProxyVersionInfo>(
+    isAdmin ? API_ENDPOINTS.UPDATE.CHECK : null,
+    fetcher,
+    {
+      refreshInterval: CHECK_INTERVAL,
+      dedupingInterval: 30_000,
+      revalidateOnFocus: false,
     }
-  }, []);
+  );
 
+  // Determine popup visibility when data changes
   useEffect(() => {
-    // Initial check after short delay (let dashboard load first)
-    const initialTimeout = setTimeout(checkForUpdate, 4000);
-
-    // Periodic check
-    const interval = setInterval(checkForUpdate, CHECK_INTERVAL);
-
-    return () => {
-      clearTimeout(initialTimeout);
-      clearInterval(interval);
-    };
-  }, [checkForUpdate]);
+    if (!updateInfo) {
+      setShowPopup(false);
+      return;
+    }
+    if (updateInfo.buildInProgress || !updateInfo.updateAvailable) {
+      setShowPopup(false);
+      return;
+    }
+    const dismissedVersion = getDismissedVersion();
+    if (dismissedVersion !== updateInfo.latestVersion) {
+      setShowPopup(true);
+    }
+  }, [updateInfo]);
 
   const dismissUpdate = useCallback(() => {
     if (updateInfo?.latestVersion) {

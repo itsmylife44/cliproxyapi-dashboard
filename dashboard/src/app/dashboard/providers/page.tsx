@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { extractApiError } from "@/lib/utils";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useAuth } from "@/hooks/use-auth";
 import {
   API_KEY_PROVIDERS,
   ApiKeySection,
@@ -51,7 +52,11 @@ const loadProvidersData = async (signal?: AbortSignal): Promise<Record<ProviderI
 };
 
 export default function ProvidersPage() {
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const { user: authUser } = useAuth();
+  const currentUser = useMemo<CurrentUser | null>(
+    () => authUser ? { id: authUser.id, username: authUser.username, isAdmin: authUser.isAdmin } : null,
+    [authUser?.id, authUser?.username, authUser?.isAdmin]
+  );
   const [configs, setConfigs] = useState<Record<ProviderId, ProviderState>>(() => ({
     [PROVIDER_IDS.CLAUDE]: { keys: [] },
     [PROVIDER_IDS.GEMINI]: { keys: [] },
@@ -63,21 +68,6 @@ export default function ProvidersPage() {
   const [oauthAccountCount, setOauthAccountCount] = useState(0);
   const [customProviderCount, setCustomProviderCount] = useState(0);
   const { showToast } = useToast();
-
-  const loadCurrentUser = useCallback(async (signal?: AbortSignal): Promise<CurrentUser | null> => {
-    try {
-      const res = await fetch(API_ENDPOINTS.AUTH.ME, { signal });
-      if (res.ok) {
-        const data = await res.json();
-        const user = { id: data.id, username: data.username, isAdmin: data.isAdmin };
-        setCurrentUser(user);
-        return user;
-      }
-    } catch (err) {
-      if (signal?.aborted) return null;
-    }
-    return null;
-  }, []);
 
   const loadMaxKeysPerUser = useCallback(async (isAdminUser: boolean, signal?: AbortSignal) => {
     if (!isAdminUser) return;
@@ -108,13 +98,12 @@ export default function ProvidersPage() {
   useEffect(() => {
     const controller = new AbortController();
     const load = async () => {
-      const user = await loadCurrentUser(controller.signal);
       const newConfigs = await loadProvidersData(controller.signal);
       if (controller.signal.aborted) return;
       setConfigs(newConfigs);
       setLoading(false);
 
-      if (user?.isAdmin) {
+      if (currentUser?.isAdmin) {
         await loadMaxKeysPerUser(true, controller.signal);
       }
     };
@@ -125,7 +114,7 @@ export default function ProvidersPage() {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [loadCurrentUser, loadMaxKeysPerUser]);
+  }, [currentUser, loadMaxKeysPerUser]);
 
   const providerStats = API_KEY_PROVIDERS.map((provider) => ({
     id: provider.id,

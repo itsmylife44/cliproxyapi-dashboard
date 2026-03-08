@@ -100,7 +100,7 @@ wait_for_cliproxyapi() {
     local attempt=0
     
     while [ $attempt -lt $max_attempts ]; do
-        if curl -s -f http://localhost:28317/ >/dev/null 2>&1; then
+        if curl -s -o /dev/null -w '%{http_code}' http://localhost:28317/ 2>/dev/null | grep -q '200'; then
             log_success "CLIProxyAPI is ready"
             return 0
         fi

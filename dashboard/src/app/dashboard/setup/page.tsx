@@ -102,7 +102,7 @@ export default function SetupWizardPage() {
       </section>
 
       {error && !loading && (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+        <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-300">
           {error}
         </div>
       )}

@@ -249,7 +249,7 @@ export default function UsagePage() {
       />
 
       {loading ? (
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6 text-center text-sm text-slate-400">
           Loading statistics...
         </div>
       ) : !usageData ? (
@@ -259,19 +259,19 @@ export default function UsagePage() {
       ) : (
         <>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+            <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Requests</p>
               <p className="mt-0.5 text-xs font-semibold text-slate-100">{usageData.totals.totalRequests.toLocaleString()}</p>
             </div>
-            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+            <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Successful</p>
               <p className="mt-0.5 text-xs font-semibold text-emerald-300">{usageData.totals.successCount.toLocaleString()}</p>
             </div>
-            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+            <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Failed</p>
               <p className="mt-0.5 text-xs font-semibold text-rose-300">{usageData.totals.failureCount.toLocaleString()}</p>
             </div>
-            <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+            <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Tokens</p>
               <p className="mt-0.5 text-xs font-semibold text-slate-100">{usageData.totals.totalTokens.toLocaleString()}</p>
             </div>
@@ -279,15 +279,15 @@ export default function UsagePage() {
 
           {hasInputOutputBreakdown && (
             <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-              <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+              <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Input Tokens</p>
                 <p className="mt-0.5 text-xs font-semibold text-slate-100">{usageData.totals.inputTokens.toLocaleString()}</p>
               </div>
-              <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+              <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Output Tokens</p>
                 <p className="mt-0.5 text-xs font-semibold text-slate-100">{usageData.totals.outputTokens.toLocaleString()}</p>
               </div>
-              <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+              <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Tokens</p>
                 <p className="mt-0.5 text-xs font-semibold text-slate-100">{usageData.totals.totalTokens.toLocaleString()}</p>
               </div>

@@ -19,7 +19,7 @@ export default function ConfigLoading() {
       <div className="h-10 animate-pulse rounded-sm border border-slate-700/70 bg-white/5 backdrop-blur-sm" />
 
       {/* General Settings section */}
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <div className="mb-3 h-3 w-36 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 5 }).map((_, idx) => (
@@ -33,7 +33,7 @@ export default function ConfigLoading() {
       </section>
 
       {/* Streaming section */}
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <div className="mb-3 h-3 w-24 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 3 }).map((_, idx) => (
@@ -47,7 +47,7 @@ export default function ConfigLoading() {
       </section>
 
       {/* Retry & Resilience section */}
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <div className="mb-3 h-3 w-40 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 5 }).map((_, idx) => (
@@ -61,7 +61,7 @@ export default function ConfigLoading() {
       </section>
 
       {/* Logging section */}
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <div className="mb-3 h-3 w-20 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, idx) => (
@@ -75,7 +75,7 @@ export default function ConfigLoading() {
       </section>
 
       {/* Advanced raw JSON section */}
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <div className="flex items-center justify-between">
           <div className="h-3 w-48 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
           <div className="h-7 w-28 animate-pulse rounded-md bg-white/5 backdrop-blur-sm" />

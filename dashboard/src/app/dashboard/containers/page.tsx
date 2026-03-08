@@ -201,7 +201,7 @@ export default function ContainersPage() {
       </section>
 
       {loading ? (
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">Loading containers...</div>
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6 text-center text-sm text-slate-400">Loading containers...</div>
       ) : (
         <>
           {fetchError && (
@@ -209,9 +209,9 @@ export default function ContainersPage() {
           )}
 
           {containers.length === 0 && !fetchError ? (
-            <div className="rounded-md border border-white/10 bg-white/5 p-8 backdrop-blur-md">
+            <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-8">
               <div className="flex flex-col items-center justify-center gap-4 text-center">
-                <div className="flex size-14 items-center justify-center rounded-full border border-white/10 bg-white/5">
+                <div className="flex size-14 items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/30">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400" aria-hidden="true">
                     <rect x="2" y="6" width="20" height="12" rx="2" />
                     <path d="M6 12h.01M10 12h.01M14 12h.01" />
@@ -225,7 +225,7 @@ export default function ContainersPage() {
             </div>
           ) : (
           <div className="overflow-x-auto">
-            <div className="min-w-[600px] divide-y divide-slate-700/60 overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+            <div className="min-w-[600px] divide-y divide-slate-700/60 overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/40">
               <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1.2fr)_80px_100px_100px_minmax(140px,auto)] border-b border-slate-700/70 bg-slate-900/95 backdrop-blur-sm px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
                 <span>Container</span>
                 <span>State</span>
@@ -280,7 +280,7 @@ export default function ContainersPage() {
           )}
 
           {selectedContainer && (
-            <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+            <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-slate-100">Logs: {selectedContainerInfo?.displayName || selectedContainer}</h2>
                 <div className="flex gap-2">

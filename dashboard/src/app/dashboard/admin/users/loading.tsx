@@ -13,7 +13,7 @@ export default function AdminUsersLoading() {
       </section>
 
       {/* Table */}
-      <section className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+      <section className="overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/40">
         {/* Table header */}
         <div className="flex items-center gap-4 border-b border-slate-700/70 bg-slate-900/60 px-3 py-2">
           {Array.from({ length: 4 }).map((_, idx) => (

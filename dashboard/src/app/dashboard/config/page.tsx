@@ -322,7 +322,7 @@ export default function ConfigPage() {
         <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
           <h1 className="text-xl font-semibold tracking-tight text-slate-100">Configuration</h1>
         </section>
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6">
           <div className="flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
               <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-blue-500"></div>
@@ -340,7 +340,7 @@ export default function ConfigPage() {
         <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
           <h1 className="text-xl font-semibold tracking-tight text-slate-100">Configuration</h1>
         </section>
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4 text-center">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4 text-center">
           <p className="text-slate-300">Failed to load configuration</p>
           <Button onClick={fetchConfig} className="mt-4 px-2.5 py-1 text-xs">
             Retry

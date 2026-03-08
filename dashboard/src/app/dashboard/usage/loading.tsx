@@ -37,7 +37,7 @@ export default function UsageLoading() {
       {/* Stat cards */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
         {Array.from({ length: 4 }).map((_, idx) => (
-          <div key={`stat-${idx}`} className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2.5 py-2">
+          <div key={`stat-${idx}`} className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
             <div className="h-2.5 w-24 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
             <div className="mt-1.5 h-4 w-16 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
           </div>
@@ -47,7 +47,7 @@ export default function UsageLoading() {
       {/* Charts 2x2 */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {Array.from({ length: 4 }).map((_, idx) => (
-          <div key={`chart-${idx}`} className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+          <div key={`chart-${idx}`} className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
             <div className="mb-3 h-4 w-32 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
             <div className="h-[220px] animate-pulse rounded-md bg-white/5 backdrop-blur-sm" />
           </div>
@@ -57,7 +57,7 @@ export default function UsageLoading() {
       {/* Usage by API Key table */}
       <section className="space-y-2">
         <div className="h-3 w-32 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
-        <div className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
+        <div className="overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/40">
           {/* Table header */}
           <div className="flex items-center gap-4 border-b border-slate-700/70 bg-slate-900/60 px-3 py-2">
             <div className="h-2.5 w-8 animate-pulse rounded bg-white/5 backdrop-blur-sm" />

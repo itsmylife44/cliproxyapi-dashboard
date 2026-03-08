@@ -7,7 +7,7 @@ export default function MonitoringLoading() {
       </section>
 
       {/* Service Status */}
-      <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <div className="mb-3 h-4 w-32 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -25,7 +25,7 @@ export default function MonitoringLoading() {
       </section>
 
       {/* Usage Statistics */}
-      <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <div className="mb-3 h-4 w-36 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
         {/* Stat cards */}
         <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
@@ -39,7 +39,7 @@ export default function MonitoringLoading() {
         {/* 2 chart sections */}
         <div className="mt-4 space-y-3">
           {Array.from({ length: 2 }).map((_, idx) => (
-            <div key={`chart-${idx}`} className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+            <div key={`chart-${idx}`} className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
               <div className="mb-3 h-4 w-36 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
               <div className="h-[200px] animate-pulse rounded-md bg-white/5 backdrop-blur-sm" />
             </div>
@@ -48,7 +48,7 @@ export default function MonitoringLoading() {
       </section>
 
       {/* Live Logs */}
-      <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <div className="mb-3 flex items-center justify-between">
           <div className="h-4 w-24 animate-pulse rounded bg-white/5 backdrop-blur-sm" />
           <div className="h-7 w-16 animate-pulse rounded-md bg-white/5 backdrop-blur-sm" />

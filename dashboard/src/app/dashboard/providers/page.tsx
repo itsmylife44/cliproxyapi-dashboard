@@ -195,13 +195,13 @@ export default function ProvidersPage() {
           <PerplexityProSection showToast={showToast} />
 
           {currentUser?.isAdmin && (
-            <section id="provider-admin" className="space-y-3">
+            <section id="provider-admin" className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
               <div>
                 <h2 className="text-sm font-semibold text-slate-100">Admin Settings</h2>
                 <p className="text-xs text-slate-400">Provider limits and policies</p>
               </div>
 
-              <div className="rounded-md border border-slate-700/70 bg-slate-900/30 p-4">
+              <div className="rounded-md border border-slate-700/60 bg-slate-900/30 p-4">
                 <h3 className="text-sm font-semibold text-slate-100">Key Contribution Limits</h3>
                 <p className="mt-1 text-sm text-slate-400">
                   Control how many provider keys each user can contribute

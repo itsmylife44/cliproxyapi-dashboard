@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import useSWR from "swr";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { NotificationBell } from "@/components/header/notification-bell";
+import { LatencyIndicator } from "@/components/header/latency-indicator";
+import { useHeaderNotifications } from "@/hooks/use-header-notifications";
 
 interface DashboardHeaderProps {
   onUserClick: () => void;
@@ -18,7 +21,7 @@ interface ProxyStatus {
 
 function formatUptime(seconds: number): string {
   if (seconds <= 0) return "0m";
-  
+
   const d = Math.floor(seconds / (3600 * 24));
   const h = Math.floor((seconds % (3600 * 24)) / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -31,50 +34,30 @@ function formatUptime(seconds: number): string {
   return parts.join(" ");
 }
 
+const statusFetcher = (url: string) =>
+  fetch(url).then((res) => {
+    if (!res.ok) throw new Error("Failed to fetch status");
+    return res.json();
+  });
+
 export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus }: DashboardHeaderProps) {
-  const [internalStatus, setInternalStatus] = useState<ProxyStatus | null>(null);
-  const [loading, setLoading] = useState(true);
   const hasExternalStatus = externalStatus !== undefined;
+  const { notifications, criticalCount, totalCount } = useHeaderNotifications(isAdmin);
 
-  useEffect(() => {
-    if (hasExternalStatus) return;
+  const { data: swrStatus, isLoading: swrLoading } = useSWR<ProxyStatus>(
+    hasExternalStatus ? null : API_ENDPOINTS.PROXY.STATUS,
+    statusFetcher,
+    { refreshInterval: 30_000, dedupingInterval: 10_000, revalidateOnFocus: false, fallbackData: undefined }
+  );
 
-    let mounted = true;
-
-    async function fetchStatus() {
-      try {
-        const res = await fetch(API_ENDPOINTS.PROXY.STATUS);
-        if (!res.ok) throw new Error("Failed to fetch status");
-        const data = await res.json();
-        if (mounted) {
-          setInternalStatus(data);
-          setLoading(false);
-        }
-      } catch {
-        if (mounted) {
-          setInternalStatus({ running: false });
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 30000);
-
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, [hasExternalStatus]);
-
-  const status = hasExternalStatus ? externalStatus : internalStatus;
-  const isLoading = hasExternalStatus ? status === null : loading;
+  const status = hasExternalStatus ? externalStatus : (swrStatus ?? null);
+  const isLoading = hasExternalStatus ? status === null : swrLoading;
 
   const initial = username ? username.charAt(0).toUpperCase() : "?";
 
   return (
     <header className="w-full bg-slate-900/40 border-b border-slate-700/70 backdrop-blur-sm py-2.5 px-4 lg:px-6 rounded-lg mb-4 flex items-center justify-between">
-      {/* Left Side: Status */}
+      {/* Left Side: Status + Latency */}
       <div className="flex items-center gap-3 text-sm">
         <div className="flex items-center gap-2">
           {isLoading ? (
@@ -94,37 +77,54 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
             </>
           )}
         </div>
-        
+
         {status?.running && status.uptime != null && (
           <>
             <div className="w-px h-4 bg-slate-700" />
             <span className="text-slate-400 text-xs">
-              Proxy Uptime: {formatUptime(status.uptime)}
+              Uptime: {formatUptime(status.uptime)}
             </span>
+          </>
+        )}
+
+        {status?.running && (
+          <>
+            <div className="hidden sm:block w-px h-4 bg-slate-700" />
+            <div className="hidden sm:block">
+              <LatencyIndicator />
+            </div>
           </>
         )}
       </div>
 
-      {/* Right Side: User */}
-      <button 
-        onClick={onUserClick}
-        aria-label="User settings"
-        className="flex items-center gap-3 group transition-all"
-      >
-        <div className="hidden sm:flex flex-col items-end">
-          <span className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors">
-            {username}
-          </span>
-          {isAdmin && (
-            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">
-              Admin
+      {/* Right Side: Notifications + User */}
+      <div className="flex items-center gap-2">
+        <NotificationBell
+          notifications={notifications}
+          criticalCount={criticalCount}
+          totalCount={totalCount}
+        />
+
+        <button
+          onClick={onUserClick}
+          aria-label="User settings"
+          className="flex items-center gap-3 group transition-all"
+        >
+          <div className="hidden sm:flex flex-col items-end">
+            <span className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors">
+              {username}
             </span>
-          )}
-        </div>
-        <div className="w-9 h-9 rounded-full bg-slate-800/60 border border-slate-600/50 flex items-center justify-center text-sm font-medium text-slate-200 group-hover:border-blue-400/50 group-hover:shadow-[0_0_10px_rgba(96,165,250,0.2)] transition-all">
-          {initial}
-        </div>
-      </button>
+            {isAdmin && (
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">
+                Admin
+              </span>
+            )}
+          </div>
+          <div className="w-9 h-9 rounded-full bg-slate-800/60 border border-slate-600/50 flex items-center justify-center text-sm font-medium text-slate-200 group-hover:border-blue-400/50 group-hover:shadow-[0_0_10px_rgba(96,165,250,0.2)] transition-all">
+            {initial}
+          </div>
+        </button>
+      </div>
     </header>
   );
 }

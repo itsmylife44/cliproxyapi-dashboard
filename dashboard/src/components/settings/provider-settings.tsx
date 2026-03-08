@@ -1,5 +1,6 @@
 "use client";
 
+import Markdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 
 interface ProxyUpdateInfo {
@@ -148,9 +149,9 @@ export function ProviderSettings({
                       <summary className="cursor-pointer text-xs text-blue-400 hover:text-blue-300 transition-colors">
                         View release notes
                       </summary>
-                      <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 text-xs text-slate-300 font-mono">
-                        {dashboardUpdateInfo.releaseNotes}
-                      </pre>
+                      <div className="mt-2 max-h-60 overflow-auto rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 text-xs text-slate-300 prose prose-invert prose-xs max-w-none [&_h1]:text-sm [&_h1]:font-semibold [&_h1]:text-slate-100 [&_h2]:text-xs [&_h2]:font-semibold [&_h2]:text-slate-200 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:text-slate-300 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:my-0.5 [&_code]:bg-slate-800 [&_code]:px-1 [&_code]:rounded [&_a]:text-blue-400 [&_a]:underline [&_p]:my-1">
+                        <Markdown>{dashboardUpdateInfo.releaseNotes}</Markdown>
+                      </div>
                     </details>
                   )}
                 </div>

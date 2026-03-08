@@ -171,7 +171,7 @@ export function ModelSelector({
 
   return (
     <div
-      className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl"
+      className="rounded-lg border border-slate-700/70 bg-slate-900/40"
       data-testid="model-selector"
     >
       <div className="flex items-center justify-between gap-3 p-4">

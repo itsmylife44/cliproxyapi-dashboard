@@ -291,7 +291,7 @@ export default function AdminLogsPage() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="max-h-[clamp(300px,60vh,700px)] overflow-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="sticky top-0 z-10 border-b border-slate-700/70 bg-slate-900/95 backdrop-blur-sm">

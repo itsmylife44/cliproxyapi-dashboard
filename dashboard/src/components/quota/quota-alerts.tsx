@@ -45,7 +45,7 @@ interface CheckAlertResult {
 
 export function QuotaAlerts() {
   const { showToast } = useToast();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const isAdmin = user?.isAdmin ?? false;
   const [loaded, setLoaded] = useState(false);
   const [settings, setSettings] = useState<TelegramSettings>({
@@ -64,6 +64,7 @@ export function QuotaAlerts() {
   const [checkResult, setCheckResult] = useState<CheckAlertResult | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!isAdmin) {
       setLoaded(true);
       return;
@@ -90,9 +91,9 @@ export function QuotaAlerts() {
       }
     };
     init();
-  }, [isAdmin]);
+  }, [isAdmin, authLoading]);
 
-  if (!loaded || !isAdmin) return null;
+  if (authLoading || !loaded || !isAdmin) return null;
 
   const handleSave = async () => {
     setSaving(true);

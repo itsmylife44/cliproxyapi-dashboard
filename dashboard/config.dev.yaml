@@ -7,7 +7,7 @@ proxy-url: ''
 force-model-prefix: false
 request-log: false
 api-keys:
-  - sk-128246479c34abf9503fcb283385081752b72a77f0fa9b5ae07a84f7eef0f436
+  - sk-dev-placeholder-replace-with-real-key
 passthrough-headers: false
 streaming: {}
 tls:

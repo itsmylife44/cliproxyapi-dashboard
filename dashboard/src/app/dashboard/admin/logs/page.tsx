@@ -263,8 +263,8 @@ export default function AdminLogsPage() {
         </div>
       )}
 
-      <section className="overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/25">
-        <div className="flex items-center justify-between border-b border-slate-700/70 bg-slate-900/60 px-3 py-2">
+      <section className="overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/40">
+        <div className="flex items-center justify-between border-b border-slate-700/70 bg-slate-900/50 px-3 py-2">
           <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Log Entries</span>
           <span className="text-xs text-slate-400">
             Showing {logs.length} of {total} logs

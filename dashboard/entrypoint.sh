@@ -7,7 +7,25 @@ const { Client } = require('pg');
 const client = new Client({ connectionString: process.env.DATABASE_URL });
 
 async function migrate() {
-  await client.connect();
+  try {
+    await client.connect();
+  } catch (e) {
+    if (e.code === '28P01') {
+      console.error('[dashboard] FATAL: Password authentication failed for PostgreSQL user.');
+      console.error('[dashboard] This usually means POSTGRES_PASSWORD in your .env was changed after the database was first created.');
+      console.error('[dashboard] PostgreSQL only reads POSTGRES_PASSWORD during initial volume creation.');
+      console.error('[dashboard]');
+      console.error('[dashboard] To fix, choose one of:');
+      console.error('[dashboard]   1. Reset the volume (destroys data): docker compose down -v && docker compose up -d');
+      console.error('[dashboard]   2. Update the DB password to match your .env:');
+      console.error('[dashboard]      docker compose exec postgres psql -U cliproxyapi -c "ALTER USER cliproxyapi PASSWORD \'<POSTGRES_PASSWORD from .env>\';"');
+      console.error('[dashboard]   3. Revert POSTGRES_PASSWORD in .env to the original value');
+    } else {
+      console.error('[dashboard] FATAL: Cannot connect to database:', e.message);
+    }
+    process.exitCode = 1;
+    return;
+  }
   let failed = false;
 
   try {

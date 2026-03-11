@@ -18,6 +18,8 @@ services:
     environment:
       POSTGRES_DB: cliproxyapi
       POSTGRES_USER: cliproxyapi
+      # NOTE: Only used on first run (volume creation). Changing this later won't update the DB password.
+      # To reset: docker compose down -v (destroys all data)
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       TZ: ${TZ}
     env_file:

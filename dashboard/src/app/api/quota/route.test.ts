@@ -87,10 +87,11 @@ describe("GET /api/quota — Gemini CLI support (issue #125)", () => {
     const response = await GET(request as any);
     const data = await response.json();
 
-    expect(data.success).toBe(true);
-    expect(data.data.accounts).toHaveLength(1);
+    // Route returns { accounts: [...] } directly (no success wrapper)
+    expect(data.accounts).toBeDefined();
+    expect(data.accounts).toHaveLength(1);
 
-    const account = data.data.accounts[0];
+    const account = data.accounts[0];
     expect(account.provider).toBe("gemini-cli");
     expect(account.supported).toBe(true);
     // Should have quota groups, not be unsupported
@@ -132,8 +133,9 @@ describe("GET /api/quota — Gemini CLI support (issue #125)", () => {
     const response = await GET(request as any);
     const data = await response.json();
 
-    expect(data.success).toBe(true);
-    const account = data.data.accounts[0];
+    // Route returns { accounts: [...] } directly (no success wrapper)
+    expect(data.accounts).toBeDefined();
+    const account = data.accounts[0];
     expect(account.provider).toBe("gemini-cli");
     expect(account.supported).toBe(true);
     expect(account.error).toBeDefined();
@@ -184,8 +186,164 @@ describe("GET /api/quota — Gemini CLI support (issue #125)", () => {
     const response = await GET(request as any);
     const data = await response.json();
 
-    const account = data.data.accounts[0];
+    // Route returns { accounts: [...] } directly (no success wrapper)
+    expect(data.accounts).toBeDefined();
+    const account = data.accounts[0];
     expect(account.supported).toBe(true);
     expect(account.groups).toBeDefined();
+  });
+});
+
+// RED: These tests fail until quota/route.ts normalizes provider strings
+describe("GET /api/quota — imported provider normalization (issue #provider-fix)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("copilot provider should return supported: true (RED: route checks 'github'/'github-copilot' but not 'copilot')", async () => {
+    // RED: This test fails until quota/route.ts normalizes provider strings
+    // Fix needed: add || account.provider === "copilot" to the github branch in route.ts
+
+    const authFilesResponse = {
+      files: [
+        {
+          auth_index: 0,
+          provider: "copilot",
+          email: "user@github.com",
+          disabled: false,
+          status: "active",
+        },
+      ],
+    };
+
+    // fetchCopilotQuota calls /api-call and expects ApiCallResponse shape
+    const copilotApiCallResponse = {
+      status_code: 200,
+      body: {
+        quota_snapshots: {
+          premium_interactions: {
+            unlimited: true,
+          },
+        },
+        quota_reset_date_utc: "2026-04-01T00:00:00Z",
+      },
+    };
+
+    fetchMock
+      // First call: auth-files
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(authFilesResponse),
+        body: { cancel: vi.fn() },
+      })
+      // Second call: api-call for copilot quota
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(copilotApiCallResponse),
+        body: { cancel: vi.fn() },
+      });
+
+    const { GET } = await import("./route");
+
+    const request = new Request("http://localhost/api/quota", {
+      headers: { cookie: "session=test" },
+    });
+    const response = await GET(request as any);
+    const data = await response.json();
+
+    // Route returns { accounts: [...] } directly (no success wrapper)
+    expect(data.accounts).toBeDefined();
+    expect(data.accounts).toHaveLength(1);
+
+    const account = data.accounts[0];
+    expect(account.provider).toBe("copilot");
+    // RED: currently returns supported: false because route only checks "github"/"github-copilot"
+    expect(account.supported).toBe(true);
+    expect(account.groups).toBeDefined();
+  });
+
+  it("CLAUDE (uppercase) provider should return supported: true (RED: route uses strict equality, no toLowerCase)", async () => {
+    // RED: This test fails until quota/route.ts normalizes provider strings
+    // Fix needed: normalize provider to lowercase before the if-chain, e.g.:
+    //   const normalizedProvider = account.provider.toLowerCase();
+
+    const authFilesResponse = {
+      files: [
+        {
+          auth_index: 0,
+          provider: "CLAUDE",
+          email: "user@anthropic.com",
+          disabled: false,
+          status: "active",
+        },
+      ],
+    };
+
+    fetchMock
+      // First call: auth-files — no second call needed, route falls through before fetching
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(authFilesResponse),
+        body: { cancel: vi.fn() },
+      });
+
+    const { GET } = await import("./route");
+
+    const request = new Request("http://localhost/api/quota", {
+      headers: { cookie: "session=test" },
+    });
+    const response = await GET(request as any);
+    const data = await response.json();
+
+    // Route returns { accounts: [...] } directly (no success wrapper)
+    expect(data.accounts).toBeDefined();
+    expect(data.accounts).toHaveLength(1);
+
+    const account = data.accounts[0];
+    expect(account.provider).toBe("CLAUDE");
+    // RED: currently returns supported: false because route checks === "claude" (lowercase only)
+    expect(account.supported).toBe(true);
+  });
+
+  it("unknown-xyz provider should return supported: false (regression guard — must always pass)", async () => {
+    // GREEN: This test should always pass — regression guard to ensure unknown providers
+    // are never accidentally marked as supported after normalization changes.
+
+    const authFilesResponse = {
+      files: [
+        {
+          auth_index: 0,
+          provider: "unknown-xyz",
+          email: "user@unknown.com",
+          disabled: false,
+          status: "active",
+        },
+      ],
+    };
+
+    fetchMock
+      // First call: auth-files — no second call, route falls through
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(authFilesResponse),
+        body: { cancel: vi.fn() },
+      });
+
+    const { GET } = await import("./route");
+
+    const request = new Request("http://localhost/api/quota", {
+      headers: { cookie: "session=test" },
+    });
+    const response = await GET(request as any);
+    const data = await response.json();
+
+    // Route returns { accounts: [...] } directly (no success wrapper)
+    expect(data.accounts).toBeDefined();
+    expect(data.accounts).toHaveLength(1);
+
+    const account = data.accounts[0];
+    expect(account.provider).toBe("unknown-xyz");
+    // GREEN: unknown providers must always return supported: false
+    expect(account.supported).toBe(false);
   });
 });

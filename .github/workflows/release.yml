@@ -23,6 +23,7 @@ permissions:
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}/dashboard
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   # Run Release Please to create/update a release PR, then merge and tag.

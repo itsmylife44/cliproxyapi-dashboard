@@ -66,6 +66,19 @@ interface QuotaResponse {
   accounts: QuotaAccount[];
 }
 
+function isMeaningfulDisplayValue(value: string | undefined): value is string {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return normalized !== "unknown" && normalized !== "n/a" && normalized !== "none";
+}
+
 function inferProviderFromAuthFile(account: AuthFile): string | null {
   const candidates = [account.id, account.name, account.path, account.label]
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
@@ -1058,12 +1071,14 @@ export async function GET(request: NextRequest) {
     const quotaPromises = activeAccounts.map(async (account) => {
       const authIndex = String(account.auth_index);
       const displayEmail =
-        typeof account.email === "string" && account.email.trim() !== ""
+        isMeaningfulDisplayValue(account.email)
           ? account.email.trim()
-          : typeof account.label === "string" && account.label.trim() !== ""
+          : isMeaningfulDisplayValue(account.label)
             ? account.label.trim()
-            : typeof account.name === "string" && account.name.trim() !== ""
+            : isMeaningfulDisplayValue(account.name)
               ? account.name.trim()
+              : isMeaningfulDisplayValue(account.id)
+                ? account.id.trim()
               : `${account.provider}-${authIndex}`;
 
       const declaredProviderNorm = account.provider.toLowerCase();

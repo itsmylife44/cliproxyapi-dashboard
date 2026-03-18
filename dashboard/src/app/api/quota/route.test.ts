@@ -394,6 +394,7 @@ describe("GET /api/quota — imported provider normalization (issue #provider-fi
     const account = data.accounts[0];
     expect(account.provider).toBe("claude");
     expect(account.supported).toBe(true);
+    expect(account.email).toBe("claude-credential.json");
     expect(account.groups).toBeDefined();
     expect(account.groups.length).toBeGreaterThan(0);
   });

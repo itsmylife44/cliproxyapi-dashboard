@@ -13,6 +13,9 @@ const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
 interface AuthFile {
   auth_index: string | number;
   provider: string;
+  id?: string;
+  path?: string;
+  type?: string;
   email?: string;
   name?: string;
   label?: string;
@@ -61,6 +64,24 @@ interface QuotaAccount {
 
 interface QuotaResponse {
   accounts: QuotaAccount[];
+}
+
+function inferProviderFromAuthFile(account: AuthFile): string | null {
+  const candidates = [account.id, account.name, account.path, account.label]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .map((value) => value.toLowerCase());
+
+  for (const candidate of candidates) {
+    if (candidate.includes("claude-")) return "claude";
+    if (candidate.includes("codex-")) return "codex";
+    if (candidate.includes("gemini-cli") || candidate.includes("gemini-")) return "gemini-cli";
+    if (candidate.includes("antigravity-")) return "antigravity";
+    if (candidate.includes("kimi-")) return "kimi";
+    if (candidate.includes("github-copilot") || candidate.includes("copilot-")) return "copilot";
+    if (candidate.includes("github-")) return "github";
+  }
+
+  return null;
 }
 
 interface ApiCallResponse {
@@ -1045,7 +1066,11 @@ export async function GET(request: NextRequest) {
               ? account.name.trim()
               : `${account.provider}-${authIndex}`;
 
-      const providerNorm = account.provider.toLowerCase();
+      const declaredProviderNorm = account.provider.toLowerCase();
+      const inferredProvider =
+        declaredProviderNorm === "unknown" ? inferProviderFromAuthFile(account) : null;
+      const providerNorm = inferredProvider ?? declaredProviderNorm;
+      const providerForResponse = inferredProvider ?? account.provider;
 
       if (providerNorm === "claude") {
         const result = await fetchClaudeQuota(authIndex);
@@ -1060,7 +1085,7 @@ export async function GET(request: NextRequest) {
           if (needsReauth) {
             return {
               auth_index: authIndex,
-              provider: account.provider,
+              provider: providerForResponse,
               email: displayEmail,
               supported: true,
               error: "Claude OAuth token needs re-authentication (provider returned 401)",
@@ -1069,7 +1094,7 @@ export async function GET(request: NextRequest) {
 
           return {
             auth_index: authIndex,
-            provider: account.provider,
+            provider: providerForResponse,
             email: displayEmail,
             supported: true,
             error: result.error,
@@ -1078,7 +1103,7 @@ export async function GET(request: NextRequest) {
 
         return {
           auth_index: authIndex,
-          provider: account.provider,
+          provider: providerForResponse,
           email: displayEmail,
           supported: true,
           groups: result,
@@ -1091,7 +1116,7 @@ export async function GET(request: NextRequest) {
         if ("error" in result) {
           return {
             auth_index: authIndex,
-            provider: account.provider,
+            provider: providerForResponse,
             email: displayEmail,
             supported: true,
             error: result.error,
@@ -1100,7 +1125,7 @@ export async function GET(request: NextRequest) {
 
         return {
           auth_index: authIndex,
-          provider: account.provider,
+          provider: providerForResponse,
           email: displayEmail,
           supported: true,
           groups: result,
@@ -1113,7 +1138,7 @@ export async function GET(request: NextRequest) {
         if ("error" in result) {
           return {
             auth_index: authIndex,
-            provider: account.provider,
+            provider: providerForResponse,
             email: displayEmail,
             supported: true,
             error: result.error,
@@ -1122,7 +1147,7 @@ export async function GET(request: NextRequest) {
 
         return {
           auth_index: authIndex,
-          provider: account.provider,
+          provider: providerForResponse,
           email: displayEmail,
           supported: true,
           groups: result,
@@ -1135,7 +1160,7 @@ export async function GET(request: NextRequest) {
         if ("error" in result) {
           return {
             auth_index: authIndex,
-            provider: account.provider,
+            provider: providerForResponse,
             email: displayEmail,
             supported: true,
             error: result.error,
@@ -1144,7 +1169,7 @@ export async function GET(request: NextRequest) {
 
         return {
           auth_index: authIndex,
-          provider: account.provider,
+          provider: providerForResponse,
           email: displayEmail,
           supported: true,
           groups: result,
@@ -1158,7 +1183,7 @@ export async function GET(request: NextRequest) {
         if ("error" in result) {
           return {
             auth_index: authIndex,
-            provider: account.provider,
+            provider: providerForResponse,
             email: displayEmail,
             supported: true,
             error: result.error,
@@ -1167,7 +1192,7 @@ export async function GET(request: NextRequest) {
 
         return {
           auth_index: authIndex,
-          provider: account.provider,
+          provider: providerForResponse,
           email: displayEmail,
           supported: true,
           groups: result,
@@ -1176,7 +1201,7 @@ export async function GET(request: NextRequest) {
 
       return {
         auth_index: authIndex,
-        provider: account.provider,
+        provider: providerForResponse,
         email: displayEmail,
         supported: false,
       };

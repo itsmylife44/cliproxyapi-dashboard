@@ -346,4 +346,55 @@ describe("GET /api/quota — imported provider normalization (issue #provider-fi
     // GREEN: unknown providers must always return supported: false
     expect(account.supported).toBe(false);
   });
+
+  it("infers claude provider from claude-credential.json when provider is unknown", async () => {
+    const authFilesResponse = {
+      files: [
+        {
+          auth_index: 0,
+          provider: "unknown",
+          id: "claude-credential.json",
+          name: "claude-credential.json",
+          email: "unknown",
+          disabled: false,
+          status: "active",
+        },
+      ],
+    };
+
+    const claudeUsageResponse = {
+      five_hour: { utilization: 0.1, resets_at: "2026-03-20T18:00:00Z" },
+      seven_day: { utilization: 0.3, resets_at: "2026-03-25T18:00:00Z" },
+      seven_day_sonnet: { utilization: 0.2, resets_at: "2026-03-24T18:00:00Z" },
+    };
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(authFilesResponse),
+        body: { cancel: vi.fn() },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ status_code: 200, body: claudeUsageResponse }),
+        body: { cancel: vi.fn() },
+      });
+
+    const { GET } = await import("./route");
+
+    const request = new Request("http://localhost/api/quota", {
+      headers: { cookie: "session=test" },
+    });
+    const response = await GET(request as any);
+    const data = await response.json();
+
+    expect(data.accounts).toBeDefined();
+    expect(data.accounts).toHaveLength(1);
+
+    const account = data.accounts[0];
+    expect(account.provider).toBe("claude");
+    expect(account.supported).toBe(true);
+    expect(account.groups).toBeDefined();
+    expect(account.groups.length).toBeGreaterThan(0);
+  });
 });

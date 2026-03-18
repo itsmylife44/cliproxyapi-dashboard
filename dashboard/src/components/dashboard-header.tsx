@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { NotificationBell } from "@/components/header/notification-bell";
 import { LatencyIndicator } from "@/components/header/latency-indicator";
 import { useHeaderNotifications } from "@/hooks/use-header-notifications";
+import { useAuth } from "@/hooks/use-auth";
 
 interface DashboardHeaderProps {
   onUserClick: () => void;
@@ -42,7 +43,8 @@ const statusFetcher = (url: string) =>
 
 export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus }: DashboardHeaderProps) {
   const hasExternalStatus = externalStatus !== undefined;
-  const { notifications, criticalCount, totalCount } = useHeaderNotifications(isAdmin);
+  const { user } = useAuth();
+  const { notifications, criticalCount, totalCount, dismissNotification } = useHeaderNotifications(isAdmin, user?.id ?? "");
 
   const { data: swrStatus, isLoading: swrLoading } = useSWR<ProxyStatus>(
     hasExternalStatus ? null : API_ENDPOINTS.PROXY.STATUS,
@@ -103,6 +105,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
           notifications={notifications}
           criticalCount={criticalCount}
           totalCount={totalCount}
+          onDismiss={dismissNotification}
         />
 
         <button

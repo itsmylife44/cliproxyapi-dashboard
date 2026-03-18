@@ -9,6 +9,7 @@ interface NotificationBellProps {
   notifications: Notification[];
   criticalCount: number;
   totalCount: number;
+  onDismiss: (id: string) => void;
 }
 
 function BellIcon({ hasNotifications }: { hasNotifications: boolean }) {
@@ -36,8 +37,12 @@ const TYPE_STYLES: Record<NotificationType, { dot: string; border: string; bg: s
   info: { dot: "bg-blue-500", border: "border-blue-500/30", bg: "bg-blue-500/5" },
 };
 
-function NotificationItem({ notification, onNavigate }: { notification: Notification; onNavigate: () => void }) {
+function NotificationItem({ notification, onNavigate, onDismiss }: { notification: Notification; onNavigate: () => void; onDismiss: (id: string) => void }) {
   const style = TYPE_STYLES[notification.type];
+  const handleClick = () => {
+    onDismiss(notification.id);
+    onNavigate();
+  };
   const content = (
     <div className={`flex items-start gap-2.5 rounded-md border ${style.border} ${style.bg} px-3 py-2.5 transition-colors hover:brightness-125`}>
       <div className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${style.dot}`} />
@@ -49,9 +54,9 @@ function NotificationItem({ notification, onNavigate }: { notification: Notifica
   );
 
   if (notification.link) {
-    return <Link href={notification.link} onClick={onNavigate}>{content}</Link>;
+    return <Link href={notification.link} onClick={handleClick}>{content}</Link>;
   }
-  return content;
+  return <div onClick={handleClick} style={{ cursor: "pointer" }}>{content}</div>;
 }
 
 interface DropdownPosition {
@@ -64,11 +69,13 @@ function NotificationDropdown({
   totalCount,
   position,
   onClose,
+  onDismiss,
 }: {
   notifications: Notification[];
   totalCount: number;
   position: DropdownPosition;
   onClose: () => void;
+  onDismiss: (id: string) => void;
 }) {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -122,7 +129,7 @@ function NotificationDropdown({
         ) : (
           <div className="space-y-1.5 p-2">
             {notifications.map((n) => (
-              <NotificationItem key={n.id} notification={n} onNavigate={onClose} />
+              <NotificationItem key={n.id} notification={n} onNavigate={onClose} onDismiss={onDismiss} />
             ))}
           </div>
         )}
@@ -132,7 +139,7 @@ function NotificationDropdown({
   );
 }
 
-export function NotificationBell({ notifications, criticalCount, totalCount }: NotificationBellProps) {
+export function NotificationBell({ notifications, criticalCount, totalCount, onDismiss }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState<DropdownPosition>({ top: 0, right: 0 });
@@ -187,6 +194,7 @@ export function NotificationBell({ notifications, criticalCount, totalCount }: N
           totalCount={totalCount}
           position={position}
           onClose={handleClose}
+          onDismiss={onDismiss}
         />
       )}
     </>

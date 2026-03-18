@@ -1045,7 +1045,9 @@ export async function GET(request: NextRequest) {
               ? account.name.trim()
               : `${account.provider}-${authIndex}`;
 
-      if (account.provider === "claude") {
+      const providerNorm = account.provider.toLowerCase();
+
+      if (providerNorm === "claude") {
         const result = await fetchClaudeQuota(authIndex);
 
         if ("error" in result) {
@@ -1083,7 +1085,7 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      if (account.provider === "antigravity" || account.provider === "gemini-cli" || account.provider === "gemini") {
+      if (providerNorm === "antigravity" || providerNorm === "gemini-cli" || providerNorm === "gemini") {
         const result = await fetchAntigravityQuota(authIndex);
         
         if ("error" in result) {
@@ -1105,7 +1107,7 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      if (account.provider === "codex") {
+      if (providerNorm === "codex") {
         const result = await fetchCodexQuota(authIndex);
         
         if ("error" in result) {
@@ -1127,7 +1129,7 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      if (account.provider === "kimi") {
+      if (providerNorm === "kimi") {
         const result = await fetchKimiQuota(authIndex);
 
         if ("error" in result) {
@@ -1150,7 +1152,7 @@ export async function GET(request: NextRequest) {
       }
 
 
-      if (account.provider === "github" || account.provider === "github-copilot") {
+      if (providerNorm === "github" || providerNorm === "github-copilot" || providerNorm === "copilot") {
         const result = await fetchCopilotQuota(authIndex);
 
         if ("error" in result) {

@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.55](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.54...dashboard-v0.1.55) (2026-03-18)
+
+
+### Bug Fixes
+
+* improve PostgreSQL password auth error handling and documentation ([#135](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/135)) ([1dbed04](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/1dbed043fd32079bdc45fbec6b390f744cbb9b78))
+* **notifications:** mark header notifications as read on click ([3541586](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/3541586c98ebf8c88d345c655b5f2faf1a0ea024))
+* **notifications:** persist dismissed header notifications ([6976715](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/69767155a01064d1cfc5892b474a86c7fb61cc8b))
+* **quota:** infer provider for unknown auth file entries ([e121c21](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/e121c21c4e2db3dcf3d89d553e6790ba0db93a97))
+* **quota:** normalize imported provider support mapping ([0de46ca](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/0de46cadb2f3c45a2b7d80004d55a6bde835bafc))
+
 ## [0.1.54](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.53...dashboard-v0.1.54) (2026-03-08)
 
 

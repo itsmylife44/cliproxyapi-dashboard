@@ -4,7 +4,10 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CLIProxyAPI Dashboard",
+  title: {
+    default: "CLIProxyAPI Dashboard",
+    template: "%s | CLIProxyAPI",
+  },
   description: "Management dashboard for CLIProxyAPI",
 };
 

@@ -7,6 +7,8 @@ import { Errors } from "@/lib/errors";
 
 const USAGE_HISTORY_CACHE_TTL_MS = 15_000;
 const USAGE_RECORD_LIMIT = 25_000;
+const REQUEST_EVENT_LIMIT = 200;
+const LATENCY_SERIES_LIMIT = 120;
 
 interface KeyUsage {
   keyName: string;
@@ -28,6 +30,34 @@ interface KeyUsage {
   }>;
 }
 
+interface RequestEvent {
+  timestamp: string;
+  keyName: string;
+  username?: string;
+  model: string;
+  latencyMs: number;
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  failed: boolean;
+}
+
+interface LatencyPoint {
+  timestamp: string;
+  keyName: string;
+  username?: string;
+  model: string;
+  latencyMs: number;
+  failed: boolean;
+}
+
+interface LatencySummary {
+  sampleCount: number;
+  averageMs: number;
+  p95Ms: number;
+  maxMs: number;
+}
+
 function isValidDateParam(dateString: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
   const [year, month, day] = dateString.split("-").map(Number);
@@ -35,6 +65,28 @@ function isValidDateParam(dateString: string): boolean {
   return date.getFullYear() === year
     && date.getMonth() === month - 1
     && date.getDate() === day;
+}
+
+function summarizeLatency(values: number[]): LatencySummary {
+  if (values.length === 0) {
+    return {
+      sampleCount: 0,
+      averageMs: 0,
+      p95Ms: 0,
+      maxMs: 0,
+    };
+  }
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const total = values.reduce((sum, value) => sum + value, 0);
+  const p95Index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * 0.95) - 1));
+
+  return {
+    sampleCount: values.length,
+    averageMs: Math.round(total / values.length),
+    p95Ms: sorted[p95Index] ?? 0,
+    maxMs: sorted[sorted.length - 1] ?? 0,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -116,6 +168,7 @@ export async function GET(request: NextRequest) {
         userId: true,
         authIndex: true,
         model: true,
+        latencyMs: true,
         totalTokens: true,
         inputTokens: true,
         outputTokens: true,
@@ -152,6 +205,9 @@ export async function GET(request: NextRequest) {
     const keyUsageMap: Record<string, KeyUsage> = {};
     const dailyMap: Record<string, { requests: number; tokens: number; inputTokens: number; outputTokens: number; success: number; failure: number }> = {};
     const modelTotalsMap: Record<string, { requests: number; tokens: number }> = {};
+    const requestEvents: RequestEvent[] = [];
+    const latencySeriesSeed: LatencyPoint[] = [];
+    const latencyValues: number[] = [];
     let totalRequests = 0;
     let totalTokens = 0;
     let totalInputTokens = 0;
@@ -183,6 +239,7 @@ export async function GET(request: NextRequest) {
       }
 
       const keyUsage = keyUsageMap[groupKey];
+      const username = record.user?.username;
       keyUsage.totalRequests += 1;
       keyUsage.totalTokens += record.totalTokens;
       keyUsage.inputTokens += record.inputTokens;
@@ -232,6 +289,34 @@ export async function GET(request: NextRequest) {
       modelTotalsMap[modelName].requests += 1;
       modelTotalsMap[modelName].tokens += record.totalTokens;
 
+      const event: RequestEvent = {
+        timestamp: record.timestamp.toISOString(),
+        keyName: keyUsage.keyName,
+        ...(isAdmin && username ? { username } : {}),
+        model: modelName,
+        latencyMs: Math.max(0, record.latencyMs),
+        totalTokens: record.totalTokens,
+        inputTokens: record.inputTokens,
+        outputTokens: record.outputTokens,
+        failed: record.failed,
+      };
+      if (requestEvents.length < REQUEST_EVENT_LIMIT) {
+        requestEvents.push(event);
+      }
+      if (event.latencyMs > 0) {
+        latencyValues.push(event.latencyMs);
+        if (latencySeriesSeed.length < LATENCY_SERIES_LIMIT) {
+          latencySeriesSeed.push({
+            timestamp: event.timestamp,
+            keyName: event.keyName,
+            ...(event.username ? { username: event.username } : {}),
+            model: event.model,
+            latencyMs: event.latencyMs,
+            failed: event.failed,
+          });
+        }
+      }
+
       totalRequests += 1;
       totalTokens += record.totalTokens;
       totalInputTokens += record.inputTokens;
@@ -252,6 +337,8 @@ export async function GET(request: NextRequest) {
     const modelBreakdown = Object.entries(modelTotalsMap)
       .sort(([, a], [, b]) => b.requests - a.requests)
       .map(([model, data]) => ({ model, ...data }));
+    const latencySummary = summarizeLatency(latencyValues);
+    const latencySeries = [...latencySeriesSeed].reverse();
 
     const responseData = {
       data: {
@@ -266,6 +353,9 @@ export async function GET(request: NextRequest) {
         },
         dailyBreakdown,
         modelBreakdown,
+        requestEvents,
+        latencySeries,
+        latencySummary,
         period: {
           from: fromDate.toISOString(),
           to: toDate.toISOString(),

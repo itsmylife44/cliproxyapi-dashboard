@@ -257,6 +257,7 @@ model UsageRecord {
   model           String
   source          String
   timestamp       DateTime
+  latencyMs       Int      @default(0)
   inputTokens     Int      @default(0)
   outputTokens    Int      @default(0)
   reasoningTokens Int      @default(0)

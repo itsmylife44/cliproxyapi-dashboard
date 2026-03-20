@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { TimeFilter } from "@/components/usage/time-filter";
 import { UsageCharts } from "@/components/usage/usage-charts";
+import { UsageRequestEvents } from "@/components/usage/usage-request-events";
 import { UsageTable } from "@/components/usage/usage-table";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
@@ -54,6 +55,32 @@ interface UsageData {
     requests: number;
     tokens: number;
   }>;
+  latencySeries?: Array<{
+    timestamp: string;
+    keyName: string;
+    username?: string;
+    model: string;
+    latencyMs: number;
+    failed: boolean;
+  }>;
+  latencySummary?: {
+    sampleCount: number;
+    averageMs: number;
+    p95Ms: number;
+    maxMs: number;
+  };
+  requestEvents?: Array<{
+    timestamp: string;
+    keyName: string;
+    username?: string;
+    model: string;
+    latencyMs: number;
+    totalTokens: number;
+    inputTokens: number;
+    outputTokens: number;
+    failed: boolean;
+  }>;
+  truncated?: boolean;
 }
 
 interface UsageResponse {
@@ -114,10 +141,13 @@ function getStatusColor(isoString: string): string {
   return "bg-red-500";
 }
 
+function formatLatencyValue(value: number): string {
+  return `${value.toLocaleString()} ms`;
+}
+
 export default function UsagePage() {
   const [usageData, setUsageData] = useState<UsageData | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const isAdminRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<DateFilter>("7d");
   const [customFrom, setCustomFrom] = useState("");
@@ -147,7 +177,6 @@ export default function UsagePage() {
         const json: UsageResponse = await res.json();
         if (abortController.signal.aborted) return;
         setUsageData(json.data);
-        isAdminRef.current = json.isAdmin;
         setIsAdmin(json.isAdmin);
         setLoading(false);
       } catch {
@@ -218,6 +247,7 @@ export default function UsagePage() {
   };
 
   const hasInputOutputBreakdown = usageData && (usageData.totals.inputTokens > 0 || usageData.totals.outputTokens > 0);
+  const hasLatencyBreakdown = (usageData?.latencySummary?.sampleCount ?? 0) > 0;
   const collectorStatusColor = usageData ? getStatusColor(usageData.collectorStatus.lastCollectedAt) : "bg-gray-500";
   const collectorTimeAgo = usageData ? getRelativeTime(usageData.collectorStatus.lastCollectedAt) : "Unknown";
 
@@ -294,13 +324,33 @@ export default function UsagePage() {
             </div>
           )}
 
+          {hasLatencyBreakdown && usageData?.latencySummary ? (
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
+              <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-cyan-200/70">Avg Latency</p>
+                <p className="mt-0.5 text-xs font-semibold text-cyan-100">{formatLatencyValue(usageData.latencySummary.averageMs)}</p>
+              </div>
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-200/70">P95 Latency</p>
+                <p className="mt-0.5 text-xs font-semibold text-amber-100">{formatLatencyValue(usageData.latencySummary.p95Ms)}</p>
+              </div>
+              <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-200/70">Slowest Request</p>
+                <p className="mt-0.5 text-xs font-semibold text-rose-100">{formatLatencyValue(usageData.latencySummary.maxMs)}</p>
+              </div>
+            </div>
+          ) : null}
+
           <UsageCharts
             dailyBreakdown={usageData.dailyBreakdown}
             modelBreakdown={usageData.modelBreakdown}
+            latencySeries={usageData.latencySeries}
+            latencySummary={usageData.latencySummary}
             totals={usageData.totals}
           />
 
           <UsageTable keys={usageData.keys} isAdmin={isAdmin} />
+          <UsageRequestEvents events={usageData.requestEvents} isAdmin={isAdmin} truncated={usageData.truncated} />
         </>
       )}
     </div>

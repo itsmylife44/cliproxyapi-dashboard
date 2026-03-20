@@ -14,6 +14,7 @@ const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
 const COLLECTOR_API_KEY = process.env.COLLECTOR_API_KEY;
 
 const BATCH_SIZE = 500;
+const LATENCY_BACKFILL_BATCH_SIZE = 100;
 const COLLECTOR_LEASE_STALE_MS = 15 * 60 * 1000;
 
 function markCollectorError(runId: string, errorMessage: string): Promise<void> {
@@ -52,6 +53,7 @@ interface TokenDetails {
 
 interface RequestDetail {
   timestamp: string;
+  latency_ms?: number;
   source: string;
   auth_index: string;
   tokens: TokenDetails;
@@ -140,12 +142,40 @@ interface UsageRecordCandidate {
   model: string;
   source: string;
   timestamp: Date;
+  latencyMs: number;
   inputTokens: number;
   outputTokens: number;
   reasoningTokens: number;
   cachedTokens: number;
   totalTokens: number;
   failed: boolean;
+}
+
+function usageDedupKey(candidate: Pick<UsageRecordCandidate, "authIndex" | "model" | "timestamp" | "source" | "totalTokens">): string {
+  return [
+    candidate.authIndex,
+    candidate.model,
+    candidate.timestamp.toISOString(),
+    candidate.source,
+    String(candidate.totalTokens),
+  ].join("|");
+}
+
+function buildLatencyBackfillCandidates(candidates: UsageRecordCandidate[]): UsageRecordCandidate[] {
+  const deduped = new Map<string, UsageRecordCandidate>();
+
+  for (const candidate of candidates) {
+    if (candidate.latencyMs <= 0) {
+      continue;
+    }
+    const key = usageDedupKey(candidate);
+    const existing = deduped.get(key);
+    if (!existing || candidate.latencyMs > existing.latencyMs) {
+      deduped.set(key, candidate);
+    }
+  }
+
+  return [...deduped.values()];
 }
 
 async function tryAcquireCollectorLease(now: Date): Promise<boolean> {
@@ -418,6 +448,7 @@ export async function POST(request: NextRequest) {
             model: modelName,
             source: detail.source || "",
             timestamp: new Date(detail.timestamp),
+            latencyMs: Number.isFinite(Number(detail.latency_ms)) ? Math.max(0, Math.round(Number(detail.latency_ms))) : 0,
             inputTokens: detail.tokens?.input_tokens || 0,
             outputTokens: detail.tokens?.output_tokens || 0,
             reasoningTokens: detail.tokens?.reasoning_tokens || 0,
@@ -437,6 +468,32 @@ export async function POST(request: NextRequest) {
         skipDuplicates: true,
       });
       totalStored += result.count;
+    }
+
+    let latencyBackfilled = 0;
+    const latencyBackfillCandidates = buildLatencyBackfillCandidates(candidates);
+    for (let i = 0; i < latencyBackfillCandidates.length; i += LATENCY_BACKFILL_BATCH_SIZE) {
+      const batch = latencyBackfillCandidates.slice(i, i + LATENCY_BACKFILL_BATCH_SIZE);
+      const results = await prisma.$transaction(
+        batch.map((candidate) =>
+          prisma.usageRecord.updateMany({
+            where: {
+              authIndex: candidate.authIndex,
+              model: candidate.model,
+              timestamp: candidate.timestamp,
+              source: candidate.source,
+              totalTokens: candidate.totalTokens,
+              latencyMs: 0,
+            },
+            data: {
+              latencyMs: candidate.latencyMs,
+            },
+          })
+        )
+      );
+      for (const result of results) {
+        latencyBackfilled += result.count;
+      }
     }
 
     const skipped = candidates.length - totalStored;
@@ -461,7 +518,7 @@ export async function POST(request: NextRequest) {
     });
 
     logger.info(
-      { runId, processed: candidates.length, stored: totalStored, skipped, durationMs },
+      { runId, processed: candidates.length, stored: totalStored, skipped, latencyBackfilled, durationMs },
       "Usage collection completed"
     );
 
@@ -470,6 +527,7 @@ export async function POST(request: NextRequest) {
       processed: candidates.length,
       stored: totalStored,
       skipped,
+      latencyBackfilled,
       durationMs,
       lastCollectedAt: now.toISOString(),
     });

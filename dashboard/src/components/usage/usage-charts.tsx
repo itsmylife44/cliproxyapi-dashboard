@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
 import { ChartContainer, CHART_COLORS, SERIES_PALETTE, AXIS_TICK_STYLE, TOOLTIP_STYLE, formatCompact, formatDateShort } from "@/components/ui/chart-theme";
 
 interface DailyBreakdown {
@@ -29,16 +29,56 @@ interface Totals {
   failureCount: number;
 }
 
+interface LatencyPoint {
+  timestamp: string;
+  keyName: string;
+  username?: string;
+  model: string;
+  latencyMs: number;
+  failed: boolean;
+}
+
+interface LatencySummary {
+  sampleCount: number;
+  averageMs: number;
+  p95Ms: number;
+  maxMs: number;
+}
+
 interface UsageChartsProps {
   dailyBreakdown?: DailyBreakdown[];
   modelBreakdown?: ModelBreakdown[];
+  latencySeries?: LatencyPoint[];
+  latencySummary?: LatencySummary;
   totals: Totals;
 }
 
-export function UsageCharts({ dailyBreakdown, modelBreakdown, totals }: UsageChartsProps) {
+function formatLatencyTick(timestamp: string): string {
+  return new Date(timestamp).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatLatencyLabel(timestamp: string): string {
+  return new Date(timestamp).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function formatLatencyValue(value: number): string {
+  return `${Math.round(value).toLocaleString()} ms`;
+}
+
+export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, latencySummary, totals }: UsageChartsProps) {
   const uid = useId();
   const gradInputId = `${uid}-gradInput`;
   const gradOutputId = `${uid}-gradOutput`;
+  const gradLatencyId = `${uid}-gradLatency`;
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       {dailyBreakdown && dailyBreakdown.length > 0 ? (
@@ -84,6 +124,64 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, totals }: UsageCha
               <Legend wrapperStyle={{ fontSize: 10, color: CHART_COLORS.text.muted }} />
               <Area type="monotone" dataKey="inputTokens" name="Input" stackId="1" stroke={CHART_COLORS.primary} fill={`url(#${gradInputId})`} strokeWidth={1.5} />
               <Area type="monotone" dataKey="outputTokens" name="Output" stackId="1" stroke={CHART_COLORS.success} fill={`url(#${gradOutputId})`} strokeWidth={1.5} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </ChartContainer>
+      ) : null}
+
+      {latencySeries && latencySeries.length > 0 ? (
+        <ChartContainer
+          title="Request Latency"
+          subtitle={
+            latencySummary && latencySummary.sampleCount > 0
+              ? `Avg ${formatLatencyValue(latencySummary.averageMs)} • P95 ${formatLatencyValue(latencySummary.p95Ms)} • Max ${formatLatencyValue(latencySummary.maxMs)}`
+              : "Recent requests with latency data"
+          }
+        >
+          <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
+            <AreaChart data={latencySeries} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
+              <defs>
+                <linearGradient id={gradLatencyId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={CHART_COLORS.warning} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={CHART_COLORS.warning} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+              <XAxis
+                dataKey="timestamp"
+                tickFormatter={formatLatencyTick}
+                tick={AXIS_TICK_STYLE}
+                tickLine={false}
+                axisLine={false}
+                minTickGap={20}
+              />
+              <YAxis
+                tickFormatter={(value) => `${formatCompact(Number(value))}ms`}
+                tick={AXIS_TICK_STYLE}
+                tickLine={false}
+                axisLine={false}
+              />
+              <Tooltip
+                {...TOOLTIP_STYLE}
+                labelFormatter={(label, payload) => {
+                  const point = payload?.[0]?.payload as LatencyPoint | undefined;
+                  const status = point == null ? "Unknown" : point.failed ? "Failed" : "Success";
+                  return `${formatLatencyLabel(label)} • ${point?.model ?? "Unknown model"} • ${status}`;
+                }}
+                formatter={(value) => [formatLatencyValue(Number(value)), "Latency"]}
+              />
+              {latencySummary && latencySummary.p95Ms > 0 ? (
+                <ReferenceLine y={latencySummary.p95Ms} stroke={CHART_COLORS.rose} strokeDasharray="4 4" ifOverflow="extendDomain" />
+              ) : null}
+              <Area
+                type="monotone"
+                dataKey="latencyMs"
+                name="Latency"
+                stroke={CHART_COLORS.warning}
+                fill={`url(#${gradLatencyId})`}
+                strokeWidth={2}
+                activeDot={{ r: 4, fill: CHART_COLORS.warning }}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </ChartContainer>

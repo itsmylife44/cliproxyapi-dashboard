@@ -448,7 +448,7 @@ export async function POST(request: NextRequest) {
             model: modelName,
             source: detail.source || "",
             timestamp: new Date(detail.timestamp),
-            latencyMs: Math.max(0, Number(detail.latency_ms ?? 0)),
+            latencyMs: Number.isFinite(Number(detail.latency_ms)) ? Math.max(0, Math.round(Number(detail.latency_ms))) : 0,
             inputTokens: detail.tokens?.input_tokens || 0,
             outputTokens: detail.tokens?.output_tokens || 0,
             reasoningTokens: detail.tokens?.reasoning_tokens || 0,

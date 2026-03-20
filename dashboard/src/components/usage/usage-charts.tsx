@@ -165,7 +165,7 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                 {...TOOLTIP_STYLE}
                 labelFormatter={(label, payload) => {
                   const point = payload?.[0]?.payload as LatencyPoint | undefined;
-                  const status = point?.failed ? "Failed" : "Success";
+                  const status = point == null ? "Unknown" : point.failed ? "Failed" : "Success";
                   return `${formatLatencyLabel(label)} • ${point?.model ?? "Unknown model"} • ${status}`;
                 }}
                 formatter={(value) => [formatLatencyValue(Number(value)), "Latency"]}

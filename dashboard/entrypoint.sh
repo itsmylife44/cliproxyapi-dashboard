@@ -325,6 +325,7 @@ async function migrate() {
       "model" TEXT NOT NULL,
       "source" TEXT NOT NULL,
       "timestamp" TIMESTAMP(3) NOT NULL,
+      "latencyMs" INTEGER NOT NULL DEFAULT 0,
       "inputTokens" INTEGER NOT NULL DEFAULT 0,
       "outputTokens" INTEGER NOT NULL DEFAULT 0,
       "reasoningTokens" INTEGER NOT NULL DEFAULT 0,
@@ -351,6 +352,10 @@ async function migrate() {
       ALTER TABLE "usage_records" ADD CONSTRAINT "usage_records_apiKeyId_fkey"
         FOREIGN KEY ("apiKeyId") REFERENCES "user_api_keys"("id") ON DELETE SET NULL;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    -- Add latencyMs column if missing (existing installs upgrading to 0.1.53+)
+    DO $$ BEGIN
+      ALTER TABLE "usage_records" ADD COLUMN "latencyMs" INTEGER NOT NULL DEFAULT 0;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
     -- Perplexity cookies table (stores session cookies for Perplexity Pro sidecar)
     CREATE TABLE IF NOT EXISTS "perplexity_cookies" (

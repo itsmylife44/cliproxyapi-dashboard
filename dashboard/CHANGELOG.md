@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.56](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.55...dashboard-v0.1.56) (2026-03-21)
+
+
+### Features
+
+* add global-error boundary and metadata title template ([54657d2](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/54657d2901b3a303a97e72ceba8146ac94341e27))
+* **usage:** add latency tracking to usage records and enhance dashbo… ([#138](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/138)) ([c56a657](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c56a6573413bcd860c7e072989f913a4c9c1f421))
+
+
+### Bug Fixes
+
+* **quota:** avoid unknown display labels for inferred providers ([6eacdfb](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6eacdfbc58159a574b78bbbce1239942264418ef))
+
 ## [0.1.55](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.54...dashboard-v0.1.55) (2026-03-18)
 
 

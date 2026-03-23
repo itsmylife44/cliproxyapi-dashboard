@@ -88,6 +88,7 @@ export const usageCache = new LRUCache<unknown>(50);
 export const proxyModelsCache = new LRUCache<unknown>(50);
 export const updateCheckCache = new LRUCache<unknown>(10);
 export const quotaCache = new LRUCache<unknown>(10);
+export const modelsDevCache = new LRUCache<unknown>(10);
 
 export const CACHE_TTL = {
   USAGE: 30_000,
@@ -96,11 +97,13 @@ export const CACHE_TTL = {
   GITHUB_BUILD_STATUS: 600_000,
   DOCKER_HUB_TAGS: 900_000,
   QUOTA: 120_000,
+  MODELS_DEV: 3_600_000,
 } as const;
 
 export const CACHE_KEYS = {
   usage: (userId: string) => `usage:${userId}`,
   proxyModels: (proxyUrl: string, apiKey: string) => `proxy-models:${proxyUrl}:${apiKey.slice(-8)}`,
+  modelsDev: () => "models-dev-limits",
 } as const;
 
 export function invalidateUsageCaches(): void {

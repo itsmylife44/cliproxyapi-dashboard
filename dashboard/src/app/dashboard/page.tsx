@@ -8,7 +8,7 @@ import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { fetchProxyModels } from "@/lib/config-generators/shared";
-import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases } from "@/lib/config-generators/opencode";
+import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits } from "@/lib/config-generators/opencode";
 import type { ConfigData } from "@/lib/config-generators/shared";
 import { resolveOwnedByDisplay } from "@/lib/providers/model-grouping";
 import { DashboardMiniCharts } from "@/components/dashboard-mini-charts";
@@ -172,15 +172,18 @@ export default async function QuickStartPage() {
   const providerCount = configProviderCount + activeOAuthProviders.size;
 
   const apiKeyForProxy = userApiKeys.length > 0 ? userApiKeys[0].key : "";
-  const proxyModels = apiKeyForProxy ? await fetchProxyModels(getInternalProxyUrl(), apiKeyForProxy) : [];
-  const oauthAliasModels = extractOAuthModelAliases(config as ConfigData | null, oauthAccounts);
+  const [proxyModels, modelsDevLimits] = await Promise.all([
+    apiKeyForProxy ? fetchProxyModels(getInternalProxyUrl(), apiKeyForProxy) : Promise.resolve([]),
+    fetchModelsDevLimits(),
+  ]);
+  const oauthAliasModels = extractOAuthModelAliases(config as ConfigData | null, oauthAccounts, modelsDevLimits);
   const oauthAliasIds = Object.keys(oauthAliasModels);
   const availableModelIds = [...new Set([...proxyModels.map((m) => m.id), ...oauthAliasIds])];
   const modelSourceMap = buildSourceMap(proxyModels);
   for (const aliasId of oauthAliasIds) {
     modelSourceMap.set(aliasId, "OAuth Alias");
   }
-  const allProxyModels = { ...oauthAliasModels, ...buildAvailableModelsFromProxy(proxyModels) };
+  const allProxyModels = { ...oauthAliasModels, ...buildAvailableModelsFromProxy(proxyModels, modelsDevLimits) };
   const setupItems = [
     {
       label: "Provider connected",

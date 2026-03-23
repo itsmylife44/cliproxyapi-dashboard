@@ -1,6 +1,6 @@
 {
-  "version": "0.1.56",
-  "tag": "dashboard-v0.1.56",
-  "releaseUrl": "https://github.com/itsmylife44/cliproxyapi-dashboard/releases/tag/dashboard-v0.1.56",
-  "releaseNotes": "## [0.1.56](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.55...dashboard-v0.1.56) (2026-03-21)\n\n\n### Features\n\n* add global-error boundary and metadata title template ([54657d2](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/54657d2901b3a303a97e72ceba8146ac94341e27))\n* **usage:** add latency tracking to usage records and enhance dashbo… ([#138](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/138)) ([c56a657](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c56a6573413bcd860c7e072989f913a4c9c1f421))\n\n\n### Bug Fixes\n\n* **quota:** avoid unknown display labels for inferred providers ([6eacdfb](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6eacdfbc58159a574b78bbbce1239942264418ef))\n\n---\nThis PR was generated with [Release Please](https://github.com/googleapis/release-please). See [documentation](https://github.com/googleapis/release-please#release-please).\n\n<!-- This is an auto-generated description by cubic. -->"
+  "version": "0.1.57",
+  "tag": "dashboard-v0.1.57",
+  "releaseUrl": "https://github.com/itsmylife44/cliproxyapi-dashboard/releases/tag/dashboard-v0.1.57",
+  "releaseNotes": "## [0.1.57](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.56...dashboard-v0.1.57) (2026-03-23)\n\n\n### Features\n\n* use models.dev as source for model context/output limits instead of hardcoded heuristics ([81ffcc0](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/81ffcc0024b504b0fda98df7f14f17aa4eb92578))\n\n\n### Bug Fixes\n\n* add latencyMs column to usage_records in entrypoint migration ([c13f5d0](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c13f5d04107d232dd79219b3f9af84272ad2bb21))\n\n---\nThis PR was generated with [Release Please](https://github.com/googleapis/release-please). See [documentation](https://github.com/googleapis/release-please#release-please).\n\n<!-- This is an auto-generated description by cubic. -->"
 }

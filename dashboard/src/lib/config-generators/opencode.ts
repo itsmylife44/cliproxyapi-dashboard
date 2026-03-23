@@ -2,6 +2,7 @@ import {
   isRecord,
   type ProxyModel,
 } from "./shared";
+import { modelsDevCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";
 
 export type { OAuthAccount, ConfigData } from "./shared";
 
@@ -28,6 +29,80 @@ export interface ModelDefinition {
   modalities: { input: string[]; output: string[] };
 }
 
+export interface ModelsDevLimits {
+  context: number;
+  output: number;
+}
+
+const MODELS_DEV_URL = "https://models.dev/api.json";
+
+/**
+ * Primary providers whose model data takes priority when the same model ID
+ * appears across multiple providers in the models.dev registry.
+ */
+const PRIORITY_PROVIDERS = [
+  "anthropic", "openai", "google", "google-vertex",
+  "xai", "deepseek", "mistral", "cohere", "amazon-bedrock",
+];
+
+/**
+ * Fetch model context/output limits from models.dev (same source OpenCode uses).
+ * Results are cached for 1 hour. Returns a flat map of modelId → {context, output}.
+ * On failure, returns an empty map so the caller falls back to heuristics.
+ */
+export async function fetchModelsDevLimits(): Promise<Record<string, ModelsDevLimits>> {
+  const cacheKey = CACHE_KEYS.modelsDev();
+  const cached = modelsDevCache.get(cacheKey) as Record<string, ModelsDevLimits> | null;
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(MODELS_DEV_URL, {
+      headers: { "User-Agent": "cliproxyapi-dashboard" },
+      signal: AbortSignal.timeout(10_000),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      await res.body?.cancel();
+      return {};
+    }
+
+    const data: Record<string, unknown> = await res.json();
+    const lookup: Record<string, ModelsDevLimits> = {};
+
+    // First pass: collect all models from every provider
+    for (const prov of Object.values(data)) {
+      if (!isRecord(prov) || !isRecord(prov.models)) continue;
+      for (const [modelId, model] of Object.entries(prov.models)) {
+        if (!isRecord(model) || !isRecord(model.limit)) continue;
+        const ctx = model.limit.context;
+        const out = model.limit.output;
+        if (typeof ctx !== "number" || typeof out !== "number") continue;
+        if (!lookup[modelId]) {
+          lookup[modelId] = { context: ctx, output: out };
+        }
+      }
+    }
+
+    // Second pass: let priority providers override (they have the canonical values)
+    for (const pid of PRIORITY_PROVIDERS) {
+      const prov = data[pid];
+      if (!isRecord(prov) || !isRecord(prov.models)) continue;
+      for (const [modelId, model] of Object.entries(prov.models)) {
+        if (!isRecord(model) || !isRecord(model.limit)) continue;
+        const ctx = model.limit.context;
+        const out = model.limit.output;
+        if (typeof ctx !== "number" || typeof out !== "number") continue;
+        lookup[modelId] = { context: ctx, output: out };
+      }
+    }
+
+    modelsDevCache.set(cacheKey, lookup, CACHE_TTL.MODELS_DEV);
+    return lookup;
+  } catch {
+    return {};
+  }
+}
+
 const DEFAULT_MODALITIES: { input: string[]; output: string[] } = { input: ["text", "image"], output: ["text"] };
 
 /**
@@ -43,17 +118,30 @@ function supportsReasoning(modelId: string): boolean {
   return false;
 }
 
-function inferModelDefinition(modelId: string, ownedBy: string): ModelDefinition {
+function inferModelDefinition(
+  modelId: string,
+  ownedBy: string,
+  modelsDevLimits: Record<string, ModelsDevLimits>,
+): ModelDefinition {
   const isReasoning = supportsReasoning(modelId);
 
-  let context = 200000;
-  let output = 64000;
-  if (ownedBy === "google" || ownedBy === "antigravity") {
-    context = 1048576;
-    output = 65536;
-  } else if (ownedBy === "openai") {
-    context = 400000;
-    output = 128000;
+  const devLimits = modelsDevLimits[modelId];
+  let context: number;
+  let output: number;
+
+  if (devLimits) {
+    context = devLimits.context;
+    output = devLimits.output;
+  } else {
+    context = 200000;
+    output = 64000;
+    if (ownedBy === "google" || ownedBy === "antigravity") {
+      context = 1048576;
+      output = 65536;
+    } else if (ownedBy === "openai") {
+      context = 400000;
+      output = 128000;
+    }
   }
 
   const name = modelId
@@ -118,12 +206,13 @@ function hyphenatedToDot(id: string): string {
 }
 
 export function buildAvailableModelsFromProxy(
-  proxyModels: ProxyModel[]
+  proxyModels: ProxyModel[],
+  modelsDevLimits: Record<string, ModelsDevLimits> = {},
 ): Record<string, ModelDefinition> {
   const deduplicated = deduplicateProxyModels(proxyModels);
   const models: Record<string, ModelDefinition> = {};
   for (const pm of deduplicated) {
-    models[pm.id] = inferModelDefinition(pm.id, pm.owned_by);
+    models[pm.id] = inferModelDefinition(pm.id, pm.owned_by, modelsDevLimits);
   }
   return models;
 }
@@ -133,7 +222,11 @@ interface OAuthModelAlias {
   alias: string;
 }
 
-export function extractOAuthModelAliases(config: import("./shared").ConfigData | null, oauthAccounts: import("./shared").OAuthAccount[]): Record<string, ModelDefinition> {
+export function extractOAuthModelAliases(
+  config: import("./shared").ConfigData | null,
+  oauthAccounts: import("./shared").OAuthAccount[],
+  modelsDevLimits: Record<string, ModelsDevLimits> = {},
+): Record<string, ModelDefinition> {
    if (!config) return {};
    const aliases = config["oauth-model-alias"];
    if (!isRecord(aliases)) return {};
@@ -155,10 +248,11 @@ export function extractOAuthModelAliases(config: import("./shared").ConfigData |
        if (!isRecord(entry)) continue;
        const alias = entry as unknown as OAuthModelAlias;
       if (typeof alias.alias === "string" && typeof alias.name === "string") {
+          const devLimits = modelsDevLimits[alias.alias];
           models[alias.alias] = {
             name: `${alias.name} (via ${provider})`,
-            context: 200000,
-            output: 64000,
+            context: devLimits?.context ?? 200000,
+            output: devLimits?.output ?? 64000,
             attachment: true,
             reasoning: supportsReasoning(alias.alias),
             modalities: DEFAULT_MODALITIES,

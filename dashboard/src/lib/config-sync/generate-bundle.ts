@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
-import { buildAvailableModelsFromProxy, extractOAuthModelAliases, getProxyUrl, getInternalProxyUrl, type McpEntry, type ModelDefinition } from "@/lib/config-generators/opencode";
+import { buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits, getProxyUrl, getInternalProxyUrl, type McpEntry, type ModelDefinition } from "@/lib/config-generators/opencode";
 import { buildOhMyOpenCodeConfig } from "@/lib/config-generators/oh-my-opencode";
 import { fetchProxyModels, type ProxyModel } from "@/lib/config-generators/shared";
 import { validateFullConfig, type OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
@@ -294,11 +294,14 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
 
    const externalProxyUrl = getProxyUrl();
    const internalProxyUrl = getInternalProxyUrl();
-   const proxyModels = apiKey !== "no-api-key-create-one-in-dashboard"
-     ? await fetchProxyModelsCached(internalProxyUrl, apiKey)
-     : [];
-   const nativeModels = buildAvailableModelsFromProxy(proxyModels);
-   const aliasModels = extractOAuthModelAliases(managementConfig as ConfigData | null, oauthAccounts);
+   const [proxyModels, modelsDevLimits] = await Promise.all([
+     apiKey !== "no-api-key-create-one-in-dashboard"
+       ? fetchProxyModelsCached(internalProxyUrl, apiKey)
+       : Promise.resolve([]),
+     fetchModelsDevLimits(),
+   ]);
+   const nativeModels = buildAvailableModelsFromProxy(proxyModels, modelsDevLimits);
+   const aliasModels = extractOAuthModelAliases(managementConfig as ConfigData | null, oauthAccounts, modelsDevLimits);
    // Native proxy models take priority over OAuth aliases with the same ID
    // This prevents e.g. a github-copilot fork alias from overwriting the native Claude model
    const allModels: Record<string, ModelDefinition> = {

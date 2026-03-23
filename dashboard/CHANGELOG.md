@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.57](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.56...dashboard-v0.1.57) (2026-03-23)
+
+
+### Features
+
+* use models.dev as source for model context/output limits instead of hardcoded heuristics ([81ffcc0](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/81ffcc0024b504b0fda98df7f14f17aa4eb92578))
+
+
+### Bug Fixes
+
+* add latencyMs column to usage_records in entrypoint migration ([c13f5d0](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c13f5d04107d232dd79219b3f9af84272ad2bb21))
+
 ## [0.1.56](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.55...dashboard-v0.1.56) (2026-03-21)
 
 

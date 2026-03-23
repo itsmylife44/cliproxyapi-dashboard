@@ -87,12 +87,13 @@ services:
     networks:
       - backend
     environment:
-      # Allow read-only container/image info + pull/restart operations
+      # Allow container/image management + pull/restart/create operations
       CONTAINERS: 1
       IMAGES: 1
       POST: 1
+      # Allow network inspection + connect (required for container recreation after updates)
+      NETWORKS: 1
       # Block dangerous operations
-      NETWORKS: 0
       VOLUMES: 0
       EXEC: 0
       SERVICES: 0

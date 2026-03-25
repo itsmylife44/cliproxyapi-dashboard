@@ -144,6 +144,76 @@ const fetchAuthFiles = async (): Promise<AuthFileEntry[] | null> => {
   }
 };
 
+/**
+ * Find new auth files by comparing before/after snapshots.
+ * Primary strategy: snapshot-diff is provider-agnostic and works regardless
+ * of how CLIProxyAPIPlus names the auth file.
+ */
+const findNewAuthFilesByDiff = (
+  before: AuthFileEntry[],
+  after: AuthFileEntry[],
+  provider: Provider
+): AuthFileEntry[] => {
+  const beforeNames = new Set(before.map((f) => f.name));
+
+  return after.filter((file) => {
+    if (beforeNames.has(file.name)) return false;
+
+    const fileProvider = (file.provider || file.type || "").toLowerCase();
+    const fileNameLower = file.name.toLowerCase();
+    return matchesAuthFileProvider(provider, fileProvider, fileNameLower);
+  });
+};
+
+/**
+ * Find auth files matching the OAuth state in the filename.
+ * Fallback strategy for providers that embed state in auth file names.
+ */
+const findAuthFilesByState = (
+  files: AuthFileEntry[],
+  provider: Provider,
+  resolvedState: string | undefined
+): AuthFileEntry[] => {
+  return files.filter((file) => {
+    const fileNameLower = file.name.toLowerCase();
+    const fileProvider = (file.provider || file.type || "").toLowerCase();
+
+    if (!matchesAuthFileProvider(provider, fileProvider, fileNameLower)) {
+      return false;
+    }
+
+    if (!resolvedState) return true;
+
+    return file.name.includes(resolvedState) ||
+      fileNameLower.includes(resolvedState.toLowerCase());
+  });
+};
+
+/**
+ * Find unclaimed auth files matching the provider that have no ownership record.
+ * Last-resort fallback: if only one unclaimed file exists for this provider, claim it.
+ */
+const findUnclaimedAuthFiles = async (
+  files: AuthFileEntry[],
+  provider: Provider
+): Promise<AuthFileEntry[]> => {
+  const providerFiles = files.filter((file) => {
+    const fileProvider = (file.provider || file.type || "").toLowerCase();
+    const fileNameLower = file.name.toLowerCase();
+    return matchesAuthFileProvider(provider, fileProvider, fileNameLower);
+  });
+
+  if (providerFiles.length === 0) return [];
+
+  const existingOwnerships = await prisma.providerOAuthOwnership.findMany({
+    where: { accountName: { in: providerFiles.map((f) => f.name) } },
+    select: { accountName: true },
+  });
+
+  const ownedNames = new Set(existingOwnerships.map((o) => o.accountName));
+  return providerFiles.filter((f) => !ownedNames.has(f.name));
+};
+
 export async function POST(request: NextRequest) {
   const session = await verifySession();
 
@@ -178,6 +248,9 @@ export async function POST(request: NextRequest) {
   try {
     let responseStatus = 200;
     let resolvedState = state;
+
+    const preCallbackFiles = await fetchAuthFiles() ?? [];
+    const preCallbackNames = new Set(preCallbackFiles.map((f) => f.name));
 
     if (PROVIDERS_WITH_CALLBACK.has(provider)) {
       if (!callbackUrl) {
@@ -219,34 +292,58 @@ export async function POST(request: NextRequest) {
       await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
 
       const afterAuthFiles = await fetchAuthFiles();
+      if (!afterAuthFiles) continue;
 
-        if (afterAuthFiles) {
-          candidateFiles = afterAuthFiles.filter((file) => {
-          const fileNameLower = file.name.toLowerCase();
-          const fileProvider = (file.provider || file.type || "").toLowerCase();
-          const providerMatches = matchesAuthFileProvider(provider, fileProvider, fileNameLower);
-
-          if (!providerMatches) {
-            return false;
-          }
-
-          if (!resolvedState) {
-            return true;
-          }
-
-          return file.name.includes(resolvedState) ||
-            fileNameLower.includes(resolvedState.toLowerCase());
-        });
+      const diffCandidates = findNewAuthFilesByDiff(preCallbackFiles, afterAuthFiles, provider);
+      if (diffCandidates.length > 0) {
+        candidateFiles = diffCandidates;
+        logger.info(
+          { provider, strategy: "snapshot-diff", count: diffCandidates.length },
+          "OAuth callback: matched new auth file via snapshot diff"
+        );
+        break;
       }
 
-      if (candidateFiles.length > 0) {
+      const stateCandidates = findAuthFilesByState(afterAuthFiles, provider, resolvedState);
+      if (stateCandidates.length > 0) {
+        candidateFiles = stateCandidates;
+        logger.info(
+          { provider, strategy: "state-match", count: stateCandidates.length },
+          "OAuth callback: matched auth file via state in filename"
+        );
         break;
+      }
+
+      if (attempt >= MAX_RETRIES - 2) {
+        const unclaimedCandidates = await findUnclaimedAuthFiles(afterAuthFiles, provider);
+        if (unclaimedCandidates.length === 1) {
+          candidateFiles = unclaimedCandidates;
+          logger.info(
+            { provider, strategy: "unclaimed-single", name: unclaimedCandidates[0].name },
+            "OAuth callback: matched single unclaimed auth file for provider"
+          );
+          break;
+        }
+
+        if (unclaimedCandidates.length > 1) {
+          const newAndUnclaimed = unclaimedCandidates.filter(
+            (f) => !preCallbackNames.has(f.name)
+          );
+          if (newAndUnclaimed.length === 1) {
+            candidateFiles = newAndUnclaimed;
+            logger.info(
+              { provider, strategy: "unclaimed-new", name: newAndUnclaimed[0].name },
+              "OAuth callback: matched single new unclaimed auth file"
+            );
+            break;
+          }
+        }
       }
     }
 
     if (candidateFiles.length === 0) {
       logger.warn(
-        { provider, state: resolvedState || null },
+        { provider, state: resolvedState || null, preSnapshotCount: preCallbackFiles.length },
         "OAuth callback: auth file not yet available, client should retry"
       );
       return NextResponse.json({ status: 202 }, { status: 202 });
@@ -265,6 +362,10 @@ export async function POST(request: NextRequest) {
           },
         });
         claimed = true;
+        logger.info(
+          { provider, accountName: file.name, userId: session.userId },
+          "OAuth callback: ownership claimed successfully"
+        );
       } catch (e) {
         if (
           e instanceof Prisma.PrismaClientKnownRequestError &&

@@ -249,8 +249,10 @@ export async function POST(request: NextRequest) {
     let responseStatus = 200;
     let resolvedState = state;
 
-    const preCallbackFiles = await fetchAuthFiles() ?? [];
-    const preCallbackNames = new Set(preCallbackFiles.map((f) => f.name));
+    const preCallbackFiles = await fetchAuthFiles();
+    const preCallbackNames = preCallbackFiles
+      ? new Set(preCallbackFiles.map((f) => f.name))
+      : null;
 
     if (PROVIDERS_WITH_CALLBACK.has(provider)) {
       if (!callbackUrl) {
@@ -294,14 +296,16 @@ export async function POST(request: NextRequest) {
       const afterAuthFiles = await fetchAuthFiles();
       if (!afterAuthFiles) continue;
 
-      const diffCandidates = findNewAuthFilesByDiff(preCallbackFiles, afterAuthFiles, provider);
-      if (diffCandidates.length > 0) {
-        candidateFiles = diffCandidates;
-        logger.info(
-          { provider, strategy: "snapshot-diff", count: diffCandidates.length },
-          "OAuth callback: matched new auth file via snapshot diff"
-        );
-        break;
+      if (preCallbackFiles) {
+        const diffCandidates = findNewAuthFilesByDiff(preCallbackFiles, afterAuthFiles, provider);
+        if (diffCandidates.length > 0) {
+          candidateFiles = diffCandidates;
+          logger.info(
+            { provider, strategy: "snapshot-diff", count: diffCandidates.length },
+            "OAuth callback: matched new auth file via snapshot diff"
+          );
+          break;
+        }
       }
 
       const stateCandidates = findAuthFilesByState(afterAuthFiles, provider, resolvedState);
@@ -325,7 +329,7 @@ export async function POST(request: NextRequest) {
           break;
         }
 
-        if (unclaimedCandidates.length > 1) {
+        if (unclaimedCandidates.length > 1 && preCallbackNames) {
           const newAndUnclaimed = unclaimedCandidates.filter(
             (f) => !preCallbackNames.has(f.name)
           );
@@ -343,7 +347,7 @@ export async function POST(request: NextRequest) {
 
     if (candidateFiles.length === 0) {
       logger.warn(
-        { provider, state: resolvedState || null, preSnapshotCount: preCallbackFiles.length },
+        { provider, state: resolvedState || null, preSnapshotCount: preCallbackFiles?.length ?? -1 },
         "OAuth callback: auth file not yet available, client should retry"
       );
       return NextResponse.json({ status: 202 }, { status: 202 });

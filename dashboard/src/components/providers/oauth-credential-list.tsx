@@ -21,8 +21,10 @@ interface OAuthCredentialListProps {
   loading: boolean;
   currentUser: CurrentUserLike | null;
   togglingAccountId: string | null;
+  claimingAccountName: string | null;
   onToggle: (accountId: string, currentlyDisabled: boolean) => void;
   onDelete: (accountId: string) => void;
+  onClaim: (accountName: string) => void;
 }
 
 function parseStatusMessage(raw: string | null): string | null {
@@ -90,8 +92,10 @@ export function OAuthCredentialList({
   loading,
   currentUser,
   togglingAccountId,
+  claimingAccountName,
   onToggle,
   onDelete,
+  onClaim,
 }: OAuthCredentialListProps) {
   return (
     <>
@@ -130,6 +134,16 @@ export function OAuthCredentialList({
                 </div>
                 {currentUser && (account.isOwn || currentUser.isAdmin) && (
                   <div className="flex shrink-0 items-center gap-2">
+                    {currentUser.isAdmin && !account.ownerUsername && (
+                      <Button
+                        variant="secondary"
+                        className="px-2.5 py-1 text-xs"
+                        disabled={claimingAccountName === account.accountName}
+                        onClick={() => onClaim(account.accountName)}
+                      >
+                        {claimingAccountName === account.accountName ? "..." : "Claim"}
+                      </Button>
+                    )}
                     <Button
                       variant="secondary"
                       className="px-2.5 py-1 text-xs"

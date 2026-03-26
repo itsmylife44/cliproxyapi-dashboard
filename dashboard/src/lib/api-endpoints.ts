@@ -38,6 +38,7 @@ export const API_ENDPOINTS = {
     KEYS: "/api/providers/keys",
     OAUTH: "/api/providers/oauth",
     OAUTH_IMPORT: "/api/providers/oauth/import",
+    OAUTH_CLAIM: "/api/providers/oauth/claim",
     PERPLEXITY_COOKIE: "/api/providers/perplexity-cookie",
     PERPLEXITY_COOKIE_SYNC_MODELS: "/api/providers/perplexity-cookie/sync-models",
   },

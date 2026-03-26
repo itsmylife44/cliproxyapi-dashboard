@@ -201,6 +201,7 @@ export function OAuthSection({
   const [showConfirmOAuthDelete, setShowConfirmOAuthDelete] = useState(false);
   const [pendingOAuthDelete, setPendingOAuthDelete] = useState<{ accountId: string; accountName: string } | null>(null);
   const [togglingAccountId, setTogglingAccountId] = useState<string | null>(null);
+  const [claimingAccountName, setClaimingAccountName] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importProviderId, setImportProviderId] = useState<OAuthProviderId | null>(null);
   const [importJsonContent, setImportJsonContent] = useState("");
@@ -269,6 +270,28 @@ export function OAuthSection({
       showToast("Network error", "error");
     } finally {
       setTogglingAccountId(null);
+    }
+  };
+
+  const claimOAuthAccount = async (accountName: string) => {
+    setClaimingAccountName(accountName);
+    try {
+      const res = await fetch(API_ENDPOINTS.PROVIDERS.OAUTH_CLAIM, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountName }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(extractApiError(data, "Failed to claim account"), "error");
+      } else {
+        showToast("Account claimed successfully", "success");
+        await loadAccounts();
+      }
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setClaimingAccountName(null);
     }
   };
 
@@ -744,8 +767,10 @@ export function OAuthSection({
             loading={oauthAccountsLoading}
             currentUser={currentUser}
             togglingAccountId={togglingAccountId}
+            claimingAccountName={claimingAccountName}
             onToggle={toggleOAuthAccount}
             onDelete={confirmDeleteOAuth}
+            onClaim={claimOAuthAccount}
           />
 
           <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3 text-xs text-slate-400">

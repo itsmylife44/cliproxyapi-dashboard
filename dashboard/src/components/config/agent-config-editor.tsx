@@ -55,8 +55,8 @@ export default function AgentConfigEditor({
       <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
         <SectionHeader title="General Settings" />
         <div className="grid gap-4 sm:grid-cols-2">
-          <ConfigField label="Upstream Proxy" description="Optional SOCKS5/HTTP/HTTPS proxy for outbound requests to AI providers. Leave empty for direct connection.">
-            <Input type="text" name="proxy-url" value={config["proxy-url"]} onChange={(value) => updateConfig("proxy-url", value)} placeholder="socks5://proxy:1080 or http://proxy:8080" className="font-mono" />
+          <ConfigField label="Upstream Proxy" description="Optional SOCKS5/HTTP/HTTPS proxy for outbound requests. Use 'direct' or 'none' to bypass. Leave empty for direct connection.">
+            <Input type="text" name="proxy-url" value={config["proxy-url"]} onChange={(value) => updateConfig("proxy-url", value)} placeholder="socks5://user:pass@host:port" className="font-mono" />
           </ConfigField>
           <ConfigField label="Auth Directory" description="Directory where OAuth credential files are stored.">
             <Input type="text" name="auth-dir" value={config["auth-dir"]} onChange={(value) => updateConfig("auth-dir", value)} placeholder="~/.cli-proxy-api" className="font-mono" />

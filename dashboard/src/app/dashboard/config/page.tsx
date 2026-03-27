@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import AgentConfigEditor from "@/components/config/agent-config-editor";
 import ConfigPreview from "@/components/config/config-preview";
@@ -137,6 +138,8 @@ export default function ConfigPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
+  const [showProxyWarning, setShowProxyWarning] = useState(false);
+  const [resettingProxy, setResettingProxy] = useState(false);
   const { showToast } = useToast();
 
   const hasUnsavedChanges = config && originalConfig && JSON.stringify(config) !== JSON.stringify(originalConfig);
@@ -176,7 +179,43 @@ export default function ConfigPage() {
     };
   }, [fetchConfig]);
 
+  const VALID_PROXY_SCHEMES = ["socks5://", "socks5h://", "http://", "https://"];
+  const VALID_PROXY_KEYWORDS = ["direct", "none"];
+
+  const validateProxyUrl = (url: string): string | null => {
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    if (VALID_PROXY_KEYWORDS.includes(trimmed)) return null;
+    if (!VALID_PROXY_SCHEMES.some((s) => trimmed.startsWith(s))) {
+      return `Proxy URL must start with socks5://, http://, or https:// (or use "direct"/"none" to bypass)`;
+    }
+    try {
+      new URL(trimmed);
+    } catch {
+      return "Invalid proxy URL format. Example: socks5://user:pass@host:port";
+    }
+    return null;
+  };
+
   const handleSave = async () => {
+    if (!config) return;
+
+    const proxyUrl = config["proxy-url"];
+    const proxyError = validateProxyUrl(proxyUrl);
+    if (proxyError) {
+      showToast(proxyError, "error");
+      return;
+    }
+
+    if (proxyUrl.trim() && proxyUrl !== originalConfig?.["proxy-url"]) {
+      setShowProxyWarning(true);
+      return;
+    }
+
+    await executeSave();
+  };
+
+  const executeSave = async () => {
     if (!config) return;
 
     setSaving(true);
@@ -335,16 +374,53 @@ export default function ConfigPage() {
   }
 
   if (!config) {
+    const handleEmergencyProxyReset = async () => {
+      setResettingProxy(true);
+      try {
+        const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
+          method: "PUT",
+          headers: { "Content-Type": "text/yaml" },
+          body: yaml.dump({ "proxy-url": "" }, { lineWidth: -1, noRefs: true }),
+        });
+
+        if (res.ok) {
+          showToast("Proxy URL cleared. Retrying config load...", "success");
+          setTimeout(() => {
+            void fetchConfig();
+          }, 2000);
+        } else {
+          showToast("Failed to reset proxy — the management API may be unreachable", "error");
+        }
+      } catch {
+        showToast("Network error — CLIProxyAPI may be completely unreachable through the proxy", "error");
+      } finally {
+        setResettingProxy(false);
+      }
+    };
+
     return (
       <div className="space-y-4">
         <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
           <h1 className="text-xl font-semibold tracking-tight text-slate-100">Configuration</h1>
         </section>
-        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4 text-center">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6 text-center space-y-4">
           <p className="text-slate-300">Failed to load configuration</p>
-          <Button onClick={fetchConfig} className="mt-4 px-2.5 py-1 text-xs">
-            Retry
-          </Button>
+          <p className="text-xs text-slate-500">
+            This can happen if an invalid proxy URL was configured, preventing CLIProxyAPI from responding.
+          </p>
+          <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+            <Button onClick={fetchConfig} className="px-2.5 py-1 text-xs">
+              Retry
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleEmergencyProxyReset}
+              disabled={resettingProxy}
+              className="px-2.5 py-1 text-xs"
+            >
+              {resettingProxy ? "Resetting..." : "Emergency: Clear Proxy URL"}
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -410,6 +486,20 @@ export default function ConfigPage() {
         <strong>TIP:</strong> Changes are saved immediately to the management API. The service may need to be
         restarted for some configuration changes to take effect.
       </div>
+
+      <ConfirmDialog
+        isOpen={showProxyWarning}
+        onClose={() => setShowProxyWarning(false)}
+        onConfirm={() => {
+          setShowProxyWarning(false);
+          void executeSave();
+        }}
+        title="Proxy URL Changed"
+        message={`Setting a proxy URL will route all CLIProxyAPI outbound traffic through "${config?.["proxy-url"]}". If the proxy is unreachable, you won't be able to load this configuration page anymore. Are you sure?`}
+        confirmLabel="Save Anyway"
+        cancelLabel="Cancel"
+        variant="warning"
+      />
     </div>
   );
 }

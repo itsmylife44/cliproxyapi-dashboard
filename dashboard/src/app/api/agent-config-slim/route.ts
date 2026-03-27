@@ -4,7 +4,7 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { pickBestModel, SLIM_AGENT_ROLES } from "@/lib/config-generators/oh-my-opencode-slim";
 import { getInternalProxyUrl, extractOAuthModelAliases } from "@/lib/config-generators/opencode";
-import { fetchProxyModels } from "@/lib/config-generators/shared";
+import { buildAvailableModelIds, fetchProxyModels } from "@/lib/config-generators/shared";
 import type { ConfigData } from "@/lib/config-generators/shared";
 import type { OhMyOpenCodeSlimFullConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { validateSlimConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
@@ -94,10 +94,8 @@ export async function GET() {
     const proxyModels = apiKeyForProxy ? await fetchProxyModels(getInternalProxyUrl(), apiKeyForProxy) : [];
     const oauthAccounts = extractOAuthAccounts(authFilesData);
     const oauthAliasIds = Object.keys(extractOAuthModelAliases(managementConfig as ConfigData | null, oauthAccounts));
-    const allModelIds = [...new Set([...proxyModels.map((m: { id: string }) => m.id), ...oauthAliasIds])];
-    const availableModels = allModelIds
-      .filter((id: string) => !excludedModels.has(id))
-      .sort((a, b) => a.localeCompare(b));
+    const allModelIds = buildAvailableModelIds(proxyModels, oauthAliasIds);
+    const availableModels = allModelIds.filter((id: string) => !excludedModels.has(id));
 
     const defaults = computeSlimDefaults(availableModels);
     const overrides = agentOverride?.slimOverrides ? validateSlimConfig(agentOverride.slimOverrides) : {} as OhMyOpenCodeSlimFullConfig;

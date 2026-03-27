@@ -22,6 +22,14 @@ export interface ProxyModel {
   owned_by: string;
 }
 
+export function buildAvailableModelIds(
+  proxyModels: ProxyModel[],
+  oauthAliasIds: string[],
+): string[] {
+  return [...new Set([...proxyModels.map((m) => m.id), ...oauthAliasIds])]
+    .sort((a, b) => a.localeCompare(b));
+}
+
 export async function fetchProxyModels(proxyUrl: string, apiKey: string): Promise<ProxyModel[]> {
   try {
     const controller = new AbortController();

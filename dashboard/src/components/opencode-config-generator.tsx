@@ -91,8 +91,12 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
             p === "opencode-cliproxyapi-sync" ? "opencode-cliproxyapi-sync@latest" : p
           );
           setPlugins(normalizedPlugins);
+          // Sync variant with parent based on loaded plugins
+          const loadedVariant = normalizedPlugins.includes(PLUGIN_OH_MY_OPENCODE_SLIM) ? "slim" : "normal";
+          onVariantChange?.(loadedVariant);
         } else {
           setPlugins(DEFAULT_PLUGINS);
+          onVariantChange?.("normal");
         }
       } catch {
       } finally {

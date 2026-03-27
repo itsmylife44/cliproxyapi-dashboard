@@ -309,7 +309,6 @@ export function generateConfigJson(
    const plugins = options?.plugins ?? [
      "opencode-cliproxyapi-sync@latest",
      "oh-my-opencode@latest",
-     "opencode-anthropic-auth@latest",
    ];
  
    const configObj: Record<string, unknown> = {

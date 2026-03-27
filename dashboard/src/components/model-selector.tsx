@@ -7,6 +7,7 @@ import {
   groupModelsByProvider,
 } from "@/lib/providers/model-grouping";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 interface ModelSelectorProps {
   availableModels: string[];
@@ -197,7 +198,7 @@ export function ModelSelector({
               <polyline points="9 18 15 12 9 6" />
             </svg>
             <span className="text-sm font-semibold text-white">
-              Model Selection
+              Model Selection <HelpTooltip content="Deselect models to exclude them from your config. Excluded models won't appear in opencode.json or be assigned to agents." />
             </span>
             {isLocked && (
               <span className="text-amber-400" title="Locked by subscription">

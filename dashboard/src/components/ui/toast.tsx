@@ -18,14 +18,18 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   const showToast = useCallback((message: string, type: Toast["type"]) => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
 
     setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
+      removeToast(id);
     }, 5000);
-  }, []);
+  }, [removeToast]);
 
   return (
     <ToastContext.Provider value={{ showToast }}>
@@ -35,14 +39,26 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             className={cn(
-              "backdrop-blur-xl px-6 py-4 text-sm font-medium rounded-xl border shadow-2xl",
+              "backdrop-blur-xl pl-5 pr-2 py-3 text-sm font-medium rounded-xl border shadow-2xl",
               "animate-in slide-in-from-right-5 transition-all duration-300",
+              "flex items-center gap-3",
               toast.type === "success" && "bg-green-500/30 border-green-400/40 text-white shadow-green-500/20",
               toast.type === "error" && "bg-red-500/30 border-red-400/40 text-white shadow-red-500/20",
               toast.type === "info" && "bg-blue-500/30 border-blue-400/40 text-white shadow-blue-500/20"
             )}
           >
-            {toast.message}
+            <span className="flex-1">{toast.message}</span>
+            <button
+              type="button"
+              onClick={() => removeToast(toast.id)}
+              className="shrink-0 rounded-md p-1 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+              aria-label="Dismiss"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           </div>
         ))}
       </div>

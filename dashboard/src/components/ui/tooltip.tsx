@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 interface TooltipProps {
   children: ReactNode;
@@ -16,18 +16,26 @@ export function Tooltip({
   side = "top",
   className,
 }: TooltipProps) {
+  const [visible, setVisible] = useState(false);
+
   return (
-    <span className="relative inline-flex group">
+    <span
+      className="relative inline-flex"
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+      onFocus={() => setVisible(true)}
+      onBlur={() => setVisible(false)}
+      onTouchStart={() => setVisible((v) => !v)}
+    >
       {children}
       <span
         role="tooltip"
         className={cn(
-          "pointer-events-none absolute z-50 max-w-xs",
-          "bg-slate-800 border border-slate-600/50 text-slate-200 text-xs rounded-md px-2 py-1 shadow-lg",
-          "opacity-0 group-hover:opacity-100",
+          "pointer-events-none absolute z-50 w-52",
+          "bg-slate-900/95 backdrop-blur-sm border border-slate-600/40 text-slate-300 text-[10px] leading-[14px] rounded-md px-2.5 py-1.5 shadow-xl",
           "transition-opacity duration-150",
           "whitespace-normal break-words",
-          // Positioning per side
+          visible ? "opacity-100" : "opacity-0",
           side === "top" && "bottom-full left-1/2 -translate-x-1/2 mb-1.5",
           side === "bottom" && "top-full left-1/2 -translate-x-1/2 mt-1.5",
           side === "left" && "right-full top-1/2 -translate-y-1/2 mr-1.5",
@@ -36,19 +44,18 @@ export function Tooltip({
         )}
       >
         {content}
-        {/* Arrow/caret */}
         <span
           className={cn(
             "pointer-events-none absolute",
             "border-4 border-transparent",
             side === "top" &&
-              "top-full left-1/2 -translate-x-1/2 border-t-slate-800",
+              "top-full left-1/2 -translate-x-1/2 border-t-slate-900/95",
             side === "bottom" &&
-              "bottom-full left-1/2 -translate-x-1/2 border-b-slate-800",
+              "bottom-full left-1/2 -translate-x-1/2 border-b-slate-900/95",
             side === "left" &&
-              "left-full top-1/2 -translate-y-1/2 border-l-slate-800",
+              "left-full top-1/2 -translate-y-1/2 border-l-slate-900/95",
             side === "right" &&
-              "right-full top-1/2 -translate-y-1/2 border-r-slate-800"
+              "right-full top-1/2 -translate-y-1/2 border-r-slate-900/95"
           )}
         />
       </span>
@@ -62,9 +69,10 @@ interface HelpTooltipProps {
 
 export function HelpTooltip({ content }: HelpTooltipProps) {
   return (
-    <Tooltip content={content}>
+    <Tooltip content={content} side="bottom">
       <span
-        className="inline-flex items-center justify-center size-4 rounded-full bg-slate-700/50 text-slate-400 text-[10px] cursor-help hover:bg-slate-600/50 transition-colors duration-150 select-none"
+        className="inline-flex items-center justify-center size-3.5 rounded-full bg-slate-700/40 text-slate-500 text-[8px] cursor-help hover:bg-slate-600/50 hover:text-slate-400 transition-colors duration-150 select-none ml-1 align-middle"
+        tabIndex={0}
         aria-label={content}
       >
         ?

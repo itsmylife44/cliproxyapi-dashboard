@@ -125,6 +125,59 @@ export const AgentConfigSchema = z.object({
 });
 
 // ============================================================================
+// SLIM AGENT CONFIG
+// ============================================================================
+
+const SlimAgentEntrySchema = z.object({
+  model: z.string().optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  variant: z.string().optional(),
+  skills: z.array(z.string()).optional(),
+  mcps: z.array(z.string()).optional(),
+});
+
+const SlimManualPlanEntrySchema = z.object({
+  primary: z.string(),
+  fallback1: z.string(),
+  fallback2: z.string(),
+  fallback3: z.string(),
+});
+
+const SlimFallbackSchema = z.object({
+  enabled: z.boolean().optional(),
+  timeoutMs: z.number().min(0).optional(),
+  retryDelayMs: z.number().min(0).optional(),
+  chains: z.record(z.string(), z.array(z.string()).min(1)).optional(),
+});
+
+const SlimTmuxSchema = z.object({
+  enabled: z.boolean().optional(),
+  layout: z.enum(["main-horizontal", "main-vertical", "tiled", "even-horizontal", "even-vertical"]).optional(),
+  main_pane_size: z.number().min(20).max(80).optional(),
+});
+
+const SlimBackgroundSchema = z.object({
+  maxConcurrentStarts: z.number().min(1).max(50).optional(),
+});
+
+const SlimConfigOverridesSchema = z.object({
+  preset: z.string().optional(),
+  setDefaultAgent: z.boolean().optional(),
+  scoringEngineVersion: z.enum(["v1", "v2-shadow", "v2"]).optional(),
+  balanceProviderUsage: z.boolean().optional(),
+  manualPlan: z.record(z.string(), SlimManualPlanEntrySchema).optional(),
+  agents: z.record(z.string(), SlimAgentEntrySchema).optional(),
+  disabled_mcps: z.array(z.string()).optional(),
+  tmux: SlimTmuxSchema.optional(),
+  background: SlimBackgroundSchema.optional(),
+  fallback: SlimFallbackSchema.optional(),
+});
+
+export const SlimAgentConfigSchema = z.object({
+  overrides: SlimConfigOverridesSchema,
+});
+
+// ============================================================================
 // CUSTOM PROVIDERS
 // ============================================================================
 

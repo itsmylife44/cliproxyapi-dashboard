@@ -6,6 +6,7 @@ import { PluginSection } from "@/components/opencode/plugin-section";
 import { McpSection } from "@/components/opencode/mcp-section";
 import { ConfigPreview } from "@/components/opencode/config-preview";
 import { extractApiError } from "@/lib/utils";
+import { HelpTooltip } from "@/components/ui/tooltip";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import {
   type OAuthAccount,
@@ -20,6 +21,8 @@ interface ApiKeyEntry {
   name: string | null;
 }
 
+export type OmoVariant = "normal" | "slim";
+
 interface OpenCodeConfigGeneratorProps {
    apiKeys: ApiKeyEntry[];
    config: ConfigData | null;
@@ -27,6 +30,7 @@ interface OpenCodeConfigGeneratorProps {
    models: Record<string, ModelDefinition>;
    excludedModels?: string[];
    proxyUrl: string;
+   onVariantChange?: (variant: OmoVariant) => void;
  }
 
 function downloadFile(content: string, filename: string) {
@@ -41,18 +45,21 @@ function downloadFile(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+const PLUGIN_OH_MY_OPENCODE = "oh-my-opencode@latest";
+const PLUGIN_OH_MY_OPENCODE_SLIM = "oh-my-opencode-slim@latest";
+
 const DEFAULT_PLUGINS = [
   "opencode-cliproxyapi-sync@latest",
-  "oh-my-opencode@latest",
-  "opencode-anthropic-auth@latest",
+  PLUGIN_OH_MY_OPENCODE,
 ];
 
 export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
-  const { apiKeys, config, oauthAccounts, models: allModels, excludedModels, proxyUrl } = props;
+  const { apiKeys, config, oauthAccounts, models: allModels, excludedModels, proxyUrl, onVariantChange } = props;
    const [selectedKeyIndex, setSelectedKeyIndex] = useState(0);
    const [isExpanded, setIsExpanded] = useState(false);
    const [plugins, setPlugins] = useState<string[]>(DEFAULT_PLUGINS);
    const [pluginInput, setPluginInput] = useState("");
+   const omoVariant: "normal" | "slim" = plugins.includes(PLUGIN_OH_MY_OPENCODE_SLIM) ? "slim" : "normal";
   const [mcps, setMcps] = useState<McpEntry[]>([]);
   const [mcpName, setMcpName] = useState("");
   const [mcpType, setMcpType] = useState<"local" | "remote">("local");
@@ -176,6 +183,16 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
      plugins,
      mcps,
    });
+
+  const handleOmoVariantChange = (variant: OmoVariant) => {
+    const removePlugin = variant === "slim" ? PLUGIN_OH_MY_OPENCODE : PLUGIN_OH_MY_OPENCODE_SLIM;
+    const addPlugin = variant === "slim" ? PLUGIN_OH_MY_OPENCODE_SLIM : PLUGIN_OH_MY_OPENCODE;
+    const filtered = plugins.filter((p) => p !== removePlugin && p !== addPlugin);
+    const insertIdx = Math.min(1, filtered.length);
+    const newPlugins = [...filtered.slice(0, insertIdx), addPlugin, ...filtered.slice(insertIdx)];
+    setPlugins(newPlugins);
+    onVariantChange?.(variant);
+  };
 
   const handleAddPlugin = () => {
     const trimmed = pluginInput.trim();
@@ -389,6 +406,36 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
        )}
 
        <div className="space-y-4 border-t border-white/10 pt-4">
+         <div className="space-y-2">
+           <p className="text-xs font-medium text-white/50 uppercase tracking-wider">Oh My OpenCode Variant <HelpTooltip content="Normal: 9 specialized agents with categories for fine-grained control. Slim: 6 agents, lower token usage, built-in fallback chains. Both use your proxy models." /></p>
+           <div className="flex gap-2">
+             <button
+               type="button"
+               onClick={() => handleOmoVariantChange("normal")}
+               className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                 omoVariant === "normal"
+                   ? "border-fuchsia-400/50 bg-fuchsia-500/15 text-fuchsia-300"
+                   : "border-white/10 bg-white/5 text-white/50 hover:text-white/70 hover:border-white/20"
+               }`}
+             >
+               <div className="font-semibold">Oh My OpenCode</div>
+               <div className="mt-0.5 text-[10px] opacity-70">9 agents + categories</div>
+             </button>
+             <button
+               type="button"
+               onClick={() => handleOmoVariantChange("slim")}
+               className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                 omoVariant === "slim"
+                   ? "border-teal-400/50 bg-teal-500/15 text-teal-300"
+                   : "border-white/10 bg-white/5 text-white/50 hover:text-white/70 hover:border-white/20"
+               }`}
+             >
+               <div className="font-semibold">Oh My OpenCode Slim</div>
+               <div className="mt-0.5 text-[10px] opacity-70">6 agents, less tokens</div>
+             </button>
+           </div>
+         </div>
+
          <PluginSection
            plugins={plugins}
            pluginInput={pluginInput}

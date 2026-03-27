@@ -53,3 +53,60 @@ export function getAllowedActions(containerName: string, state: string): Contain
 
   return actions;
 }
+
+// ---------------------------------------------------------------------------
+// Container detail helpers (used by /api/containers/[name]/details)
+// ---------------------------------------------------------------------------
+
+export interface ContainerPort {
+  containerPort: number;
+  protocol: "tcp" | "udp";
+  hostIp?: string;
+  hostPort?: number;
+}
+
+export interface ContainerMount {
+  type: "bind" | "volume" | "tmpfs";
+  source: string;
+  destination: string;
+  readOnly: boolean;
+}
+
+type HealthStatus = "healthy" | "unhealthy" | "starting" | "none";
+
+export function normalizeHealthStatus(raw: string): HealthStatus {
+  const lower = raw.toLowerCase().trim();
+  if (lower === "healthy") return "healthy";
+  if (lower === "unhealthy") return "unhealthy";
+  if (lower === "starting") return "starting";
+  return "none";
+}
+
+export function extractEnvKeys(envArray: string[]): string[] {
+  return envArray.map((entry) => {
+    const eqIdx = entry.indexOf("=");
+    return eqIdx === -1 ? entry : entry.slice(0, eqIdx);
+  });
+}
+
+export function parseRestartInfo(
+  restartCount: number,
+  exitCode?: number,
+  error?: string,
+): { restartCount: number; exitCode?: number; error?: string } {
+  return {
+    restartCount,
+    ...(exitCode !== undefined && { exitCode }),
+    ...(error && { error }),
+  };
+}
+
+export function parseServiceLabels(
+  labels: Record<string, string>,
+): { project?: string; service?: string; version?: string } {
+  return {
+    ...(labels["com.docker.compose.project"] && { project: labels["com.docker.compose.project"] }),
+    ...(labels["com.docker.compose.service"] && { service: labels["com.docker.compose.service"] }),
+    ...(labels["org.opencontainers.image.version"] && { version: labels["org.opencontainers.image.version"] }),
+  };
+}

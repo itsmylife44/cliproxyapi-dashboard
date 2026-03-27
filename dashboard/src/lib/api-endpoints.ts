@@ -70,6 +70,7 @@ export const API_ENDPOINTS = {
   },
   MODEL_PREFERENCES: "/api/model-preferences",
   AGENT_CONFIG: "/api/agent-config",
+  AGENT_CONFIG_SLIM: "/api/agent-config-slim",
   CONTAINERS: {
     LIST: "/api/containers/list",
   },

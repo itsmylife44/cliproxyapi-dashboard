@@ -7,6 +7,7 @@ import { ConfigSubscriber } from "@/components/config-subscriber";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
+import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { fetchProxyModels } from "@/lib/config-generators/shared";
 import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits } from "@/lib/config-generators/opencode";
 import type { ConfigData } from "@/lib/config-generators/shared";
@@ -145,6 +146,17 @@ export default async function QuickStartPage() {
     ? { ...publisherOverrides, mcpServers: subscriberOverrides.mcpServers, customPlugins: subscriberOverrides.customPlugins }
     : subscriberOverrides;
 
+  // Slim overrides — validate from DB, subscriber inherits publisher's if non-empty
+  const publisherSlimOverrides = publisherAgentOverride?.slimOverrides
+    ? validateSlimConfig(publisherAgentOverride.slimOverrides)
+    : {};
+  const subscriberSlimOverrides = agentOverride?.slimOverrides
+    ? validateSlimConfig(agentOverride.slimOverrides)
+    : {};
+  const slimOverrides: OhMyOpenCodeSlimFullConfig = isSubscriber && Object.keys(publisherSlimOverrides).length > 0
+    ? publisherSlimOverrides
+    : subscriberSlimOverrides;
+
   const apiKeys = userApiKeys.map((k) => ({ key: k.key, name: k.name }));
   const oauthAccounts = extractOAuthAccounts(oauthData);
 
@@ -281,7 +293,7 @@ export default async function QuickStartPage() {
           {statusCards.map((card) => (
             <div key={card.label} className="glass-card rounded-md border border-slate-700/70 px-2.5 py-2 transition-colors hover:border-slate-600">
               <div className="flex items-center justify-between">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{card.label}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{card.label}</div>
                 <span className={`text-xs ${card.iconTone}`} aria-hidden="true">{card.icon}</span>
               </div>
               <div className={`mt-0.5 text-xs font-semibold ${card.tone} ${"truncate" in card && card.truncate ? "truncate" : ""}`} title={String(card.value)}>
@@ -303,6 +315,7 @@ export default async function QuickStartPage() {
         modelSourceMap={modelSourceMap}
         initialExcludedModels={initialExcludedModels}
         agentOverrides={agentOverrides}
+        slimOverrides={slimOverrides}
         hasSyncActive={hasSyncActive}
         isSubscribed={isSubscriber}
         proxyUrl={getProxyUrl()}

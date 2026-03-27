@@ -41,11 +41,9 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
   const [overrides, setOverrides] = useState<OhMyOpenCodeSlimFullConfig>(initialOverrides ?? { agents: {} });
   const [saving, setSaving] = useState(false);
 
-  // Sync state when parent prop changes (e.g. late-loaded subscriber overrides)
+  // Sync state when parent prop changes (e.g. late-loaded subscriber overrides or cleared)
   useEffect(() => {
-    if (initialOverrides) {
-      setOverrides(initialOverrides);
-    }
+    setOverrides(initialOverrides ?? { agents: {} });
   }, [initialOverrides]);
   const { showToast } = useToast();
 

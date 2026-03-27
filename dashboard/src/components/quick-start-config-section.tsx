@@ -43,6 +43,7 @@ interface QuickStartConfigSectionProps {
    availableModels: string[];
    allModels: Record<string, ModelDefinitionLike>;
    modelSourceMap: Map<string, string>;
+   modelProvidersMap?: Map<string, string[]>;
    initialExcludedModels: string[];
    agentOverrides?: OhMyOpenCodeFullConfig;
    slimOverrides?: OhMyOpenCodeSlimFullConfig;
@@ -61,6 +62,7 @@ export function QuickStartConfigSection({
    initialExcludedModels,
    agentOverrides,
    slimOverrides,
+   modelProvidersMap,
    hasSyncActive,
    isSubscribed = false,
    proxyUrl,
@@ -75,6 +77,7 @@ export function QuickStartConfigSection({
           <ModelSelector
             availableModels={availableModels}
             modelSourceMap={modelSourceMap}
+            modelProvidersMap={modelProvidersMap}
             initialExcludedModels={initialExcludedModels}
             onSelectionChange={setExcludedModels}
             isLocked={isSubscribed}

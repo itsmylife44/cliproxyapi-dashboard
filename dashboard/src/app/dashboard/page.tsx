@@ -91,6 +91,18 @@ function buildSourceMap(proxyModels: { id: string; owned_by: string }[]): Map<st
   return sourceMap;
 }
 
+function buildProvidersMap(proxyModels: { id: string; owned_by: string }[]): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const m of proxyModels) {
+    const display = resolveOwnedByDisplay(m.owned_by);
+    const existing = map.get(m.id) ?? [];
+    if (!existing.includes(display)) {
+      map.set(m.id, [...existing, display]);
+    }
+  }
+  return map;
+}
+
 export default async function QuickStartPage() {
   const [config, isHealthy, oauthData, session] = await Promise.all([
     fetchManagementJson({ path: "config" }),
@@ -192,8 +204,13 @@ export default async function QuickStartPage() {
   const oauthAliasIds = Object.keys(oauthAliasModels);
   const availableModelIds = [...new Set([...proxyModels.map((m) => m.id), ...oauthAliasIds])];
   const modelSourceMap = buildSourceMap(proxyModels);
+  const modelProvidersMap = buildProvidersMap(proxyModels);
   for (const aliasId of oauthAliasIds) {
     modelSourceMap.set(aliasId, "OAuth Alias");
+    const existing = modelProvidersMap.get(aliasId) ?? [];
+    if (!existing.includes("OAuth Alias")) {
+      modelProvidersMap.set(aliasId, [...existing, "OAuth Alias"]);
+    }
   }
   const allProxyModels = { ...oauthAliasModels, ...buildAvailableModelsFromProxy(proxyModels, modelsDevLimits) };
   const setupItems = [
@@ -313,6 +330,7 @@ export default async function QuickStartPage() {
         availableModels={availableModelIds}
         allModels={allProxyModels}
         modelSourceMap={modelSourceMap}
+        modelProvidersMap={modelProvidersMap}
         initialExcludedModels={initialExcludedModels}
         agentOverrides={agentOverrides}
         slimOverrides={slimOverrides}

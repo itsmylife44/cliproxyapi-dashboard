@@ -49,7 +49,8 @@ Open **http://localhost:3000** → create admin account → done.
 - **Quota Tracking** — Rate limits and usage per provider (Claude, Codex, Kimi, Antigravity)
 - **Telegram Quota Alerts** — Automatic notifications when OAuth quota drops below threshold (configurable per-provider, 1-hour cooldown)
 - **Usage Analytics** — Request counts, provider breakdown, model stats, error rates
-- **Config Sync** — Auto-sync OpenCode configs via the [`opencode-cliproxyapi-sync`](https://github.com/itsmylife44/opencode-cliproxyapi-sync) plugin
+- **Oh-My-OpenCode Variant Toggle** — Choose between [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) (9 agents + categories) and [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (6 agents, lower tokens, fallback chains) with per-agent model/skills configuration
+- **Config Sync** — Auto-sync OpenCode configs via the [`opencode-cliproxyapi-sync`](https://github.com/itsmylife44/opencode-cliproxyapi-sync) plugin (includes slim config)
 - **Config Sharing** — Share model configs with others via share codes (`XXXX-XXXX`)
 - **One-Click Updates** — Update both Dashboard (GHCR) and CLIProxyAPIPlus (Docker Hub) from the admin panel
 - **Container Management** — Start, stop, restart containers directly from the UI
@@ -71,6 +72,31 @@ Get notified on Telegram when your OAuth provider quota is running low.
 4. Enable alerts — the scheduler checks every 5 minutes with a 1-hour cooldown between notifications
 
 Use the **Test Message** button to verify your configuration before enabling.
+
+## Oh-My-OpenCode Integration
+
+The dashboard supports two OpenCode orchestration variants. Toggle between them in the **Using with OpenCode** section:
+
+| Variant | Agents | Description |
+|---------|--------|-------------|
+| **Oh-My-OpenCode** | 9 agents + 8 categories | Full-featured orchestration with sisyphus, atlas, prometheus, oracle, and more |
+| **Oh-My-OpenCode Slim** | 6 agents | Lightweight: orchestrator, oracle, designer, explorer, librarian, fixer. Lower token usage with dedicated fallback chains |
+
+**How it works:**
+
+1. Select your variant in the dashboard -- the plugin in `opencode.json` switches automatically
+2. Assign models to agents (auto-assigned by tier, or manually override)
+3. Toggle skills per agent (simplify, cartography, agent-browser)
+4. Config syncs automatically via the sync plugin
+
+**First-time setup** (run once per variant):
+
+```bash
+bunx oh-my-opencode@latest install          # Normal variant
+bunx oh-my-opencode-slim@latest install     # Slim variant
+```
+
+Each variant has its own config file (`oh-my-opencode.json` / `oh-my-opencode-slim.json`) -- they don't conflict.
 
 ## Screenshots
 

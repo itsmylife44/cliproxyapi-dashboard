@@ -139,7 +139,9 @@ function Invoke-Migrations {
             "20260225_add_provider_groups",
             "20260213000000_add_usage_tracking",
             "20260216_add_collected_at_index",
-            "20260217_add_audit_target_usage_source_indexes"
+            "20260217_add_audit_target_usage_source_indexes",
+            "20260320_add_usage_latency_ms",
+            "20260327_add_slim_overrides"
         )
         foreach ($m in $migrations) {
             npx prisma migrate resolve --applied $m 2>&1 | Out-Null

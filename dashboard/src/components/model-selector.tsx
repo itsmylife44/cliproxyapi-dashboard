@@ -7,10 +7,12 @@ import {
   groupModelsByProvider,
 } from "@/lib/providers/model-grouping";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 interface ModelSelectorProps {
   availableModels: string[];
   modelSourceMap: Map<string, string>;
+  modelProvidersMap?: Map<string, string[]>;
   initialExcludedModels: string[];
   onSelectionChange: (excludedModels: string[]) => void;
   isLocked?: boolean;
@@ -31,6 +33,7 @@ function buildExcludedSignature(models: Iterable<string>): string {
 export function ModelSelector({
   availableModels,
   modelSourceMap,
+  modelProvidersMap,
   initialExcludedModels,
   onSelectionChange,
   isLocked = false,
@@ -197,7 +200,7 @@ export function ModelSelector({
               <polyline points="9 18 15 12 9 6" />
             </svg>
             <span className="text-sm font-semibold text-white">
-              Model Selection
+              Model Selection <HelpTooltip content="Deselect models to exclude them from your config. Excluded models won't appear in opencode.json or be assigned to agents." />
             </span>
             {isLocked && (
               <span className="text-amber-400" title="Locked by subscription">
@@ -336,6 +339,8 @@ export function ModelSelector({
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                       {group.models.map((modelId) => {
                         const isChecked = !excludedModels.has(modelId);
+                        const providers = modelProvidersMap?.get(modelId) ?? [];
+                        const hasMultipleProviders = providers.length > 1;
                         return (
                           <label
                             key={modelId}
@@ -352,11 +357,22 @@ export function ModelSelector({
                               disabled={isLocked}
                               className="size-4 shrink-0 rounded border-white/20 bg-white/5 text-purple-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer disabled:cursor-not-allowed"
                             />
-                            <span className={`font-mono text-xs ${
-                              isLocked ? "text-white/50" : "text-white/70 group-hover:text-white/90"
-                            } transition-colors truncate`}>
-                              {modelId}
-                            </span>
+                            <div className="min-w-0 flex-1">
+                              <span className={`font-mono text-xs ${
+                                isLocked ? "text-white/50" : "text-white/70 group-hover:text-white/90"
+                              } transition-colors truncate block`}>
+                                {modelId}
+                              </span>
+                              {hasMultipleProviders && (
+                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                  {providers.map((p) => (
+                                    <span key={p} className="inline-block rounded-sm bg-white/8 border border-white/10 px-1 py-px text-[9px] text-white/45">
+                                      {p}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </label>
                         );
                       })}

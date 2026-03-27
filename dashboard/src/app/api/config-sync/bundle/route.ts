@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
       version: bundle.version,
       opencode: bundle.opencode,
       ohMyOpencode: bundle.ohMyOpencode,
+      ohMyOpenCodeSlim: bundle.ohMyOpenCodeSlim,
     });
   } catch (error) {
     const isSyncTokenError =

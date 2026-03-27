@@ -143,6 +143,8 @@ run_migrations() {
          npx prisma migrate resolve --applied 20260213000000_add_usage_tracking >/dev/null 2>&1 || true
          npx prisma migrate resolve --applied 20260216_add_collected_at_index >/dev/null 2>&1 || true
          npx prisma migrate resolve --applied 20260217_add_audit_target_usage_source_indexes >/dev/null 2>&1 || true
+         npx prisma migrate resolve --applied 20260320_add_usage_latency_ms >/dev/null 2>&1 || true
+         npx prisma migrate resolve --applied 20260327_add_slim_overrides >/dev/null 2>&1 || true
        fi
     
     if npx prisma migrate deploy; then

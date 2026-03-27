@@ -7,6 +7,7 @@ import { ConfigSubscriber } from "@/components/config-subscriber";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
+import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { fetchProxyModels } from "@/lib/config-generators/shared";
 import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits } from "@/lib/config-generators/opencode";
 import type { ConfigData } from "@/lib/config-generators/shared";
@@ -90,6 +91,18 @@ function buildSourceMap(proxyModels: { id: string; owned_by: string }[]): Map<st
   return sourceMap;
 }
 
+function buildProvidersMap(proxyModels: { id: string; owned_by: string }[]): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const m of proxyModels) {
+    const display = resolveOwnedByDisplay(m.owned_by);
+    const existing = map.get(m.id) ?? [];
+    if (!existing.includes(display)) {
+      map.set(m.id, [...existing, display]);
+    }
+  }
+  return map;
+}
+
 export default async function QuickStartPage() {
   const [config, isHealthy, oauthData, session] = await Promise.all([
     fetchManagementJson({ path: "config" }),
@@ -145,6 +158,17 @@ export default async function QuickStartPage() {
     ? { ...publisherOverrides, mcpServers: subscriberOverrides.mcpServers, customPlugins: subscriberOverrides.customPlugins }
     : subscriberOverrides;
 
+  // Slim overrides — validate from DB, subscriber inherits publisher's if non-empty
+  const publisherSlimOverrides = publisherAgentOverride?.slimOverrides
+    ? validateSlimConfig(publisherAgentOverride.slimOverrides)
+    : {};
+  const subscriberSlimOverrides = agentOverride?.slimOverrides
+    ? validateSlimConfig(agentOverride.slimOverrides)
+    : {};
+  const slimOverrides: OhMyOpenCodeSlimFullConfig = isSubscriber && Object.keys(publisherSlimOverrides).length > 0
+    ? publisherSlimOverrides
+    : subscriberSlimOverrides;
+
   const apiKeys = userApiKeys.map((k) => ({ key: k.key, name: k.name }));
   const oauthAccounts = extractOAuthAccounts(oauthData);
 
@@ -180,8 +204,13 @@ export default async function QuickStartPage() {
   const oauthAliasIds = Object.keys(oauthAliasModels);
   const availableModelIds = [...new Set([...proxyModels.map((m) => m.id), ...oauthAliasIds])];
   const modelSourceMap = buildSourceMap(proxyModels);
+  const modelProvidersMap = buildProvidersMap(proxyModels);
   for (const aliasId of oauthAliasIds) {
     modelSourceMap.set(aliasId, "OAuth Alias");
+    const existing = modelProvidersMap.get(aliasId) ?? [];
+    if (!existing.includes("OAuth Alias")) {
+      modelProvidersMap.set(aliasId, [...existing, "OAuth Alias"]);
+    }
   }
   const allProxyModels = { ...oauthAliasModels, ...buildAvailableModelsFromProxy(proxyModels, modelsDevLimits) };
   const setupItems = [
@@ -281,7 +310,7 @@ export default async function QuickStartPage() {
           {statusCards.map((card) => (
             <div key={card.label} className="glass-card rounded-md border border-slate-700/70 px-2.5 py-2 transition-colors hover:border-slate-600">
               <div className="flex items-center justify-between">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{card.label}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{card.label}</div>
                 <span className={`text-xs ${card.iconTone}`} aria-hidden="true">{card.icon}</span>
               </div>
               <div className={`mt-0.5 text-xs font-semibold ${card.tone} ${"truncate" in card && card.truncate ? "truncate" : ""}`} title={String(card.value)}>
@@ -301,8 +330,10 @@ export default async function QuickStartPage() {
         availableModels={availableModelIds}
         allModels={allProxyModels}
         modelSourceMap={modelSourceMap}
+        modelProvidersMap={modelProvidersMap}
         initialExcludedModels={initialExcludedModels}
         agentOverrides={agentOverrides}
+        slimOverrides={slimOverrides}
         hasSyncActive={hasSyncActive}
         isSubscribed={isSubscriber}
         proxyUrl={getProxyUrl()}

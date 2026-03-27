@@ -2,8 +2,10 @@ import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits, getProxyUrl, getInternalProxyUrl, type McpEntry, type ModelDefinition } from "@/lib/config-generators/opencode";
 import { buildOhMyOpenCodeConfig } from "@/lib/config-generators/oh-my-opencode";
+import { buildSlimConfig } from "@/lib/config-generators/oh-my-opencode-slim";
 import { fetchProxyModels, type ProxyModel } from "@/lib/config-generators/shared";
 import { validateFullConfig, type OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
+import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import type { ConfigData, OAuthAccount } from "@/lib/config-generators/shared";
 import { proxyModelsCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -168,6 +170,7 @@ interface ConfigBundle {
   version: string;
   opencode: Record<string, unknown>;
   ohMyOpencode: Record<string, unknown> | null;
+  ohMyOpenCodeSlim: Record<string, unknown> | null;
 }
 
 export async function generateConfigBundle(userId: string, syncApiKey?: string | null): Promise<ConfigBundle> {
@@ -334,8 +337,14 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
    const mcpEntries: McpEntry[] = agentOverrides?.mcpServers ?? [];
    const customPlugins = agentOverrides?.customPlugins ?? [];
    
-   const defaultPlugins = ["opencode-cliproxyapi-sync@latest", "oh-my-opencode@latest", "opencode-anthropic-auth@latest"];
+   // Use slim plugin if user's customPlugins include it, otherwise default to normal
+   const hasSlimPlugin = customPlugins.includes("oh-my-opencode-slim@latest");
+   const omoPlugin = hasSlimPlugin ? "oh-my-opencode-slim@latest" : "oh-my-opencode@latest";
+   const defaultPlugins = ["opencode-cliproxyapi-sync@latest", omoPlugin];
    const pluginSet = new Set([...defaultPlugins, ...customPlugins]);
+   // Ensure both variants aren't included simultaneously
+   if (hasSlimPlugin) pluginSet.delete("oh-my-opencode@latest");
+   else pluginSet.delete("oh-my-opencode-slim@latest");
    const plugins = Array.from(pluginSet).sort();
 
    const providers: Record<string, Record<string, unknown>> = {
@@ -382,10 +391,25 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
      agentOverrides
    );
 
+   // Build slim config
+   const subscriberSlimOverrides = agentOverride?.slimOverrides
+     ? validateSlimConfig(agentOverride.slimOverrides)
+     : undefined;
+   const publisherSlimOverrides = publisherAgentOverride?.slimOverrides
+     ? validateSlimConfig(publisherAgentOverride.slimOverrides)
+     : undefined;
+   const slimOverrides: OhMyOpenCodeSlimFullConfig | undefined =
+     hasActiveSubscription && publisherSlimOverrides
+       ? publisherSlimOverrides
+       : subscriberSlimOverrides;
+
+   const ohMyOpenCodeSlimConfig = buildSlimConfig(sortedFilteredIds, slimOverrides);
+
    // 11. Compute version hash
    const bundleForHash = {
      opencode: opencodeConfig,
      ohMyOpencode: ohMyOpencodeConfig,
+     ohMyOpenCodeSlim: ohMyOpenCodeSlimConfig,
    };
    const version = crypto
      .createHash("sha256")
@@ -397,5 +421,6 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
     version,
     opencode: opencodeConfig,
     ohMyOpencode: ohMyOpencodeConfig,
+    ohMyOpenCodeSlim: ohMyOpenCodeSlimConfig,
   };
 }

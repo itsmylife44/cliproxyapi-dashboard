@@ -245,9 +245,21 @@ export default function ConfigPage() {
         // If we can't fetch, proceed with what we have — better than blocking save
       }
 
-      const cleanedConfig = stripOAuthIds(config);
-      // Merge: start with full server config, overlay only the dashboard-managed fields
-      const mergedConfig = { ...fullCurrentConfig, ...cleanedConfig };
+      const cleanedConfig = stripOAuthIds(config) as unknown as Record<string, unknown>;
+      // Deep merge: preserve unmanaged fields in nested objects (e.g. claude-header-defaults.os/arch,
+      // codex-header-defaults, remote-management.secret-key, etc.)
+      const mergedConfig: Record<string, unknown> = { ...fullCurrentConfig };
+      for (const [key, value] of Object.entries(cleanedConfig)) {
+        if (
+          value !== null && typeof value === "object" && !Array.isArray(value) &&
+          mergedConfig[key] !== null && typeof mergedConfig[key] === "object" && !Array.isArray(mergedConfig[key])
+        ) {
+          // Deep merge one level: overlay dashboard fields onto server fields
+          mergedConfig[key] = { ...(mergedConfig[key] as Record<string, unknown>), ...(value as Record<string, unknown>) };
+        } else {
+          mergedConfig[key] = value;
+        }
+      }
 
       const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
         method: "PUT",

@@ -144,28 +144,39 @@ export default function ConfigPage() {
 
   const hasUnsavedChanges = config && originalConfig && JSON.stringify(config) !== JSON.stringify(originalConfig);
 
-  const fetchConfig = useCallback(async () => {
+  const fetchConfig = useCallback(async (retries = 3, delayMs = 1500) => {
     setLoading(true);
-    try {
-      const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG);
-      if (!res.ok) {
-        showToast("Failed to load configuration", "error");
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG);
+        if (!res.ok) {
+          if (attempt < retries) {
+            await new Promise((r) => setTimeout(r, delayMs * attempt));
+            continue;
+          }
+          showToast("Failed to load configuration", "error");
+          setLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+        if (!data["auth-dir"]) {
+          data["auth-dir"] = "~/.cli-proxy-api";
+        }
+        const stamped = stampOAuthIds(data as Config);
+        setConfig(stamped);
+        setOriginalConfig(stamped);
+        setRawJson(JSON.stringify(data, null, 2));
         setLoading(false);
         return;
+      } catch {
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, delayMs * attempt));
+          continue;
+        }
+        showToast("Network error", "error");
+        setLoading(false);
       }
-
-      const data = await res.json();
-      if (!data["auth-dir"]) {
-        data["auth-dir"] = "~/.cli-proxy-api";
-      }
-      const stamped = stampOAuthIds(data as Config);
-      setConfig(stamped);
-      setOriginalConfig(stamped);
-      setRawJson(JSON.stringify(data, null, 2));
-      setLoading(false);
-    } catch {
-      showToast("Network error", "error");
-      setLoading(false);
     }
   }, [showToast]);
 
@@ -234,10 +245,12 @@ export default function ConfigPage() {
         return;
       }
 
-      showToast("Configuration saved successfully", "success");
+      showToast("Configuration saved. CLIProxyAPI may restart briefly.", "success");
       setOriginalConfig(config);
       setRawJson(JSON.stringify(stripOAuthIds(config), null, 2));
       setSaving(false);
+      // Re-fetch after a short delay to pick up any server-side normalization
+      setTimeout(() => { void fetchConfig(3, 2000); }, 1500);
     } catch {
       showToast("Failed to save configuration", "error");
       setSaving(false);

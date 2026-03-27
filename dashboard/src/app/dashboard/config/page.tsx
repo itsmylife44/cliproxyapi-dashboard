@@ -245,12 +245,24 @@ export default function ConfigPage() {
         return;
       }
 
-      showToast("Configuration saved. CLIProxyAPI may restart briefly.", "success");
       setOriginalConfig(config);
       setRawJson(JSON.stringify(stripOAuthIds(config), null, 2));
       setSaving(false);
-      // Re-fetch after a short delay to pick up any server-side normalization
-      setTimeout(() => { void fetchConfig(3, 2000); }, 1500);
+
+      // Restart CLIProxyAPI to apply the new config
+      showToast("Configuration saved. Restarting CLIProxyAPI...", "success");
+      try {
+        await fetch(API_ENDPOINTS.RESTART, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmed: true }),
+        });
+      } catch {
+        // Restart call failed silently — container may not be managed by Docker
+      }
+
+      // Re-fetch after restart settles
+      setTimeout(() => { void fetchConfig(5, 2000); }, 3000);
     } catch {
       showToast("Failed to save configuration", "error");
       setSaving(false);

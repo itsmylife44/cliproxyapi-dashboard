@@ -232,11 +232,27 @@ export default function ConfigPage() {
     setSaving(true);
 
     try {
+      // Fetch the full current config first to preserve fields the dashboard
+      // doesn't manage (port, host, remote-management, api-keys, provider keys, etc.)
+      // Without this merge, saving overwrites those fields with empty/default values.
+      let fullCurrentConfig: Record<string, unknown> = {};
+      try {
+        const currentRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG);
+        if (currentRes.ok) {
+          fullCurrentConfig = await currentRes.json();
+        }
+      } catch {
+        // If we can't fetch, proceed with what we have — better than blocking save
+      }
+
       const cleanedConfig = stripOAuthIds(config);
+      // Merge: start with full server config, overlay only the dashboard-managed fields
+      const mergedConfig = { ...fullCurrentConfig, ...cleanedConfig };
+
       const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
         method: "PUT",
         headers: { "Content-Type": "text/yaml" },
-        body: yaml.dump(cleanedConfig, { lineWidth: -1, noRefs: true }),
+        body: yaml.dump(mergedConfig, { lineWidth: -1, noRefs: true }),
       });
 
       if (!res.ok) {

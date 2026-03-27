@@ -97,6 +97,7 @@ async function migrate() {
       "id" TEXT NOT NULL,
       "userId" TEXT NOT NULL,
       "overrides" JSONB NOT NULL DEFAULT '{}',
+      "slim_overrides" JSONB NOT NULL DEFAULT '{}',
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" TIMESTAMP(3) NOT NULL,
       CONSTRAINT "agent_model_overrides_pkey" PRIMARY KEY ("id")
@@ -106,6 +107,10 @@ async function migrate() {
       ALTER TABLE "agent_model_overrides" ADD CONSTRAINT "agent_model_overrides_userId_fkey"
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    -- Add slim_overrides column if missing (existing installs)
+    DO $$ BEGIN
+      ALTER TABLE "agent_model_overrides" ADD COLUMN "slim_overrides" JSONB NOT NULL DEFAULT '{}';
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
     -- User API keys table (per-user API keys with dual storage sync)
     CREATE TABLE IF NOT EXISTS "user_api_keys" (

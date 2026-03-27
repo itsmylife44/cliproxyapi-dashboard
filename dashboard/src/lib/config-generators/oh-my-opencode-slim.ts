@@ -76,20 +76,23 @@ export function buildSlimConfig(
   if (overrides?.scoringEngineVersion) config.scoringEngineVersion = overrides.scoringEngineVersion;
   if (overrides?.balanceProviderUsage !== undefined) config.balanceProviderUsage = overrides.balanceProviderUsage;
 
-  // Manual plan — filter models against available and prefix with cliproxyapi/
+  // Manual plan — skip entries with unavailable models, prefix valid ones
   if (overrides?.manualPlan && Object.keys(overrides.manualPlan).length > 0) {
-    const prefixIfAvailable = (m: string) =>
-      availableModels.includes(m) ? `cliproxyapi/${m}` : `cliproxyapi/${m}`;
     const filteredPlan: Record<string, { primary: string; fallback1: string; fallback2: string; fallback3: string }> = {};
     for (const [agent, entry] of Object.entries(overrides.manualPlan)) {
+      const allAvailable = [entry.primary, entry.fallback1, entry.fallback2, entry.fallback3]
+        .every((m) => availableModels.includes(m));
+      if (!allAvailable) continue;
       filteredPlan[agent] = {
-        primary: prefixIfAvailable(entry.primary),
-        fallback1: prefixIfAvailable(entry.fallback1),
-        fallback2: prefixIfAvailable(entry.fallback2),
-        fallback3: prefixIfAvailable(entry.fallback3),
+        primary: `cliproxyapi/${entry.primary}`,
+        fallback1: `cliproxyapi/${entry.fallback1}`,
+        fallback2: `cliproxyapi/${entry.fallback2}`,
+        fallback3: `cliproxyapi/${entry.fallback3}`,
       };
     }
-    config.manualPlan = filteredPlan;
+    if (Object.keys(filteredPlan).length > 0) {
+      config.manualPlan = filteredPlan;
+    }
   }
 
   // Disabled MCPs

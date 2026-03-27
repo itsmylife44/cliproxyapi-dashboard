@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CopyBlock } from "@/components/copy-block";
 import { downloadFile } from "@/components/oh-my-opencode/model-badge";
@@ -40,6 +40,13 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
   const [isExpanded, setIsExpanded] = useState(false);
   const [overrides, setOverrides] = useState<OhMyOpenCodeSlimFullConfig>(initialOverrides ?? { agents: {} });
   const [saving, setSaving] = useState(false);
+
+  // Sync state when parent prop changes (e.g. late-loaded subscriber overrides)
+  useEffect(() => {
+    if (initialOverrides) {
+      setOverrides(initialOverrides);
+    }
+  }, [initialOverrides]);
   const { showToast } = useToast();
 
   const allModelIds = proxyModelIds ?? [];

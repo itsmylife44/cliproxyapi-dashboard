@@ -148,7 +148,7 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     const agentsObj = obj.agents as Record<string, unknown>;
     const validatedAgents: Record<string, SlimAgentConfig> = {};
     for (const [key, value] of Object.entries(agentsObj)) {
-      if (key.length > 64) continue;
+      if (!(SLIM_AGENTS as readonly string[]).includes(key)) continue;
       if (typeof value === "object" && value !== null && !Array.isArray(value)) {
         const entryObj = value as Record<string, unknown>;
         const entry: SlimAgentConfig = {};

@@ -264,7 +264,7 @@ export default function ConfigPage() {
       const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
         method: "PUT",
         headers: { "Content-Type": "text/yaml" },
-        body: yaml.dump(mergedConfig, { lineWidth: -1, noRefs: true }),
+        body: yaml.dump(mergedConfig, { lineWidth: -1, noRefs: true, quotingType: '"', forceQuotes: true }),
       });
 
       if (!res.ok) {
@@ -433,7 +433,7 @@ export default function ConfigPage() {
         const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
           method: "PUT",
           headers: { "Content-Type": "text/yaml" },
-          body: yaml.dump({ "proxy-url": "" }, { lineWidth: -1, noRefs: true }),
+          body: yaml.dump({ "proxy-url": "" }, { lineWidth: -1, noRefs: true, quotingType: '"', forceQuotes: true }),
         });
 
         if (res.ok) {

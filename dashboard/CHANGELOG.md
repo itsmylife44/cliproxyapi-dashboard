@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.58](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.57...dashboard-v0.1.58) (2026-03-27)
+
+
+### Features
+
+* add oh-my-opencode-slim support with variant toggle ([#143](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/143)) ([152dc42](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/152dc42e682f81eca90a1016ec18c1cffa544175))
+
+
+### Bug Fixes
+
+* enable NETWORKS in docker-socket-proxy for container update flow ([054275f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/054275f0dfec697db3678481b8bbe947c6511cb1))
+* **oauth:** use snapshot-diff for ownership claim instead of state-in-filename matching ([#142](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/142)) ([a788d19](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a788d19992f3e3f27f636524305b1552a19df09f))
+
 ## [0.1.57](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.56...dashboard-v0.1.57) (2026-03-23)
 
 

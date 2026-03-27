@@ -47,7 +47,7 @@ export function TelegramSettings({
   onUpdateTokenApiKey,
 }: TelegramSettingsProps) {
   return (
-    <section className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+    <div className="space-y-3">
       <div>
         <h2 className="text-sm font-semibold text-slate-100">Config Sync</h2>
         <p className="text-xs text-slate-400">Sync tokens for OpenCode configuration</p>
@@ -229,6 +229,6 @@ export function TelegramSettings({
           )}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

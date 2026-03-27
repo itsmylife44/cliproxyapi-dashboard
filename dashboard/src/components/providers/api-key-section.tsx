@@ -206,7 +206,7 @@ export function ApiKeySection({
 
   return (
     <>
-      <section id="provider-api-keys" className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+      <div id="provider-api-keys" className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-slate-100">API Key Providers</h2>
@@ -253,47 +253,43 @@ export function ApiKeySection({
                     </div>
                   </div>
 
-                  <div className="px-4 pb-3">
-                    {configuredCount === 0 ? (
-                      <p className="text-xs text-slate-500">No API keys configured.</p>
-                    ) : (
-                      <div className="overflow-hidden rounded-sm border border-slate-700/60">
-                        {config.keys.map((keyInfo) => (
-                          <div
-                            key={keyInfo.keyHash}
-                            className="group flex items-center justify-between gap-3 border-b border-slate-700/60 bg-slate-900/30 px-3 py-2 last:border-b-0"
-                          >
-                            <div className="flex min-w-0 items-center gap-2">
-                              <span className="truncate font-mono text-xs text-slate-200">{keyInfo.maskedKey}</span>
-                              {currentUser && (
-                                <OwnerBadge ownerUsername={keyInfo.ownerUsername} isOwn={keyInfo.isOwn} />
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3">
-                              {currentUser && (
-                                <span className="text-[11px] text-slate-500">{userKeyCount}/{maxKeysPerUser}</span>
-                              )}
-                              {currentUser && (keyInfo.isOwn || currentUser.isAdmin) && (
-                                <Button
-                                  variant="danger"
-                                  className="px-2 py-1 text-[11px]"
-                                  onClick={() => confirmDeleteKey(keyInfo.keyHash, provider.id)}
-                                >
-                                  Remove
-                                </Button>
-                              )}
-                            </div>
+                  {configuredCount > 0 && (
+                    <div className="px-4 pb-3">
+                      {config.keys.map((keyInfo) => (
+                        <div
+                          key={keyInfo.keyHash}
+                          className="group flex items-center justify-between gap-3 border-t border-slate-700/50 px-1 py-1.5 first:border-t-0"
+                        >
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="truncate font-mono text-xs text-slate-300">{keyInfo.maskedKey}</span>
+                            {currentUser && (
+                              <OwnerBadge ownerUsername={keyInfo.ownerUsername} isOwn={keyInfo.isOwn} />
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                          <div className="flex items-center gap-3">
+                            {currentUser && (
+                              <span className="text-[11px] text-slate-500">{userKeyCount}/{maxKeysPerUser}</span>
+                            )}
+                            {currentUser && (keyInfo.isOwn || currentUser.isAdmin) && (
+                              <Button
+                                variant="danger"
+                                className="px-2 py-1 text-[11px]"
+                                onClick={() => confirmDeleteKey(keyInfo.keyHash, provider.id)}
+                              >
+                                Remove
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         </div>
-      </section>
+      </div>
 
       <Modal isOpen={modalProvider !== null} onClose={closeModal}>
         <ModalHeader>

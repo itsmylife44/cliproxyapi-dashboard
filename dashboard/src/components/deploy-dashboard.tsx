@@ -165,7 +165,7 @@ export function DeployDashboard() {
 
   if (webhookConfigured === false) {
     return (
-      <section className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+      <div className="space-y-3">
         <div>
           <h2 className="text-sm font-semibold text-slate-100">Dashboard Deployment</h2>
           <p className="text-xs text-slate-400">Deploy the latest dashboard changes from the repository</p>
@@ -190,12 +190,12 @@ export function DeployDashboard() {
             </ol>
           </div>
         </div>
-      </section>
+      </div>
     );
   }
 
   return (
-    <section className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold text-slate-100">Dashboard Deployment</h2>
@@ -307,6 +307,6 @@ export function DeployDashboard() {
         cancelLabel="Cancel"
         variant="warning"
       />
-    </section>
+    </div>
   );
 }

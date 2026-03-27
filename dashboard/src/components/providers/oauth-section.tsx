@@ -752,7 +752,7 @@ export function OAuthSection({
 
   return (
     <>
-      <section id="provider-oauth" className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+      <div id="provider-oauth" className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-slate-100">OAuth Accounts</h2>
@@ -783,7 +783,7 @@ export function OAuthSection({
             onImport={openImportModal}
           />
         </div>
-      </section>
+      </div>
 
       <Modal isOpen={isOAuthModalOpen} onClose={handleOAuthModalClose}>
         <ModalHeader>

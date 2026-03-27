@@ -145,7 +145,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
   }, [loadPerplexityCookies]);
 
   return (
-    <section id="provider-perplexity" className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+    <div id="provider-perplexity" className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold text-slate-100">Perplexity Pro</h2>
@@ -317,6 +317,6 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

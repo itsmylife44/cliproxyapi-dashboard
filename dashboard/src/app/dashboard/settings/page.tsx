@@ -328,49 +328,59 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-3">
+    <div className="space-y-6">
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <h1 className="text-xl font-semibold tracking-tight text-slate-100">Settings</h1>
         <p className="mt-1 text-sm text-slate-400">Manage account, security, config sync, and system operations.</p>
       </section>
 
-      <TelegramSettings
-        syncTokens={syncTokens}
-        syncTokensLoading={syncTokensLoading}
-        generatingToken={generatingToken}
-        generatedToken={generatedToken}
-        showInstructions={showInstructions}
-        availableApiKeys={availableApiKeys}
-        onGenerateToken={handleGenerateToken}
-        onClearGeneratedToken={() => setGeneratedToken(null)}
-        onCopyToken={handleCopyToken}
-        onToggleInstructions={() => setShowInstructions(!showInstructions)}
-        onConfirmRevokeToken={confirmRevokeToken}
-        onUpdateTokenApiKey={handleUpdateTokenApiKey}
-      />
+      <div className="flex flex-col lg:flex-row gap-6">
+        <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6 flex flex-col gap-6 lg:flex-1 lg:min-w-0">
+          <TelegramSettings
+            syncTokens={syncTokens}
+            syncTokensLoading={syncTokensLoading}
+            generatingToken={generatingToken}
+            generatedToken={generatedToken}
+            showInstructions={showInstructions}
+            availableApiKeys={availableApiKeys}
+            onGenerateToken={handleGenerateToken}
+            onClearGeneratedToken={() => setGeneratedToken(null)}
+            onCopyToken={handleCopyToken}
+            onToggleInstructions={() => setShowInstructions(!showInstructions)}
+            onConfirmRevokeToken={confirmRevokeToken}
+            onUpdateTokenApiKey={handleUpdateTokenApiKey}
+          />
+        </section>
 
-      <ProviderSettings
-        proxyUpdateInfo={proxyUpdateInfo}
-        proxyUpdateLoading={proxyUpdateLoading}
-        proxyUpdating={proxyUpdating}
-        dashboardUpdateInfo={dashboardUpdateInfo}
-        dashboardUpdateLoading={dashboardUpdateLoading}
-        dashboardUpdating={dashboardUpdating}
-        onConfirmProxyUpdate={confirmProxyUpdate}
-        onConfirmDashboardUpdate={confirmDashboardUpdate}
-        onRefreshProxyUpdate={fetchProxyUpdateInfo}
-        onRefreshDashboardUpdate={fetchDashboardUpdateInfo}
-      />
+        <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6 flex flex-col gap-6 lg:flex-1 lg:min-w-0 lg:self-start lg:sticky lg:top-4">
+          <PasswordSettings
+            cliProxyVersion={cliProxyVersion}
+            cliProxyLoading={cliProxyLoading}
+            dashboardUpdateInfo={dashboardUpdateInfo}
+            revokingSessions={revokingSessions}
+            onConfirmRevokeSessions={confirmRevokeSessions}
+          />
+        </section>
+      </div>
 
-      <DeployDashboard />
+      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6 flex flex-col gap-6">
+        <ProviderSettings
+          proxyUpdateInfo={proxyUpdateInfo}
+          proxyUpdateLoading={proxyUpdateLoading}
+          proxyUpdating={proxyUpdating}
+          dashboardUpdateInfo={dashboardUpdateInfo}
+          dashboardUpdateLoading={dashboardUpdateLoading}
+          dashboardUpdating={dashboardUpdating}
+          onConfirmProxyUpdate={confirmProxyUpdate}
+          onConfirmDashboardUpdate={confirmDashboardUpdate}
+          onRefreshProxyUpdate={fetchProxyUpdateInfo}
+          onRefreshDashboardUpdate={fetchDashboardUpdateInfo}
+        />
 
-      <PasswordSettings
-        cliProxyVersion={cliProxyVersion}
-        cliProxyLoading={cliProxyLoading}
-        dashboardUpdateInfo={dashboardUpdateInfo}
-        revokingSessions={revokingSessions}
-        onConfirmRevokeSessions={confirmRevokeSessions}
-      />
+        <div className="border-t border-slate-700/70 pt-6">
+          <DeployDashboard />
+        </div>
+      </section>
 
       <ConfirmDialog
         isOpen={showConfirmProxyUpdate}

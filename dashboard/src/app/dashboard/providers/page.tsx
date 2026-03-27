@@ -132,7 +132,7 @@ export default function ProvidersPage() {
     : 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <h1 className="text-xl font-semibold tracking-tight text-slate-100">
           AI Provider Configuration
@@ -174,27 +174,35 @@ export default function ProvidersPage() {
         </div>
       ) : (
         <>
-          <ApiKeySection
-            showToast={showToast}
-            currentUser={currentUser}
-            configs={configs}
-            maxKeysPerUser={maxKeysPerUser}
-            refreshProviders={refreshProviders}
-          />
+          <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6 space-y-6">
+            <ApiKeySection
+              showToast={showToast}
+              currentUser={currentUser}
+              configs={configs}
+              maxKeysPerUser={maxKeysPerUser}
+              refreshProviders={refreshProviders}
+            />
 
-          <OAuthSection
-            showToast={showToast}
-            currentUser={currentUser}
-            refreshProviders={refreshProviders}
-            onAccountCountChange={setOauthAccountCount}
-          />
+            <div className="border-t border-slate-700/70 pt-6">
+              <OAuthSection
+                showToast={showToast}
+                currentUser={currentUser}
+                refreshProviders={refreshProviders}
+                onAccountCountChange={setOauthAccountCount}
+              />
+            </div>
 
-          <CustomProviderSection
-            showToast={showToast}
-            onProviderCountChange={setCustomProviderCount}
-          />
+            <div className="border-t border-slate-700/70 pt-6">
+              <CustomProviderSection
+                showToast={showToast}
+                onProviderCountChange={setCustomProviderCount}
+              />
+            </div>
 
-          <PerplexityProSection showToast={showToast} />
+            <div className="border-t border-slate-700/70 pt-6">
+              <PerplexityProSection showToast={showToast} />
+            </div>
+          </section>
 
           {currentUser?.isAdmin && (
             <section id="provider-admin" className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">

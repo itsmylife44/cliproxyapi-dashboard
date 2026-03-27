@@ -108,8 +108,10 @@ export async function GET() {
     const proxyModels = apiKeyForProxy ? await fetchProxyModels(getInternalProxyUrl(), apiKeyForProxy) : [];
     const oauthAccounts = extractOAuthAccounts(authFilesData);
     const oauthAliasIds = Object.keys(extractOAuthModelAliases(managementConfig as ConfigData | null, oauthAccounts));
-    const allModelIds = [...proxyModels.map((m: { id: string }) => m.id), ...oauthAliasIds];
-    const availableModels = allModelIds.filter((id: string) => !excludedModels.has(id));
+    const allModelIds = [...new Set([...proxyModels.map((m: { id: string }) => m.id), ...oauthAliasIds])];
+    const availableModels = allModelIds
+      .filter((id: string) => !excludedModels.has(id))
+      .sort((a, b) => a.localeCompare(b));
 
     const defaults = computeDefaults(availableModels);
     const overrides = agentOverride?.overrides ? validateFullConfig(agentOverride.overrides) : {} as OhMyOpenCodeFullConfig;

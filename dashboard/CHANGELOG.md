@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.59](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.58...dashboard-v0.1.59) (2026-03-27)
+
+
+### Features
+
+* **config:** add proxy-url validation and emergency recovery ([797fb6c](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/797fb6c8d033388b07b86c21522855c0b82ef375))
+* **config:** restart CLIProxyAPI container after saving config ([5f5c7ac](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/5f5c7ace22a8ab408d2a5b73fd900e089537ee25))
+
+
+### Bug Fixes
+
+* **config:** preserve unmanaged fields on save via GET-then-merge ([2565aca](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/2565acac07e0f8eabb0337f179fceec2493476bf))
+* **config:** retry on load failure and re-fetch after save ([5b0558d](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/5b0558dd03243f14f1c01fad11dd0dc57fb997f2))
+* **config:** use deep merge to preserve nested unmanaged fields ([d8e1413](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d8e1413e8cb1c2fc7c16a88beac427cc81dd2578))
+* **db:** add slim_overrides column migration to agent_model_overrides ([4812b91](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/4812b91959de20fe8d9ab3c897049818304dcdf6))
+
 ## [0.1.58](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.57...dashboard-v0.1.58) (2026-03-27)
 
 

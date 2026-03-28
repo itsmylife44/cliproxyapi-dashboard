@@ -264,7 +264,7 @@ export default function ConfigPage() {
       const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
         method: "PUT",
         headers: { "Content-Type": "text/yaml" },
-        body: yaml.dump(mergedConfig, { lineWidth: -1, noRefs: true, quotingType: '"', forceQuotes: true }),
+        body: yaml.dump(mergedConfig, { lineWidth: -1, noRefs: true }),
       });
 
       if (!res.ok) {

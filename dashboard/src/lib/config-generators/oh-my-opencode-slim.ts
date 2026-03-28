@@ -122,13 +122,17 @@ export function buildSlimConfig(
       ...overrides.fallback,
     };
 
-    // Prefix chain models with cliproxyapi/
+    // Prefix chain models with cliproxyapi/, dropping empty chains
+    delete fallback.chains;
     if (overrides.fallback.chains) {
       const prefixedChains: Record<string, string[]> = {};
       for (const [agent, chain] of Object.entries(overrides.fallback.chains)) {
-        prefixedChains[agent] = chain
+        const filtered = chain
           .filter((m) => availableModels.includes(m))
           .map((m) => `cliproxyapi/${m}`);
+        if (filtered.length > 0) {
+          prefixedChains[agent] = filtered;
+        }
       }
       if (Object.keys(prefixedChains).length > 0) {
         fallback.chains = prefixedChains;

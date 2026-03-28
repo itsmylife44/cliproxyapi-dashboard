@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.60](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.59...dashboard-v0.1.60) (2026-03-28)
+
+
+### Features
+
+* **providers:** add Cursor and CodeBuddy OAuth provider support ([20eb8ae](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/20eb8ae328338113c6aec754a71848e3e967407a))
+* **providers:** add Cursor and CodeBuddy OAuth provider support ([#147](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/147)) ([c0c2c96](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c0c2c96905626dac6c07f4e876b43ed7b65d0e09))
+
+
+### Bug Fixes
+
+* abort config save if current config fetch fails to prevent data loss ([e2c4819](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/e2c4819714d7fe24b641d077b24c8f2fc83a2bab))
+* **agent-config:** dedupe and sort available model IDs ([11c6df4](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/11c6df4e26a57c203d4298d68453a34d9f588ffc))
+* **config:** force-quote YAML strings to prevent special char issues ([5e7fa64](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/5e7fa64e5b9db4a019b2ff6c3868c1e5b9562305))
+* remove forceQuotes from yaml dump to preserve boolean/number types ([b7f98a8](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/b7f98a88ca4dc088c3044e61a75047c70784c751))
+
 ## [0.1.59](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.58...dashboard-v0.1.59) (2026-03-27)
 
 

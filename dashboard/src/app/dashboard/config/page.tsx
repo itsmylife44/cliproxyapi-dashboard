@@ -226,71 +226,158 @@ export default function ConfigPage() {
     await executeSave();
   };
 
+  // Map of config fields to their dedicated Management API endpoints.
+  // Fields with dedicated endpoints are updated individually (safer, no full config overwrite).
+  // Fields without endpoints fall back to config.yaml update (only for those specific fields).
+  const FIELD_ENDPOINTS: Record<string, string> = {
+    "proxy-url": "/api/management/proxy-url",
+    "debug": "/api/management/debug",
+    "logging-to-file": "/api/management/logging-to-file",
+    "usage-statistics-enabled": "/api/management/usage-statistics-enabled",
+    "request-retry": "/api/management/request-retry",
+    "max-retry-interval": "/api/management/max-retry-interval",
+    "request-log": "/api/management/request-log",
+    "ws-auth": "/api/management/ws-auth",
+  };
+
+  // Nested field endpoints (e.g., quota-exceeded.switch-project)
+  const NESTED_FIELD_ENDPOINTS: Record<string, Record<string, string>> = {
+    "quota-exceeded": {
+      "switch-project": "/api/management/quota-exceeded/switch-project",
+      "switch-preview-model": "/api/management/quota-exceeded/switch-preview-model",
+    },
+  };
+
   const executeSave = async () => {
-    if (!config) return;
+    if (!config || !originalConfig) return;
 
     setSaving(true);
 
     try {
-      // Fetch the full current config first to preserve fields the dashboard
-      // doesn't manage (port, host, remote-management, api-keys, provider keys, etc.)
-      // Without this merge, saving overwrites those fields with empty/default values.
-      let fullCurrentConfig: Record<string, unknown> = {};
-      try {
-        const currentRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG);
-        if (currentRes.ok) {
-          fullCurrentConfig = await currentRes.json();
+      const errors: string[] = [];
+      let successCount = 0;
+
+      // Helper to update a single field via its dedicated endpoint
+      const updateField = async (endpoint: string, value: unknown): Promise<boolean> => {
+        try {
+          const res = await fetch(endpoint, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ value }),
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            errors.push(`${endpoint}: ${errData.error || res.statusText}`);
+            return false;
+          }
+          return true;
+        } catch {
+          errors.push(`${endpoint}: network error`);
+          return false;
         }
-      } catch {
-        // If we can't fetch, proceed with what we have — better than blocking save
+      };
+
+      // Check each top-level field for changes
+      for (const key of Object.keys(FIELD_ENDPOINTS) as (keyof Config)[]) {
+        const oldVal = originalConfig[key];
+        const newVal = config[key];
+        if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+          const success = await updateField(FIELD_ENDPOINTS[key], newVal);
+          if (success) successCount++;
+        }
       }
 
-      const cleanedConfig = stripOAuthIds(config) as unknown as Record<string, unknown>;
-      // Deep merge: preserve unmanaged fields in nested objects (e.g. claude-header-defaults.os/arch,
-      // codex-header-defaults, remote-management.secret-key, etc.)
-      const mergedConfig: Record<string, unknown> = { ...fullCurrentConfig };
-      for (const [key, value] of Object.entries(cleanedConfig)) {
-        if (
-          value !== null && typeof value === "object" && !Array.isArray(value) &&
-          mergedConfig[key] !== null && typeof mergedConfig[key] === "object" && !Array.isArray(mergedConfig[key])
-        ) {
-          // Deep merge one level: overlay dashboard fields onto server fields
-          mergedConfig[key] = { ...(mergedConfig[key] as Record<string, unknown>), ...(value as Record<string, unknown>) };
-        } else {
-          mergedConfig[key] = value;
+      // Check nested fields (quota-exceeded)
+      for (const [parentKey, subFields] of Object.entries(NESTED_FIELD_ENDPOINTS)) {
+        const oldParent = originalConfig[parentKey as keyof Config] as Record<string, unknown> | undefined;
+        const newParent = config[parentKey as keyof Config] as Record<string, unknown> | undefined;
+        if (oldParent && newParent) {
+          for (const [subKey, endpoint] of Object.entries(subFields)) {
+            if (JSON.stringify(oldParent[subKey]) !== JSON.stringify(newParent[subKey])) {
+              const success = await updateField(endpoint, newParent[subKey]);
+              if (success) successCount++;
+            }
+          }
         }
       }
 
-      const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
-        method: "PUT",
-        headers: { "Content-Type": "text/yaml" },
-        body: yaml.dump(mergedConfig, { lineWidth: -1, noRefs: true, quotingType: '"', forceQuotes: true }),
-      });
+      // For fields without dedicated endpoints, we need to use config.yaml
+      // But ONLY send those specific fields that changed and don't have endpoints
+      const fieldsWithoutEndpoints = [
+        "auth-dir", "force-model-prefix", "streaming", "commercial-mode",
+        "logs-max-total-size-mb", "error-logs-max-files", "routing",
+        "disable-cooling", "max-retry-credentials", "passthrough-headers",
+        "incognito-browser", "kiro-preferred-endpoint", "kiro", "tls", "pprof",
+        "claude-header-defaults", "ampcode", "payload", "oauth-model-alias",
+      ] as const;
 
-      if (!res.ok) {
-        showToast("Failed to save configuration", "error");
-        setSaving(false);
-        return;
+      const yamlChanges: Record<string, unknown> = {};
+      for (const key of fieldsWithoutEndpoints) {
+        const oldVal = originalConfig[key];
+        const newVal = config[key];
+        if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+          // For oauth-model-alias, strip the _id fields
+          if (key === "oauth-model-alias") {
+            yamlChanges[key] = stripOAuthIds(config)["oauth-model-alias"];
+          } else {
+            yamlChanges[key] = newVal;
+          }
+        }
+      }
+
+      // If there are fields that need config.yaml update, fetch current config and merge
+      if (Object.keys(yamlChanges).length > 0) {
+        try {
+          const currentRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG);
+          if (!currentRes.ok) {
+            errors.push("Failed to fetch current config for YAML update");
+          } else {
+            const fullCurrentConfig = await currentRes.json();
+            
+            // Deep merge only the changed fields
+            const mergedConfig = { ...fullCurrentConfig };
+            for (const [key, value] of Object.entries(yamlChanges)) {
+              if (
+                value !== null && typeof value === "object" && !Array.isArray(value) &&
+                mergedConfig[key] !== null && typeof mergedConfig[key] === "object" && !Array.isArray(mergedConfig[key])
+              ) {
+                mergedConfig[key] = { ...(mergedConfig[key] as Record<string, unknown>), ...(value as Record<string, unknown>) };
+              } else {
+                mergedConfig[key] = value;
+              }
+            }
+
+            const yamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
+              method: "PUT",
+              headers: { "Content-Type": "text/yaml" },
+              body: yaml.dump(mergedConfig, { lineWidth: -1, noRefs: true }),
+            });
+
+            if (!yamlRes.ok) {
+              errors.push("Failed to save config.yaml");
+            } else {
+              successCount += Object.keys(yamlChanges).length;
+            }
+          }
+        } catch {
+          errors.push("Network error updating config.yaml");
+        }
+      }
+
+      if (errors.length > 0) {
+        showToast(`Some fields failed to save: ${errors.join(", ")}`, "error");
+      } else if (successCount === 0) {
+        showToast("No changes to save", "info");
+      } else {
+        showToast(`Configuration saved (${successCount} field${successCount > 1 ? "s" : ""} updated)`, "success");
       }
 
       setOriginalConfig(config);
       setRawJson(JSON.stringify(stripOAuthIds(config), null, 2));
       setSaving(false);
 
-      // Restart CLIProxyAPI to apply the new config
-      showToast("Configuration saved. Restarting CLIProxyAPI...", "success");
-      try {
-        await fetch(API_ENDPOINTS.RESTART, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ confirmed: true }),
-        });
-      } catch {
-        // Restart call failed silently — container may not be managed by Docker
-      }
-
-      // Re-fetch after restart settles
-      setTimeout(() => { void fetchConfig(5, 2000); }, 3000);
+      // Re-fetch after a short delay to confirm changes
+      setTimeout(() => { void fetchConfig(3, 1000); }, 1500);
     } catch {
       showToast("Failed to save configuration", "error");
       setSaving(false);

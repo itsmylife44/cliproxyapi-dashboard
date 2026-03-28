@@ -385,6 +385,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (!claimed) {
+      logger.warn(
+        { provider, candidateCount: candidateFiles.length, userId: session.userId },
+        "OAuth callback: all candidate files already owned"
+      );
+      return NextResponse.json({ status: 409 }, { status: 409 });
+    }
+
     const payload: OAuthCallbackResponse = { status: responseStatus };
 
     return NextResponse.json(payload, { status: responseStatus });

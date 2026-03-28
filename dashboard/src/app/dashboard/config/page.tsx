@@ -230,21 +230,27 @@ export default function ConfigPage() {
   // Fields with dedicated endpoints are updated individually (safer, no full config overwrite).
   // Fields without endpoints fall back to config.yaml update (only for those specific fields).
   const FIELD_ENDPOINTS: Record<string, string> = {
-    "proxy-url": "/api/management/proxy-url",
-    "debug": "/api/management/debug",
-    "logging-to-file": "/api/management/logging-to-file",
-    "usage-statistics-enabled": "/api/management/usage-statistics-enabled",
-    "request-retry": "/api/management/request-retry",
-    "max-retry-interval": "/api/management/max-retry-interval",
-    "request-log": "/api/management/request-log",
-    "ws-auth": "/api/management/ws-auth",
+    "proxy-url": API_ENDPOINTS.MANAGEMENT.PROXY_URL,
+    "debug": API_ENDPOINTS.MANAGEMENT.DEBUG,
+    "logging-to-file": API_ENDPOINTS.MANAGEMENT.LOGGING_TO_FILE,
+    "logs-max-total-size-mb": API_ENDPOINTS.MANAGEMENT.LOGS_MAX_TOTAL_SIZE_MB,
+    "error-logs-max-files": API_ENDPOINTS.MANAGEMENT.ERROR_LOGS_MAX_FILES,
+    "usage-statistics-enabled": API_ENDPOINTS.MANAGEMENT.USAGE_STATISTICS_ENABLED,
+    "request-retry": API_ENDPOINTS.MANAGEMENT.REQUEST_RETRY,
+    "max-retry-interval": API_ENDPOINTS.MANAGEMENT.MAX_RETRY_INTERVAL,
+    "request-log": API_ENDPOINTS.MANAGEMENT.REQUEST_LOG,
+    "ws-auth": API_ENDPOINTS.MANAGEMENT.WS_AUTH,
+    "force-model-prefix": API_ENDPOINTS.MANAGEMENT.FORCE_MODEL_PREFIX,
   };
 
   // Nested field endpoints (e.g., quota-exceeded.switch-project)
   const NESTED_FIELD_ENDPOINTS: Record<string, Record<string, string>> = {
     "quota-exceeded": {
-      "switch-project": "/api/management/quota-exceeded/switch-project",
-      "switch-preview-model": "/api/management/quota-exceeded/switch-preview-model",
+      "switch-project": API_ENDPOINTS.MANAGEMENT.QUOTA_EXCEEDED_SWITCH_PROJECT,
+      "switch-preview-model": API_ENDPOINTS.MANAGEMENT.QUOTA_EXCEEDED_SWITCH_PREVIEW_MODEL,
+    },
+    "routing": {
+      "strategy": API_ENDPOINTS.MANAGEMENT.ROUTING_STRATEGY,
     },
   };
 
@@ -304,8 +310,7 @@ export default function ConfigPage() {
       // For fields without dedicated endpoints, we need to use config.yaml
       // But ONLY send those specific fields that changed and don't have endpoints
       const fieldsWithoutEndpoints = [
-        "auth-dir", "force-model-prefix", "streaming", "commercial-mode",
-        "logs-max-total-size-mb", "error-logs-max-files", "routing",
+        "auth-dir", "streaming", "commercial-mode",
         "disable-cooling", "max-retry-credentials", "passthrough-headers",
         "incognito-browser", "kiro-preferred-endpoint", "kiro", "tls", "pprof",
         "claude-header-defaults", "ampcode", "payload", "oauth-model-alias",

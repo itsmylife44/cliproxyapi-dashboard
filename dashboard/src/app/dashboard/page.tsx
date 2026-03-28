@@ -8,7 +8,7 @@ import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
-import { fetchProxyModels } from "@/lib/config-generators/shared";
+import { buildAvailableModelIds, fetchProxyModels } from "@/lib/config-generators/shared";
 import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits } from "@/lib/config-generators/opencode";
 import type { ConfigData } from "@/lib/config-generators/shared";
 import { resolveOwnedByDisplay } from "@/lib/providers/model-grouping";
@@ -202,7 +202,7 @@ export default async function QuickStartPage() {
   ]);
   const oauthAliasModels = extractOAuthModelAliases(config as ConfigData | null, oauthAccounts, modelsDevLimits);
   const oauthAliasIds = Object.keys(oauthAliasModels);
-  const availableModelIds = [...new Set([...proxyModels.map((m) => m.id), ...oauthAliasIds])];
+  const availableModelIds = buildAvailableModelIds(proxyModels, oauthAliasIds);
   const modelSourceMap = buildSourceMap(proxyModels);
   const modelProvidersMap = buildProvidersMap(proxyModels);
   for (const aliasId of oauthAliasIds) {

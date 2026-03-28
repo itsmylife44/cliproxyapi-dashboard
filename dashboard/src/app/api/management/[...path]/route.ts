@@ -31,6 +31,8 @@ const NON_ADMIN_OAUTH_PATHS = new Set<string>([
   "qwen-auth-url",
   "github-auth-url",
   "kiro-auth-url",
+  "cursor-auth-url",
+  "codebuddy-auth-url",
   "get-auth-status",
 ]);
 

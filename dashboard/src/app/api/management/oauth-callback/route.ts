@@ -17,6 +17,8 @@ const PROVIDERS = {
   KIMI: "kimi",
   COPILOT: "copilot",
   KIRO: "kiro",
+  CURSOR: "cursor",
+  CODEBUDDY: "codebuddy",
 } as const;
 
 type Provider = (typeof PROVIDERS)[keyof typeof PROVIDERS];
@@ -39,6 +41,8 @@ const PROVIDER_MATCH_ALIASES: Record<Provider, readonly string[]> = {
   [PROVIDERS.KIMI]: ["kimi"],
   [PROVIDERS.COPILOT]: ["copilot", "github", "github-copilot"],
   [PROVIDERS.KIRO]: ["kiro"],
+  [PROVIDERS.CURSOR]: ["cursor"],
+  [PROVIDERS.CODEBUDDY]: ["codebuddy"],
 };
 
 const CLIPROXYAPI_BASE = process.env.CLIPROXYAPI_MANAGEMENT_URL?.replace("/v0/management", "") || "http://cliproxyapi:8317";

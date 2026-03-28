@@ -24,6 +24,8 @@ export const OAUTH_PROVIDER = {
   KIMI: "kimi",
   COPILOT: "copilot",
   KIRO: "kiro",
+  CURSOR: "cursor",
+  CODEBUDDY: "codebuddy",
 } as const;
 
 export type OAuthProvider = (typeof OAUTH_PROVIDER)[keyof typeof OAUTH_PROVIDER];

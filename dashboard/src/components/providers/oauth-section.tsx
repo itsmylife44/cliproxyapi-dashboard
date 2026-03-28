@@ -86,6 +86,20 @@ const OAUTH_PROVIDERS = [
     authEndpoint: "/api/management/kiro-auth-url?is_webui=true",
     requiresCallback: false,
   },
+  {
+    id: "cursor" as const,
+    name: "Cursor",
+    description: "Cursor IDE (via PKCE OAuth)",
+    authEndpoint: "/api/management/cursor-auth-url?is_webui=true",
+    requiresCallback: false,
+  },
+  {
+    id: "codebuddy" as const,
+    name: "CodeBuddy",
+    description: "Tencent CodeBuddy (via browser OAuth)",
+    authEndpoint: "/api/management/codebuddy-auth-url?is_webui=true",
+    requiresCallback: false,
+  },
 ] as const;
 
 type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];

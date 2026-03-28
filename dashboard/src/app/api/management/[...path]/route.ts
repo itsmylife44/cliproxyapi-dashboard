@@ -37,20 +37,80 @@ const NON_ADMIN_OAUTH_PATHS = new Set<string>([
 ]);
 
 const ALLOWED_MANAGEMENT_PATHS = new Set<string>([
+  // Core config
   "config",
   "config.yaml",
+
+  // Usage & logs
   "usage",
+  "usage/export",
+  "usage/import",
   "logs",
+  "request-error-logs",
+  "request-log",
+
+  // Toggles & settings
+  "debug",
   "logging-to-file",
+  "logs-max-total-size-mb",
+  "error-logs-max-files",
+  "usage-statistics-enabled",
+  "proxy-url",
+  "ws-auth",
+  "force-model-prefix",
+  "request-retry",
+  "max-retry-interval",
+
+  // Quota exceeded behavior
+  "quota-exceeded/switch-project",
+  "quota-exceeded/switch-preview-model",
+
+  // Routing
+  "routing/strategy",
+
+  // Version
   "latest-version",
+
+  // Auth files
   "auth-files",
+  "auth-files/models",
+  "auth-files/download",
+  "auth-files/status",
+  "auth-files/fields",
+
+  // Providers
   "openai-compatibility",
+  "api-keys",
+
+  // OAuth
   "oauth-callback",
+  "oauth-excluded-models",
+  "oauth-model-alias",
+
+  // Ampcode
+  "ampcode",
+  "ampcode/upstream-url",
+  "ampcode/upstream-api-key",
+  "ampcode/restrict-management-to-localhost",
+  "ampcode/model-mappings",
+  "ampcode/force-model-mappings",
+  "ampcode/upstream-api-keys",
+
+  // Vertex
+  "vertex/import",
+
+  // Misc
+  "api-call",
+
+  // OAuth login flows
   ...NON_ADMIN_OAUTH_PATHS,
 ]);
 
 const ALLOWED_MANAGEMENT_PATH_PATTERNS = [
   /^[a-z0-9-]+-api-key$/,
+  /^request-error-logs\/[a-z0-9._-]+$/i,
+  /^request-log-by-id\/[a-z0-9-]+$/i,
+  /^model-definitions\/[a-z0-9-]+$/i,
 ];
 
 function isAllowedManagementPath(path: string): boolean {

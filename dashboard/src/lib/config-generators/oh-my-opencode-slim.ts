@@ -115,20 +115,26 @@ export function buildSlimConfig(
 
   // Fallback — build chains from available models if not explicitly set
   if (overrides?.fallback) {
+    // Destructure chains out so the spread below never copies raw model IDs
+    // into fallback.chains — we set that field explicitly after prefixing.
+    const { chains: rawChains, ...fallbackRest } = overrides.fallback;
     const fallback: Record<string, unknown> = {
       enabled: true,
       timeoutMs: 15000,
       retryDelayMs: 500,
-      ...overrides.fallback,
+      ...fallbackRest,
     };
 
-    // Prefix chain models with cliproxyapi/
-    if (overrides.fallback.chains) {
+    // Prefix chain models with cliproxyapi/ and drop chains with no available models
+    if (rawChains) {
       const prefixedChains: Record<string, string[]> = {};
-      for (const [agent, chain] of Object.entries(overrides.fallback.chains)) {
-        prefixedChains[agent] = chain
+      for (const [agent, chain] of Object.entries(rawChains)) {
+        const available = chain
           .filter((m) => availableModels.includes(m))
           .map((m) => `cliproxyapi/${m}`);
+        if (available.length > 0) {
+          prefixedChains[agent] = available;
+        }
       }
       if (Object.keys(prefixedChains).length > 0) {
         fallback.chains = prefixedChains;

@@ -235,14 +235,20 @@ export default function ConfigPage() {
       // Fetch the full current config first to preserve fields the dashboard
       // doesn't manage (port, host, remote-management, api-keys, provider keys, etc.)
       // Without this merge, saving overwrites those fields with empty/default values.
-      let fullCurrentConfig: Record<string, unknown> = {};
+      // CRITICAL: If we can't fetch the current config, we MUST abort to prevent data loss.
+      let fullCurrentConfig: Record<string, unknown>;
       try {
         const currentRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG);
-        if (currentRes.ok) {
-          fullCurrentConfig = await currentRes.json();
+        if (!currentRes.ok) {
+          showToast("Cannot save: failed to fetch current config (would overwrite server settings)", "error");
+          setSaving(false);
+          return;
         }
+        fullCurrentConfig = await currentRes.json();
       } catch {
-        // If we can't fetch, proceed with what we have — better than blocking save
+        showToast("Cannot save: CLIProxyAPI unreachable (would overwrite server settings)", "error");
+        setSaving(false);
+        return;
       }
 
       const cleanedConfig = stripOAuthIds(config) as unknown as Record<string, unknown>;

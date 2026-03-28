@@ -330,17 +330,38 @@ export default function ConfigPage() {
         }
       }
 
-      // If there are fields that need config.yaml update, fetch current config and merge
+      // Fetch the current live config once — used both for the auth-dir
+      // guard and for the yaml merge below.
+      let liveConfig: Record<string, unknown> | null = null;
+      try {
+        const currentRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG);
+        if (currentRes.ok) {
+          liveConfig = await currentRes.json();
+        } else {
+          await currentRes.body?.cancel();
+        }
+      } catch {
+        // handled below
+      }
+
+      // Ensure auth-dir is always persisted in config.yaml.  Without it,
+      // CLIProxyAPI may write OAuth credential files into its CWD instead
+      // of the auth directory, making them invisible to the management API.
+      // This runs *before* the yamlChanges gate so endpoint-only saves
+      // (e.g. debug, proxy-url) still trigger the yaml write when needed.
+      if (liveConfig && !liveConfig["auth-dir"] && !yamlChanges["auth-dir"]) {
+        yamlChanges["auth-dir"] = config["auth-dir"] || "~/.cli-proxy-api";
+      }
+
+      // If there are fields that need config.yaml update, merge and write
       if (Object.keys(yamlChanges).length > 0) {
-        try {
-          const currentRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG);
-          if (!currentRes.ok) {
-            errors.push("Failed to fetch current config for YAML update");
-          } else {
-            const fullCurrentConfig = await currentRes.json();
-            
+        if (!liveConfig) {
+          errors.push("Failed to fetch current config for YAML update");
+        } else {
+          try {
             // Deep merge only the changed fields
-            const mergedConfig = { ...fullCurrentConfig };
+            const mergedConfig = { ...liveConfig };
+
             for (const [key, value] of Object.entries(yamlChanges)) {
               if (
                 value !== null && typeof value === "object" && !Array.isArray(value) &&
@@ -363,9 +384,9 @@ export default function ConfigPage() {
             } else {
               successCount += Object.keys(yamlChanges).length;
             }
+          } catch {
+            errors.push("Network error updating config.yaml");
           }
-        } catch {
-          errors.push("Network error updating config.yaml");
         }
       }
 

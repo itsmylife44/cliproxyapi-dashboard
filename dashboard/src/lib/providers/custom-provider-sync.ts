@@ -108,11 +108,21 @@ export async function syncCustomProviderToProxy(
     if (operation === "create") {
       newList = [...currentList, newEntry];
     } else {
-      // Update: replace existing entry with same providerId
-      newList = currentList.map((entry) => 
-        entry.name === providerData.providerId ? newEntry : entry
+      // Update: replace existing entry, or append if not found (e.g. after proxy restart)
+      const existingIndex = currentList.findIndex(
+        (entry) => entry.name === providerData.providerId
       );
+      if (existingIndex >= 0) {
+        newList = currentList.map((entry) =>
+          entry.name === providerData.providerId ? newEntry : entry
+        );
+      } else {
+        newList = [...currentList, newEntry];
+      }
     }
+
+    const putBody = { "openai-compatibility": newList };
+    logger.info({ operation, providerId: providerData.providerId, entryCount: newList.length }, "Syncing provider to CLIProxyAPI");
 
     const putRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
       method: "PUT",
@@ -120,12 +130,12 @@ export async function syncCustomProviderToProxy(
         "Content-Type": "application/json",
         "Authorization": `Bearer ${secretKey}` 
       },
-      body: JSON.stringify(newList)
+      body: JSON.stringify(putBody)
     });
 
     if (!putRes.ok) {
-      await putRes.body?.cancel();
-      logger.error({ status: putRes.status }, `Failed to sync custom provider to Management API (${operation})`);
+      const errorBody = await putRes.text().catch(() => "unreadable");
+      logger.error({ status: putRes.status, errorBody }, `Failed to sync custom provider to Management API (${operation})`);
       return {
         syncStatus: "failed",
         syncMessage: `Backend sync failed - provider ${operation === "create" ? "created" : "updated"} but may not work immediately`

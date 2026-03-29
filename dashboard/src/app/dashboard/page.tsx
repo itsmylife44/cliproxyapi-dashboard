@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { buildAvailableModelIds, fetchProxyModels } from "@/lib/config-generators/shared";
-import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits } from "@/lib/config-generators/opencode";
+import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits, inferModelDefinition } from "@/lib/config-generators/opencode";
 import type { ConfigData } from "@/lib/config-generators/shared";
 import { resolveOwnedByDisplay } from "@/lib/providers/model-grouping";
 import { DashboardMiniCharts } from "@/components/dashboard-mini-charts";
@@ -196,9 +196,16 @@ export default async function QuickStartPage() {
   const providerCount = configProviderCount + activeOAuthProviders.size;
 
   const apiKeyForProxy = userApiKeys.length > 0 ? userApiKeys[0].key : "";
-  const [proxyModels, modelsDevLimits] = await Promise.all([
+  const [proxyModels, modelsDevLimits, customProviders] = await Promise.all([
     apiKeyForProxy ? fetchProxyModels(getInternalProxyUrl(), apiKeyForProxy) : Promise.resolve([]),
     fetchModelsDevLimits(),
+    session
+      ? prisma.customProvider.findMany({
+          where: { userId: session.userId },
+          include: { models: true },
+          orderBy: { sortOrder: "asc" },
+        })
+      : Promise.resolve([]),
   ]);
   const oauthAliasModels = extractOAuthModelAliases(config as ConfigData | null, oauthAccounts, modelsDevLimits);
   const oauthAliasIds = Object.keys(oauthAliasModels);
@@ -212,7 +219,30 @@ export default async function QuickStartPage() {
       modelProvidersMap.set(aliasId, [...existing, "OAuth Alias"]);
     }
   }
+  for (const cp of customProviders) {
+    const label = cp.name;
+    for (const m of cp.models) {
+      const id = m.alias;
+      if (!availableModelIds.includes(id)) {
+        availableModelIds.push(id);
+      }
+      if (!modelSourceMap.has(id)) modelSourceMap.set(id, label);
+      const existingProviders = modelProvidersMap.get(id) ?? [];
+      if (!existingProviders.includes(label)) {
+        modelProvidersMap.set(id, [...existingProviders, label]);
+      }
+    }
+  }
+  availableModelIds.sort((a, b) => a.localeCompare(b));
   const allProxyModels = { ...oauthAliasModels, ...buildAvailableModelsFromProxy(proxyModels, modelsDevLimits) };
+  for (const cp of customProviders) {
+    for (const m of cp.models) {
+      if (!(m.alias in allProxyModels)) {
+        const def = inferModelDefinition(m.upstreamName, cp.providerId, modelsDevLimits);
+        allProxyModels[m.alias] = { ...def, name: `${m.alias} (via ${cp.name})` };
+      }
+    }
+  }
   const setupItems = [
     {
       label: "Provider connected",

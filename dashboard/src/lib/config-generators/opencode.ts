@@ -118,7 +118,7 @@ function supportsReasoning(modelId: string): boolean {
   return false;
 }
 
-function inferModelDefinition(
+export function inferModelDefinition(
   modelId: string,
   ownedBy: string,
   modelsDevLimits: Record<string, ModelsDevLimits>,

@@ -29,13 +29,11 @@ function normalizeStatus(payload: unknown): DeployStatus {
 
 export function DeployDashboard() {
   const [status, setStatus] = useState<DeployStatus>({ status: "idle" });
-  const [log, setLog] = useState<string>("");
-  const [showLog, setShowLog] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [webhookConfigured, setWebhookConfigured] = useState<boolean | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingDeploy, setPendingDeploy] = useState<{ noCache: boolean } | null>(null);
-  const logRef = useRef<HTMLPreElement>(null);
+
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const fetchStatusRef = useRef<(shouldStartPolling?: boolean) => Promise<void>>(async () => {});
   const { showToast } = useToast();
@@ -47,13 +45,11 @@ export function DeployDashboard() {
         const data = await res.json();
         const normalized = normalizeStatus(data.status ?? data);
         setStatus(normalized);
-        setLog(data.log || "");
         setWebhookConfigured(data.webhookConfigured ?? null);
         
         const s = normalized.status;
         if (s === "running") {
           setDeploying(true);
-          setShowLog(true);
           if (shouldStartPolling && !pollingRef.current) {
             pollingRef.current = setInterval(() => {
               void fetchStatusRef.current(false);
@@ -87,12 +83,6 @@ export function DeployDashboard() {
     };
   }, [fetchStatus]);
 
-  useEffect(() => {
-    if (logRef.current && showLog) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
-    }
-  }, [showLog]);
-
   const startPolling = () => {
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
@@ -112,8 +102,6 @@ export function DeployDashboard() {
     const mode = noCache ? "Full Rebuild" : "Quick Update";
 
     setDeploying(true);
-    setShowLog(true);
-    setLog("");
     setStatus({ status: "running", step: "init", message: "Starting deployment..." });
 
     try {
@@ -249,22 +237,13 @@ export function DeployDashboard() {
 
       {status.status !== "idle" && (
         <div className="space-y-3 border-t border-slate-700/70 pt-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className={`text-sm font-medium ${getStatusColor(status.status)}`}>
-                {status.status === "running" && (
-                  <span className="mr-2 inline-block size-2 animate-pulse rounded-full bg-blue-400" />
-                )}
-                {getStepLabel(status.step)}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowLog(!showLog)}
-              className="text-xs text-slate-500 hover:text-slate-300"
-            >
-              {showLog ? "Hide Log" : "Show Log"}
-            </button>
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium ${getStatusColor(status.status)}`}>
+              {status.status === "running" && (
+                <span className="mr-2 inline-block size-2 animate-pulse rounded-full bg-blue-400" />
+              )}
+              {getStepLabel(status.step)}
+            </span>
           </div>
 
           {status.message && (
@@ -275,15 +254,6 @@ export function DeployDashboard() {
             <div className="rounded-sm border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">
               {status.error}
             </div>
-          )}
-
-          {showLog && log && (
-            <pre
-              ref={logRef}
-              className="max-h-64 overflow-auto rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 font-mono text-xs text-slate-300 whitespace-pre-wrap"
-            >
-              {log}
-            </pre>
           )}
 
           {status.completedAt && (

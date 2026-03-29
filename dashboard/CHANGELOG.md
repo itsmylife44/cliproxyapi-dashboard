@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.61](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.60...dashboard-v0.1.61) (2026-03-29)
+
+
+### Bug Fixes
+
+* add all management endpoints to proxy allowlist to unblock config saves ([27b9e8b](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/27b9e8bc91839bb079360bd5bfa378dc3774ffec))
+* **config:** always persist auth-dir on config save ([#149](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/149)) ([18cf244](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/18cf2442c7556a41035d4eb7fba37a993b2d17bf))
+* normalize OAuth provider aliases in ownership migration ([#151](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/151)) ([ebca654](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/ebca654cb36b6feb3e714bd8634edb0888ac767b))
+* perplexity sidecar home for pip, optional auto-update, oauth config docs ([f4e0d73](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/f4e0d735ecd63da6c5ed2e03f6122b655dc8e653))
+* two bug fixes from recent PR scan (slim chains + Cursor OAuth claim latency) ([#153](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/153)) ([a2b8438](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a2b8438a42d96d102a598bb405b54b69fc4b4973))
+
 ## [0.1.60](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.59...dashboard-v0.1.60) (2026-03-28)
 
 

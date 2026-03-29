@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
-import { buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits, getProxyUrl, getInternalProxyUrl, type McpEntry, type ModelDefinition } from "@/lib/config-generators/opencode";
+import { buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits, getProxyUrl, getInternalProxyUrl, inferModelDefinition, type McpEntry, type ModelDefinition } from "@/lib/config-generators/opencode";
 import { buildOhMyOpenCodeConfig } from "@/lib/config-generators/oh-my-opencode";
 import { buildSlimConfig } from "@/lib/config-generators/oh-my-opencode-slim";
 import { fetchProxyModels, type ProxyModel } from "@/lib/config-generators/shared";
@@ -297,20 +297,31 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
 
    const externalProxyUrl = getProxyUrl();
    const internalProxyUrl = getInternalProxyUrl();
-   const [proxyModels, modelsDevLimits] = await Promise.all([
+   const [proxyModels, modelsDevLimits, dbCustomProviders] = await Promise.all([
      apiKey !== "no-api-key-create-one-in-dashboard"
        ? fetchProxyModelsCached(internalProxyUrl, apiKey)
        : Promise.resolve([]),
      fetchModelsDevLimits(),
+     prisma.customProvider.findMany({
+       where: { userId },
+       include: { models: true },
+       orderBy: { sortOrder: "asc" },
+     }),
    ]);
    const nativeModels = buildAvailableModelsFromProxy(proxyModels, modelsDevLimits);
    const aliasModels = extractOAuthModelAliases(managementConfig as ConfigData | null, oauthAccounts, modelsDevLimits);
-   // Native proxy models take priority over OAuth aliases with the same ID
-   // This prevents e.g. a github-copilot fork alias from overwriting the native Claude model
    const allModels: Record<string, ModelDefinition> = {
      ...aliasModels,
      ...nativeModels,
    };
+   for (const cp of dbCustomProviders) {
+     for (const m of cp.models) {
+       if (!(m.alias in allModels)) {
+         const def = inferModelDefinition(m.upstreamName, cp.providerId, modelsDevLimits);
+         allModels[m.alias] = { ...def, name: `${m.alias} (via ${cp.name})` };
+       }
+     }
+   }
 
    const filteredModels = Object.fromEntries(
      Object.entries(allModels).filter(([modelId]) => !excludedModels.has(modelId))

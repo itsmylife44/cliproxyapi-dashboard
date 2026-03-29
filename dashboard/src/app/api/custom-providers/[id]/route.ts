@@ -26,7 +26,7 @@ async function fetchWithTimeout(url: string, options: RequestInit): Promise<Resp
 
 const UpdateCustomProviderSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  baseUrl: z.string().url().startsWith("https://", "Base URL must start with https://").optional(),
+  baseUrl: z.string().url("Base URL must be a valid URL (http:// or https://)").optional(),
   apiKey: z.string().min(1).optional(),
   prefix: z.string().optional(),
   proxyUrl: z.string().optional(),

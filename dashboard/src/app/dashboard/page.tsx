@@ -226,8 +226,11 @@ export default async function QuickStartPage() {
       if (!availableModelIds.includes(id)) {
         availableModelIds.push(id);
       }
-      modelSourceMap.set(id, label);
-      modelProvidersMap.set(id, [label]);
+      if (!modelSourceMap.has(id)) modelSourceMap.set(id, label);
+      const existingProviders = modelProvidersMap.get(id) ?? [];
+      if (!existingProviders.includes(label)) {
+        modelProvidersMap.set(id, [...existingProviders, label]);
+      }
     }
   }
   availableModelIds.sort((a, b) => a.localeCompare(b));

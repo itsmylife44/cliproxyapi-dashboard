@@ -1,4 +1,4 @@
-<!-- Generated: 2026-03-07 | Files scanned: 86 | Token estimate: ~800 -->
+<!-- Generated: 2026-03-30 | Files scanned: 222 | Token estimate: ~820 -->
 # Frontend
 
 ## Page Tree

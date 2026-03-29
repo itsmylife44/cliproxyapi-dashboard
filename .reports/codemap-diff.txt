@@ -1,0 +1,24 @@
+Codemap Diff Report
+Generated on: 2026-03-30
+
+Files changed since last scan (target codemaps):
+- Added: 0
+- Removed: 0
+- Modified: 5
+  - docs/CODEMAPS/architecture.md
+  - docs/CODEMAPS/backend.md
+  - docs/CODEMAPS/data.md
+  - docs/CODEMAPS/dependencies.md
+  - docs/CODEMAPS/frontend.md
+
+Dependency changes since last scan:
+- No dependency additions/removals/version changes detected in dashboard/package.json.
+
+Architecture changes:
+- Updated freshness headers in all five codemaps to 2026-03-30 with Files scanned metadata.
+- Corrected architecture counts: API routes 59, components 88, lib modules 50, hooks 7, Prisma models 19.
+- Backend map now includes additional endpoints/methods: /api/agent-config-slim, /api/providers/oauth/claim, /api/providers/perplexity-cookie/current, /api/providers/perplexity-cookie/sync-models, DELETE on /api/user/api-keys, GET on /api/setup.
+- Data map now reflects CustomProvider.apiKeyEncrypted and updated model count header metadata.
+
+Staleness warnings (90+ days):
+- None. All target codemaps refreshed on 2026-03-30.

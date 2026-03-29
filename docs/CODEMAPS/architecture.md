@@ -1,4 +1,4 @@
-<!-- Generated: 2026-03-07 | Files scanned: 180+ | Token estimate: ~600 -->
+<!-- Generated: 2026-03-30 | Files scanned: 222 | Token estimate: ~620 -->
 # Architecture
 
 ## Stack
@@ -26,11 +26,11 @@ User → Login → JWT session cookie → Protected API routes → Prisma → Po
 ## Key Directories
 ```
 dashboard/src/
-├── app/api/          51 route files (REST API)
-├── app/dashboard/    16 page routes (UI)
-├── components/       70+ React components
-├── lib/              40+ service/utility modules
-├── hooks/            3 custom hooks
+├── app/api/          59 route files (REST API)
+├── app/dashboard/    13 dashboard page routes (+ root/login/setup)
+├── components/       88 React component files
+├── lib/              50 service/utility modules
+├── hooks/            7 hook/test utility files
 └── generated/        Prisma client
 ```
 

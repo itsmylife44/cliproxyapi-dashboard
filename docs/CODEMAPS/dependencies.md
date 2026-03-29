@@ -1,4 +1,4 @@
-<!-- Generated: 2026-03-07 | Token estimate: ~400 -->
+<!-- Generated: 2026-03-30 | Files scanned: 222 | Token estimate: ~520 -->
 # Dependencies
 
 ## External Services

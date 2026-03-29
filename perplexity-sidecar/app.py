@@ -129,7 +129,17 @@ log.info("Discovered %d models: %s", len(MODEL_REGISTRY), list(MODEL_REGISTRY.ke
 # Auto-update: check PyPI periodically, restart if newer version available
 # ---------------------------------------------------------------------------
 
+def _env_auto_update_enabled() -> bool:
+    raw = os.environ.get("PERPLEXITY_SIDECAR_AUTO_UPDATE", "true").strip().lower()
+    if raw in ("0", "false", "no", "off"):
+        return False
+    if raw in ("1", "true", "yes", "on"):
+        return True
+    return True
+
+
 UPDATE_CHECK_INTERVAL = int(os.environ.get("UPDATE_CHECK_INTERVAL", "3600"))
+_AUTO_UPDATE_ENABLED = _env_auto_update_enabled() and UPDATE_CHECK_INTERVAL > 0
 
 
 def _get_installed_version() -> str:
@@ -216,8 +226,15 @@ def _auto_update_loop():
             log.error("Auto-update check failed: %s", exc)
 
 
-threading.Thread(target=_auto_update_loop, daemon=True).start()
-log.info("Auto-update checker started (interval: %ds)", UPDATE_CHECK_INTERVAL)
+if _AUTO_UPDATE_ENABLED:
+    threading.Thread(target=_auto_update_loop, daemon=True).start()
+    log.info("Auto-update checker started (interval: %ds)", UPDATE_CHECK_INTERVAL)
+else:
+    log.info(
+        "Auto-update disabled (PERPLEXITY_SIDECAR_AUTO_UPDATE=%r, UPDATE_CHECK_INTERVAL=%s)",
+        os.environ.get("PERPLEXITY_SIDECAR_AUTO_UPDATE"),
+        UPDATE_CHECK_INTERVAL,
+    )
 
 
 def _startup_sync():

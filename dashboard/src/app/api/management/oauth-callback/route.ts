@@ -322,7 +322,15 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      if (attempt >= MAX_RETRIES - 2) {
+      // For non-callback providers (e.g. Cursor, CodeBuddy), the auth file is
+      // written by the browser flow *before* POST /oauth-callback is called, so
+      // preCallbackFiles is always stale and snapshot-diff yields nothing.
+      // Run unclaimed detection on every attempt for these providers so we
+      // can claim on attempt 1 rather than waiting until attempt 8+.
+      const runUnclaimed =
+        !PROVIDERS_WITH_CALLBACK.has(provider) || attempt >= MAX_RETRIES - 2;
+
+      if (runUnclaimed) {
         const unclaimedCandidates = await findUnclaimedAuthFiles(afterAuthFiles, provider);
         if (unclaimedCandidates.length === 1) {
           candidateFiles = unclaimedCandidates;

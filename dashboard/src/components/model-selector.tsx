@@ -51,6 +51,16 @@ export function ModelSelector({
   const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedSignatureRef = useRef<string>(buildExcludedSignature(initialExcludedModels));
 
+  useEffect(() => {
+    const incoming = new Set(initialExcludedModels);
+    if (buildExcludedSignature(incoming) !== buildExcludedSignature(excludedModels)) {
+      setExcludedModels(incoming);
+      lastSavedSignatureRef.current = buildExcludedSignature(incoming);
+      onSelectionChange(Array.from(incoming));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialExcludedModels]);
+
   const modelGroups = groupModelsByProvider(availableModels, modelSourceMap);
 
   const toggleGroupExpansion = (provider: ModelProviderName) => {

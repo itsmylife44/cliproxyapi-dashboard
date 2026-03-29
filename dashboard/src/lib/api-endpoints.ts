@@ -45,6 +45,7 @@ export const API_ENDPOINTS = {
   CUSTOM_PROVIDERS: {
     FETCH_MODELS: "/api/custom-providers/fetch-models",
     REORDER: "/api/custom-providers/reorder",
+    RESYNC: "/api/custom-providers/resync",
   },
   PROVIDER_GROUPS: {
     BASE: "/api/provider-groups",

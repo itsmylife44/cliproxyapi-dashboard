@@ -173,7 +173,8 @@ model CustomProvider {
   name        String                    // Display name (e.g., "OpenRouter")
   providerId  String   @unique          // URL-safe ID (e.g., "openrouter-custom")
   baseUrl     String                    // https://openrouter.ai/api/v1
-  apiKeyHash  String                    // Hashed for identification
+  apiKeyHash      String                    // Hashed for identification
+  apiKeyEncrypted String?                   // AES-256-GCM encrypted, for re-sync after proxy restart
   prefix      String?                   // Optional routing prefix
   proxyUrl    String?                   // Optional SOCKS5/HTTP proxy
   headers     Json?     @default("{}")  // Custom headers JSON

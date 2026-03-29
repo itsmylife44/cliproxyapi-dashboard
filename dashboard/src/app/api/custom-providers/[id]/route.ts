@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { hashProviderKey } from "@/lib/providers/hash";
+import { encryptProviderKey, decryptProviderKey } from "@/lib/providers/encrypt";
 import { z } from "zod";
 import { invalidateProxyModelsCache } from "@/lib/cache";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
@@ -124,7 +125,10 @@ export async function PATCH(
         data: {
           name: validated.name,
           baseUrl: validated.baseUrl,
-          ...(validated.apiKey ? { apiKeyHash: hashProviderKey(validated.apiKey) } : {}),
+          ...(validated.apiKey ? {
+            apiKeyHash: hashProviderKey(validated.apiKey),
+            apiKeyEncrypted: encryptProviderKey(validated.apiKey) ?? undefined,
+          } : {}),
           prefix: validated.prefix,
           proxyUrl: validated.proxyUrl,
           groupId: validated.groupId,
@@ -150,37 +154,46 @@ export async function PATCH(
     let prefetchedConfig: ManagementProviderEntry[] | undefined;
 
     if (!resolvedApiKey) {
-      const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
-      const secretKey = env.MANAGEMENT_API_KEY;
+      if (provider.apiKeyEncrypted) {
+        resolvedApiKey = decryptProviderKey(provider.apiKeyEncrypted) ?? undefined;
+        if (!resolvedApiKey) {
+          logger.error({ providerId: provider.providerId }, "Failed to decrypt stored API key");
+        }
+      }
 
-      if (secretKey) {
-        try {
-          const getRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
-            headers: { "Authorization": `Bearer ${secretKey}` }
-          });
-          
-          if (getRes.ok) {
-            const configData = (await getRes.json()) as Record<string, unknown>;
-            const openAiCompatibility = configData["openai-compatibility"];
-            const currentList: ManagementProviderEntry[] = Array.isArray(openAiCompatibility)
-              ? openAiCompatibility.filter(isManagementProviderEntry)
-              : [];
-            
-            prefetchedConfig = currentList;
+      if (!resolvedApiKey) {
+        const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
+        const secretKey = env.MANAGEMENT_API_KEY;
 
-            const currentEntry = currentList.find((entry) => entry.name === provider.providerId);
-            const apiKeyEntries = currentEntry?.["api-key-entries"];
-            if (Array.isArray(apiKeyEntries) && apiKeyEntries.length > 0) {
-              const firstEntry = apiKeyEntries[0];
-              if (firstEntry && typeof firstEntry["api-key"] === "string") {
-                resolvedApiKey = firstEntry["api-key"];
+        if (secretKey) {
+          try {
+            const getRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
+              headers: { "Authorization": `Bearer ${secretKey}` }
+            });
+
+            if (getRes.ok) {
+              const configData = (await getRes.json()) as Record<string, unknown>;
+              const openAiCompatibility = configData["openai-compatibility"];
+              const currentList: ManagementProviderEntry[] = Array.isArray(openAiCompatibility)
+                ? openAiCompatibility.filter(isManagementProviderEntry)
+                : [];
+
+              prefetchedConfig = currentList;
+
+              const currentEntry = currentList.find((entry) => entry.name === provider.providerId);
+              const apiKeyEntries = currentEntry?.["api-key-entries"];
+              if (Array.isArray(apiKeyEntries) && apiKeyEntries.length > 0) {
+                const firstEntry = apiKeyEntries[0];
+                if (firstEntry && typeof firstEntry["api-key"] === "string") {
+                  resolvedApiKey = firstEntry["api-key"];
+                }
               }
+            } else {
+              await getRes.body?.cancel();
             }
-          } else {
-            await getRes.body?.cancel();
+          } catch (err) {
+            logger.error({ err }, "Failed to retrieve existing API key from live proxy");
           }
-        } catch (err) {
-          logger.error({ err }, "Failed to retrieve existing API key for update");
         }
       }
     }

@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { hashProviderKey } from "@/lib/providers/hash";
+import { encryptProviderKey } from "@/lib/providers/encrypt";
 import { z } from "zod";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
@@ -40,6 +41,7 @@ export async function GET() {
         headers: p.headers,
         models: p.models,
         excludedModels: p.excludedModels,
+        hasEncryptedKey: p.apiKeyEncrypted !== null,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt
       }))
@@ -93,6 +95,7 @@ export async function POST(request: NextRequest) {
         providerId: validated.providerId,
         baseUrl: validated.baseUrl,
         apiKeyHash: hashProviderKey(validated.apiKey),
+        apiKeyEncrypted: encryptProviderKey(validated.apiKey) ?? undefined,
         prefix: validated.prefix,
         proxyUrl: validated.proxyUrl,
         headers: validated.headers ? (validated.headers as Record<string, string>) : {},

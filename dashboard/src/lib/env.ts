@@ -48,6 +48,13 @@ const envSchema = z.object({
     .min(16, "PERPLEXITY_SIDECAR_SECRET must be at least 16 characters")
     .optional()
     .describe("Shared secret for perplexity sidecar authentication"),
+
+  PROVIDER_ENCRYPTION_KEY: z
+    .string()
+    .length(64, "PROVIDER_ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes)")
+    .regex(/^[0-9a-fA-F]{64}$/, "PROVIDER_ENCRYPTION_KEY must be a valid hex string")
+    .optional()
+    .describe("AES-256-GCM key for encrypting custom provider API keys. Generate with: openssl rand -hex 32"),
 });
 
 function parseEnv() {

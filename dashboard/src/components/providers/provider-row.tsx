@@ -27,7 +27,17 @@ export function ProviderRow({
   return (
     <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] items-center border-b border-slate-700/60 px-3 py-2 last:border-b-0">
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-slate-100">{provider.name}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="truncate text-sm font-medium text-slate-100">{provider.name}</p>
+          {!provider.hasEncryptedKey && (
+            <span
+              title="Re-save this provider to enable auto-resync after proxy restarts"
+              className="shrink-0 rounded-sm border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-300"
+            >
+              re-save
+            </span>
+          )}
+        </div>
         <p className="truncate text-xs text-slate-500">{provider.providerId}</p>
       </div>
       <p className="truncate text-xs text-slate-300 pr-2">{provider.baseUrl}</p>

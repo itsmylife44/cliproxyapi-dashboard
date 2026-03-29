@@ -35,6 +35,7 @@ export interface CustomProvider {
   excludedModels: { pattern: string }[];
   groupId: string | null;
   sortOrder: number;
+  hasEncryptedKey: boolean;
   createdAt: string;
   updatedAt: string;
 }

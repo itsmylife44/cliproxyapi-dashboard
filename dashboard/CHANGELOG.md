@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.64](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.63...dashboard-v0.1.64) (2026-03-29)
+
+
+### Bug Fixes
+
+* send raw array to PUT openai-compatibility (not wrapped object) ([580798e](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/580798e536bc1fb735405b9a26afe691b697ee17))
+
 ## [0.1.63](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.62...dashboard-v0.1.63) (2026-03-29)
 
 

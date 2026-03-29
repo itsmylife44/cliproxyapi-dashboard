@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { buildAvailableModelIds, fetchProxyModels } from "@/lib/config-generators/shared";
-import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits } from "@/lib/config-generators/opencode";
+import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits, inferModelDefinition } from "@/lib/config-generators/opencode";
 import type { ConfigData } from "@/lib/config-generators/shared";
 import { resolveOwnedByDisplay } from "@/lib/providers/model-grouping";
 import { DashboardMiniCharts } from "@/components/dashboard-mini-charts";
@@ -235,14 +235,8 @@ export default async function QuickStartPage() {
   for (const cp of customProviders) {
     for (const m of cp.models) {
       if (!(m.alias in allProxyModels)) {
-        allProxyModels[m.alias] = {
-          name: `${m.alias} (via ${cp.name})`,
-          context: 200000,
-          output: 64000,
-          attachment: true,
-          reasoning: false,
-          modalities: { input: ["text", "image"], output: ["text"] },
-        };
+        const def = inferModelDefinition(m.upstreamName, cp.providerId, modelsDevLimits);
+        allProxyModels[m.alias] = { ...def, name: `${m.alias} (via ${cp.name})` };
       }
     }
   }

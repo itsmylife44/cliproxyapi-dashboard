@@ -56,6 +56,7 @@ export function ModelSelector({
     if (buildExcludedSignature(incoming) !== buildExcludedSignature(excludedModels)) {
       setExcludedModels(incoming);
       lastSavedSignatureRef.current = buildExcludedSignature(incoming);
+      onSelectionChange(Array.from(incoming));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialExcludedModels]);

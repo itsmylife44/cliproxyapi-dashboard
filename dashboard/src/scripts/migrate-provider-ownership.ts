@@ -14,6 +14,7 @@
 import { createHash } from "crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
+import { OAUTH_PROVIDER } from "@/lib/providers/constants";
 
 const PROVIDER = {
   CLAUDE: "claude",
@@ -29,15 +30,23 @@ const PROVIDER_ENDPOINT = {
   [PROVIDER.OPENAI_COMPAT]: "/openai-compatibility",
 } as const;
 
-const OAUTH_PROVIDER = {
-  CLAUDE: "claude",
-  GEMINI_CLI: "gemini-cli",
-  CODEX: "codex",
-  ANTIGRAVITY: "antigravity",
-  QWEN: "qwen",
-  IFLOW: "iflow",
-  KIMI: "kimi",
-} as const;
+const OAUTH_PROVIDER_ALIASES: Record<string, string> = {
+  claude: OAUTH_PROVIDER.CLAUDE,
+  anthropic: OAUTH_PROVIDER.CLAUDE,
+  "gemini-cli": OAUTH_PROVIDER.GEMINI_CLI,
+  gemini: OAUTH_PROVIDER.GEMINI_CLI,
+  codex: OAUTH_PROVIDER.CODEX,
+  antigravity: OAUTH_PROVIDER.ANTIGRAVITY,
+  qwen: OAUTH_PROVIDER.QWEN,
+  iflow: OAUTH_PROVIDER.IFLOW,
+  kimi: OAUTH_PROVIDER.KIMI,
+  copilot: OAUTH_PROVIDER.COPILOT,
+  "github-copilot": OAUTH_PROVIDER.COPILOT,
+  github: OAUTH_PROVIDER.COPILOT,
+  kiro: OAUTH_PROVIDER.KIRO,
+  cursor: OAUTH_PROVIDER.CURSOR,
+  codebuddy: OAUTH_PROVIDER.CODEBUDDY,
+};
 
 function hashProviderKey(apiKey: string): string {
   return createHash("sha256").update(apiKey).digest("hex");
@@ -272,17 +281,15 @@ async function main() {
         if (typeof accountName !== "string") continue;
 
         const accountEmail = typeof file.email === "string" ? file.email : null;
-        const providerType = typeof file.provider === "string" ? file.provider : (typeof file.type === "string" ? file.type : "unknown");
-
-        // Normalize provider type to match OAUTH_PROVIDER constants
-        let normalizedProvider = providerType;
-        if (providerType === "claude") normalizedProvider = OAUTH_PROVIDER.CLAUDE;
-        else if (providerType === "gemini-cli" || providerType === "gemini") normalizedProvider = OAUTH_PROVIDER.GEMINI_CLI;
-        else if (providerType === "codex") normalizedProvider = OAUTH_PROVIDER.CODEX;
-        else if (providerType === "antigravity") normalizedProvider = OAUTH_PROVIDER.ANTIGRAVITY;
-        else if (providerType === "qwen") normalizedProvider = OAUTH_PROVIDER.QWEN;
-        else if (providerType === "iflow") normalizedProvider = OAUTH_PROVIDER.IFLOW;
-        else if (providerType === "kimi") normalizedProvider = OAUTH_PROVIDER.KIMI;
+        const providerTypeRaw =
+          typeof file.provider === "string"
+            ? file.provider
+            : typeof file.type === "string"
+              ? file.type
+              : "unknown";
+        const providerType = providerTypeRaw.toLowerCase();
+        const normalizedProvider =
+          OAUTH_PROVIDER_ALIASES[providerType] ?? providerType;
 
         const existing = await prisma.providerOAuthOwnership.findUnique({
           where: { accountName },

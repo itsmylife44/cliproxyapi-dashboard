@@ -336,6 +336,11 @@ export function OAuthSection({
         const res = await fetch(
           `/api/management/get-auth-status?state=${encodeURIComponent(state)}`
         );
+        if (!res.ok || pollingAttemptsRef.current <= 3 || pollingAttemptsRef.current % 10 === 0) {
+          // #region agent log
+          fetch("http://127.0.0.1:7769/ingest/d2e80aa9-18b8-4947-969b-cd12bcef18c3", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "34ec83" }, body: JSON.stringify({ sessionId: "34ec83", runId: "baseline", hypothesisId: "H3", location: "oauth-section.tsx:pollAuthStatus", message: "oauth status poll tick", data: { statePresent: Boolean(state), attempt: pollingAttemptsRef.current, status: res.status, ok: res.ok, tabVisible: isTabVisible() }, timestamp: Date.now() }) }).catch(() => {});
+          // #endregion
+        }
         if (!res.ok) {
           stopPolling();
           setOauthModalStatus(MODAL_STATUS.ERROR);
@@ -361,6 +366,9 @@ export function OAuthSection({
         }
 
         if (data.status === "ok") {
+          // #region agent log
+          fetch("http://127.0.0.1:7769/ingest/d2e80aa9-18b8-4947-969b-cd12bcef18c3", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "34ec83" }, body: JSON.stringify({ sessionId: "34ec83", runId: "baseline", hypothesisId: "H3", location: "oauth-section.tsx:pollAuthStatus:ok", message: "oauth status reached ok", data: { attempt: pollingAttemptsRef.current }, timestamp: Date.now() }) }).catch(() => {});
+          // #endregion
           stopPolling();
           setOauthModalStatus(MODAL_STATUS.SUCCESS);
           showToast("OAuth account connected", "success");
@@ -376,6 +384,9 @@ export function OAuthSection({
           return;
         }
       } catch {
+        // #region agent log
+        fetch("http://127.0.0.1:7769/ingest/d2e80aa9-18b8-4947-969b-cd12bcef18c3", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "34ec83" }, body: JSON.stringify({ sessionId: "34ec83", runId: "baseline", hypothesisId: "H3", location: "oauth-section.tsx:pollAuthStatus:catch", message: "oauth status poll threw", data: { attempt: pollingAttemptsRef.current }, timestamp: Date.now() }) }).catch(() => {});
+        // #endregion
         stopPolling();
         setOauthModalStatus(MODAL_STATUS.ERROR);
         setOauthErrorMessage("Network error while polling authorization.");
@@ -471,8 +482,11 @@ export function OAuthSection({
     try {
       const res = await fetch(provider.authEndpoint);
       if (!res.ok) {
+        const errorData: unknown = await res.json().catch(() => null);
         setOauthModalStatus(MODAL_STATUS.ERROR);
-        setOauthErrorMessage("Failed to start OAuth flow.");
+        setOauthErrorMessage(
+          extractApiError(errorData, `Failed to start OAuth flow (HTTP ${res.status}).`)
+        );
         return;
       }
 

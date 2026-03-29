@@ -1,4 +1,4 @@
-<!-- Generated: 2026-03-07 | Files scanned: 91 | Token estimate: ~900 -->
+<!-- Generated: 2026-03-30 | Files scanned: 222 | Token estimate: ~920 -->
 # Backend (API Routes)
 
 ## Auth
@@ -21,8 +21,11 @@ GET|POST       /api/providers/keys       → lib/providers/api-key-ops → Prism
 DELETE         /api/providers/keys/[keyHash] → cascade delete
 GET|POST       /api/providers/oauth      → lib/providers/oauth-ops → Prisma
 DELETE|PATCH   /api/providers/oauth/[id]  → ownership check → Prisma
+POST           /api/providers/oauth/claim → claim imported OAuth ownership
 POST           /api/providers/oauth/import → bulk import
 GET|POST|DELETE /api/providers/perplexity-cookie → Prisma PerplexityCookie
+GET            /api/providers/perplexity-cookie/current → current active cookie
+POST|PUT       /api/providers/perplexity-cookie/sync-models → model sync trigger
 
 ## Custom Providers
 GET|POST       /api/custom-providers     → Prisma CustomProvider
@@ -37,9 +40,10 @@ PUT            /api/provider-groups/reorder → reorder positions
 
 ## Config
 GET|PUT        /api/model-preferences    → Prisma ModelPreference
-GET            /api/agent-config         → Prisma AgentModelOverride
+GET|PUT        /api/agent-config         → Prisma AgentModelOverride
+GET|PUT        /api/agent-config-slim    → Prisma AgentModelOverride.slimOverrides
 GET|PUT        /api/user/config          → lib/config-generators/opencode
-GET|POST       /api/user/api-keys        → lib/api-keys/generate
+GET|POST|DELETE /api/user/api-keys       → lib/api-keys/generate
 
 ## Config Sync
 GET|POST       /api/config-sync/tokens   → Prisma SyncToken
@@ -60,7 +64,7 @@ GET            /api/usage/history        → Prisma UsageRecord time series
 
 ## System
 GET            /api/health               → health check
-POST           /api/setup                → initial admin creation
+GET|POST       /api/setup                → initial admin creation + status probe
 GET            /api/setup-status         → Prisma User count check
 POST           /api/restart              → management proxy
 GET|POST       /api/update/*             → management proxy (proxy + dashboard updates)

@@ -1,4 +1,4 @@
-<!-- Generated: 2026-03-07 | Models: 18 | Token estimate: ~500 -->
+<!-- Generated: 2026-03-30 | Files scanned: 222 | Models: 19 | Token estimate: ~560 -->
 # Data Model (Prisma + PostgreSQL)
 
 ## Core Models
@@ -20,7 +20,7 @@ User (id, username, passwordHash, isAdmin, sessionVersion, createdAt, updatedAt)
 
 ## Provider Models
 ```
-CustomProvider (id, userId, name, providerId, baseUrl, apiKeyHash, groupId?, sortOrder,
+CustomProvider (id, userId, name, providerId, baseUrl, apiKeyHash, apiKeyEncrypted?, groupId?, sortOrder,
                prefix?, proxyUrl?, headers?)
   ├──< CustomProviderModel (customProviderId, upstreamName, alias)
   └──< CustomProviderExcludedModel (customProviderId, pattern)

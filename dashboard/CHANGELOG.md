@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.63](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.62...dashboard-v0.1.63) (2026-03-29)
+
+
+### Features
+
+* encrypt custom provider API keys for auto-resync after proxy restart ([d194d0d](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d194d0d844eef391c7ee9f00484e037bb0f59f2e))
+
+
+### Bug Fixes
+
+* add apiKeyEncrypted migration to entrypoint.sh and PROVIDER_ENCRYPTION_KEY to install.sh ([082362c](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/082362c043ac009ad4d52c628a8091a51dc33d3b))
+* allow http:// base URLs for internal Docker service providers ([e36ad15](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/e36ad15a74c45ede58d1464f3f0c44617a217119))
+* include custom provider models in generated config bundle ([6584815](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/65848158891ab3f27afd1f30510603903f6444c3))
+* wrap PUT body in openai-compatibility object and handle update on empty list ([6504aa9](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6504aa97b468cd20c16f501e793c00ce79a3dc79))
+
 ## [0.1.62](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.61...dashboard-v0.1.62) (2026-03-29)
 
 

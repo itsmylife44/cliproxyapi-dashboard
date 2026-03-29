@@ -33,7 +33,7 @@ services:
       retries: 5
       start_period: 10s
 
-  # CLIProxyAPI Service
+  # CLIProxyAPI Service — requires ./config/config.yaml with `port: 8317` (OAuth URLs fail if unset)
   cliproxyapi:
     image: eceasy/cli-proxy-api-plus:latest
     container_name: cliproxyapi
@@ -133,6 +133,8 @@ services:
       MANAGEMENT_API_KEY: ${MANAGEMENT_API_KEY}
       DASHBOARD_URL: http://dashboard:3000
       PORT: "8766"
+      PERPLEXITY_SIDECAR_AUTO_UPDATE: ${PERPLEXITY_SIDECAR_AUTO_UPDATE:-true}
+      UPDATE_CHECK_INTERVAL: ${UPDATE_CHECK_INTERVAL:-3600}
       TZ: ${TZ}
     env_file:
       - ./.env

@@ -24,6 +24,7 @@ services:
       retries: 5
       start_period: 10s
 
+  # Requires ./config.local.yaml mounted below with `port: 8317` for management/OAuth
   cliproxyapi:
     image: eceasy/cli-proxy-api-plus:latest
     container_name: cliproxyapi
@@ -100,6 +101,8 @@ services:
       MANAGEMENT_API_KEY: ${MANAGEMENT_API_KEY}
       DASHBOARD_URL: http://dashboard:3000
       PORT: "8766"
+      PERPLEXITY_SIDECAR_AUTO_UPDATE: ${PERPLEXITY_SIDECAR_AUTO_UPDATE:-true}
+      UPDATE_CHECK_INTERVAL: ${UPDATE_CHECK_INTERVAL:-3600}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8766/health"]
       interval: 15s

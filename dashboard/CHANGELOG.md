@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.62](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.61...dashboard-v0.1.62) (2026-03-29)
+
+
+### Bug Fixes
+
+* include custom provider models in agent assignment model selector ([#155](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/155)) ([5369dd3](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/5369dd37a22c212a2855e9b4c7c3ffdedcb859d3))
+
 ## [0.1.61](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.60...dashboard-v0.1.61) (2026-03-29)
 
 

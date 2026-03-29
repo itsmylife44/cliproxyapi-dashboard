@@ -121,7 +121,6 @@ export async function syncCustomProviderToProxy(
       }
     }
 
-    const putBody = { "openai-compatibility": newList };
     logger.info({ operation, providerId: providerData.providerId, entryCount: newList.length }, "Syncing provider to CLIProxyAPI");
 
     const putRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {
@@ -130,7 +129,7 @@ export async function syncCustomProviderToProxy(
         "Content-Type": "application/json",
         "Authorization": `Bearer ${secretKey}` 
       },
-      body: JSON.stringify(putBody)
+      body: JSON.stringify(newList)
     });
 
     if (!putRes.ok) {

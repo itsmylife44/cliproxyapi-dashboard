@@ -244,6 +244,11 @@ async function migrate() {
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
     
+    -- Add apiKeyEncrypted column if missing (existing installs upgrading to support auto-resync)
+    DO $$ BEGIN
+      ALTER TABLE "custom_providers" ADD COLUMN "apiKeyEncrypted" TEXT;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
     -- Provider groups table (grouping + ordering for custom providers)
     CREATE TABLE IF NOT EXISTS "provider_groups" (
       "id" TEXT NOT NULL,

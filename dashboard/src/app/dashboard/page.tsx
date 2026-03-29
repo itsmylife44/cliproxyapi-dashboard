@@ -196,9 +196,16 @@ export default async function QuickStartPage() {
   const providerCount = configProviderCount + activeOAuthProviders.size;
 
   const apiKeyForProxy = userApiKeys.length > 0 ? userApiKeys[0].key : "";
-  const [proxyModels, modelsDevLimits] = await Promise.all([
+  const [proxyModels, modelsDevLimits, customProviders] = await Promise.all([
     apiKeyForProxy ? fetchProxyModels(getInternalProxyUrl(), apiKeyForProxy) : Promise.resolve([]),
     fetchModelsDevLimits(),
+    session
+      ? prisma.customProvider.findMany({
+          where: { userId: session.userId },
+          include: { models: true },
+          orderBy: { sortOrder: "asc" },
+        })
+      : Promise.resolve([]),
   ]);
   const oauthAliasModels = extractOAuthModelAliases(config as ConfigData | null, oauthAccounts, modelsDevLimits);
   const oauthAliasIds = Object.keys(oauthAliasModels);
@@ -212,7 +219,33 @@ export default async function QuickStartPage() {
       modelProvidersMap.set(aliasId, [...existing, "OAuth Alias"]);
     }
   }
+  for (const cp of customProviders) {
+    const label = cp.name;
+    for (const m of cp.models) {
+      const id = m.alias;
+      if (!availableModelIds.includes(id)) {
+        availableModelIds.push(id);
+      }
+      modelSourceMap.set(id, label);
+      modelProvidersMap.set(id, [label]);
+    }
+  }
+  availableModelIds.sort((a, b) => a.localeCompare(b));
   const allProxyModels = { ...oauthAliasModels, ...buildAvailableModelsFromProxy(proxyModels, modelsDevLimits) };
+  for (const cp of customProviders) {
+    for (const m of cp.models) {
+      if (!(m.alias in allProxyModels)) {
+        allProxyModels[m.alias] = {
+          name: `${m.alias} (via ${cp.name})`,
+          context: 200000,
+          output: 64000,
+          attachment: true,
+          reasoning: false,
+          modalities: { input: ["text", "image"], output: ["text"] },
+        };
+      }
+    }
+  }
   const setupItems = [
     {
       label: "Provider connected",

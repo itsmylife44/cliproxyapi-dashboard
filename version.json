@@ -1,6 +1,6 @@
 {
-  "version": "0.1.63",
-  "tag": "dashboard-v0.1.63",
-  "releaseUrl": "https://github.com/itsmylife44/cliproxyapi-dashboard/releases/tag/dashboard-v0.1.63",
-  "releaseNotes": "## [0.1.63](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.62...dashboard-v0.1.63) (2026-03-29)\n\n\n### Features\n\n* encrypt custom provider API keys for auto-resync after proxy restart ([d194d0d](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d194d0d844eef391c7ee9f00484e037bb0f59f2e))\n\n\n### Bug Fixes\n\n* add apiKeyEncrypted migration to entrypoint.sh and PROVIDER_ENCRYPTION_KEY to install.sh ([082362c](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/082362c043ac009ad4d52c628a8091a51dc33d3b))\n* allow http:// base URLs for internal Docker service providers ([e36ad15](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/e36ad15a74c45ede58d1464f3f0c44617a217119))\n* include custom provider models in generated config bundle ([6584815](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/65848158891ab3f27afd1f30510603903f6444c3))\n* wrap PUT body in openai-compatibility object and handle update on empty list ([6504aa9](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6504aa97b468cd20c16f501e793c00ce79a3dc79))"
+  "version": "0.1.64",
+  "tag": "dashboard-v0.1.64",
+  "releaseUrl": "https://github.com/itsmylife44/cliproxyapi-dashboard/releases/tag/dashboard-v0.1.64",
+  "releaseNotes": "## [0.1.64](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.63...dashboard-v0.1.64) (2026-03-29)\n\n\n### Bug Fixes\n\n* send raw array to PUT openai-compatibility (not wrapped object) ([580798e](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/580798e536bc1fb735405b9a26afe691b697ee17))"
 }

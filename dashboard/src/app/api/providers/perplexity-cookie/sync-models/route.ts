@@ -11,6 +11,11 @@ import { logger } from "@/lib/logger";
 const SIDECAR_BASE_URL = "http://perplexity-sidecar:8766/v1";
 const SIDECAR_FETCH_TIMEOUT_MS = 5_000;
 
+/** Check whether the Perplexity Sidecar feature is enabled (secret configured). */
+function isPerplexityEnabled(): boolean {
+  return Boolean(process.env.PERPLEXITY_SIDECAR_SECRET?.trim());
+}
+
 interface SidecarModel {
   id: string;
 }
@@ -84,6 +89,9 @@ async function syncModelsCore() {
 
 // PUT: internal endpoint for sidecar auto-sync (key auth, no session/origin required)
 export async function PUT(request: NextRequest) {
+  if (!isPerplexityEnabled()) {
+    return NextResponse.json({ error: "Perplexity Sidecar is not enabled" }, { status: 404 });
+  }
   if (!verifyInternalAuth(request)) return Errors.unauthorized();
 
   try {
@@ -98,6 +106,10 @@ export async function PUT(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await verifySession();
   if (!session) return Errors.unauthorized();
+
+  if (!isPerplexityEnabled()) {
+    return NextResponse.json({ error: "Perplexity Sidecar is not enabled" }, { status: 404 });
+  }
 
   const originError = validateOrigin(request);
   if (originError) return originError;

@@ -183,6 +183,17 @@ else
     OAUTH_ENABLED=0
 fi
 
+# Perplexity Pro Sidecar support
+echo ""
+log_info "Perplexity Pro Sidecar provides an OpenAI-compatible API wrapper for Perplexity Pro subscriptions."
+log_info "If enabled, it runs as a separate container alongside the stack."
+read -p "Enable Perplexity Pro Sidecar? [y/N]: " PERPLEXITY_ENABLED_INPUT
+if [[ "$PERPLEXITY_ENABLED_INPUT" =~ ^[Yy]$ ]]; then
+    PERPLEXITY_ENABLED=1
+else
+    PERPLEXITY_ENABLED=0
+fi
+
 # Backup interval
 echo ""
 log_info "Select backup interval:"
@@ -220,6 +231,7 @@ log_info "  Dashboard: ${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
 log_info "  API: ${API_SUBDOMAIN}.${DOMAIN}"
 log_info "  External reverse proxy: $([ $EXTERNAL_PROXY -eq 1 ] && echo 'enabled' || echo 'disabled')"
 log_info "  OAuth callbacks: $([ $OAUTH_ENABLED -eq 1 ] && echo 'enabled' || echo 'disabled')"
+log_info "  Perplexity Sidecar: $([ $PERPLEXITY_ENABLED -eq 1 ] && echo 'enabled' || echo 'disabled')"
 log_info "  Backup interval: $BACKUP_INTERVAL"
 echo ""
 
@@ -476,8 +488,11 @@ JWT_SECRET=$(openssl rand -base64 32)
 MANAGEMENT_API_KEY=$(openssl rand -hex 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 32)
 COLLECTOR_API_KEY=$(openssl rand -hex 32)
-PERPLEXITY_SIDECAR_SECRET=$(openssl rand -hex 32)
 PROVIDER_ENCRYPTION_KEY=$(openssl rand -hex 32)
+
+if [ $PERPLEXITY_ENABLED -eq 1 ]; then
+    PERPLEXITY_SIDECAR_SECRET=$(openssl rand -hex 32)
+fi
 
 log_success "Secrets generated"
 
@@ -525,7 +540,6 @@ POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 JWT_SECRET=$JWT_SECRET
 MANAGEMENT_API_KEY=$MANAGEMENT_API_KEY
 COLLECTOR_API_KEY=$COLLECTOR_API_KEY
-PERPLEXITY_SIDECAR_SECRET=$PERPLEXITY_SIDECAR_SECRET
 PROVIDER_ENCRYPTION_KEY=$PROVIDER_ENCRYPTION_KEY
 
 # Management API URL
@@ -544,6 +558,16 @@ LOG_LEVEL=info
 DASHBOARD_URL=https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}
 API_URL=https://${API_SUBDOMAIN}.${DOMAIN}
 EOF
+
+    # Perplexity Sidecar (conditional)
+    if [ $PERPLEXITY_ENABLED -eq 1 ]; then
+        cat >> "$ENV_FILE" << EOF
+
+# Perplexity Pro Sidecar
+COMPOSE_PROFILES=perplexity
+PERPLEXITY_SIDECAR_SECRET=$PERPLEXITY_SIDECAR_SECRET
+EOF
+    fi
     
     chmod 600 "$ENV_FILE"
     log_success ".env file created"
@@ -578,6 +602,9 @@ if [ $SKIP_SERVICE -eq 0 ]; then
     
     if [ $EXTERNAL_PROXY -eq 1 ]; then
         COMPOSE_SERVICES="postgres cliproxyapi docker-proxy dashboard"
+        if [ $PERPLEXITY_ENABLED -eq 1 ]; then
+            COMPOSE_SERVICES="$COMPOSE_SERVICES perplexity-sidecar"
+        fi
         COMPOSE_DESC="(without Caddy - using external reverse proxy)"
     else
         COMPOSE_SERVICES=""

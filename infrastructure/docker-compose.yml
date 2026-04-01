@@ -116,7 +116,9 @@ services:
       start_period: 5s
 
   # Perplexity Pro Sidecar — OpenAI-compatible wrapper for Perplexity Pro subscription
+  # Only starts when COMPOSE_PROFILES includes "perplexity" (set by install.sh)
   perplexity-sidecar:
+    profiles: ["perplexity"]
     build: ${INSTALL_DIR:-.}/../perplexity-sidecar
     container_name: cliproxyapi-perplexity-sidecar
     restart: unless-stopped

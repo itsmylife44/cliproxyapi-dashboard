@@ -111,19 +111,50 @@ generate_env_file() {
 
     ensure_openssl
 
-    local jwt_secret management_api_key postgres_password perplexity_sidecar_secret
+    # Ask about Perplexity Pro Sidecar
+    local enable_perplexity=0
+    echo ""
+    log_info "Perplexity Pro Sidecar provides an OpenAI-compatible API wrapper for Perplexity Pro subscriptions."
+    while true; do
+        read -r -p "Enable Perplexity Pro Sidecar? [y/N]: " PPLX_ANSWER
+        case "${PPLX_ANSWER:-}" in
+            [Yy])
+                enable_perplexity=1
+                break
+                ;;
+            [Nn]|"")
+                enable_perplexity=0
+                break
+                ;;
+            *)
+                log_warning "Please answer y or n."
+                ;;
+        esac
+    done
+
+    local jwt_secret management_api_key postgres_password
     jwt_secret="$(openssl rand -base64 32)"
     management_api_key="$(openssl rand -hex 32)"
     postgres_password="$(openssl rand -hex 32)"
-    perplexity_sidecar_secret="$(openssl rand -hex 32)"
 
     umask 077
     cat > "$ENV_FILE" <<EOF
 JWT_SECRET=${jwt_secret}
 MANAGEMENT_API_KEY=${management_api_key}
 POSTGRES_PASSWORD=${postgres_password}
+EOF
+
+    if [ "$enable_perplexity" -eq 1 ]; then
+        local perplexity_sidecar_secret
+        perplexity_sidecar_secret="$(openssl rand -hex 32)"
+        cat >> "$ENV_FILE" <<EOF
+COMPOSE_PROFILES=perplexity
 PERPLEXITY_SIDECAR_SECRET=${perplexity_sidecar_secret}
 EOF
+        log_success "Perplexity Pro Sidecar enabled"
+    else
+        log_info "Perplexity Pro Sidecar disabled (can be enabled later by adding COMPOSE_PROFILES=perplexity to .env)"
+    fi
 
     log_success "Created .env in project root"
 }

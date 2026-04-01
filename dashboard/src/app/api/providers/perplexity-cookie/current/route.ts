@@ -13,6 +13,11 @@ function safeTokenCompare(a: string, b: string): boolean {
 }
 
 export async function GET(request: NextRequest) {
+  // Feature not enabled — sidecar should not be running
+  if (!process.env.PERPLEXITY_SIDECAR_SECRET?.trim()) {
+    return NextResponse.json({ error: "Perplexity Sidecar is not enabled" }, { status: 404 });
+  }
+
   const authHeader = request.headers.get("authorization") ?? "";
   const token = authHeader.replace("Bearer ", "");
 

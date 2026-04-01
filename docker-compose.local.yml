@@ -88,7 +88,10 @@ services:
       retries: 3
       start_period: 5s
 
+  # Perplexity Pro Sidecar — only starts when COMPOSE_PROFILES includes "perplexity"
+  # Enable via: ./setup-local.sh (answer 'y' to Perplexity prompt)
   perplexity-sidecar:
+    profiles: ["perplexity"]
     build: ./perplexity-sidecar
     container_name: cliproxyapi-perplexity-sidecar
     restart: unless-stopped

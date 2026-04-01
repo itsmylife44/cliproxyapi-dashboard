@@ -13,6 +13,11 @@ const REQUIRED_COOKIE_KEYS = ["next-auth.session-token"];
 const SIDECAR_BASE_URL = "http://perplexity-sidecar:8766/v1";
 const SIDECAR_FETCH_TIMEOUT_MS = 5_000;
 
+/** Check whether the Perplexity Sidecar feature is enabled (secret configured). */
+function isPerplexityEnabled(): boolean {
+  return Boolean(process.env.PERPLEXITY_SIDECAR_SECRET?.trim());
+}
+
 interface SidecarModel {
   id: string;
 }
@@ -144,6 +149,11 @@ export async function GET() {
   const session = await verifySession();
   if (!session) return Errors.unauthorized();
 
+  // Feature not enabled — tell the frontend so it can hide the section
+  if (!isPerplexityEnabled()) {
+    return NextResponse.json({ enabled: false, cookies: [] });
+  }
+
   try {
     const cookies = await prisma.perplexityCookie.findMany({
       where: { userId: session.userId },
@@ -158,7 +168,7 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ cookies });
+    return NextResponse.json({ enabled: true, cookies });
   } catch (error) {
     return Errors.internal("fetch perplexity cookies", error);
   }
@@ -167,6 +177,13 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await verifySession();
   if (!session) return Errors.unauthorized();
+
+  if (!isPerplexityEnabled()) {
+    return NextResponse.json(
+      { error: "Perplexity Sidecar is not enabled on this instance" },
+      { status: 404 }
+    );
+  }
 
   const originError = validateOrigin(request);
   if (originError) return originError;
@@ -237,6 +254,13 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const session = await verifySession();
   if (!session) return Errors.unauthorized();
+
+  if (!isPerplexityEnabled()) {
+    return NextResponse.json(
+      { error: "Perplexity Sidecar is not enabled on this instance" },
+      { status: 404 }
+    );
+  }
 
   const originError = validateOrigin(request);
   if (originError) return originError;

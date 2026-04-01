@@ -1,6 +1,6 @@
 {
-  "version": "0.1.64",
-  "tag": "dashboard-v0.1.64",
-  "releaseUrl": "https://github.com/itsmylife44/cliproxyapi-dashboard/releases/tag/dashboard-v0.1.64",
-  "releaseNotes": "## [0.1.64](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.63...dashboard-v0.1.64) (2026-03-29)\n\n\n### Bug Fixes\n\n* send raw array to PUT openai-compatibility (not wrapped object) ([580798e](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/580798e536bc1fb735405b9a26afe691b697ee17))"
+  "version": "0.1.65",
+  "tag": "dashboard-v0.1.65",
+  "releaseUrl": "https://github.com/itsmylife44/cliproxyapi-dashboard/releases/tag/dashboard-v0.1.65",
+  "releaseNotes": "## [0.1.65](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.64...dashboard-v0.1.65) (2026-04-01)\n\n\n### Bug Fixes\n\n* correct custom provider re-save state and URL validation ([248764f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/248764f9eb4c7e726a60463a46739c972870ded6))\n* surface OAuth start errors and refresh codemaps ([ceb5f95](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/ceb5f95a7f05db66ef7070f525043ad9f5ad9881))"
 }

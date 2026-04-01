@@ -17,6 +17,7 @@ interface ProviderRecord {
   providerId: string;
   baseUrl: string;
   apiKeyHash: string;
+  apiKeyEncrypted: string | null;
   prefix: string | null;
   proxyUrl: string | null;
   headers: unknown;
@@ -39,6 +40,7 @@ function sanitizeProvider(p: ProviderRecord) {
     headers: p.headers,
     models: p.models,
     excludedModels: p.excludedModels,
+    hasEncryptedKey: p.apiKeyEncrypted !== null,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -65,6 +65,15 @@ function generateProviderId(name: string): string {
 let _nextId = 0;
 function nextId() { return ++_nextId; }
 
+function isValidBaseUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: CustomProviderModalProps) {
   const { showToast } = useToast();
   const isEdit = !!provider;
@@ -108,25 +117,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     void fetchGroups();
   }, []);
 
-  useEffect(() => {
-    if (provider) {
-      setName(provider.name);
-      setProviderId(provider.providerId);
-      setBaseUrl(provider.baseUrl);
-      setPrefix(provider.prefix || "");
-      setProxyUrl(provider.proxyUrl || "");
-      setHeaders(Object.entries(provider.headers || {}).map(([key, value]) => ({ _id: nextId(), key, value })));
-      setModels(provider.models.length > 0 ? provider.models.map(m => ({ ...m, _id: nextId() })) : [{ _id: nextId(), upstreamName: "", alias: "" }]);
-      setExcludedModels(provider.excludedModels.map(e => e.pattern));
-      excludedModelIds.current = provider.excludedModels.map(() => nextId());
-      setGroupId(provider.groupId);
-      setApiKey("");
-    } else {
-      resetForm();
-    }
-  }, [provider, isOpen]);
-
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setName("");
     setProviderId("");
     setBaseUrl("");
@@ -142,7 +133,26 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     setFetchedModels([]);
     setShowFetchedModels(false);
     setGroupId(null);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (provider) {
+      setName(provider.name);
+      setProviderId(provider.providerId);
+      setBaseUrl(provider.baseUrl);
+      setPrefix(provider.prefix || "");
+      setProxyUrl(provider.proxyUrl || "");
+      setHeaders(Object.entries(provider.headers || {}).map(([key, value]) => ({ _id: nextId(), key, value })));
+      setModels(provider.models.length > 0 ? provider.models.map(m => ({ ...m, _id: nextId() })) : [{ _id: nextId(), upstreamName: "", alias: "" }]);
+      setExcludedModels(provider.excludedModels.map(e => e.pattern));
+      excludedModelIds.current = provider.excludedModels.map(() => nextId());
+      setGroupId(provider.groupId);
+      setApiKey("");
+      return;
+    }
+
+    resetForm();
+  }, [provider, resetForm]);
 
   const handleNameChange = (value: string) => {
     setName(value);
@@ -155,7 +165,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     const newErrors = {
       name: name.length === 0 ? "Name is required" : name.length > 100 ? "Max 100 characters" : "",
       providerId: !/^[a-z0-9-]+$/.test(providerId) ? "Only lowercase letters, numbers, and hyphens" : "",
-      baseUrl: !baseUrl.startsWith("https://") ? "Must start with https://" : "",
+      baseUrl: !isValidBaseUrl(baseUrl) ? "Must be a valid http:// or https:// URL" : "",
       apiKey: !isEdit && apiKey.length === 0 ? "API key is required" : "",
       models: models.filter(m => m.upstreamName && m.alias).length === 0 ? "At least one model mapping required" : ""
     };
@@ -259,8 +269,8 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
   };
 
   const fetchModelsHandler = async () => {
-    if (!baseUrl.startsWith("https://") || apiKey.length === 0) {
-      showToast("Please enter a valid Base URL (https) and API Key first", "error");
+    if (!isValidBaseUrl(baseUrl) || apiKey.length === 0) {
+      showToast("Please enter a valid Base URL (http/https) and API Key first", "error");
       return;
     }
 
@@ -370,7 +380,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
           />
 
           <ModelDiscovery
-            baseUrl={baseUrl}
+            canFetchModels={isValidBaseUrl(baseUrl) && apiKey.length > 0}
             apiKey={apiKey}
             fetchingModels={fetchingModels}
             saving={saving}

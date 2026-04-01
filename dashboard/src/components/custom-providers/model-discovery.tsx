@@ -8,7 +8,7 @@ interface FetchedModel {
 }
 
 interface ModelDiscoveryProps {
-  baseUrl: string;
+  canFetchModels: boolean;
   apiKey: string;
   fetchingModels: boolean;
   saving: boolean;
@@ -21,7 +21,7 @@ interface ModelDiscoveryProps {
 }
 
 export function ModelDiscovery({
-  baseUrl,
+  canFetchModels,
   apiKey,
   fetchingModels,
   saving,
@@ -39,7 +39,7 @@ export function ModelDiscovery({
         <Button
           variant="secondary"
           onClick={onFetchModels}
-          disabled={!baseUrl.startsWith("https://") || apiKey.length === 0 || fetchingModels || saving}
+          disabled={!canFetchModels || apiKey.length === 0 || fetchingModels || saving}
           className="px-3 py-1.5 text-xs"
         >
           {fetchingModels ? (

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.65](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.64...dashboard-v0.1.65) (2026-04-01)
+
+
+### Bug Fixes
+
+* correct custom provider re-save state and URL validation ([248764f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/248764f9eb4c7e726a60463a46739c972870ded6))
+* surface OAuth start errors and refresh codemaps ([ceb5f95](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/ceb5f95a7f05db66ef7070f525043ad9f5ad9881))
+
 ## [0.1.64](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.63...dashboard-v0.1.64) (2026-03-29)
 
 

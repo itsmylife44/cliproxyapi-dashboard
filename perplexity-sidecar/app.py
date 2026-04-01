@@ -14,7 +14,6 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from perplexity_webui_scraper import (
-    CitationMode,
     ConversationConfig,
     MODELS,
     Model,
@@ -383,7 +382,7 @@ async def chat_completions(request: Request):
     created = int(time.time())
 
     client = get_client()
-    config = ConversationConfig(citation_mode=CitationMode.CLEAN)
+    config = ConversationConfig(citation_mode="clean")
     conversation = client.create_conversation(config)
 
     if stream:

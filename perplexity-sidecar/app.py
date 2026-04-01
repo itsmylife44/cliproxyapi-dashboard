@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import os
-import re
 import subprocess
 import sys
 import threading
@@ -17,11 +16,11 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from perplexity_webui_scraper import (
     CitationMode,
     ConversationConfig,
-    Models,
+    MODELS,
+    Model,
     Perplexity,
     PerplexityError,
 )
-from perplexity_webui_scraper.models import Model
 
 logging.basicConfig(
     level=logging.INFO,
@@ -52,62 +51,39 @@ PROVIDER_MAP = {
 }
 
 
-def _attr_name_to_alias(attr_name: str) -> str:
-    """BEST -> perplexity-auto, GPT_52_THINKING -> perplexity-gpt-5.2-thinking"""
+def _slug_to_alias(slug: str) -> str:
+    """Convert library slug to our perplexity-prefixed alias.
+    e.g. 'best' -> 'perplexity-auto', 'gpt-5.4-thinking' -> 'perplexity-gpt-5.4-thinking'
+    """
     special = {
-        "BEST": "perplexity-auto",
-        "SONAR": "perplexity-sonar",
-        "DEEP_RESEARCH": "perplexity-deep-research",
-        "CREATE_FILES_AND_APPS": "perplexity-labs",
+        "best": "perplexity-auto",
+        "sonar": "perplexity-sonar",
+        "deep-research": "perplexity-deep-research",
     }
-    if attr_name in special:
-        return special[attr_name]
-
-    parts = attr_name.lower().split("_")
-    result_parts = []
-    i = 0
-    while i < len(parts):
-        part = parts[i]
-        # GPT_52 -> gpt-5.2, CLAUDE_45 -> claude-4.5, GEMINI_3 -> gemini-3
-        if i + 1 < len(parts) and re.match(r"^\d+$", parts[i + 1]):
-            digits = parts[i + 1]
-            if len(digits) >= 2:
-                result_parts.append(f"{part}-{digits[0]}.{digits[1:]}")
-            else:
-                result_parts.append(f"{part}-{digits}")
-            i += 2
-            continue
-        result_parts.append(part)
-        i += 1
-
-    return "perplexity-" + "-".join(result_parts)
+    if slug in special:
+        return special[slug]
+    return f"perplexity-{slug}"
 
 
-def _infer_provider(identifier: str) -> str:
+def _infer_provider(slug: str) -> str:
     for prefix, provider in PROVIDER_MAP.items():
-        if identifier.lower().startswith(prefix):
+        if slug.lower().startswith(prefix):
             return provider
     return "perplexity"
 
 
 def discover_models() -> dict[str, dict]:
-    """Scan Models class and build {alias: {model, identifier, provider}} map."""
+    """Build {alias: {model, identifier, provider}} map from MODELS dict."""
     registry: dict[str, dict] = {}
 
-    for attr_name in dir(Models):
-        if attr_name.startswith("_"):
-            continue
-        model_obj = getattr(Models, attr_name)
-        if not isinstance(model_obj, Model):
-            continue
-
-        alias = _attr_name_to_alias(attr_name)
-        provider = _infer_provider(model_obj.identifier)
+    for slug, model_obj in MODELS.items():
+        alias = _slug_to_alias(slug)
+        provider = _infer_provider(slug)
         registry[alias] = {
             "model": model_obj,
             "identifier": model_obj.identifier,
             "provider": provider,
-            "attr": attr_name,
+            "slug": slug,
         }
 
     # Extra alias: perplexity-pro -> same as perplexity-auto
@@ -117,6 +93,10 @@ def discover_models() -> dict[str, dict]:
     # Extra alias: perplexity-reasoning -> perplexity-auto (uses BEST in reasoning context)
     if "perplexity-auto" in registry:
         registry["perplexity-reasoning"] = registry["perplexity-auto"]
+
+    # Extra alias: perplexity-labs -> deep-research if no dedicated labs model
+    if "perplexity-labs" not in registry and "perplexity-deep-research" in registry:
+        registry["perplexity-labs"] = registry["perplexity-deep-research"]
 
     return registry
 
@@ -128,6 +108,7 @@ log.info("Discovered %d models: %s", len(MODEL_REGISTRY), list(MODEL_REGISTRY.ke
 # ---------------------------------------------------------------------------
 # Auto-update: check PyPI periodically, restart if newer version available
 # ---------------------------------------------------------------------------
+
 
 def _env_auto_update_enabled() -> bool:
     raw = os.environ.get("PERPLEXITY_SIDECAR_AUTO_UPDATE", "true").strip().lower()

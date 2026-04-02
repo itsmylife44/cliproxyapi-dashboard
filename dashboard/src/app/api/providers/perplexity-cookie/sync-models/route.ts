@@ -6,15 +6,11 @@ import { prisma } from "@/lib/db";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
 import { hashProviderKey } from "@/lib/providers/hash";
 import { env } from "@/lib/env";
+import { isPerplexityEnabled } from "@/lib/providers/perplexity";
 import { logger } from "@/lib/logger";
 
 const SIDECAR_BASE_URL = "http://perplexity-sidecar:8766/v1";
 const SIDECAR_FETCH_TIMEOUT_MS = 5_000;
-
-/** Check whether the Perplexity Sidecar feature is enabled (secret configured). */
-function isPerplexityEnabled(): boolean {
-  return Boolean(process.env.PERPLEXITY_SIDECAR_SECRET?.trim());
-}
 
 interface SidecarModel {
   id: string;

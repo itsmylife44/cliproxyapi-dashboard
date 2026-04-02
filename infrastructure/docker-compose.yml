@@ -192,6 +192,7 @@ services:
   caddy:
     image: caddy:2-alpine
     container_name: cliproxyapi-caddy
+    profiles: ["caddy"]
     restart: unless-stopped
     # Resource limits (calibrated from real usage: ~57MiB actual)
     cpus: 0.5

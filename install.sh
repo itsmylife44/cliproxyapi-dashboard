@@ -600,13 +600,20 @@ fi
 if [ $SKIP_SERVICE -eq 0 ]; then
     log_info "Creating systemd service..."
 
-    # When using an external reverse proxy, exclude Caddy from startup.
-    # Perplexity sidecar is controlled by COMPOSE_PROFILES in .env, so it
-    # never needs to be listed explicitly here.
+    # When using an external reverse proxy, exclude Caddy from startup by naming
+    # services explicitly. NOTE: when services are listed explicitly on the command
+    # line Docker Compose does NOT auto-start profiled services from COMPOSE_PROFILES,
+    # so perplexity-sidecar must also be listed here when it is enabled.
     if [ $EXTERNAL_PROXY -eq 1 ]; then
-        COMPOSE_START_CMD="/usr/bin/docker compose up -d --wait postgres cliproxyapi docker-proxy dashboard"
+        COMPOSE_SERVICES="postgres cliproxyapi docker-proxy dashboard"
+        if [ $PERPLEXITY_ENABLED -eq 1 ]; then
+            COMPOSE_SERVICES="$COMPOSE_SERVICES perplexity-sidecar"
+        fi
+        COMPOSE_START_CMD="/usr/bin/docker compose up -d --wait $COMPOSE_SERVICES"
         COMPOSE_DESC="(without Caddy - using external reverse proxy)"
     else
+        # No explicit list — Compose starts everything; COMPOSE_PROFILES in .env
+        # activates the perplexity profile when present.
         COMPOSE_START_CMD="/usr/bin/docker compose up -d --wait"
         COMPOSE_DESC="(full stack)"
     fi

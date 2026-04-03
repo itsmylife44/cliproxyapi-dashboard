@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # CLIProxyAPI Dashboard — Local Setup (macOS / Linux)
 # Requires: Docker Desktop
@@ -198,6 +198,34 @@ wait_for_health() {
     done
 }
 
+check_port_available() {
+    local port=$1
+    if ss -tlnH "sport = :${port}" 2>/dev/null | grep -q .; then
+        log_error "Port ${port} is already in use. Free it and try again."
+        exit 1
+    fi
+}
+
+patch_rootless_docker_socket() {
+    if ! docker info 2>/dev/null | grep -q rootless; then
+        return 0
+    fi
+
+    local sock_path
+    sock_path="${DOCKER_HOST#unix://}"
+    if [ -z "$sock_path" ] || [ ! -S "$sock_path" ]; then
+        log_warning "Rootless Docker detected but could not determine socket path from DOCKER_HOST"
+        return 0
+    fi
+
+    if grep -q "$sock_path" "$COMPOSE_FILE" 2>/dev/null; then
+        return 0
+    fi
+
+    log_info "Rootless Docker detected — patching docker-compose.local.yml socket path"
+    sed -i "s|/var/run/docker.sock:/var/run/docker.sock|${sock_path}:/var/run/docker.sock|" "$COMPOSE_FILE"
+}
+
 main() {
     if [ ! -f "$COMPOSE_FILE" ]; then
         log_error "Missing docker-compose.local.yml in project root."
@@ -223,8 +251,12 @@ main() {
             ;;
     esac
 
+    check_port_available 3000
+
     generate_env_file
     generate_config_yaml
+
+    patch_rootless_docker_socket
 
     log_info "Starting local stack..."
     docker compose -f "$COMPOSE_FILE" up -d

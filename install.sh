@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # CLIProxyAPI Stack Installation Script
 # Installs Docker, Docker Compose, configures UFW, generates secrets, and sets up systemd service

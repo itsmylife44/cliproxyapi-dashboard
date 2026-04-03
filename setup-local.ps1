@@ -85,14 +85,40 @@ function Ensure-EnvFile {
     $jwt = New-RandomBase64 32
     $mgmt = New-RandomHex 32
     $pg = New-RandomHex 32
-    $pplxSecret = New-RandomHex 32
 
-    $content = @(
+    # Ask about Perplexity Pro Sidecar
+    Write-Host ""
+    Write-Info "Perplexity Pro Sidecar provides an OpenAI-compatible API wrapper for Perplexity Pro subscriptions."
+    $enablePerplexity = $false
+    while ($true) {
+        $pplxAns = Read-Host "Enable Perplexity Pro Sidecar? [y/N]"
+        if ([string]::IsNullOrWhiteSpace($pplxAns) -or $pplxAns -match '^[Nn]$') {
+            $enablePerplexity = $false
+            break
+        }
+        if ($pplxAns -match '^[Yy]$') {
+            $enablePerplexity = $true
+            break
+        }
+        Write-WarningMsg "Please answer y or n."
+    }
+
+    $contentLines = @(
         "JWT_SECRET=$jwt",
         "MANAGEMENT_API_KEY=$mgmt",
-        "POSTGRES_PASSWORD=$pg",
-        "PERPLEXITY_SIDECAR_SECRET=$pplxSecret"
-    ) -join "`n"
+        "POSTGRES_PASSWORD=$pg"
+    )
+
+    if ($enablePerplexity) {
+        $pplxSecret = New-RandomHex 32
+        $contentLines += "COMPOSE_PROFILES=perplexity"
+        $contentLines += "PERPLEXITY_SIDECAR_SECRET=$pplxSecret"
+        Write-Success "Perplexity Pro Sidecar enabled"
+    } else {
+        Write-Info "Perplexity Pro Sidecar disabled (can be enabled later by adding COMPOSE_PROFILES=perplexity to .env)"
+    }
+
+    $content = $contentLines -join "`n"
 
     [System.IO.File]::WriteAllText($EnvFile, $content, [System.Text.UTF8Encoding]::new($false))
     Write-Success "Created .env in project root"

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
 import { hashProviderKey } from "@/lib/providers/hash";
 import { env } from "@/lib/env";
+import { isPerplexityEnabled } from "@/lib/providers/perplexity";
 import { logger } from "@/lib/logger";
 
 const SIDECAR_BASE_URL = "http://perplexity-sidecar:8766/v1";
@@ -84,6 +85,9 @@ async function syncModelsCore() {
 
 // PUT: internal endpoint for sidecar auto-sync (key auth, no session/origin required)
 export async function PUT(request: NextRequest) {
+  if (!isPerplexityEnabled()) {
+    return NextResponse.json({ error: "Perplexity Sidecar is not enabled" }, { status: 404 });
+  }
   if (!verifyInternalAuth(request)) return Errors.unauthorized();
 
   try {
@@ -98,6 +102,10 @@ export async function PUT(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await verifySession();
   if (!session) return Errors.unauthorized();
+
+  if (!isPerplexityEnabled()) {
+    return NextResponse.json({ error: "Perplexity Sidecar is not enabled" }, { status: 404 });
+  }
 
   const originError = validateOrigin(request);
   if (originError) return originError;

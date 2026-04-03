@@ -199,9 +199,7 @@ export default function ProvidersPage() {
               />
             </div>
 
-            <div className="border-t border-slate-700/70 pt-6">
-              <PerplexityProSection showToast={showToast} />
-            </div>
+            <PerplexityProSection showToast={showToast} />
           </section>
 
           {currentUser?.isAdmin && (

@@ -6,6 +6,7 @@ import { Errors } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
 import { hashProviderKey } from "@/lib/providers/hash";
+import { isPerplexityEnabled } from "@/lib/providers/perplexity";
 import { logger } from "@/lib/logger";
 
 const REQUIRED_COOKIE_KEYS = ["next-auth.session-token"];
@@ -144,6 +145,11 @@ export async function GET() {
   const session = await verifySession();
   if (!session) return Errors.unauthorized();
 
+  // Feature not enabled — tell the frontend so it can hide the section
+  if (!isPerplexityEnabled()) {
+    return NextResponse.json({ enabled: false, cookies: [] });
+  }
+
   try {
     const cookies = await prisma.perplexityCookie.findMany({
       where: { userId: session.userId },
@@ -158,7 +164,7 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ cookies });
+    return NextResponse.json({ enabled: true, cookies });
   } catch (error) {
     return Errors.internal("fetch perplexity cookies", error);
   }
@@ -167,6 +173,13 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await verifySession();
   if (!session) return Errors.unauthorized();
+
+  if (!isPerplexityEnabled()) {
+    return NextResponse.json(
+      { error: "Perplexity Sidecar is not enabled on this instance" },
+      { status: 404 }
+    );
+  }
 
   const originError = validateOrigin(request);
   if (originError) return originError;
@@ -237,6 +250,13 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const session = await verifySession();
   if (!session) return Errors.unauthorized();
+
+  if (!isPerplexityEnabled()) {
+    return NextResponse.json(
+      { error: "Perplexity Sidecar is not enabled on this instance" },
+      { status: 404 }
+    );
+  }
 
   const originError = validateOrigin(request);
   if (originError) return originError;

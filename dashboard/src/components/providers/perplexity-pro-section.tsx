@@ -24,6 +24,7 @@ interface PerplexityCookie {
 export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
   const [perplexityCookies, setPerplexityCookies] = useState<PerplexityCookie[]>([]);
   const [perplexityCookiesLoading, setPerplexityCookiesLoading] = useState(true);
+  const [perplexityEnabled, setPerplexityEnabled] = useState<boolean | null>(null);
   const [perplexitySessionToken, setPerplexitySessionToken] = useState("");
   const [perplexityCsrfToken, setPerplexityCsrfToken] = useState("");
   const [perplexityCookieLabel, setPerplexityCookieLabel] = useState("");
@@ -42,6 +43,13 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
         return;
       }
       const data = await res.json();
+      // Check if the feature is enabled server-side
+      if (data.enabled === false) {
+        setPerplexityEnabled(false);
+        setPerplexityCookiesLoading(false);
+        return;
+      }
+      setPerplexityEnabled(true);
       setPerplexityCookies(Array.isArray(data.cookies) ? data.cookies : []);
     } catch {
       showToast("Network error", "error");
@@ -144,7 +152,15 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
     void loadPerplexityCookies();
   }, [loadPerplexityCookies]);
 
+  // Hide entire section if the Perplexity Sidecar feature is not enabled
+  // (PERPLEXITY_SIDECAR_SECRET not configured on server)
+  if (perplexityEnabled === false) return null;
+
+  // Still loading initial state — show nothing to avoid flash
+  if (perplexityEnabled === null && perplexityCookiesLoading) return null;
+
   return (
+    <div className="border-t border-slate-700/70 pt-6">
     <div id="provider-perplexity" className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
@@ -317,6 +333,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

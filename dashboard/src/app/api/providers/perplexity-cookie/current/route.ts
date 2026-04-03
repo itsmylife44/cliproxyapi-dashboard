@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
 import { Errors } from "@/lib/errors";
 import { env } from "@/lib/env";
+import { isPerplexityEnabled } from "@/lib/providers/perplexity";
 
 const HMAC_KEY = Buffer.alloc(32);
 
@@ -13,6 +14,11 @@ function safeTokenCompare(a: string, b: string): boolean {
 }
 
 export async function GET(request: NextRequest) {
+  // Feature not enabled — sidecar should not be running
+  if (!isPerplexityEnabled()) {
+    return NextResponse.json({ error: "Perplexity Sidecar is not enabled" }, { status: 404 });
+  }
+
   const authHeader = request.headers.get("authorization") ?? "";
   const token = authHeader.replace("Bearer ", "");
 

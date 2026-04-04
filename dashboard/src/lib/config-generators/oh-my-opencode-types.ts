@@ -47,12 +47,31 @@ export interface LspEntry {
   extensions?: string[];
 }
 
+export interface AgentPermissionConfig {
+  edit?: "allow" | "deny" | "prompt";
+  bash?: { git?: "allow" | "deny" | "prompt"; test?: "allow" | "deny" | "prompt" } | "allow" | "deny" | "prompt";
+}
+
+export interface AgentThinkingConfig {
+  type: "enabled" | "disabled";
+  budgetTokens?: number;
+}
+
+export interface AgentUltraworkConfig {
+  model?: string;
+  variant?: string;
+  temperature?: number;
+}
+
 export interface AgentConfigEntry {
   model?: string;
   variant?: string;
   temperature?: number;
   prompt_append?: string;
   fallback_models?: string[];
+  permission?: AgentPermissionConfig;
+  thinking?: AgentThinkingConfig;
+  ultrawork?: AgentUltraworkConfig;
 }
 
 export interface CategoryConfigEntry {
@@ -62,6 +81,11 @@ export interface CategoryConfigEntry {
   description?: string;
   fallback_models?: string[];
 }
+export interface ExperimentalConfig {
+  aggressive_truncation?: boolean;
+  task_system?: boolean;
+}
+
 export interface OhMyOpenCodeFullConfig {
   agents?: Record<string, AgentConfigEntry>;
   categories?: Record<string, CategoryConfigEntry>;
@@ -79,7 +103,186 @@ export interface OhMyOpenCodeFullConfig {
   mcpServers?: McpEntry[];
   customPlugins?: string[];
   configSchemaVersion?: number;
+  hashline_edit?: boolean;
+  experimental?: ExperimentalConfig;
 }
+
+// ============================================================================
+// PRESETS
+// ============================================================================
+
+export interface OhMyOpenCodePreset {
+  name: string;
+  description: string;
+  config: OhMyOpenCodeFullConfig;
+}
+
+export const OFFICIAL_PRESETS: OhMyOpenCodePreset[] = [
+  {
+    name: "default",
+    description: "Balanced defaults for general development. Tuned for reliability across diverse tasks without overspending.",
+    config: {
+      agents: {
+        sisyphus: {
+          model: "anthropic/claude-opus-4-6",
+          ultrawork: { model: "anthropic/claude-opus-4-6", variant: "max" },
+        },
+        hephaestus: {
+          model: "openai/gpt-5.4",
+          prompt_append: "Explore thoroughly, then implement. Prefer small, testable changes.",
+        },
+        prometheus: {
+          prompt_append: "Always interview first. Validate scope before planning.",
+        },
+        oracle: { model: "openai/gpt-5.4", variant: "high" },
+        librarian: { model: "google/gemini-3-flash" },
+        explore: { model: "github-copilot/grok-code-fast-1" },
+        "multimodal-looker": { model: "google/gemini-3.1-pro" },
+        metis: {},
+        momus: {},
+        atlas: {},
+        "sisyphus-junior": { model: "opencode/gpt-5-nano" },
+      },
+      categories: {
+        quick: { model: "opencode/gpt-5-nano" },
+        "unspecified-low": { model: "anthropic/claude-sonnet-4-6" },
+        "unspecified-high": { model: "anthropic/claude-opus-4-6", variant: "max" },
+        writing: { model: "google/gemini-3-flash" },
+        "visual-engineering": { model: "google/gemini-3.1-pro", variant: "high" },
+        deep: { model: "openai/gpt-5.3-codex" },
+        ultrabrain: { model: "openai/gpt-5.4", variant: "xhigh" },
+      },
+      background_task: {
+        providerConcurrency: {
+          anthropic: 3,
+          openai: 3,
+          google: 5,
+          opencode: 10,
+        },
+      },
+      experimental: { aggressive_truncation: true },
+    },
+  },
+  {
+    name: "coding-focused",
+    description: "Optimized for intensive coding sessions. Prioritizes deep implementation agents and fast feedback loops.",
+    config: {
+      agents: {
+        sisyphus: {
+          model: "kimi-for-coding/k2p5",
+          ultrawork: { model: "anthropic/claude-opus-4-6", variant: "max" },
+          prompt_append: "Delegate heavily to hephaestus for implementation. Parallelize exploration.",
+        },
+        hephaestus: {
+          model: "openai/gpt-5.4",
+          prompt_append: "You are the primary implementation agent. Own the codebase. Explore, decide, execute. Use LSP and AST-grep aggressively.",
+          permission: { edit: "allow", bash: { git: "allow", test: "allow" } },
+        },
+        prometheus: {
+          model: "opencode/gpt-5-nano",
+          prompt_append: "Keep plans concise. Focus on file structure and key decisions.",
+        },
+        oracle: { model: "openai/gpt-5.4", variant: "high" },
+        librarian: { model: "github-copilot/grok-code-fast-1" },
+        explore: { model: "github-copilot/grok-code-fast-1" },
+        "multimodal-looker": { model: "google/gemini-3.1-pro" },
+        metis: { model: "opencode/gpt-5-nano" },
+        momus: { prompt_append: "Focus on code quality, edge cases, and test coverage." },
+        atlas: {},
+        "sisyphus-junior": { model: "opencode/gpt-5-nano" },
+      },
+      categories: {
+        quick: { model: "opencode/gpt-5-nano" },
+        "unspecified-low": { model: "anthropic/claude-sonnet-4-6" },
+        "unspecified-high": { model: "openai/gpt-5.3-codex" },
+        "visual-engineering": { model: "google/gemini-3.1-pro", variant: "high" },
+        deep: { model: "openai/gpt-5.3-codex" },
+        ultrabrain: { model: "openai/gpt-5.4", variant: "xhigh" },
+      },
+      background_task: {
+        defaultConcurrency: 8,
+        providerConcurrency: {
+          anthropic: 5,
+          openai: 5,
+          google: 10,
+          "github-copilot": 10,
+          opencode: 15,
+        },
+      },
+      hashline_edit: true,
+      experimental: { aggressive_truncation: true, task_system: true },
+    },
+  },
+  {
+    name: "planning-focused",
+    description: "Optimized for strategic planning, architecture, and complex project design. Prioritizes deep thinking agents.",
+    config: {
+      agents: {
+        sisyphus: {
+          model: "anthropic/claude-opus-4-6",
+          ultrawork: { model: "anthropic/claude-opus-4-6", variant: "max" },
+          prompt_append: "Always consult prometheus and atlas for planning. Never rush to implementation.",
+        },
+        hephaestus: {
+          model: "openai/gpt-5.4",
+          prompt_append: "Follow established plans precisely. Ask for clarification when plans are ambiguous.",
+        },
+        prometheus: {
+          model: "anthropic/claude-opus-4-6",
+          thinking: { type: "enabled", budgetTokens: 160000 },
+          prompt_append: "Interview extensively. Question assumptions. Build exhaustive plans with milestones, risks, and contingencies.",
+        },
+        oracle: {
+          model: "openai/gpt-5.4",
+          variant: "xhigh",
+          thinking: { type: "enabled", budgetTokens: 120000 },
+        },
+        librarian: { model: "google/gemini-3-flash" },
+        explore: { model: "github-copilot/grok-code-fast-1" },
+        "multimodal-looker": { model: "google/gemini-3.1-pro", variant: "high" },
+        metis: {
+          model: "anthropic/claude-opus-4-6",
+          prompt_append: "Critically evaluate plans. Identify gaps, risks, and improvements. Be thorough.",
+        },
+        momus: {
+          model: "openai/gpt-5.4",
+          prompt_append: "Challenge all assumptions in plans. Look for edge cases, failure modes, and overlooked requirements.",
+        },
+        atlas: {
+          prompt_append: "Preserve context across long planning sessions. Track evolving decisions.",
+        },
+        "sisyphus-junior": { model: "opencode/gpt-5-nano" },
+      },
+      categories: {
+        quick: { model: "opencode/gpt-5-nano" },
+        "unspecified-low": { model: "anthropic/claude-sonnet-4-6" },
+        "unspecified-high": { model: "openai/gpt-5.4", variant: "xhigh" },
+        writing: { model: "google/gemini-3-flash" },
+        "visual-engineering": { model: "google/gemini-3.1-pro", variant: "high" },
+        deep: { model: "openai/gpt-5.3-codex" },
+        ultrabrain: { model: "openai/gpt-5.4", variant: "xhigh" },
+        artistry: { model: "google/gemini-3.1-pro", variant: "high" },
+      },
+      background_task: {
+        defaultConcurrency: 5,
+        staleTimeoutMs: 300000,
+        providerConcurrency: {
+          anthropic: 3,
+          openai: 3,
+        },
+        modelConcurrency: {
+          "anthropic/claude-opus-4-6": 2,
+          "openai/gpt-5.4": 2,
+        },
+      },
+      sisyphus_agent: {
+        planner_enabled: true,
+        replace_plan: true,
+      },
+      experimental: { aggressive_truncation: true },
+    },
+  },
+];
 
 // ============================================================================
 // CONSTANTS - Available Values
@@ -87,6 +290,7 @@ export interface OhMyOpenCodeFullConfig {
 
 export const AVAILABLE_AGENTS = [
   "sisyphus",
+  "hephaestus",
   "prometheus",
   "oracle",
   "librarian",
@@ -95,6 +299,7 @@ export const AVAILABLE_AGENTS = [
   "metis",
   "momus",
   "atlas",
+  "sisyphus-junior",
 ] as const;
 
 export const AVAILABLE_SKILLS = [

@@ -283,6 +283,7 @@ export interface GenerateConfigOptions {
   plugins?: string[];
   mcps?: McpEntry[];
   lsps?: LspEntry[];
+  defaultModel?: string;
 }
 
 export function generateConfigJson(
@@ -304,7 +305,9 @@ export function generateConfigJson(
      }
      modelEntries[id] = entry;
    }
-   const firstModelId = Object.keys(models)[0] ?? "gemini-2.5-flash";
+   const defaultModelId = options?.defaultModel && models[options.defaultModel]
+     ? options.defaultModel
+     : Object.keys(models)[0] ?? "gemini-2.5-flash";
  
    const plugins = options?.plugins ?? [
      "opencode-cliproxyapi-sync@latest",
@@ -325,7 +328,7 @@ export function generateConfigJson(
          models: modelEntries,
        },
      },
-     model: `cliproxyapi/${firstModelId}`,
+      model: `cliproxyapi/${defaultModelId}`,
    };
 
   if (options?.mcps && options.mcps.length > 0) {

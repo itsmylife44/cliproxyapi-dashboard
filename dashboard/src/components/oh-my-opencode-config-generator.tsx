@@ -14,6 +14,8 @@ import {
   AGENT_ROLES,
   CATEGORY_ROLES,
   buildOhMyOpenCodeConfig,
+  applyPreset,
+  OFFICIAL_PRESETS,
   type ConfigData,
   type OAuthAccount,
   pickBestModel,
@@ -533,11 +535,37 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-white/70">
-        Assignments are grouped by tier so core agents stay separated from fast and creative workflows. Click any
-        model to override it. Changes save automatically and sync via Config Sync.
-        {saving && <span className="ml-2 text-amber-300/70 text-xs">Saving...</span>}
-      </p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <p className="text-sm text-white/70">
+          Assignments are grouped by tier so core agents stay separated from fast and creative workflows. Click any
+          model to override it. Changes save automatically and sync via Config Sync.
+          {saving && <span className="ml-2 text-amber-300/70 text-xs">Saving...</span>}
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-white/60">Preset:</span>
+          <select
+            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-white/90 focus:outline-none focus:border-violet-400/50"
+            onChange={(e) => {
+              const presetName = e.target.value;
+              if (!presetName) return;
+              const preset = OFFICIAL_PRESETS.find((p) => p.name === presetName);
+              if (preset) {
+                const newOverrides = applyPreset(preset, overrides);
+                setOverrides(newOverrides);
+                saveOverrides(newOverrides);
+              }
+            }}
+            value=""
+          >
+            <option value="">Apply preset...</option>
+            {OFFICIAL_PRESETS.map((preset) => (
+              <option key={preset.name} value={preset.name}>
+                {preset.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <TierAssignments
         agentAssignments={agentAssignments}

@@ -1,6 +1,7 @@
 import type { OhMyOpenCodeFullConfig } from "./oh-my-opencode-types";
 
 export type { OAuthAccount, ConfigData } from "./shared";
+export { OFFICIAL_PRESETS, type OhMyOpenCodePreset } from "./oh-my-opencode-types";
 
 // ---------------------------------------------------------------------------
 // Dynamic model scoring & tier building
@@ -126,6 +127,7 @@ export function pickBestModel(availableModels: string[], tierLevel: TierLevel): 
 
 export const AGENT_ROLES: Record<string, { tier: TierLevel; label: string }> = {
   sisyphus: { tier: 1, label: "Orchestrator" },
+  hephaestus: { tier: 1, label: "Deep autonomous worker" },
   atlas: { tier: 1, label: "Master orchestrator" },
   prometheus: { tier: 1, label: "Planner" },
   metis: { tier: 2, label: "Plan consultant" },
@@ -134,6 +136,7 @@ export const AGENT_ROLES: Record<string, { tier: TierLevel; label: string }> = {
   explore: { tier: 3, label: "Fast exploration" },
   "multimodal-looker": { tier: 2, label: "Vision" },
   momus: { tier: 2, label: "Reviewer" },
+  "sisyphus-junior": { tier: 3, label: "Lightweight executor" },
 };
 
 export const CATEGORY_ROLES: Record<string, { tier: TierLevel; label: string }> = {
@@ -154,6 +157,9 @@ interface ModelAssignment {
   prompt_append?: string;
   description?: string;
   fallback_models?: string[];
+  permission?: { edit?: string; bash?: unknown };
+  thinking?: { type: string; budgetTokens?: number };
+  ultrawork?: { model?: string; variant?: string; temperature?: number };
 }
 
 export function buildOhMyOpenCodeConfig(
@@ -181,6 +187,9 @@ export function buildOhMyOpenCodeConfig(
         .map(m => `cliproxyapi/${m}`);
       if (entry.fallback_models.length === 0) delete entry.fallback_models;
     }
+    if (agentOverride?.permission) entry.permission = agentOverride.permission;
+    if (agentOverride?.thinking) entry.thinking = agentOverride.thinking;
+    if (agentOverride?.ultrawork) entry.ultrawork = agentOverride.ultrawork;
     agents[agent] = entry;
   }
 
@@ -214,7 +223,7 @@ export function buildOhMyOpenCodeConfig(
 
   const config: Record<string, unknown> = {
     $schema:
-      "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
+      "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
   };
 
   if (Object.keys(agents).length > 0) {
@@ -262,5 +271,89 @@ export function buildOhMyOpenCodeConfig(
     config.lsp = overrides.lsp;
   }
 
+  // Hashline edit — enable hash-anchored edit tool
+  if (overrides?.hashline_edit !== undefined) config.hashline_edit = overrides.hashline_edit;
+
+  // Experimental features
+  if (overrides?.experimental && Object.keys(overrides.experimental).length > 0) {
+    config.experimental = overrides.experimental;
+  }
+
   return config;
+}
+
+import type { OhMyOpenCodePreset } from "./oh-my-opencode-types";
+
+export function applyPreset(
+  preset: OhMyOpenCodePreset,
+  existingOverrides?: OhMyOpenCodeFullConfig
+): OhMyOpenCodeFullConfig {
+  const presetConfig = preset.config;
+
+  const merged: OhMyOpenCodeFullConfig = {
+    ...existingOverrides,
+    ...presetConfig,
+    agents: {
+      ...existingOverrides?.agents,
+      ...presetConfig.agents,
+    },
+    categories: {
+      ...existingOverrides?.categories,
+      ...presetConfig.categories,
+    },
+    background_task: {
+      ...existingOverrides?.background_task,
+      ...presetConfig.background_task,
+      providerConcurrency: {
+        ...existingOverrides?.background_task?.providerConcurrency,
+        ...presetConfig.background_task?.providerConcurrency,
+      },
+      modelConcurrency: {
+        ...existingOverrides?.background_task?.modelConcurrency,
+        ...presetConfig.background_task?.modelConcurrency,
+      },
+    },
+    sisyphus_agent: {
+      ...existingOverrides?.sisyphus_agent,
+      ...presetConfig.sisyphus_agent,
+    },
+    git_master: {
+      ...existingOverrides?.git_master,
+      ...presetConfig.git_master,
+    },
+    experimental: {
+      ...existingOverrides?.experimental,
+      ...presetConfig.experimental,
+    },
+  };
+
+  if (presetConfig.hashline_edit !== undefined) {
+    merged.hashline_edit = presetConfig.hashline_edit;
+  }
+
+  if (presetConfig.tmux) {
+    merged.tmux = {
+      ...existingOverrides?.tmux,
+      ...presetConfig.tmux,
+    };
+  }
+
+  if (presetConfig.browser_automation_engine) {
+    merged.browser_automation_engine = {
+      ...existingOverrides?.browser_automation_engine,
+      ...presetConfig.browser_automation_engine,
+    };
+  }
+
+  const arrayFields = ["disabled_agents", "disabled_skills", "disabled_hooks", "disabled_commands", "disabled_mcps"] as const;
+  for (const field of arrayFields) {
+    const presetValue = presetConfig[field];
+    const existingValue = existingOverrides?.[field];
+    if (presetValue && presetValue.length > 0) {
+      const combined = [...(existingValue ?? []), ...presetValue];
+      merged[field] = [...new Set(combined)];
+    }
+  }
+
+  return merged;
 }

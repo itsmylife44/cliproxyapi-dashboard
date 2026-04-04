@@ -207,7 +207,7 @@ export function UpdateOverlay({
           <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
             <div
               className={cn(
-                "h-full rounded-full transition-all duration-1000 ease-out",
+                "h-full rounded-full transition-[width] duration-1000 ease-out",
                 serverReady
                   ? "bg-green-400"
                   : isDashboard

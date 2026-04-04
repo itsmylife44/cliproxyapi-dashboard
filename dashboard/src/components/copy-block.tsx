@@ -36,7 +36,7 @@ export function CopyBlock({ code }: CopyBlockProps) {
       <button
         type="button"
         onClick={handleCopy}
-        className="absolute top-3 right-3 px-3 py-1.5 text-xs font-medium rounded-lg border transition-all duration-200 bg-white/5 border-white/15 text-white/60 hover:bg-white/10 hover:text-white/90 active:scale-95"
+        className="absolute top-3 right-3 px-3 py-1.5 text-xs font-medium rounded-lg border transition-[color,background-color,border-color,transform] duration-200 bg-white/5 border-white/15 text-white/60 hover:bg-white/10 hover:text-white/90 active:scale-95"
       >
         {copied ? (
           <span className="flex items-center gap-1.5">

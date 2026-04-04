@@ -268,3 +268,24 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   border-color: rgba(96, 165, 250, 0.5);
   box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
 }
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-modal-overlay,
+  .animate-modal-card,
+  .animate-pulse-dot,
+  .animate-panel-slide,
+  .animate-panel-overlay {
+    animation: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

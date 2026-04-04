@@ -3,7 +3,7 @@
 import { useMobileSidebar } from "@/components/mobile-sidebar-context";
 
 export function MobileTopBar() {
-  const { toggle } = useMobileSidebar();
+  const { isOpen, toggle } = useMobileSidebar();
 
   return (
     <div className="fixed left-0 right-0 top-0 z-30 border-b border-slate-700/80 glass-nav lg:hidden">
@@ -13,6 +13,7 @@ export function MobileTopBar() {
           onClick={toggle}
           className="rounded-md p-2 text-slate-200 transition-colors duration-200 hover:bg-slate-700/50"
           aria-label="Toggle menu"
+          aria-expanded={isOpen}
         >
           <svg
             className="w-6 h-6"

@@ -82,7 +82,7 @@ export function LspServersSection({
               onLspCommandChange(preset.command);
               onLspExtensionsChange(preset.extensions);
             }}
-            className={`px-3 py-2 rounded-lg border text-xs font-medium transition-all ${PRESET_BUTTON_STYLES[preset.color]}`}
+            className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${PRESET_BUTTON_STYLES[preset.color]}`}
           >
             {preset.language.charAt(0).toUpperCase() + preset.language.slice(1)}
           </button>

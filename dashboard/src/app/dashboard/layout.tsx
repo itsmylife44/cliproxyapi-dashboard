@@ -29,7 +29,7 @@ export default async function DashboardLayout({
          <MobileTopBar />
          <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[auto_1fr]">
            <DashboardNav />
-            <main className="min-w-0 flex-1 px-3 pb-4 pt-16 lg:px-6 lg:pb-6 lg:pt-6">
+            <main id="main-content" className="min-w-0 flex-1 px-3 pb-4 pt-16 lg:px-6 lg:pb-6 lg:pt-6">
               <div className="mx-auto w-full max-w-[1320px]">
                 <DashboardShell>{children}</DashboardShell>
               </div>

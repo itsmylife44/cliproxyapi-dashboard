@@ -125,13 +125,13 @@ export default function SetupPage() {
             </div>
 
             {error && (
-              <div className="rounded-xl bg-red-500/20 border border-red-400/30 p-3 text-sm text-red-300">
+              <div role="alert" aria-live="polite" className="rounded-xl bg-red-500/20 border border-red-400/30 p-3 text-sm text-red-300">
                 {error}
               </div>
             )}
 
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Creating account..." : "Create Account"}
+              {loading ? "Creating account\u2026" : "Create Account"}
             </Button>
           </form>
         </div>

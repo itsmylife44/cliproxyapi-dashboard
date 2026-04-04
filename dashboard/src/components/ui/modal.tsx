@@ -36,6 +36,7 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
       onKeyDown={(e) => e.key === "Escape" && onClose()}
       role="dialog"
       aria-modal="true"
+      aria-labelledby="modal-title"
     >
       <div
         ref={modalRef}
@@ -43,6 +44,7 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
           "animate-modal-card relative max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-slate-900 border border-slate-700/70 rounded-xl p-5 shadow-2xl",
           className
         )}
+        style={{ overscrollBehavior: "contain" }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
@@ -50,7 +52,6 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
           }
           e.stopPropagation();
         }}
-        role="document"
       >
         <button
           type="button"
@@ -86,7 +87,7 @@ interface ModalTitleProps {
 
 export function ModalTitle({ children, className }: ModalTitleProps) {
   return (
-    <h2 className={cn("text-lg font-semibold tracking-tight text-white", className)}>
+    <h2 id="modal-title" className={cn("text-lg font-semibold tracking-tight text-white", className)}>
       {children}
     </h2>
   );

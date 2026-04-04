@@ -56,7 +56,30 @@ export default function LoginPage() {
   };
 
   if (!ready) {
-    return <div className="flex min-h-screen items-center justify-center" />;
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <div className="mb-6 text-center">
+            <div className="mx-auto mb-3 h-12 w-12 rounded-xl bg-slate-800 animate-pulse" />
+            <div className="mx-auto h-7 w-40 rounded bg-slate-800 animate-pulse" />
+            <div className="mx-auto mt-2 h-4 w-52 rounded bg-slate-800/60 animate-pulse" />
+          </div>
+          <div className="glass-card rounded-xl p-4 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+            <div className="space-y-4">
+              <div>
+                <div className="mb-2 h-3 w-20 rounded bg-slate-800/60 animate-pulse" />
+                <div className="h-10 rounded-lg bg-slate-800 animate-pulse" />
+              </div>
+              <div>
+                <div className="mb-2 h-3 w-20 rounded bg-slate-800/60 animate-pulse" />
+                <div className="h-10 rounded-lg bg-slate-800 animate-pulse" />
+              </div>
+              <div className="h-10 rounded-lg bg-slate-800 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -106,13 +129,13 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="rounded-xl bg-red-500/20 border border-red-400/30 p-3 text-sm text-red-300">
+              <div role="alert" aria-live="polite" className="rounded-xl bg-red-500/20 border border-red-400/30 p-3 text-sm text-red-300">
                 {error}
               </div>
             )}
 
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? "Signing in\u2026" : "Sign in"}
             </Button>
           </form>
         </div>

@@ -178,7 +178,7 @@ export function NotificationBell({ notifications, criticalCount, totalCount, onD
           setOpen((prev) => !prev);
         }}
         aria-label={`Notifications${totalCount > 0 ? ` (${totalCount})` : ""}`}
-        className="relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-600/50 bg-slate-800/60 transition-all hover:border-slate-500/70 hover:bg-slate-700/60"
+        className="relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-600/50 bg-slate-800/60 transition-colors hover:border-slate-500/70 hover:bg-slate-700/60"
       >
         <BellIcon hasNotifications={totalCount > 0} />
         {totalCount > 0 && (

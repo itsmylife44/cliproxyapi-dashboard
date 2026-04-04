@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 interface UserPanelProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface UserPanelProps {
 
 export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps) {
   const router = useRouter();
+  const panelRef = useRef<HTMLDivElement>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -23,6 +25,8 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  useFocusTrap(isOpen, panelRef);
 
   const initial = username ? username.charAt(0).toUpperCase() : "?";
 
@@ -121,7 +125,14 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
       />
 
       {/* Panel */}
-      <div className="fixed inset-y-0 right-0 z-50 w-80 sm:w-96 bg-slate-900/95 backdrop-blur-xl border-l border-slate-700/70 animate-panel-slide overflow-y-auto">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="User settings"
+        className="fixed inset-y-0 right-0 z-50 w-80 sm:w-96 bg-slate-900/95 backdrop-blur-xl border-l border-slate-700/70 animate-panel-slide overflow-y-auto"
+        style={{ overscrollBehavior: "contain" }}
+      >
         <div className="flex flex-col h-full p-6">
           {/* Header: Close button */}
           <div className="flex items-start justify-between mb-6">
@@ -182,6 +193,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
             <button
               type="button"
               onClick={() => setPasswordOpen(!passwordOpen)}
+              aria-expanded={passwordOpen}
               className="flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800/50 transition-colors"
             >
               <div className="flex items-center gap-2">
@@ -204,7 +216,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
 
             <div
               className={cn(
-                "overflow-hidden transition-all duration-300 ease-out",
+                "overflow-hidden transition-[max-height,opacity] duration-300 ease-out",
                 passwordOpen ? "max-h-96 opacity-100 mt-2" : "max-h-0 opacity-0"
               )}
             >
@@ -254,19 +266,19 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
 
                 {/* Feedback */}
                 {error && (
-                  <div className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+                  <div role="alert" aria-live="polite" className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
                     {error}
                   </div>
                 )}
 
                 {success && (
-                  <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+                  <div role="status" aria-live="polite" className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
                     Password changed successfully
                   </div>
                 )}
 
                 <Button type="submit" disabled={loading} className="w-full">
-                  {loading ? "Changing..." : "Update Password"}
+                  {loading ? "Changing\u2026" : "Update Password"}
                 </Button>
               </form>
             </div>

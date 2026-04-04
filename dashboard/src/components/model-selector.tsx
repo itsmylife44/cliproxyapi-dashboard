@@ -358,7 +358,7 @@ export function ModelSelector({
                               isLocked
                                 ? "cursor-not-allowed opacity-60"
                                 : "cursor-pointer group hover:bg-white/8 hover:border-white/15"
-                            } transition-all`}
+                            } transition-colors`}
                           >
                             <input
                               type="checkbox"

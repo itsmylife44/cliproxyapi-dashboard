@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useHealthStatus } from "@/hooks/use-health-status";
 import {
   buildNotifications,
   type Notification,
@@ -84,11 +85,8 @@ export function useHeaderNotifications(isAdmin: boolean, userId: string) {
     setDismissedIds(getDismissedIds(userId));
   }, [userId]);
 
-  const { data: healthData } = useSWR<HealthStatus>(
-    debug ? null : API_ENDPOINTS.HEALTH,
-    silentFetcher,
-    { refreshInterval: CHECK_INTERVAL, dedupingInterval: 30_000, revalidateOnFocus: false }
-  );
+  const { raw: healthRaw } = useHealthStatus();
+  const healthData = (debug ? undefined : healthRaw) as HealthStatus | undefined;
 
   const { data: quotaData } = useSWR<{ accounts: QuotaAccount[] }>(
     debug ? null : API_ENDPOINTS.QUOTA.BASE,

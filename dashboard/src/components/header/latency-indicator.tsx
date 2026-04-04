@@ -1,9 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { API_ENDPOINTS } from "@/lib/api-endpoints";
-
-const PING_INTERVAL = 30_000; // 30 seconds
+import { useHealthStatus } from "@/hooks/use-health-status";
 
 function getLatencyColor(ms: number): string {
   if (ms < 100) return "text-emerald-400";
@@ -18,43 +15,11 @@ function getLatencyDotColor(ms: number): string {
 }
 
 export function LatencyIndicator() {
-  const [latency, setLatency] = useState<number | null>(null);
+  const { latencyMs } = useHealthStatus();
 
-  useEffect(() => {
-    let mounted = true;
+  if (latencyMs === null) return null;
 
-    async function measureLatency() {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10_000);
-      try {
-        const start = performance.now();
-        const res = await fetch(API_ENDPOINTS.HEALTH, { cache: "no-store", signal: controller.signal });
-        const end = performance.now();
-
-        if (mounted && res.ok) {
-          setLatency(Math.round(end - start));
-        } else if (mounted) {
-          setLatency(-1);
-        }
-      } catch {
-        if (mounted) setLatency(-1);
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    }
-
-    measureLatency();
-    const interval = setInterval(measureLatency, PING_INTERVAL);
-
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, []);
-
-  if (latency === null) return null;
-
-  if (latency === -1) {
+  if (latencyMs === -1) {
     return (
       <div className="flex items-center gap-1.5" title="Proxy unreachable">
         <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
@@ -64,9 +29,9 @@ export function LatencyIndicator() {
   }
 
   return (
-    <div className="flex items-center gap-1.5" title={`Latency: ${latency}ms`}>
-      <div className={`h-1.5 w-1.5 rounded-full ${getLatencyDotColor(latency)}`} />
-      <span className={`text-xs tabular-nums ${getLatencyColor(latency)}`}>{latency}ms</span>
+    <div className="flex items-center gap-1.5" title={`Latency: ${latencyMs}ms`}>
+      <div className={`h-1.5 w-1.5 rounded-full ${getLatencyDotColor(latencyMs)}`} />
+      <span className={`text-xs tabular-nums ${getLatencyColor(latencyMs)}`}>{latencyMs}ms</span>
     </div>
   );
 }

@@ -2,9 +2,13 @@
 
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
-import { QuotaChart } from "@/components/quota/quota-chart";
+const QuotaChart = dynamic(
+  () => import("@/components/quota/quota-chart").then(mod => ({ default: mod.QuotaChart })),
+  { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-slate-800/50" /> }
+);
 import { QuotaDetails } from "@/components/quota/quota-details";
 import { QuotaAlerts } from "@/components/quota/quota-alerts";
 

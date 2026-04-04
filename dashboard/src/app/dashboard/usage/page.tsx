@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { TimeFilter } from "@/components/usage/time-filter";
-import { UsageCharts } from "@/components/usage/usage-charts";
+const UsageCharts = dynamic(
+  () => import("@/components/usage/usage-charts").then(mod => ({ default: mod.UsageCharts })),
+  { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-slate-800/50" /> }
+);
 import { UsageRequestEvents } from "@/components/usage/usage-request-events";
 import { UsageTable } from "@/components/usage/usage-table";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";

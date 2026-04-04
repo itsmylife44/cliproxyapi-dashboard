@@ -111,7 +111,7 @@ export function QuickStartConfigSection({
                 <code className="text-xs font-mono select-all truncate text-red-200">
                   {omoVariant === "slim"
                     ? "bunx oh-my-opencode-slim@latest install --no-tui --skills=no"
-                    : "bunx oh-my-opencode@latest install --no-tui --skills=no"}
+                    : "bunx oh-my-openagent@latest install --no-tui --skills=no"}
                 </code>
                 <span className="text-[10px] text-red-400/70 shrink-0">(run once)</span>
               </div>

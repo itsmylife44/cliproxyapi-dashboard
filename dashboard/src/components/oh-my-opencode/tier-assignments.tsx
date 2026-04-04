@@ -2,7 +2,7 @@
 
 import type { AgentConfigEntry, CategoryConfigEntry } from "@/lib/config-generators/oh-my-opencode-types";
 
-import { ModelBadge, TIER_META } from "@/components/oh-my-opencode/model-badge";
+import { ModelBadge, TIER_META, type ModelBadgeFieldValue } from "@/components/oh-my-opencode/model-badge";
 
 interface TierAssignmentItem<TConfig> {
   name: string;
@@ -19,7 +19,7 @@ interface TierAssignmentsProps {
   availableModelIds: string[];
   modelSourceMap?: Map<string, string>;
   onAgentModelChange: (agent: string, model: string | undefined) => void;
-  onAgentFieldChange: (agent: string, field: string, value: string | number | string[] | undefined) => void;
+  onAgentFieldChange: (agent: string, field: string, value: ModelBadgeFieldValue) => void;
   onCategoryModelChange: (category: string, model: string | undefined) => void;
   onCategoryFieldChange: (category: string, field: string, value: string | number | string[] | undefined) => void;
 }
@@ -87,6 +87,7 @@ export function TierAssignments({
                           thirdFieldKey: "prompt_append",
                           thirdFieldPlaceholder: "prompt append",
                           fallback_models: config.fallback_models,
+                          ultrawork: config.ultrawork,
                         }}
                         onFieldChange={(field, value) => onAgentFieldChange(name, field, value)}
                       />
@@ -148,7 +149,16 @@ export function TierAssignments({
                           thirdFieldPlaceholder: "description",
                           fallback_models: config.fallback_models,
                         }}
-                        onFieldChange={(field, value) => onCategoryFieldChange(name, field, value)}
+                        onFieldChange={(field, value) => {
+                          if (
+                            value === undefined ||
+                            typeof value === "string" ||
+                            typeof value === "number" ||
+                            Array.isArray(value)
+                          ) {
+                            onCategoryFieldChange(name, field, value);
+                          }
+                        }}
                       />
                     </div>
                   ))}

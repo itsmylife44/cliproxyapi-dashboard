@@ -7,7 +7,22 @@ import { modelsDevCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";
 export type { OAuthAccount, ConfigData } from "./shared";
 
 export function getProxyUrl(): string {
-  return process.env.API_URL || "";
+  const apiUrl = process.env.API_URL?.trim();
+  if (apiUrl) {
+    return apiUrl;
+  }
+
+  const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL?.trim();
+  if (!managementUrl) {
+    return "";
+  }
+
+  try {
+    const url = new URL(managementUrl);
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return "";
+  }
 }
 
 export function getInternalProxyUrl(): string {
@@ -286,6 +301,19 @@ export interface GenerateConfigOptions {
   defaultModel?: string;
 }
 
+function resolveConfigModel(
+  models: Record<string, ModelDefinition>,
+  options?: GenerateConfigOptions,
+): string {
+  const manualModel = options?.defaultModel?.trim();
+  if (manualModel) {
+    return manualModel;
+  }
+
+  const fallbackModelId = Object.keys(models)[0] ?? "gemini-2.5-flash";
+  return `cliproxyapi/${fallbackModelId}`;
+}
+
 export function generateConfigJson(
    apiKey: string,
    models: Record<string, ModelDefinition>,
@@ -305,9 +333,7 @@ export function generateConfigJson(
      }
      modelEntries[id] = entry;
    }
-   const defaultModelId = options?.defaultModel && models[options.defaultModel]
-     ? options.defaultModel
-     : Object.keys(models)[0] ?? "gemini-2.5-flash";
+   const configModel = resolveConfigModel(models, options);
  
    const plugins = options?.plugins ?? [
      "opencode-cliproxyapi-sync@latest",
@@ -327,9 +353,9 @@ export function generateConfigJson(
          },
          models: modelEntries,
        },
-     },
-      model: `cliproxyapi/${defaultModelId}`,
-   };
+      },
+       model: configModel,
+    };
 
   if (options?.mcps && options.mcps.length > 0) {
     const mcpServers: Record<string, Record<string, unknown>> = {};

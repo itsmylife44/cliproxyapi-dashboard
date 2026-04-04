@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CopyBlock } from "@/components/copy-block";
 import { downloadFile } from "@/components/oh-my-opencode/model-badge";
+import type { ModelBadgeFieldValue } from "@/components/oh-my-opencode/model-badge";
 import { TierAssignments } from "@/components/oh-my-opencode/tier-assignments";
 import { ToggleSections } from "@/components/oh-my-opencode/toggle-sections";
 import { Button } from "@/components/ui/button";
@@ -127,10 +128,10 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     saveOverrides(newOverrides);
   };
 
-  const handleAgentFieldChange = (agent: string, field: string, value: string | number | string[] | undefined) => {
+  const handleAgentFieldChange = (agent: string, field: string, value: ModelBadgeFieldValue) => {
     const existing = overrides.agents?.[agent] ?? {};
     const newAgents = { ...overrides.agents };
-    if (value === undefined || value === "" || (Array.isArray(value) && value.length === 0)) {
+    if (value === undefined || value === "" || (Array.isArray(value) && value.length === 0) || (typeof value === "object" && value !== null && Object.keys(value).length === 0)) {
       const updated = { ...existing } as Record<string, unknown>;
       delete updated[field];
       if (Object.keys(updated).length === 0) {

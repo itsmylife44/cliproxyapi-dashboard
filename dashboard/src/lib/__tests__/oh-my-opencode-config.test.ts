@@ -25,6 +25,30 @@ describe("oh-my-opencode config", () => {
     });
   });
 
+  it("preserves permission and thinking overrides when validating saved config", () => {
+    const validated = validateFullConfig({
+      agents: {
+        hephaestus: {
+          model: "openai/gpt-5.4",
+          permission: { edit: "allow", bash: { git: "allow", test: "allow" } },
+        },
+        oracle: {
+          model: "openai/gpt-5.4",
+          thinking: { type: "enabled", budgetTokens: 120000 },
+        },
+      },
+    });
+
+    expect(validated.agents?.hephaestus?.permission).toEqual({
+      edit: "allow",
+      bash: { git: "allow", test: "allow" },
+    });
+    expect(validated.agents?.oracle?.thinking).toEqual({
+      type: "enabled",
+      budgetTokens: 120000,
+    });
+  });
+
   it("preserves advanced option overrides when validating saved config", () => {
     const validated = validateFullConfig({
       hashline_edit: true,

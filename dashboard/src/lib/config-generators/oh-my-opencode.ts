@@ -1,7 +1,7 @@
 import type { OhMyOpenCodeFullConfig } from "./oh-my-opencode-types";
 
 export type { OAuthAccount, ConfigData } from "./shared";
-export { OFFICIAL_PRESETS, type OhMyOpenCodePreset } from "./oh-my-opencode-types";
+export { type OhMyOpenCodePreset } from "./oh-my-opencode-types";
 
 // ---------------------------------------------------------------------------
 // Dynamic model scoring & tier building

@@ -16,7 +16,6 @@ import {
   CATEGORY_ROLES,
   buildOhMyOpenCodeConfig,
   applyPreset,
-  OFFICIAL_PRESETS,
   type ConfigData,
   type OAuthAccount,
   pickBestModel,
@@ -28,6 +27,7 @@ import type {
   CategoryConfigEntry,
   GitMasterConfig,
   OhMyOpenCodeFullConfig,
+  OhMyOpenCodePreset,
   SisyphusAgentConfig,
   TmuxConfig,
 } from "@/lib/config-generators/oh-my-opencode-types";
@@ -51,6 +51,8 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   const nextId = useCallback(() => `row-${nextIdRef.current++}`, []);
   const [providerConcurrencyRows, setProviderConcurrencyRows] = useState<Array<{ _id: string; key: string; value: number }>>([]);
   const [modelConcurrencyRows, setModelConcurrencyRows] = useState<Array<{ _id: string; key: string; value: number }>>([]);
+  const [presets, setPresets] = useState<OhMyOpenCodePreset[]>([]);
+  const [presetsLoading, setPresetsLoading] = useState(true);
   const tmuxDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const { showToast } = useToast();
 
@@ -73,6 +75,40 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
       setModelConcurrencyRows(entries.map(([key, value]) => ({ _id: nextId(), key, value })));
     }
   }, [initialOverrides, nextId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadPresets() {
+      try {
+        setPresetsLoading(true);
+        const response = await fetch(API_ENDPOINTS.OH_MY_OPENCODE_PRESETS);
+        if (!response.ok) {
+          throw new Error("Failed to load presets");
+        }
+
+        const data = await response.json() as { presets?: OhMyOpenCodePreset[] };
+        if (isMounted) {
+          setPresets(Array.isArray(data.presets) ? data.presets : []);
+        }
+      } catch {
+        if (isMounted) {
+          setPresets([]);
+          showToast("Failed to load preset source", "error");
+        }
+      } finally {
+        if (isMounted) {
+          setPresetsLoading(false);
+        }
+      }
+    }
+
+    void loadPresets();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [showToast]);
 
   const latestSaveRef = useRef<OhMyOpenCodeFullConfig>(overrides);
 
@@ -566,10 +602,11 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
           <span className="text-sm text-white/60">Preset:</span>
           <select
             className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-white/90 focus:outline-none focus:border-violet-400/50"
+            disabled={presetsLoading || presets.length === 0}
             onChange={(e) => {
               const presetName = e.target.value;
               if (!presetName) return;
-              const preset = OFFICIAL_PRESETS.find((p) => p.name === presetName);
+              const preset = presets.find((p) => p.name === presetName);
               if (preset) {
                 const newOverrides = applyPreset(preset, overrides);
                 setOverrides(newOverrides);
@@ -578,8 +615,8 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
             }}
             value=""
           >
-            <option value="">Apply preset...</option>
-            {OFFICIAL_PRESETS.map((preset) => (
+            <option value="">{presetsLoading ? "Loading presets..." : "Apply preset..."}</option>
+            {presets.map((preset) => (
               <option key={preset.name} value={preset.name}>
                 {preset.name}
               </option>

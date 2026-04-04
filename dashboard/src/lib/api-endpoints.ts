@@ -112,6 +112,7 @@ export const API_ENDPOINTS = {
   MODEL_PREFERENCES: "/api/model-preferences",
   AGENT_CONFIG: "/api/agent-config",
   AGENT_CONFIG_SLIM: "/api/agent-config-slim",
+  OH_MY_OPENCODE_PRESETS: "/api/oh-my-opencode/presets",
   CONTAINERS: {
     LIST: "/api/containers/list",
   },

@@ -37,6 +37,20 @@ const AgentConfigEntrySchema = z.object({
   temperature: z.number().min(0).max(2).optional(),
   prompt_append: z.string().optional(),
   fallback_models: z.array(z.string()).optional(),
+  permission: z.object({
+    edit: z.enum(["allow", "deny", "prompt"]).optional(),
+    bash: z.union([
+      z.enum(["allow", "deny", "prompt"]),
+      z.object({
+        git: z.enum(["allow", "deny", "prompt"]).optional(),
+        test: z.enum(["allow", "deny", "prompt"]).optional(),
+      }),
+    ]).optional(),
+  }).optional(),
+  thinking: z.object({
+    type: z.enum(["enabled", "disabled"]),
+    budgetTokens: z.number().min(0).optional(),
+  }).optional(),
   ultrawork: z.object({
     model: z.string().optional(),
     variant: z.string().optional(),

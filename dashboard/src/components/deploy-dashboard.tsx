@@ -251,7 +251,7 @@ export function DeployDashboard() {
           )}
 
           {status.error && (
-            <div className="rounded-sm border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">
+            <div role="alert" className="rounded-sm border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">
               {status.error}
             </div>
           )}

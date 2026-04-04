@@ -67,7 +67,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => removeToast(toast.id)}
-              className="shrink-0 rounded-md p-1 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+              className="shrink-0 rounded-md p-2 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
               aria-label="Dismiss"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

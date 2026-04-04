@@ -22,7 +22,6 @@ export function MobileTopBar() {
             viewBox="0 0 24 24"
             aria-hidden="true"
           >
-            <title>Menu</title>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"

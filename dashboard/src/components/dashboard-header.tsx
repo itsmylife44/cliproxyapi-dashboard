@@ -112,7 +112,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
           type="button"
           onClick={onUserClick}
           aria-label="User settings"
-          className="flex items-center gap-3 group transition-colors transition-shadow"
+          className="flex items-center gap-3 group transition-[color,box-shadow]"
         >
           <div className="hidden sm:flex flex-col items-end">
             <span className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors">
@@ -124,7 +124,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
               </span>
             )}
           </div>
-          <div className="w-9 h-9 rounded-full bg-slate-800/60 border border-slate-600/50 flex items-center justify-center text-sm font-medium text-slate-200 group-hover:border-blue-400/50 group-hover:shadow-[0_0_10px_rgba(96,165,250,0.2)] transition-colors transition-shadow">
+          <div className="w-9 h-9 rounded-full bg-slate-800/60 border border-slate-600/50 flex items-center justify-center text-sm font-medium text-slate-200 group-hover:border-blue-400/50 group-hover:shadow-[0_0_10px_rgba(96,165,250,0.2)] transition-[color,border-color,box-shadow]">
             {initial}
           </div>
         </button>

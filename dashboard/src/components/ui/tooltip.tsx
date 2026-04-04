@@ -71,7 +71,7 @@ export function HelpTooltip({ content }: HelpTooltipProps) {
   return (
     <Tooltip content={content} side="bottom">
       <span
-        className="inline-flex items-center justify-center size-3.5 rounded-full bg-slate-700/40 text-slate-500 text-[8px] cursor-help hover:bg-slate-600/50 hover:text-slate-400 transition-colors duration-150 select-none ml-1 align-middle"
+        className="inline-flex items-center justify-center size-5 min-w-[44px] min-h-[44px] rounded-full bg-slate-700/40 text-slate-500 text-[9px] cursor-help hover:bg-slate-600/50 hover:text-slate-400 transition-colors duration-150 select-none ml-1 align-middle"
         tabIndex={0}
         aria-label={content}
       >

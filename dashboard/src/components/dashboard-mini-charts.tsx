@@ -127,7 +127,7 @@ function MiniSparkCard({
           <p className="mt-0.5 text-sm font-semibold text-slate-100">{value}</p>
         </div>
       </div>
-      <div className="mt-1.5 h-10">
+      <div className="mt-1.5 h-10" role="img" aria-label={`${label}: ${value}`}>
         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
           <AreaChart data={data} margin={{ top: 2, right: 2, left: 2, bottom: 0 }}>
             <defs>

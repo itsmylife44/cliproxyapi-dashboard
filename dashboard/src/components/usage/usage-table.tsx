@@ -66,8 +66,24 @@ export function UsageTable({ keys, isAdmin }: UsageTableProps) {
                 <React.Fragment key={authIndex}>
                   <tr
                     className={`border-b border-slate-700/60 ${hasModels ? "cursor-pointer hover:bg-slate-800/40" : ""}`}
+                    tabIndex={hasModels ? 0 : undefined}
+                    aria-expanded={hasModels ? isExpanded : undefined}
                     onClick={() => {
                       if (hasModels) {
+                        setExpandedKeys(prev => {
+                          const next = new Set(prev);
+                          if (next.has(authIndex)) {
+                            next.delete(authIndex);
+                          } else {
+                            next.add(authIndex);
+                          }
+                          return next;
+                        });
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (hasModels && (e.key === "Enter" || e.key === " ")) {
+                        e.preventDefault();
                         setExpandedKeys(prev => {
                           const next = new Set(prev);
                           if (next.has(authIndex)) {

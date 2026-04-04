@@ -3,10 +3,11 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useMobileSidebar } from "@/components/mobile-sidebar-context";
 import { useAuth } from "@/hooks/use-auth";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 function IconPlayCircle({ className }: { className?: string }) {
   return (
@@ -140,6 +141,10 @@ export function DashboardNav() {
   const { isOpen, isCollapsed, toggleCollapsed, close } = useMobileSidebar();
   const { user } = useAuth();
   const isAdmin = user?.isAdmin ?? false;
+  const navRef = useRef<HTMLElement>(null);
+
+  // Focus trap for mobile sidebar overlay
+  useFocusTrap(isOpen, navRef as React.RefObject<HTMLElement | null>);
 
   const handleNavClick = () => {
     close();
@@ -171,6 +176,10 @@ export function DashboardNav() {
       )}
 
       <nav
+        ref={navRef}
+        role={isOpen ? "dialog" : undefined}
+        aria-modal={isOpen ? "true" : undefined}
+        aria-label="Navigation"
         className={cn(
           "w-56 glass-nav p-4 flex flex-col lg:transition-[width] lg:duration-200",
           isCollapsed ? "lg:w-[4.5rem]" : "lg:w-56",

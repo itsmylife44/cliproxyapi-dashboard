@@ -56,7 +56,17 @@ function NotificationItem({ notification, onNavigate, onDismiss }: { notificatio
   if (notification.link) {
     return <Link href={notification.link} onClick={handleClick}>{content}</Link>;
   }
-  return <div onClick={handleClick} style={{ cursor: "pointer" }}>{content}</div>;
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(); } }}
+      style={{ cursor: "pointer" }}
+    >
+      {content}
+    </div>
+  );
 }
 
 interface DropdownPosition {
@@ -106,6 +116,8 @@ function NotificationDropdown({
   return createPortal(
     <div
       ref={dropdownRef}
+      role="menu"
+      aria-label="Notifications"
       className="fixed z-[9999] w-80 overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/95 shadow-2xl backdrop-blur-lg"
       style={{ top: position.top, right: position.right }}
     >

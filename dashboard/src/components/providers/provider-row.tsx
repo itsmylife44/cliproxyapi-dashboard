@@ -45,20 +45,24 @@ export function ProviderRow({
 
       <div className="flex items-center gap-1">
         <button
+          type="button"
           onClick={() => onMoveUp(provider.id, provider.groupId, index)}
           disabled={isFirst}
           className="flex size-6 items-center justify-center rounded-sm border border-slate-700/70 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white disabled:opacity-30 disabled:hover:bg-slate-800 disabled:hover:text-slate-300 transition-colors"
           title="Move Up"
+          aria-label={`Move ${provider.name} up`}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
         </button>
         <button
+          type="button"
           onClick={() => onMoveDown(provider.id, provider.groupId, index)}
           disabled={isLast}
           className="flex size-6 items-center justify-center rounded-sm border border-slate-700/70 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white disabled:opacity-30 disabled:hover:bg-slate-800 disabled:hover:text-slate-300 transition-colors"
           title="Move Down"
+          aria-label={`Move ${provider.name} down`}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
         </button>
       </div>
 

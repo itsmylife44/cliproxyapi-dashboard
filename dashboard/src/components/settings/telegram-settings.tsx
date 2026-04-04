@@ -73,6 +73,7 @@ export function TelegramSettings({
                   type="button"
                   onClick={onClearGeneratedToken}
                   className="text-slate-400 hover:text-slate-200"
+                  aria-label="Dismiss token notification"
                 >
                   ✕
                 </button>

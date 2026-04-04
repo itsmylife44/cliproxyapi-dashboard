@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.67](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.66...dashboard-v0.1.67) (2026-04-04)
+
+
+### Bug Fixes
+
+* move dynamic imports with ssr:false into client wrapper components ([7d4b815](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/7d4b8151d4821ea43e59e5d3270406d38710fb3d))
+
 ## [0.1.66](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.65...dashboard-v0.1.66) (2026-04-04)
 
 

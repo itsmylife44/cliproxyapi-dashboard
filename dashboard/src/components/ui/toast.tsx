@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 
 interface Toast {
   id: string;
@@ -17,8 +17,22 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      timers.forEach((timer) => { clearTimeout(timer); });
+      timers.clear();
+    };
+  }, []);
 
   const removeToast = useCallback((id: string) => {
+    const timer = timersRef.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timersRef.current.delete(id);
+    }
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
@@ -26,9 +40,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
 
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      timersRef.current.delete(id);
       removeToast(id);
     }, 5000);
+    timersRef.current.set(id, timer);
   }, [removeToast]);
 
   return (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { redirect } from "next/navigation";
 import { CopyBlock } from "@/components/copy-block";
 import { QuickStartConfigSection } from "@/components/quick-start-config-section";
@@ -12,7 +13,10 @@ import { buildAvailableModelIds, fetchProxyModels } from "@/lib/config-generator
 import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits, inferModelDefinition } from "@/lib/config-generators/opencode";
 import type { ConfigData } from "@/lib/config-generators/shared";
 import { resolveOwnedByDisplay } from "@/lib/providers/model-grouping";
-import { DashboardMiniCharts } from "@/components/dashboard-mini-charts";
+const DashboardMiniCharts = dynamic(
+  () => import("@/components/dashboard-mini-charts").then(mod => ({ default: mod.DashboardMiniCharts })),
+  { ssr: false, loading: () => <div className="h-40 animate-pulse rounded-lg bg-slate-800/50" /> }
+);
 
 interface ManagementFetchParams {
   path: string;

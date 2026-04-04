@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from "react";
 
 interface MobileSidebarContextValue {
   isOpen: boolean;
@@ -22,17 +22,17 @@ export function MobileSidebarProvider({ children }: { children: ReactNode }) {
     return window.localStorage.getItem("dashboard.sidebar.collapsed") === "true";
   });
 
-  const toggleCollapsed = () => {
+  const toggleCollapsed = useCallback(() => {
     setIsCollapsed((prev) => {
       const next = !prev;
       window.localStorage.setItem("dashboard.sidebar.collapsed", String(next));
       return next;
     });
-  };
+  }, []);
 
-  const open = () => setIsOpen(true);
-  const close = () => setIsOpen(false);
-  const toggle = () => setIsOpen((prev) => !prev);
+  const open = useCallback(() => setIsOpen(true), []);
+  const close = useCallback(() => setIsOpen(false), []);
+  const toggle = useCallback(() => setIsOpen((prev) => !prev), []);
 
   // Body scroll lock when sidebar is open
   useEffect(() => {
@@ -47,8 +47,13 @@ export function MobileSidebarProvider({ children }: { children: ReactNode }) {
     };
   }, [isOpen]);
 
+  const contextValue = useMemo(
+    () => ({ isOpen, isCollapsed, open, close, toggle, toggleCollapsed }),
+    [isOpen, isCollapsed, open, close, toggle, toggleCollapsed]
+  );
+
   return (
-    <MobileSidebarContext.Provider value={{ isOpen, isCollapsed, open, close, toggle, toggleCollapsed }}>
+    <MobileSidebarContext.Provider value={contextValue}>
       {children}
     </MobileSidebarContext.Provider>
   );

@@ -37,6 +37,11 @@ const AgentConfigEntrySchema = z.object({
   temperature: z.number().min(0).max(2).optional(),
   prompt_append: z.string().optional(),
   fallback_models: z.array(z.string()).optional(),
+  ultrawork: z.object({
+    model: z.string().optional(),
+    variant: z.string().optional(),
+    temperature: z.number().min(0).max(2).optional(),
+  }).optional(),
 });
 
 const CategoryConfigEntrySchema = z.object({
@@ -76,6 +81,11 @@ const SisyphusAgentConfigSchema = z.object({
 const GitMasterConfigSchema = z.object({
   commit_footer: z.boolean().optional(),
   include_co_authored_by: z.boolean().optional(),
+});
+
+const ExperimentalConfigSchema = z.object({
+  aggressive_truncation: z.boolean().optional(),
+  task_system: z.boolean().optional(),
 });
 
 const LspEntrySchema = z.object({
@@ -118,6 +128,8 @@ export const AgentConfigOverridesSchema = z.object({
   mcpServers: z.array(McpEntrySchema).optional(),
   customPlugins: z.array(z.string()).optional(),
   configSchemaVersion: z.number().positive().optional(),
+  hashline_edit: z.boolean().optional(),
+  experimental: ExperimentalConfigSchema.optional(),
 });
 
 export const AgentConfigSchema = z.object({

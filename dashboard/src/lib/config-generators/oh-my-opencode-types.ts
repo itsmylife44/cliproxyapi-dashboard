@@ -419,6 +419,20 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
           const fallbacks = entryObj.fallback_models.filter((v: unknown): v is string => typeof v === "string");
           if (fallbacks.length > 0) entry.fallback_models = fallbacks;
         }
+        if (entryObj.ultrawork && typeof entryObj.ultrawork === "object" && !Array.isArray(entryObj.ultrawork)) {
+          const ultraworkObj = entryObj.ultrawork as Record<string, unknown>;
+          const ultrawork: AgentUltraworkConfig = {};
+          if (typeof ultraworkObj.model === "string") ultrawork.model = ultraworkObj.model;
+          if (typeof ultraworkObj.variant === "string") ultrawork.variant = ultraworkObj.variant;
+          if (
+            typeof ultraworkObj.temperature === "number" &&
+            ultraworkObj.temperature >= 0 &&
+            ultraworkObj.temperature <= 2
+          ) {
+            ultrawork.temperature = ultraworkObj.temperature;
+          }
+          if (Object.keys(ultrawork).length > 0) entry.ultrawork = ultrawork;
+        }
         validatedAgents[key] = entry;
       }
     }
@@ -757,6 +771,27 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
    // Validate configSchemaVersion number
    if (typeof obj.configSchemaVersion === "number" && obj.configSchemaVersion > 0) {
      result.configSchemaVersion = obj.configSchemaVersion;
+   }
+
+   if (typeof obj.hashline_edit === "boolean") {
+     result.hashline_edit = obj.hashline_edit;
+   }
+
+   if (obj.experimental && typeof obj.experimental === "object" && !Array.isArray(obj.experimental)) {
+     const experimentalObj = obj.experimental as Record<string, unknown>;
+     const experimental: ExperimentalConfig = {};
+
+     if (typeof experimentalObj.aggressive_truncation === "boolean") {
+       experimental.aggressive_truncation = experimentalObj.aggressive_truncation;
+     }
+
+     if (typeof experimentalObj.task_system === "boolean") {
+       experimental.task_system = experimentalObj.task_system;
+     }
+
+     if (Object.keys(experimental).length > 0) {
+       result.experimental = experimental;
+     }
    }
 
    return result;

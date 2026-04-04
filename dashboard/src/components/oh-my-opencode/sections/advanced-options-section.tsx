@@ -1,0 +1,98 @@
+"use client";
+
+import type { ExperimentalConfig, OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
+
+interface AdvancedOptionsSectionProps {
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  overrides: OhMyOpenCodeFullConfig;
+  onHashlineEditToggle: () => void;
+  onExperimentalToggle: (field: keyof ExperimentalConfig) => void;
+}
+
+const EXPERIMENTAL_FIELDS: ReadonlyArray<{
+  field: keyof ExperimentalConfig;
+  label: string;
+  defaultValue: boolean;
+}> = [
+  { field: "aggressive_truncation", label: "Aggressive Truncation", defaultValue: false },
+  { field: "task_system", label: "Task System", defaultValue: false },
+];
+
+export function AdvancedOptionsSection({
+  isExpanded,
+  onToggleExpand,
+  overrides,
+  onHashlineEditToggle,
+  onExperimentalToggle,
+}: AdvancedOptionsSectionProps) {
+  const hashlineEditEnabled = overrides.hashline_edit ?? false;
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden transition-all hover:border-white/15">
+      <button
+        type="button"
+        onClick={onToggleExpand}
+        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-white/60 hover:text-white/90 hover:bg-white/[0.04] transition-colors"
+      >
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
+          aria-hidden="true"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+        <span className="flex-1 text-left">Advanced Options</span>
+      </button>
+      {isExpanded && (
+        <div className="px-3 pb-3 space-y-1">
+          <div className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-white/5">
+            <span className="text-xs text-white/70 font-mono">Hashline Edit</span>
+            <button
+              type="button"
+              onClick={onHashlineEditToggle}
+              className={`w-9 h-5 rounded-full transition-colors relative ${
+                hashlineEditEnabled ? "bg-emerald-500/60" : "bg-white/10"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform ${
+                  hashlineEditEnabled ? "translate-x-4 bg-emerald-200" : "bg-white/40"
+                }`}
+              />
+            </button>
+          </div>
+
+          {EXPERIMENTAL_FIELDS.map(({ field, label, defaultValue }) => {
+            const isEnabled = overrides.experimental?.[field] ?? defaultValue;
+            return (
+              <div key={field} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-white/5">
+                <span className="text-xs text-white/70 font-mono">{label}</span>
+                <button
+                  type="button"
+                  onClick={() => onExperimentalToggle(field)}
+                  className={`w-9 h-5 rounded-full transition-colors relative ${
+                    isEnabled ? "bg-emerald-500/60" : "bg-white/10"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform ${
+                      isEnabled ? "translate-x-4 bg-emerald-200" : "bg-white/40"
+                    }`}
+                  />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

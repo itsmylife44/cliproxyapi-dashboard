@@ -48,7 +48,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   const [overrides, setOverrides] = useState<OhMyOpenCodeFullConfig>(initialOverrides ?? { agents: {}, categories: {} });
   const [saving, setSaving] = useState(false);
   const nextIdRef = useRef(0);
-  const nextId = () => `row-${nextIdRef.current++}`;
+  const nextId = useCallback(() => `row-${nextIdRef.current++}`, []);
   const [providerConcurrencyRows, setProviderConcurrencyRows] = useState<Array<{ _id: string; key: string; value: number }>>([]);
   const [modelConcurrencyRows, setModelConcurrencyRows] = useState<Array<{ _id: string; key: string; value: number }>>([]);
   const tmuxDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -72,7 +72,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
       const entries = Object.entries(initialOverrides.background_task.modelConcurrency);
       setModelConcurrencyRows(entries.map(([key, value]) => ({ _id: nextId(), key, value })));
     }
-  }, [initialOverrides]);
+  }, [initialOverrides, nextId]);
 
   const latestSaveRef = useRef<OhMyOpenCodeFullConfig>(overrides);
 
@@ -131,7 +131,13 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   const handleAgentFieldChange = (agent: string, field: string, value: ModelBadgeFieldValue) => {
     const existing = overrides.agents?.[agent] ?? {};
     const newAgents = { ...overrides.agents };
-    if (value === undefined || value === "" || (Array.isArray(value) && value.length === 0) || (typeof value === "object" && value !== null && Object.keys(value).length === 0)) {
+    const isEmptyObject =
+      typeof value === "object" &&
+      value !== null &&
+      !Array.isArray(value) &&
+      Object.values(value).every((entry) => entry === undefined || entry === "");
+
+    if (value === undefined || value === "" || (Array.isArray(value) && value.length === 0) || isEmptyObject) {
       const updated = { ...existing } as Record<string, unknown>;
       delete updated[field];
       if (Object.keys(updated).length === 0) {
@@ -349,6 +355,20 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     const currentGit = overrides.git_master ?? {};
     const newGit = { ...currentGit, [field]: !currentGit[field] };
     const newOverrides = { ...overrides, git_master: newGit };
+    setOverrides(newOverrides);
+    saveOverrides(newOverrides);
+  };
+
+  const handleHashlineEditToggle = () => {
+    const newOverrides = { ...overrides, hashline_edit: !(overrides.hashline_edit ?? false) };
+    setOverrides(newOverrides);
+    saveOverrides(newOverrides);
+  };
+
+  const handleExperimentalToggle = (field: keyof NonNullable<OhMyOpenCodeFullConfig["experimental"]>) => {
+    const currentExperimental = overrides.experimental ?? {};
+    const newExperimental = { ...currentExperimental, [field]: !currentExperimental[field] };
+    const newOverrides = { ...overrides, experimental: newExperimental };
     setOverrides(newOverrides);
     saveOverrides(newOverrides);
   };
@@ -599,6 +619,8 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
         onModelConcurrencyRemove={handleModelConcurrencyRemove}
         onSisyphusToggle={handleSisyphusToggle}
         onGitMasterToggle={handleGitMasterToggle}
+        onHashlineEditToggle={handleHashlineEditToggle}
+        onExperimentalToggle={handleExperimentalToggle}
         onBrowserProviderChange={handleBrowserProviderChange}
         onMcpAdd={handleMcpAdd}
         onMcpRemove={handleMcpRemove}

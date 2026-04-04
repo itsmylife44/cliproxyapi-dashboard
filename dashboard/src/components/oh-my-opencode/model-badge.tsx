@@ -29,6 +29,7 @@ export interface ExtraFieldConfig {
   thirdFieldKey: string;
   thirdFieldPlaceholder: string;
   fallback_models?: string[];
+  supportsUltrawork?: boolean;
   ultrawork?: AgentUltraworkConfig;
 }
 
@@ -77,8 +78,19 @@ export function ModelBadge({
   const btnRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const hasUltraworkValues = Boolean(
+    extraFields?.ultrawork &&
+      (extraFields.ultrawork.model ||
+        extraFields.ultrawork.variant ||
+        extraFields.ultrawork.temperature !== undefined)
+  );
   const hasExtraValues =
-    extraFields && (extraFields.variant || extraFields.temperature !== undefined || extraFields.thirdField || (extraFields.fallback_models && extraFields.fallback_models.length > 0) || (extraFields.ultrawork && (extraFields.ultrawork.model || extraFields.ultrawork.variant || extraFields.ultrawork.temperature !== undefined)));
+    extraFields &&
+    (extraFields.variant ||
+      extraFields.temperature !== undefined ||
+      extraFields.thirdField ||
+      (extraFields.fallback_models && extraFields.fallback_models.length > 0) ||
+      hasUltraworkValues);
 
   useEffect(() => {
     if (!open) return;
@@ -241,9 +253,20 @@ export function ModelBadge({
               })()}
             </div>
           </div>
-          {extraFields?.ultrawork !== undefined && (
+          {extraFields?.supportsUltrawork && (
             <div className="space-y-1 pt-1 border-t border-white/10">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/35">Ultrawork</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/35">Ultrawork</p>
+                {hasUltraworkValues && (
+                  <button
+                    type="button"
+                    onClick={() => onFieldChange("ultrawork", undefined)}
+                    className="text-[10px] text-white/35 hover:text-red-400/80 transition-colors cursor-pointer"
+                  >
+                    clear
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-1.5">
                 <select
                   value={extraFields.ultrawork?.model ?? ""}

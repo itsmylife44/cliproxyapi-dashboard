@@ -87,6 +87,7 @@ export function TierAssignments({
                           thirdFieldKey: "prompt_append",
                           thirdFieldPlaceholder: "prompt append",
                           fallback_models: config.fallback_models,
+                          supportsUltrawork: true,
                           ultrawork: config.ultrawork,
                         }}
                         onFieldChange={(field, value) => onAgentFieldChange(name, field, value)}

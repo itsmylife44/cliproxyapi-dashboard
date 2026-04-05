@@ -76,7 +76,7 @@ export default function ContainersPage() {
               : `Failed to load containers (${res.status})`;
           setFetchError(message);
         }
-      } catch (err) {
+      } catch {
         if (!controller.signal.aborted) {
           setFetchError("Network error while loading containers.");
         }

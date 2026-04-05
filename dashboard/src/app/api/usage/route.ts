@@ -200,18 +200,12 @@ function groupUsageByApiKey(
 function filterAndLabelApis(
   apis: Record<string, ApiUsageEntry>,
   userKeys: ApiKeyDbRecord[],
-  isAdmin: boolean,
-  userSourceMatchers: string[]
+  isAdmin: boolean
 ): { apis: Record<string, AggregatedKeyUsage>; totals: { requests: number; tokens: number; success: number; failure: number; inputTokens: number; outputTokens: number } } {
   // First, regroup usage by API key (auth_index)
   const usageByKey = groupUsageByApiKey(apis);
   
   const result: Record<string, AggregatedKeyUsage> = {};
-  const normalizedSourceMatchers = new Set(
-    userSourceMatchers
-      .map((value) => value.trim().toLowerCase())
-      .filter((value) => value.length > 0)
-  );
   // Dashboard stores full keys like "sk-abc123...", CLIProxyAPI uses 16-char auth_index
   // Match by checking if the stored key starts with "sk-" and comparing after prefix,
   // or by direct 16-char prefix match
@@ -238,7 +232,6 @@ function filterAndLabelApis(
   for (const [authIndex, usage] of Object.entries(usageByKey)) {
     const keyName = keyNameMap.get(authIndex);
     const isUserKey = keyName !== undefined;
-    const isUserSource = usage.sources.some((source) => normalizedSourceMatchers.has(source.toLowerCase()));
     // Only show usage from dashboard-generated API keys (skip OAuth auth-file indices)
     if (!isUserKey) {
       continue;
@@ -385,24 +378,6 @@ export async function GET() {
       }),
     ]);
 
-    const userSourceMatchers = [session.username];
-    if (!isAdmin) {
-      const oauthOwnerships = await prisma.providerOAuthOwnership.findMany({
-        where: { userId: session.userId },
-        select: {
-          accountName: true,
-          accountEmail: true,
-        },
-      });
-
-      for (const ownership of oauthOwnerships) {
-        userSourceMatchers.push(ownership.accountName);
-        if (ownership.accountEmail) {
-          userSourceMatchers.push(ownership.accountEmail);
-        }
-      }
-    }
-
     if (!usageResponse.ok) {
       await usageResponse.body?.cancel();
       logger.error(
@@ -429,8 +404,7 @@ export async function GET() {
     const { apis: filteredApis, totals } = filterAndLabelApis(
       rawData.apis,
       userKeys,
-      isAdmin,
-      userSourceMatchers
+      isAdmin
     );
 
     const responseData = {

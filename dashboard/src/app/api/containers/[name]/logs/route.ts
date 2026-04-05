@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
-import { logger } from "@/lib/logger";
+import { NextRequest } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { CONTAINER_CONFIG, isValidContainerName } from "@/lib/containers";

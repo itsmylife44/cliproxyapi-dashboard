@@ -7,7 +7,6 @@ import { encryptProviderKey } from "@/lib/providers/encrypt";
 import { z } from "zod";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
-import { logger } from "@/lib/logger";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
 import { CreateCustomProviderSchema } from "@/lib/validation/schemas";
 import { Errors } from "@/lib/errors";

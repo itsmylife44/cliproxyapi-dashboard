@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock external dependencies before importing route
@@ -25,6 +26,12 @@ vi.stubGlobal("fetch", fetchMock);
 // Set required env vars
 vi.stubEnv("MANAGEMENT_API_KEY", "test-key");
 vi.stubEnv("CLIPROXYAPI_MANAGEMENT_URL", "http://test:8317/v0/management");
+
+function createQuotaRequest(): NextRequest {
+  return new NextRequest("http://localhost/api/quota", {
+    headers: { cookie: "session=test" },
+  });
+}
 
 describe("GET /api/quota — Gemini CLI support (issue #125)", () => {
   beforeEach(() => {
@@ -81,10 +88,7 @@ describe("GET /api/quota — Gemini CLI support (issue #125)", () => {
 
     const { GET } = await import("./route");
 
-    const request = new Request("http://localhost/api/quota", {
-      headers: { cookie: "session=test" },
-    });
-    const response = await GET(request as any);
+    const response = await GET(createQuotaRequest());
     const data = await response.json();
 
     // Route returns { accounts: [...] } directly (no success wrapper)
@@ -127,10 +131,7 @@ describe("GET /api/quota — Gemini CLI support (issue #125)", () => {
 
     const { GET } = await import("./route");
 
-    const request = new Request("http://localhost/api/quota", {
-      headers: { cookie: "session=test" },
-    });
-    const response = await GET(request as any);
+    const response = await GET(createQuotaRequest());
     const data = await response.json();
 
     // Route returns { accounts: [...] } directly (no success wrapper)
@@ -180,10 +181,7 @@ describe("GET /api/quota — Gemini CLI support (issue #125)", () => {
 
     const { GET } = await import("./route");
 
-    const request = new Request("http://localhost/api/quota", {
-      headers: { cookie: "session=test" },
-    });
-    const response = await GET(request as any);
+    const response = await GET(createQuotaRequest());
     const data = await response.json();
 
     // Route returns { accounts: [...] } directly (no success wrapper)
@@ -245,10 +243,7 @@ describe("GET /api/quota — imported provider normalization (issue #provider-fi
 
     const { GET } = await import("./route");
 
-    const request = new Request("http://localhost/api/quota", {
-      headers: { cookie: "session=test" },
-    });
-    const response = await GET(request as any);
+    const response = await GET(createQuotaRequest());
     const data = await response.json();
 
     // Route returns { accounts: [...] } directly (no success wrapper)
@@ -289,10 +284,7 @@ describe("GET /api/quota — imported provider normalization (issue #provider-fi
 
     const { GET } = await import("./route");
 
-    const request = new Request("http://localhost/api/quota", {
-      headers: { cookie: "session=test" },
-    });
-    const response = await GET(request as any);
+    const response = await GET(createQuotaRequest());
     const data = await response.json();
 
     // Route returns { accounts: [...] } directly (no success wrapper)
@@ -331,10 +323,7 @@ describe("GET /api/quota — imported provider normalization (issue #provider-fi
 
     const { GET } = await import("./route");
 
-    const request = new Request("http://localhost/api/quota", {
-      headers: { cookie: "session=test" },
-    });
-    const response = await GET(request as any);
+    const response = await GET(createQuotaRequest());
     const data = await response.json();
 
     // Route returns { accounts: [...] } directly (no success wrapper)
@@ -382,10 +371,7 @@ describe("GET /api/quota — imported provider normalization (issue #provider-fi
 
     const { GET } = await import("./route");
 
-    const request = new Request("http://localhost/api/quota", {
-      headers: { cookie: "session=test" },
-    });
-    const response = await GET(request as any);
+    const response = await GET(createQuotaRequest());
     const data = await response.json();
 
     expect(data.accounts).toBeDefined();

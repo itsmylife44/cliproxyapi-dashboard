@@ -87,7 +87,7 @@ The dashboard can automatically sync your OpenCode configurations to your local 
 1. **Generate a Sync Token**: Navigate to Settings -> Config Sync in the dashboard
 2. **Install the Plugin**: Add `opencode-cliproxyapi-sync` to your OpenCode plugins
 3. **Configure**: Create `~/.config/opencode-cliproxyapi-sync/config.json` with your dashboard URL and sync token
-4. **Auto-Sync**: On every OpenCode startup, the plugin checks for config changes and updates your local `opencode.json` and `oh-my-opencode.json`
+4. **Auto-Sync**: On every OpenCode startup, the plugin checks for config changes and updates your local `opencode.json` and `oh-my-openagent.json`
 
 ### Plugin Installation
 

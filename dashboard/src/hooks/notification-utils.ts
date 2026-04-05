@@ -40,7 +40,7 @@ export const QUOTA_WARNING_THRESHOLD = 0.20;  // 20%
 
 export function buildNotifications(
   healthData: HealthStatus | null | undefined,
-  quotaData: { accounts: QuotaAccount[] } | null | undefined,
+  quotaData: { accounts: readonly QuotaAccount[] } | null | undefined,
   proxyUpdateData: UpdateCheckResult | null | undefined,
   dashUpdateData: UpdateCheckResult | null | undefined,
   now: number = Date.now()

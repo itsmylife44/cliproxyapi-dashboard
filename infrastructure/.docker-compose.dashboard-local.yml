@@ -1,0 +1,3 @@
+services:
+  dashboard:
+    image: ghcr.io/islee23520/cliproxyapi-dashboard/dashboard:latest

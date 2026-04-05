@@ -3,10 +3,11 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --legacy-peer-deps && npm cache clean --force
+RUN NODE_OPTIONS=--max-old-space-size=384 npm ci --legacy-peer-deps --no-audit --no-fund && npm cache clean --force
 
 FROM node:20-alpine AS builder
 WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
 COPY next.config.ts tsconfig.json prisma.config.ts postcss.config.mjs ./
@@ -18,9 +19,11 @@ COPY prisma ./prisma
 ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
 ARG JWT_SECRET="build-time-placeholder-at-least-32-chars"
 ARG MANAGEMENT_API_KEY="build-time-placeholder-16ch"
+ARG CLIPROXYAPI_MANAGEMENT_URL="http://127.0.0.1:8317/v0/management"
+ENV CLIPROXYAPI_MANAGEMENT_URL=${CLIPROXYAPI_MANAGEMENT_URL}
 
 RUN npx prisma generate
-RUN npm run build
+RUN NODE_OPTIONS=--max-old-space-size=512 npm run build -- --webpack
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -40,6 +43,7 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV COMPOSE_DIR=/opt/cliproxyapi/infrastructure
 ENV DASHBOARD_VERSION=${DASHBOARD_VERSION}
+ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

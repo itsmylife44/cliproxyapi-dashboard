@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.1.67](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.66...dashboard-v0.1.67) (2026-04-04)
+
+
+### Bug Fixes
+
+* move dynamic imports with ssr:false into client wrapper components ([7d4b815](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/7d4b8151d4821ea43e59e5d3270406d38710fb3d))
+
+## [0.1.66](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.65...dashboard-v0.1.66) (2026-04-04)
+
+
+### Features
+
+* make Perplexity Pro Sidecar opt-in during setup ([#160](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/160)) ([a6a52ad](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a6a52ad4f74905287f6dbcb15c1d58d59c3e7983))
+
+
+### Bug Fixes
+
+* remove CitationMode enum usage for perplexity-webui-scraper 0.7.0 ([6ad7582](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6ad7582db98e13a17a4808302d06596e253e0c68))
+* upgrade perplexity-webui-scraper to 0.7.0 and adapt to new API ([78a1141](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/78a1141d34c47a26e3df4e306772f1900aa4fe60))
+
+
+### Performance Improvements
+
+* improve React performance across dashboard ([d903568](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d90356887cb19aa24e582540648dc460d9350eec))
+
 ## [0.1.65](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.64...dashboard-v0.1.65) (2026-04-01)
 
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 
@@ -29,6 +29,8 @@ export function ConfirmDialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(isOpen, dialogRef as React.RefObject<HTMLElement | null>);
   const previousOverflowRef = useRef<string>("");
+  const titleId = useId();
+  const messageId = useId();
 
   useEffect(() => {
     if (isOpen) {
@@ -86,13 +88,14 @@ export function ConfirmDialog({
       onKeyDown={handleBackdropKeyDown}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="confirm-dialog-title"
-      aria-describedby="confirm-dialog-message"
+      aria-labelledby={titleId}
+      aria-describedby={messageId}
       tabIndex={-1}
     >
       <div
         ref={dialogRef}
         className="animate-modal-card relative w-full max-w-md bg-slate-900 border border-slate-700/70 rounded-xl p-6 shadow-2xl"
+        style={{ overscrollBehavior: "contain" }}
         onClick={handleContentClick}
         onKeyDown={handleContentKeyDown}
         role="document"
@@ -125,14 +128,14 @@ export function ConfirmDialog({
         </div>
 
         <h2
-          id="confirm-dialog-title"
+          id={titleId}
           className="text-lg font-semibold text-white text-center mb-3"
         >
           {title}
         </h2>
 
         <div
-          id="confirm-dialog-message"
+          id={messageId}
           className="text-sm text-white/80 text-center mb-6"
         >
           {message}
@@ -146,11 +149,11 @@ export function ConfirmDialog({
             type="button"
             onClick={handleConfirm}
             className={cn(
-              "flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200",
-              "focus:outline-none focus:ring-2",
-              variant === "danger" && "bg-red-500 hover:bg-red-600 text-white focus:ring-red-500/50",
-              variant === "warning" && "bg-yellow-500 hover:bg-yellow-600 text-white focus:ring-yellow-500/50",
-              variant === "info" && "bg-blue-500 hover:bg-blue-600 text-white focus:ring-blue-500/50"
+              "flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-[background-color,color,box-shadow] duration-200",
+              "focus:outline-none focus-visible:ring-2",
+              variant === "danger" && "bg-red-500 hover:bg-red-600 text-white focus-visible:ring-red-500/50",
+              variant === "warning" && "bg-yellow-500 hover:bg-yellow-600 text-white focus-visible:ring-yellow-500/50",
+              variant === "info" && "bg-blue-500 hover:bg-blue-600 text-white focus-visible:ring-blue-500/50"
             )}
           >
             {confirmLabel}

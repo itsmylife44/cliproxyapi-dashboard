@@ -1,8 +1,10 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { type ReactNode, useEffect, useRef } from "react";
+import { createContext, useContext, type ReactNode, useEffect, useId, useRef } from "react";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+
+const ModalTitleIdContext = createContext<string>("");
 
 interface ModalProps {
   isOpen: boolean;
@@ -13,6 +15,7 @@ interface ModalProps {
 
 export function Modal({ isOpen, onClose, children, className }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
   useFocusTrap(isOpen, modalRef as React.RefObject<HTMLElement | null>);
 
   useEffect(() => {
@@ -30,39 +33,44 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div
-      className="animate-modal-overlay fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/60"
-      onClick={onClose}
-      onKeyDown={(e) => e.key === "Escape" && onClose()}
-      role="dialog"
-      aria-modal="true"
-    >
+    <ModalTitleIdContext.Provider value={titleId}>
       <div
-        ref={modalRef}
-        className={cn(
-          "animate-modal-card relative max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-slate-900 border border-slate-700/70 rounded-xl p-5 shadow-2xl",
-          className
-        )}
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") {
-            onClose();
-          }
-          e.stopPropagation();
-        }}
-        role="document"
+        className="animate-modal-overlay fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/60"
+        onClick={onClose}
+        onKeyDown={(e) => e.key === "Escape" && onClose()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-3 top-3 text-lg font-bold text-white/80 hover:text-white transition-colors"
-          aria-label="Close"
+        <div
+          ref={modalRef}
+          className={cn(
+            "animate-modal-card relative max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-slate-900 border border-slate-700/70 rounded-xl p-5 shadow-2xl",
+            className
+          )}
+          style={{ overscrollBehavior: "contain" }}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              onClose();
+            }
+            e.stopPropagation();
+          }}
         >
-          ×
-        </button>
-        {children}
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-3 top-3 rounded-md p-1 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            aria-label="Close"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          {children}
+        </div>
       </div>
-    </div>
+    </ModalTitleIdContext.Provider>
   );
 }
 
@@ -85,8 +93,9 @@ interface ModalTitleProps {
 }
 
 export function ModalTitle({ children, className }: ModalTitleProps) {
+  const titleId = useContext(ModalTitleIdContext);
   return (
-    <h2 className={cn("text-lg font-semibold tracking-tight text-white", className)}>
+    <h2 id={titleId} className={cn("text-lg font-semibold tracking-tight text-white", className)}>
       {children}
     </h2>
   );

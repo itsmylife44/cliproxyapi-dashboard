@@ -65,7 +65,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
           {isLoading ? (
             <>
               <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-slate-400">Checking...</span>
+              <span className="text-slate-400">Checking\u2026</span>
             </>
           ) : status?.running ? (
             <>
@@ -109,9 +109,10 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
         />
 
         <button
+          type="button"
           onClick={onUserClick}
           aria-label="User settings"
-          className="flex items-center gap-3 group transition-all"
+          className="flex items-center gap-3 group transition-[color,box-shadow]"
         >
           <div className="hidden sm:flex flex-col items-end">
             <span className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors">
@@ -123,7 +124,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
               </span>
             )}
           </div>
-          <div className="w-9 h-9 rounded-full bg-slate-800/60 border border-slate-600/50 flex items-center justify-center text-sm font-medium text-slate-200 group-hover:border-blue-400/50 group-hover:shadow-[0_0_10px_rgba(96,165,250,0.2)] transition-all">
+          <div className="w-9 h-9 rounded-full bg-slate-800/60 border border-slate-600/50 flex items-center justify-center text-sm font-medium text-slate-200 group-hover:border-blue-400/50 group-hover:shadow-[0_0_10px_rgba(96,165,250,0.2)] transition-[color,border-color,box-shadow]">
             {initial}
           </div>
         </button>

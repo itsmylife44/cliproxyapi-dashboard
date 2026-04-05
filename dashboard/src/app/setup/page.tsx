@@ -58,12 +58,11 @@ export default function SetupPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <main id="main-content" className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-600 shadow-lg shadow-purple-600/30">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-              <title>Setup</title>
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
@@ -71,7 +70,7 @@ export default function SetupPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-white">
             CLIProxyAPI
           </h1>
-          <p className="mt-1 text-sm text-white/50">First-time setup</p>
+          <p className="mt-1 text-sm text-slate-400">First-time setup</p>
         </div>
 
          <div className="glass-card rounded-xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
@@ -125,21 +124,21 @@ export default function SetupPage() {
             </div>
 
             {error && (
-              <div className="rounded-xl bg-red-500/20 border border-red-400/30 p-3 text-sm text-red-300">
+              <div role="alert" aria-live="polite" className="rounded-xl bg-red-500/20 border border-red-400/30 p-3 text-sm text-red-300">
                 {error}
               </div>
             )}
 
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Creating account..." : "Create Account"}
+              {loading ? "Creating account\u2026" : "Create Account"}
             </Button>
           </form>
         </div>
 
-        <p className="mt-6 text-center text-xs text-white/30">
+        <p className="mt-6 text-center text-xs text-slate-500">
           CLIProxyAPI Management Dashboard
         </p>
       </div>
-    </div>
+    </main>
   );
 }

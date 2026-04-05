@@ -132,7 +132,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
                     type="button"
                     onClick={() => setSelectedColor(color)}
                     disabled={saving}
-                    className={`w-7 h-7 rounded-full border-2 transition-all ${selectedColor === color ? "border-white scale-110" : "border-transparent hover:border-white/50"} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className={`w-7 h-7 rounded-full border-2 transition-[border-color,transform] ${selectedColor === color ? "border-white scale-110" : "border-transparent hover:border-white/50"} disabled:opacity-50 disabled:cursor-not-allowed`}
                     style={{ backgroundColor: color }}
                     aria-label={`Select color ${color}`}
                   />

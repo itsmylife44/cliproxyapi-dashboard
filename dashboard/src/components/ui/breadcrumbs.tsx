@@ -37,7 +37,7 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
       aria-label="Breadcrumb"
       className={cn("flex items-center gap-1.5 text-sm text-slate-400 mb-4", className)}
     >
-      <ol className="flex items-center gap-1.5">
+      <ol className="flex items-center gap-1.5" role="list">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
           return (

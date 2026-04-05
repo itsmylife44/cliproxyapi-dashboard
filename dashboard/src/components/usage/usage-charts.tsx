@@ -240,13 +240,13 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                 <div className="flex h-full">
                   {successPct > 0 && (
                     <div
-                      className="h-full bg-emerald-500 transition-all duration-700"
+                       className="h-full bg-emerald-500 transition-[width] duration-700"
                       style={{ width: `${successPct}%` }}
                     />
                   )}
                   {failPct > 0 && (
                     <div
-                      className="h-full bg-rose-500 transition-all duration-700"
+                       className="h-full bg-rose-500 transition-[width] duration-700"
                       style={{ width: `${failPct}%` }}
                     />
                   )}

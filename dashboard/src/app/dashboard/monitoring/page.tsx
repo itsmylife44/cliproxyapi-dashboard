@@ -1,9 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ServiceStatus } from "@/components/monitoring/service-status";
-import { UsageStats } from "@/components/monitoring/usage-stats";
+const UsageStats = dynamic(
+  () => import("@/components/monitoring/usage-stats").then(mod => ({ default: mod.UsageStats })),
+  { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-slate-800/50" /> }
+);
 import { LiveLogs } from "@/components/monitoring/live-logs";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { useProxyStatusProvider } from "@/components/dashboard-shell";

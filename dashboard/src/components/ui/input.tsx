@@ -11,6 +11,8 @@ interface InputProps {
   disabled?: boolean;
   className?: string;
   autoComplete?: string;
+  "aria-describedby"?: string;
+  spellCheck?: boolean;
 }
 
 export function Input({
@@ -24,6 +26,8 @@ export function Input({
   disabled = false,
   className,
   autoComplete,
+  "aria-describedby": ariaDescribedBy,
+  spellCheck,
 }: InputProps) {
   return (
     <input
@@ -36,6 +40,8 @@ export function Input({
       required={required}
       disabled={disabled}
       autoComplete={autoComplete}
+      aria-describedby={ariaDescribedBy}
+      spellCheck={spellCheck}
       className={cn(
           "w-full px-3 py-2 text-sm rounded-md",
           "glass-input text-white",

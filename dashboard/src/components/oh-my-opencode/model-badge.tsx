@@ -131,7 +131,7 @@ export function ModelBadge({
           ref={btnRef}
           type="button"
           onClick={handleOpen}
-          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-l-lg text-xs font-mono cursor-pointer transition-all hover:bg-white/10 ${
+          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-l-lg text-xs font-mono cursor-pointer transition-colors hover:bg-white/10 ${
             isOverride
               ? "bg-violet-500/10 border border-violet-400/20 text-white/80"
               : "bg-white/5 border border-white/10 text-white/70"
@@ -153,7 +153,7 @@ export function ModelBadge({
               e.stopPropagation();
               setShowExtra(!showExtra);
             }}
-            className={`px-1.5 py-1 border border-l-0 rounded-r-lg text-[10px] transition-all cursor-pointer ${
+            className={`px-1.5 py-1 border border-l-0 rounded-r-lg text-[10px] transition-colors cursor-pointer ${
               showExtra || hasExtraValues
                 ? "bg-amber-500/10 border-amber-400/20 text-amber-300/80 hover:bg-amber-500/20"
                 : "bg-white/5 border-white/10 text-white/30 hover:text-white/60 hover:bg-white/10"

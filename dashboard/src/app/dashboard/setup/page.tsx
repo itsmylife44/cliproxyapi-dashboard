@@ -95,7 +95,7 @@ export default function SetupWizardPage() {
 
         <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-slate-800">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-700"
+            className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-[width] duration-700"
             style={{ width: `${(completedCount / STEPS.length) * 100}%` }}
           />
         </div>

@@ -1,6 +1,7 @@
 export default function DashboardLoading() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" role="status" aria-busy="true" aria-label="Loading dashboard">
+      <span className="sr-only">Loading dashboard content…</span>
       <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">

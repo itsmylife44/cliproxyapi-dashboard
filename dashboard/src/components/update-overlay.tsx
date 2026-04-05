@@ -121,7 +121,7 @@ export function UpdateOverlay({
     : Math.min(((currentStep + 1) / STEPS.length) * 90, 90);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center" role="alertdialog" aria-modal="true" aria-label={serverReady ? "Update complete" : `Updating ${label}`}>
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-modal-overlay" />
 
@@ -207,7 +207,7 @@ export function UpdateOverlay({
           <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
             <div
               className={cn(
-                "h-full rounded-full transition-all duration-1000 ease-out",
+                "h-full rounded-full transition-[width] duration-1000 ease-out",
                 serverReady
                   ? "bg-green-400"
                   : isDashboard

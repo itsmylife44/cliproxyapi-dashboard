@@ -192,6 +192,7 @@ export function ModelSelector({
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
+            aria-expanded={isOpen}
             className="flex items-center gap-2 text-xs font-medium text-white/60 hover:text-white/90 transition-colors"
             disabled={isLocked}
           >
@@ -301,6 +302,7 @@ export function ModelSelector({
                     <button
                       type="button"
                       onClick={() => toggleGroupExpansion(group.provider)}
+                      aria-expanded={isExpanded}
                       className="flex items-center gap-2 text-sm font-semibold text-white/90 hover:text-white transition-colors"
                     >
                       <svg
@@ -358,7 +360,7 @@ export function ModelSelector({
                               isLocked
                                 ? "cursor-not-allowed opacity-60"
                                 : "cursor-pointer group hover:bg-white/8 hover:border-white/15"
-                            } transition-all`}
+                            } transition-colors`}
                           >
                             <input
                               type="checkbox"

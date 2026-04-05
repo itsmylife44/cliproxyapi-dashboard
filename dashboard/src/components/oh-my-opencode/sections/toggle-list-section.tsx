@@ -18,7 +18,7 @@ export function ToggleListSection({
   onItemToggle,
 }: ToggleListSectionProps) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden transition-all hover:border-white/15">
+    <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden transition-colors hover:border-white/15">
       <button
         type="button"
         onClick={onToggleExpand}

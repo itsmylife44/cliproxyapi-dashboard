@@ -56,23 +56,46 @@ export default function LoginPage() {
   };
 
   if (!ready) {
-    return <div className="flex min-h-screen items-center justify-center" />;
+    return (
+      <main id="main-content" className="flex min-h-screen items-center justify-center px-4" aria-busy="true" aria-label="Loading">
+        <div className="w-full max-w-sm">
+          <span className="sr-only">Loading login page…</span>
+          <div className="mb-6 text-center">
+            <div className="mx-auto mb-3 h-12 w-12 rounded-xl bg-slate-800 animate-pulse" />
+            <div className="mx-auto h-7 w-40 rounded bg-slate-800 animate-pulse" />
+            <div className="mx-auto mt-2 h-4 w-52 rounded bg-slate-800/60 animate-pulse" />
+          </div>
+          <div className="glass-card rounded-xl p-4 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+            <div className="space-y-4">
+              <div>
+                <div className="mb-2 h-3 w-20 rounded bg-slate-800/60 animate-pulse" />
+                <div className="h-10 rounded-lg bg-slate-800 animate-pulse" />
+              </div>
+              <div>
+                <div className="mb-2 h-3 w-20 rounded bg-slate-800/60 animate-pulse" />
+                <div className="h-10 rounded-lg bg-slate-800 animate-pulse" />
+              </div>
+              <div className="h-10 rounded-lg bg-slate-800 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <main id="main-content" className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-600 shadow-lg shadow-purple-600/30">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-              <title>CLIProxyAPI</title>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-white">
             CLIProxyAPI
           </h1>
-          <p className="mt-1 text-sm text-white/50">Sign in to your dashboard</p>
+          <p className="mt-1 text-sm text-slate-400">Sign in to your dashboard</p>
         </div>
 
          <div className="glass-card rounded-xl p-4 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
@@ -106,21 +129,21 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="rounded-xl bg-red-500/20 border border-red-400/30 p-3 text-sm text-red-300">
+              <div role="alert" aria-live="polite" className="rounded-xl bg-red-500/20 border border-red-400/30 p-3 text-sm text-red-300">
                 {error}
               </div>
             )}
 
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? "Signing in\u2026" : "Sign in"}
             </Button>
           </form>
         </div>
 
-        <p className="mt-6 text-center text-xs text-white/30">
+        <p className="mt-6 text-center text-xs text-slate-500">
           CLIProxyAPI Management Dashboard
         </p>
       </div>
-    </div>
+    </main>
   );
 }

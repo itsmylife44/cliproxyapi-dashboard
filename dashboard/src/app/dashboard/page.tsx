@@ -12,7 +12,7 @@ import { buildAvailableModelIds, fetchProxyModels } from "@/lib/config-generator
 import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits, inferModelDefinition } from "@/lib/config-generators/opencode";
 import type { ConfigData } from "@/lib/config-generators/shared";
 import { resolveOwnedByDisplay } from "@/lib/providers/model-grouping";
-import { DashboardMiniCharts } from "@/components/dashboard-mini-charts";
+import { LazyDashboardMiniCharts } from "@/components/lazy-dashboard-mini-charts";
 
 interface ManagementFetchParams {
   path: string;
@@ -351,7 +351,7 @@ export default async function QuickStartPage() {
         </div>
       </section>
 
-      <DashboardMiniCharts />
+      <LazyDashboardMiniCharts />
 
       <QuickStartConfigSection
         apiKeys={apiKeys}

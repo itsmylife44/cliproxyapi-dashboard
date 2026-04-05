@@ -58,12 +58,12 @@ export function McpSection({
             value={mcpName}
             onChange={(e) => onMcpNameChange(e.target.value)}
             placeholder="server-name"
-            className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+            className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-colors"
           />
           <select
             value={mcpType}
             onChange={(e) => onMcpTypeChange(e.target.value as "local" | "remote")}
-            className="backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+            className="backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-colors"
           >
             <option value="local" className="bg-[#1a1a2e] text-white">Local</option>
             <option value="remote" className="bg-[#1a1a2e] text-white">Remote</option>
@@ -77,7 +77,7 @@ export function McpSection({
               onChange={(e) => onMcpUrlChange(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && onAddMcp()}
               placeholder="https://mcp.example.com/mcp"
-              className="w-full backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+              className="w-full backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-colors"
             />
           </div>
         ) : (
@@ -88,7 +88,7 @@ export function McpSection({
               onChange={(e) => onMcpCommandChange(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && onAddMcp()}
               placeholder="npx -y @modelcontextprotocol/server-everything"
-              className="w-full backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+              className="w-full backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-colors"
             />
           </div>
         )}
@@ -120,14 +120,14 @@ export function McpSection({
                     value={row.key}
                     onChange={(e) => onUpdateEnvRow(index, "key", e.target.value)}
                     placeholder="KEY"
-                    className="w-1/3 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-1.5 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+                    className="w-1/3 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-1.5 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-colors"
                   />
                   <input
                     type="text"
                     value={row.value}
                     onChange={(e) => onUpdateEnvRow(index, "value", e.target.value)}
                     placeholder="Value"
-                    className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-1.5 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+                    className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-1.5 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-colors"
                   />
                   <button
                     type="button"
@@ -148,7 +148,7 @@ export function McpSection({
             <button
               type="button"
               onClick={onAddMcp}
-              className="px-4 py-2 rounded-lg bg-blue-500/20 border border-blue-400/30 text-blue-300 text-sm font-medium hover:bg-blue-500/30 hover:border-blue-400/50 transition-all"
+              className="px-4 py-2 rounded-lg bg-blue-500/20 border border-blue-400/30 text-blue-300 text-sm font-medium hover:bg-blue-500/30 hover:border-blue-400/50 transition-colors"
             >
               Add MCP Server
             </button>
@@ -175,7 +175,7 @@ function McpList({ mcps, onRemove, onToggleEnabled }: McpListProps) {
         return (
           <div
             key={mcp.name}
-            className={`flex items-start justify-between px-3 py-3 rounded-lg border transition-all ${
+            className={`flex items-start justify-between px-3 py-3 rounded-lg border transition-colors ${
               isEnabled
                 ? "bg-blue-500/10 border-blue-400/20"
                 : "bg-white/5 border-white/10 opacity-60"

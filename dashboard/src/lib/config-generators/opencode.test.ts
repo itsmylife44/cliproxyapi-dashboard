@@ -48,6 +48,36 @@ describe("generateConfigJson", () => {
 
     expect(parsed.model).toBe("cliproxyapi/gemini-2.5-pro");
   });
+
+  it("includes permission configuration when provided", () => {
+    const configJson = generateConfigJson("sk-test", models, "https://proxy.example", {
+      permission: {
+        edit: "allow",
+        bash: {
+          git: "allow",
+          test: "allow",
+        },
+      },
+    });
+
+    const parsed = JSON.parse(configJson) as { permission: { edit: string; bash: { git: string; test: string } } };
+
+    expect(parsed.permission).toEqual({
+      edit: "allow",
+      bash: {
+        git: "allow",
+        test: "allow",
+      },
+    });
+  });
+
+  it("excludes permission field when not provided", () => {
+    const configJson = generateConfigJson("sk-test", models, "https://proxy.example");
+
+    const parsed = JSON.parse(configJson) as Record<string, unknown>;
+
+    expect(parsed.permission).toBeUndefined();
+  });
 });
 
 describe("getProxyUrl", () => {

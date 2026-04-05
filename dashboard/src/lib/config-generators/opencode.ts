@@ -294,11 +294,21 @@ export interface LspEntry {
   extensions?: string[];
 }
 
+export interface PermissionConfig {
+  edit?: "allow" | "deny";
+  bash?: {
+    git?: "allow" | "deny";
+    test?: "allow" | "deny";
+    [command: string]: "allow" | "deny" | undefined;
+  };
+}
+
 export interface GenerateConfigOptions {
   plugins?: string[];
   mcps?: McpEntry[];
   lsps?: LspEntry[];
   defaultModel?: string;
+  permission?: PermissionConfig;
 }
 
 function resolveConfigModel(
@@ -392,6 +402,10 @@ export function generateConfigJson(
       lspServers[lsp.language] = lspEntry;
     }
     configObj.lsp = lspServers;
+  }
+
+  if (options?.permission) {
+    configObj.permission = options.permission;
   }
 
   return JSON.stringify(configObj, null, 2);

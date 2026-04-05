@@ -96,7 +96,7 @@ bunx oh-my-opencode@latest install          # Normal variant
 bunx oh-my-opencode-slim@latest install     # Slim variant
 ```
 
-Each variant has its own config file (`oh-my-opencode.json` / `oh-my-opencode-slim.json`) -- they don't conflict.
+Each variant has its own config file (`oh-my-openagent.json` / `oh-my-opencode-slim.json`) -- they don't conflict.
 
 ## Screenshots
 

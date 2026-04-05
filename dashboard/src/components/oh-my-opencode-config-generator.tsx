@@ -586,7 +586,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
 
   const handleDownload = () => {
     if (configJson) {
-      downloadFile(configJson, "oh-my-opencode.json");
+      downloadFile(configJson, "oh-my-openagent.json");
     }
   };
 
@@ -708,7 +708,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Download oh-my-opencode.json
+              Download oh-my-openagent.json
             </Button>
           </div>
         </div>

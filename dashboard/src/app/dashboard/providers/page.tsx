@@ -69,6 +69,7 @@ export default function ProvidersPage() {
   const [maxKeysPerUser, setMaxKeysPerUser] = useState<number>(10);
   const [oauthAccountCount, setOauthAccountCount] = useState(0);
   const [customProviderCount, setCustomProviderCount] = useState(0);
+  const [incognitoBrowserEnabled, setIncognitoBrowserEnabled] = useState(false);
   const { showToast } = useToast();
 
   const loadMaxKeysPerUser = useCallback(async (isAdminUser: boolean, signal?: AbortSignal) => {
@@ -94,6 +95,17 @@ export default function ProvidersPage() {
     setLoading(true);
     const newConfigs = await loadProvidersData();
     setConfigs(newConfigs);
+    if (currentUser?.isAdmin) {
+      try {
+        const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG);
+        if (res.ok) {
+          const data = await res.json();
+          setIncognitoBrowserEnabled(Boolean(data["incognito-browser"]));
+        }
+      } catch {
+        // best-effort only
+      }
+    }
     setLoading(false);
   };
 
@@ -103,6 +115,21 @@ export default function ProvidersPage() {
       const newConfigs = await loadProvidersData(controller.signal);
       if (controller.signal.aborted) return;
       setConfigs(newConfigs);
+
+      if (currentUser?.isAdmin) {
+        try {
+          const configRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG, { signal: controller.signal });
+          if (configRes.ok) {
+            const configData = await configRes.json();
+            setIncognitoBrowserEnabled(Boolean(configData["incognito-browser"]));
+          }
+        } catch {
+          if (!controller.signal.aborted) {
+            setIncognitoBrowserEnabled(false);
+          }
+        }
+      }
+
       setLoading(false);
 
       if (currentUser?.isAdmin) {
@@ -189,6 +216,7 @@ export default function ProvidersPage() {
                 currentUser={currentUser}
                 refreshProviders={refreshProviders}
                 onAccountCountChange={setOauthAccountCount}
+                incognitoBrowserEnabled={incognitoBrowserEnabled}
               />
             </div>
 

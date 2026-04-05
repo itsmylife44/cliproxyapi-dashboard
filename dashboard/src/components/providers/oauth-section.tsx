@@ -20,6 +20,7 @@ interface OAuthSectionProps {
   currentUser: CurrentUserLike | null;
   refreshProviders: () => Promise<void>;
   onAccountCountChange: (count: number) => void;
+  incognitoBrowserEnabled?: boolean;
 }
 
 const OAUTH_PROVIDERS = [
@@ -193,6 +194,7 @@ export function OAuthSection({
   currentUser,
   refreshProviders,
   onAccountCountChange,
+  incognitoBrowserEnabled = false,
 }: OAuthSectionProps) {
   const [isOAuthModalOpen, setIsOAuthModalOpen] = useState(false);
   const [oauthModalStatus, setOauthModalStatus] = useState<ModalStatus>(MODAL_STATUS.IDLE);
@@ -202,6 +204,7 @@ export function OAuthSection({
   const [callbackValidation, setCallbackValidation] = useState<CallbackValidation>(CALLBACK_VALIDATION.EMPTY);
   const [callbackMessage, setCallbackMessage] = useState("Paste the full URL.");
   const [oauthErrorMessage, setOauthErrorMessage] = useState<string | null>(null);
+  const [authLaunchUrl, setAuthLaunchUrl] = useState<string | null>(null);
   const pollingIntervalRef = useRef<number | null>(null);
   const pollingAttemptsRef = useRef(0);
   const noCallbackClaimTimeoutRef = useRef<number | null>(null);
@@ -395,6 +398,7 @@ export function OAuthSection({
     setCallbackValidation(CALLBACK_VALIDATION.EMPTY);
     setCallbackMessage("Paste the full URL.");
     setOauthErrorMessage(null);
+    setAuthLaunchUrl(null);
     setDeviceCodeInfo(null);
     deviceCodePopupOpenedRef.current = false;
   };
@@ -467,6 +471,7 @@ export function OAuthSection({
     setCallbackUrl("");
     setCallbackValidation(CALLBACK_VALIDATION.EMPTY);
     setCallbackMessage("Paste the full URL.");
+    setAuthLaunchUrl(null);
 
     try {
       const res = await fetch(provider.authEndpoint);
@@ -504,11 +509,16 @@ export function OAuthSection({
         setOauthErrorMessage("OAuth response missing URL.");
         return;
       }
-      const popupOpened = openAuthPopup(data.url);
-      if (!popupOpened) {
-        setOauthModalStatus(MODAL_STATUS.ERROR);
-        setOauthErrorMessage("Popup blocked. Allow pop-ups and try again.");
-        return;
+      setAuthLaunchUrl(data.url);
+
+      const shouldOpenPopup = !incognitoBrowserEnabled;
+      if (shouldOpenPopup) {
+        const popupOpened = openAuthPopup(data.url);
+        if (!popupOpened) {
+          setOauthModalStatus(MODAL_STATUS.ERROR);
+          setOauthErrorMessage("Popup blocked. Allow pop-ups and try again.");
+          return;
+        }
       }
       authStateRef.current = data.state;
       setAuthState(data.state);
@@ -516,18 +526,32 @@ export function OAuthSection({
         setOauthModalStatus(MODAL_STATUS.WAITING);
         setCallbackValidation(CALLBACK_VALIDATION.EMPTY);
         setCallbackMessage("Paste the full URL.");
-        showToast("OAuth window opened. Follow the steps below.", "info");
+        showToast(
+          incognitoBrowserEnabled
+            ? "Open the authorization URL below in a private/incognito window, then follow the steps."
+            : "OAuth window opened. Follow the steps below.",
+          "info"
+        );
       } else {
         setOauthModalStatus(MODAL_STATUS.POLLING);
         setCallbackValidation(CALLBACK_VALIDATION.VALID);
-        setCallbackMessage("No callback URL needed. Complete sign-in in the popup window.");
-        showToast("OAuth window opened. Complete sign-in in the popup.", "info");
+        setCallbackMessage(
+          incognitoBrowserEnabled
+            ? "No callback URL needed. Open the authorization URL below in a private/incognito window."
+            : "No callback URL needed. Complete sign-in in the popup window."
+        );
+        showToast(
+          incognitoBrowserEnabled
+            ? "Open the authorization URL below in a private/incognito window."
+            : "OAuth window opened. Complete sign-in in the popup.",
+          "info"
+        );
         if (data.user_code && data.url) {
           setDeviceCodeInfo({
             verificationUrl: data.url,
             userCode: data.user_code,
           });
-          deviceCodePopupOpenedRef.current = true;
+          deviceCodePopupOpenedRef.current = shouldOpenPopup;
         }
         stopNoCallbackClaimPolling();
         void claimOAuthWithoutCallback(providerId, data.state);
@@ -791,7 +815,10 @@ export function OAuthSection({
           />
 
           <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3 text-xs text-slate-400">
-            <strong className="text-slate-200">Note:</strong> OAuth flows open in a popup window. Make sure pop-ups are allowed in your browser.
+            <strong className="text-slate-200">Note:</strong>{" "}
+            {incognitoBrowserEnabled
+              ? "Incognito mode is enabled. Browsers do not let the dashboard force-open a private window, so you will open the authorization URL manually."
+              : "OAuth flows open in a popup window. Make sure pop-ups are allowed in your browser."}
           </div>
 
           <OAuthActions
@@ -815,6 +842,58 @@ export function OAuthSection({
             </div>
           )}
 
+          {authLaunchUrl && (oauthModalStatus === MODAL_STATUS.WAITING || oauthModalStatus === MODAL_STATUS.POLLING || oauthModalStatus === MODAL_STATUS.ERROR) && (
+            <div className={`rounded-xl border-l-4 p-4 text-sm backdrop-blur-xl ${
+              incognitoBrowserEnabled
+                ? "border-amber-400/60 bg-amber-500/20 text-white"
+                : "border-slate-400/40 bg-white/5 text-white/80"
+            }`}>
+              <div className="font-medium text-white">
+                {incognitoBrowserEnabled ? "Open This URL In A Private Window" : "Authorization URL"}
+              </div>
+              <p className="mt-2 text-white/80">
+                {incognitoBrowserEnabled
+                  ? "Open this link manually in a new Firefox Private Window or browser incognito window, then continue the flow."
+                  : "If the popup did not appear, open this link manually."}
+              </p>
+              <div className="mt-3 rounded-lg bg-slate-950/50 p-3">
+                <input
+                  readOnly
+                  value={authLaunchUrl}
+                  className="w-full bg-transparent font-mono text-xs text-slate-100 outline-none"
+                />
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(authLaunchUrl);
+                      showToast("Authorization URL copied", "success");
+                    } catch {
+                      showToast("Failed to copy authorization URL", "error");
+                    }
+                  }}
+                >
+                  Copy URL
+                </Button>
+                {!incognitoBrowserEnabled && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      const popupOpened = openAuthPopup(authLaunchUrl);
+                      if (!popupOpened) {
+                        showToast("Popup blocked. Allow pop-ups and try again.", "error");
+                      }
+                    }}
+                  >
+                    Open Again
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
           {(oauthModalStatus === MODAL_STATUS.WAITING ||
             oauthModalStatus === MODAL_STATUS.SUBMITTING ||
             oauthModalStatus === MODAL_STATUS.POLLING ||
@@ -826,7 +905,7 @@ export function OAuthSection({
                   Step-by-step
                 </div>
                 <ol className="mt-3 list-decimal space-y-2 pl-4 text-white/90">
-                  <li>Log in and authorize in the popup window.</li>
+                  <li>{incognitoBrowserEnabled ? "Open the authorization URL above in a private/incognito window and sign in there." : "Log in and authorize in the popup window."}</li>
                   <li>
                     After authorizing, the page will fail to load (this is
                     expected).
@@ -879,7 +958,7 @@ export function OAuthSection({
                 Device Authorization
               </div>
               <ol className="mt-3 list-decimal space-y-2 pl-4 text-white/90">
-                <li>A browser window has opened with the authorization page.</li>
+                <li>{incognitoBrowserEnabled ? "Open the authorization URL above in a private/incognito window." : "A browser window has opened with the authorization page."}</li>
                 <li>Log in and approve the access request.</li>
                 <li>Once approved, this dialog will update automatically.</li>
               </ol>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { mergeConfigYaml } from "@/lib/config-yaml";
 import AgentConfigEditor from "@/components/config/agent-config-editor";
 import ConfigPreview from "@/components/config/config-preview";
 import yaml from "js-yaml";
@@ -142,6 +143,13 @@ export default function ConfigPage() {
   const [resettingProxy, setResettingProxy] = useState(false);
   const { showToast } = useToast();
 
+  const getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error && error.message.trim()) {
+      return error.message;
+    }
+    return "Unknown error";
+  };
+
   const hasUnsavedChanges = config && originalConfig && JSON.stringify(config) !== JSON.stringify(originalConfig);
 
   const fetchConfig = useCallback(async (retries = 3, delayMs = 1500) => {
@@ -277,8 +285,8 @@ export default function ConfigPage() {
             return false;
           }
           return true;
-        } catch {
-          errors.push(`${endpoint}: network error`);
+        } catch (error) {
+          errors.push(`${endpoint}: ${getErrorMessage(error)}`);
           return false;
         }
       };
@@ -330,8 +338,7 @@ export default function ConfigPage() {
         }
       }
 
-      // Fetch the current live config once — used both for the auth-dir
-      // guard and for the yaml merge below.
+      // Fetch the current live config once — used for the auth-dir guard.
       let liveConfig: Record<string, unknown> | null = null;
       try {
         const currentRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG);
@@ -355,28 +362,18 @@ export default function ConfigPage() {
 
       // If there are fields that need config.yaml update, merge and write
       if (Object.keys(yamlChanges).length > 0) {
-        if (!liveConfig) {
-          errors.push("Failed to fetch current config for YAML update");
-        } else {
-          try {
-            // Deep merge only the changed fields
-            const mergedConfig = { ...liveConfig };
-
-            for (const [key, value] of Object.entries(yamlChanges)) {
-              if (
-                value !== null && typeof value === "object" && !Array.isArray(value) &&
-                mergedConfig[key] !== null && typeof mergedConfig[key] === "object" && !Array.isArray(mergedConfig[key])
-              ) {
-                mergedConfig[key] = { ...(mergedConfig[key] as Record<string, unknown>), ...(value as Record<string, unknown>) };
-              } else {
-                mergedConfig[key] = value;
-              }
-            }
+        try {
+          const rawYamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML);
+          if (!rawYamlRes.ok) {
+            errors.push("Failed to fetch current config.yaml for YAML update");
+          } else {
+            const rawYaml = await rawYamlRes.text();
+            const mergedYaml = mergeConfigYaml(rawYaml, yamlChanges);
 
             const yamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
               method: "PUT",
               headers: { "Content-Type": "text/yaml" },
-              body: yaml.dump(mergedConfig, { lineWidth: -1, noRefs: true }),
+              body: mergedYaml,
             });
 
             if (!yamlRes.ok) {
@@ -384,9 +381,9 @@ export default function ConfigPage() {
             } else {
               successCount += Object.keys(yamlChanges).length;
             }
-          } catch {
-            errors.push("Network error updating config.yaml");
           }
+        } catch (error) {
+          errors.push(`Failed to update config.yaml: ${getErrorMessage(error)}`);
         }
       }
 
@@ -404,8 +401,8 @@ export default function ConfigPage() {
 
       // Re-fetch after a short delay to confirm changes
       setTimeout(() => { void fetchConfig(3, 1000); }, 1500);
-    } catch {
-      showToast("Failed to save configuration", "error");
+    } catch (error) {
+      showToast(`Failed to save configuration: ${getErrorMessage(error)}`, "error");
       setSaving(false);
     }
   };

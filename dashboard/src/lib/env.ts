@@ -1,5 +1,22 @@
 import { z } from "zod";
 
+const BUILD_TIME_DATABASE_URL = "postgresql://build:build@localhost:5432/build";
+const BUILD_TIME_JWT_SECRET = "build-time-placeholder-at-least-32-chars";
+const BUILD_TIME_MANAGEMENT_API_KEY = "build-time-placeholder-16ch";
+
+function withBuildTimeFallbacks(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  if (process.env.NEXT_PHASE !== "phase-production-build") {
+    return source;
+  }
+
+  return {
+    ...source,
+    DATABASE_URL: source.DATABASE_URL || BUILD_TIME_DATABASE_URL,
+    JWT_SECRET: source.JWT_SECRET || BUILD_TIME_JWT_SECRET,
+    MANAGEMENT_API_KEY: source.MANAGEMENT_API_KEY || BUILD_TIME_MANAGEMENT_API_KEY,
+  };
+}
+
 const envSchema = z.object({
   DATABASE_URL: z
     .string()
@@ -58,7 +75,7 @@ const envSchema = z.object({
 });
 
 function parseEnv() {
-  const result = envSchema.safeParse(process.env);
+  const result = envSchema.safeParse(withBuildTimeFallbacks(process.env));
   
   if (!result.success) {
     const errors = result.error.issues

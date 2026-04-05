@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
@@ -55,10 +55,9 @@ const loadProvidersData = async (signal?: AbortSignal): Promise<Record<ProviderI
 
 export default function ProvidersPage() {
   const { user: authUser } = useAuth();
-  const currentUser = useMemo<CurrentUser | null>(
-    () => authUser ? { id: authUser.id, username: authUser.username, isAdmin: authUser.isAdmin } : null,
-    [authUser?.id, authUser?.username, authUser?.isAdmin]
-  );
+  const currentUser: CurrentUser | null = authUser
+    ? { id: authUser.id, username: authUser.username, isAdmin: authUser.isAdmin }
+    : null;
   const [configs, setConfigs] = useState<Record<ProviderId, ProviderState>>(() => ({
     [PROVIDER_IDS.CLAUDE]: { keys: [] },
     [PROVIDER_IDS.GEMINI]: { keys: [] },
@@ -85,7 +84,7 @@ export default function ProvidersPage() {
           }
         }
       }
-    } catch (err) {
+    } catch {
       if (signal?.aborted) return;
     }
   }, []);
@@ -105,7 +104,7 @@ export default function ProvidersPage() {
       setConfigs(newConfigs);
       setLoading(false);
 
-      if (currentUser?.isAdmin) {
+      if (authUser?.isAdmin) {
         await loadMaxKeysPerUser(true, controller.signal);
       }
     };
@@ -116,7 +115,7 @@ export default function ProvidersPage() {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [currentUser, loadMaxKeysPerUser]);
+  }, [authUser, loadMaxKeysPerUser]);
 
   const providerStats = API_KEY_PROVIDERS.map((provider) => ({
     id: provider.id,

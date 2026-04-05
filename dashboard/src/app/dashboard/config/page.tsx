@@ -126,7 +126,11 @@ function stripOAuthIds(cfg: Config): Config {
 
   const cleaned: Record<string, OAuthModelAliasEntry[]> = {};
   for (const [provider, entries] of Object.entries(aliases)) {
-    cleaned[provider] = entries.map(({ _id: _, ...rest }) => rest);
+    cleaned[provider] = entries.map((entry) => {
+      const { _id, ...rest } = entry;
+      void _id;
+      return rest;
+    });
   }
   return { ...cfg, "oauth-model-alias": cleaned };
 }

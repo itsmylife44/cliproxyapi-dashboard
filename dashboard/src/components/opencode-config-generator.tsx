@@ -104,7 +104,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
       }
     }
     loadConfig();
-  }, []);
+  }, [onVariantChange]);
 
   useEffect(() => {
     if (isLoading) return;

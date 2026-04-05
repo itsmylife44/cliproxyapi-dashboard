@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { generateConfigJson, getProxyUrl, type ModelDefinition } from "./opencode";
 
 const models: Record<string, ModelDefinition> = {

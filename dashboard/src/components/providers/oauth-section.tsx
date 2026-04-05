@@ -199,7 +199,6 @@ export function OAuthSection({
   const [isOAuthModalOpen, setIsOAuthModalOpen] = useState(false);
   const [oauthModalStatus, setOauthModalStatus] = useState<ModalStatus>(MODAL_STATUS.IDLE);
   const [selectedOAuthProviderId, setSelectedOAuthProviderId] = useState<OAuthProviderId | null>(null);
-  const [authState, setAuthState] = useState<string | null>(null);
   const [callbackUrl, setCallbackUrl] = useState("");
   const [callbackValidation, setCallbackValidation] = useState<CallbackValidation>(CALLBACK_VALIDATION.EMPTY);
   const [callbackMessage, setCallbackMessage] = useState("Paste the full URL.");
@@ -396,7 +395,6 @@ export function OAuthSection({
     selectedOAuthProviderIdRef.current = null;
     setSelectedOAuthProviderId(null);
     authStateRef.current = null;
-    setAuthState(null);
     setCallbackUrl("");
     setCallbackValidation(CALLBACK_VALIDATION.EMPTY);
     setCallbackMessage("Paste the full URL.");
@@ -496,7 +494,6 @@ export function OAuthSection({
 
       if (!data.url && data.method === "device_code") {
         authStateRef.current = data.state;
-        setAuthState(data.state);
         setOauthModalStatus(MODAL_STATUS.POLLING);
         setCallbackValidation(CALLBACK_VALIDATION.VALID);
         setCallbackMessage("Waiting for device authorization details...");
@@ -524,7 +521,6 @@ export function OAuthSection({
         }
       }
       authStateRef.current = data.state;
-      setAuthState(data.state);
       if (provider.requiresCallback) {
         setOauthModalStatus(MODAL_STATUS.WAITING);
         setCallbackValidation(CALLBACK_VALIDATION.EMPTY);

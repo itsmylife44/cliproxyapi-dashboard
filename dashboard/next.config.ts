@@ -1,4 +1,3 @@
-import path from "path";
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -33,9 +32,6 @@ const getCSP = (): string => {
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  turbopack: {
-    root: path.resolve(__dirname),
-  },
   async headers() {
     const csp = getCSP();
 

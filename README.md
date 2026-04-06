@@ -13,7 +13,7 @@
   <a href="https://github.com/itsmylife44/cliproxyapi-dashboard/actions/workflows/release.yml"><img src="https://github.com/itsmylife44/cliproxyapi-dashboard/actions/workflows/release.yml/badge.svg" alt="Build"></a>
   <a href="https://github.com/itsmylife44/cliproxyapi-dashboard/pkgs/container/cliproxyapi-dashboard%2Fdashboard"><img src="https://img.shields.io/badge/Docker-GHCR-blue?logo=docker" alt="Docker"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"></a>
-  <a href="https://discord.gg/RngVxcNvfg"><img src="https://img.shields.io/discord/1490772349086208232?logo=discord&logoColor=white&label=Discord&color=5865F2" alt="Discord"></a>
+  <a href="https://discord.gg/RngVxcNvfg"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
   <img src="https://img.shields.io/badge/Next.js-16-black?logo=next.js" alt="Next.js 16">
   <img src="https://img.shields.io/badge/React-19-blue?logo=react" alt="React 19">
   <img src="https://img.shields.io/badge/TypeScript-5-blue?logo=typescript" alt="TypeScript">

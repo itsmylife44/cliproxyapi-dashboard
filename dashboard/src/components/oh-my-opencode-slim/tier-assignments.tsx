@@ -34,10 +34,10 @@ export function SlimTierAssignments({
   const overrideCount = agentAssignments.filter((item) => item.isOverride).length;
 
   return (
-    <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-3">
+    <div className="space-y-3 rounded-lg border border-[#e5e5e5] bg-[#f5f5f5] p-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wider text-white/50">Slim Agent Assignments <HelpTooltip content="Each agent is auto-assigned the best model from your proxy based on its tier. Click the model to override. The orchestrator delegates tasks to other agents automatically." /></p>
-        <p className="text-[11px] text-white/40">
+        <p className="text-xs font-medium uppercase tracking-wider text-[#777169]">Slim Agent Assignments <HelpTooltip content="Each agent is auto-assigned the best model from your proxy based on its tier. Click the model to override. The orchestrator delegates tasks to other agents automatically." /></p>
+        <p className="text-[11px] text-[#999]">
           {overrideCount}/{agentAssignments.length} custom
         </p>
       </div>
@@ -49,21 +49,21 @@ export function SlimTierAssignments({
         return (
           <div key={`slim-tier-${tier}`} className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/45">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#999]">
                 {tierMeta.label}
               </p>
-              <p className="text-[11px] text-white/35">{tierMeta.hint}</p>
+              <p className="text-[11px] text-[#aaa]">{tierMeta.hint}</p>
             </div>
             <div className="space-y-2">
               {tierAssignments.map(({ name, model, isOverride, config, label }) => (
                 <div
                   key={name}
-                  className="rounded-lg border border-white/10 bg-black/15 p-3 space-y-2.5"
+                  className="rounded-lg border border-[#e5e5e5] bg-black/15 p-3 space-y-2.5"
                 >
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-white/90 font-mono">{name}</p>
-                      <p className="text-[11px] text-white/45">{label}</p>
+                      <p className="text-xs font-bold text-black font-mono">{name}</p>
+                      <p className="text-[11px] text-[#999]">{label}</p>
                     </div>
                     <ModelBadge
                       name={name}
@@ -94,7 +94,7 @@ export function SlimTierAssignments({
                     />
                   </div>
                   <div>
-                    <span className="text-[10px] text-white/40">Skills <HelpTooltip content="Toggle which skills this agent can use. 'All' enables everything. With 'All' active, click a skill to exclude it. Install skills first via the setup command above." /></span>
+                    <span className="text-[10px] text-[#999]">Skills <HelpTooltip content="Toggle which skills this agent can use. 'All' enables everything. With 'All' active, click a skill to exclude it. Install skills first via the setup command above." /></span>
                     <AgentSkillsSection
                       agentName={name}
                       config={config}

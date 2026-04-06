@@ -38,11 +38,11 @@ export function BackgroundTasksSection({
   onModelConcurrencyRemove,
 }: BackgroundTasksSectionProps) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden transition-colors hover:border-white/15">
+    <div className="rounded-xl border border-[#e5e5e5] bg-[#fafafa] overflow-hidden transition-colors hover:border-[#e5e5e5]">
       <button
         type="button"
         onClick={onToggleExpand}
-        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-white/60 hover:text-white/90 hover:bg-white/[0.04] transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-[#777169] hover:text-black hover:bg-[#f5f5f5] transition-colors"
       >
         <svg
           width="10"
@@ -63,7 +63,7 @@ export function BackgroundTasksSection({
       {isExpanded && (
         <div className="px-3 pb-3 space-y-2">
           <div className="space-y-1">
-            <span className="text-xs text-white/50">Default Concurrency</span>
+            <span className="text-xs text-[#777169]">Default Concurrency</span>
             <input
               type="number"
               min={1}
@@ -74,11 +74,11 @@ export function BackgroundTasksSection({
                   onBgTaskNumberChange("defaultConcurrency", parsed);
                 }
               }}
-              className="w-full px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
+              className="w-full px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black focus:outline-none focus:border-black/20"
             />
           </div>
           <div className="space-y-1">
-            <span className="text-xs text-white/50">Stale Timeout (ms)</span>
+            <span className="text-xs text-[#777169]">Stale Timeout (ms)</span>
             <input
               type="number"
               min={60000}
@@ -89,16 +89,16 @@ export function BackgroundTasksSection({
                   onBgTaskNumberChange("staleTimeoutMs", parsed);
                 }
               }}
-              className="w-full px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
+              className="w-full px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black focus:outline-none focus:border-black/20"
             />
           </div>
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-white/50">Provider Concurrency</span>
+              <span className="text-xs text-[#777169]">Provider Concurrency</span>
               <button
                 type="button"
                 onClick={onProviderConcurrencyAdd}
-                className="text-xs text-violet-400 hover:text-violet-300"
+                className="text-xs text-[#4e4e4e] hover:text-black"
               >
                 + Add
               </button>
@@ -110,7 +110,7 @@ export function BackgroundTasksSection({
                   placeholder="Provider"
                   value={row.key}
                   onChange={(e) => onProviderConcurrencyChange(idx, "key", e.target.value)}
-                  className="flex-1 px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
+                  className="flex-1 px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black focus:outline-none focus:border-black/20"
                 />
                 <input
                   type="number"
@@ -122,12 +122,12 @@ export function BackgroundTasksSection({
                       onProviderConcurrencyChange(idx, "value", parsed);
                     }
                   }}
-                  className="w-20 px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
+                  className="w-20 px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black focus:outline-none focus:border-black/20"
                 />
                 <button
                   type="button"
                   onClick={() => onProviderConcurrencyRemove(idx)}
-                  className="text-xs text-red-400 hover:text-red-300"
+                  className="text-xs text-red-500 hover:text-red-600"
                 >
                   Remove
                 </button>
@@ -136,11 +136,11 @@ export function BackgroundTasksSection({
           </div>
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-white/50">Model Concurrency</span>
+              <span className="text-xs text-[#777169]">Model Concurrency</span>
               <button
                 type="button"
                 onClick={onModelConcurrencyAdd}
-                className="text-xs text-violet-400 hover:text-violet-300"
+                className="text-xs text-[#4e4e4e] hover:text-black"
               >
                 + Add
               </button>
@@ -152,7 +152,7 @@ export function BackgroundTasksSection({
                   placeholder="Model"
                   value={row.key}
                   onChange={(e) => onModelConcurrencyChange(idx, "key", e.target.value)}
-                  className="flex-1 px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
+                  className="flex-1 px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black focus:outline-none focus:border-black/20"
                 />
                 <input
                   type="number"
@@ -164,12 +164,12 @@ export function BackgroundTasksSection({
                       onModelConcurrencyChange(idx, "value", parsed);
                     }
                   }}
-                  className="w-20 px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
+                  className="w-20 px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black focus:outline-none focus:border-black/20"
                 />
                 <button
                   type="button"
                   onClick={() => onModelConcurrencyRemove(idx)}
-                  className="text-xs text-red-400 hover:text-red-300"
+                  className="text-xs text-red-500 hover:text-red-600"
                 >
                   Remove
                 </button>

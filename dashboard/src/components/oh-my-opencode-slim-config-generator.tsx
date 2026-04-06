@@ -211,12 +211,12 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
   if (apiKeys.length === 0) {
     return (
       <div className="space-y-3">
-        <div className="border-l-4 border-amber-400/60 backdrop-blur-xl bg-amber-500/10 p-4 rounded-r-xl">
-          <div className="text-sm font-medium text-white mb-1">API Key Required</div>
-          <p className="text-sm text-white/70">Create an API key to generate your slim configuration.</p>
+        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 rounded-r-xl">
+          <div className="text-sm font-medium text-black mb-1">API Key Required</div>
+          <p className="text-sm text-[#4e4e4e]">Create an API key to generate your slim configuration.</p>
           <Link
             href="/dashboard/api-keys"
-            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-500/20 border border-violet-400/30 text-violet-300 text-sm font-medium hover:bg-violet-500/30 transition-colors"
+            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] text-black text-sm font-medium hover:bg-[#eee] transition-colors"
           >
             Create API Key →
           </Link>
@@ -228,13 +228,13 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
   if (!hasModels || !slimConfig) {
     return (
       <div className="space-y-4">
-        <div className="border-l-4 border-amber-400/60 bg-amber-500/10 backdrop-blur-xl p-4 text-sm rounded-r-xl">
-          <p className="text-white/90 font-medium mb-1">No providers configured</p>
-          <p className="text-white/60 text-xs">
+        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 text-sm rounded-r-xl">
+          <p className="text-black font-medium mb-1">No providers configured</p>
+          <p className="text-[#777169] text-xs">
             Configure at least one AI provider before generating a slim config. Head to{" "}
             <Link
               href="/dashboard/providers"
-              className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30"
+              className="text-[#4e4e4e] font-medium hover:text-black underline underline-offset-2 decoration-[#ccc]"
             >
               Providers
             </Link>
@@ -292,10 +292,10 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-white/70">
+      <p className="text-sm text-[#4e4e4e]">
         Slim uses 6 specialized agents (orchestrator, oracle, designer, explorer, librarian, fixer) with a dedicated fallback system.
         Changes save automatically.
-        {saving && <span className="ml-2 text-amber-300/70 text-xs">Saving...</span>}
+        {saving && <span className="ml-2 text-amber-700/70 text-xs">Saving...</span>}
       </p>
 
       <SlimTierAssignments
@@ -320,7 +320,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-xs font-medium text-white/60 hover:text-white/90 transition-colors"
+        className="flex items-center gap-2 text-xs font-medium text-[#777169] hover:text-black transition-colors"
       >
         <svg
           width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"

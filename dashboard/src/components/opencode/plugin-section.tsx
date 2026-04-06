@@ -17,7 +17,7 @@ export function PluginSection({
 }: PluginSectionProps) {
   return (
     <div className="space-y-2">
-      <label htmlFor="plugin-input" className="text-xs font-medium text-white/50 uppercase tracking-wider">
+      <label htmlFor="plugin-input" className="text-xs font-medium text-[#777169] uppercase tracking-wider">
         Plugins
       </label>
       <div className="flex gap-2">
@@ -33,12 +33,12 @@ export function PluginSection({
             }
           }}
           placeholder="plugin-name@version"
-          className="flex-1 backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white/90 font-mono placeholder:text-white/30 focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-colors"
+          className="flex-1 bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg px-3 py-2 text-sm text-black font-mono placeholder:text-[#aaa] focus:border-black/20 focus:bg-white focus:outline-none transition-colors"
         />
         <button
           type="button"
           onClick={onAddPlugin}
-          className="px-4 py-2 rounded-lg bg-purple-500/20 border border-purple-400/30 text-purple-300 text-sm font-medium hover:bg-purple-500/30 hover:border-purple-400/50 transition-colors"
+          className="px-4 py-2 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] text-black text-sm font-medium hover:bg-[#eee] hover:border-[#ccc] transition-colors"
         >
           Add
         </button>
@@ -47,13 +47,13 @@ export function PluginSection({
         {plugins.map((plugin) => (
           <span
             key={plugin}
-            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-400/20 text-xs text-purple-300 font-mono"
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] text-xs text-black font-mono"
           >
             {plugin}
             <button
               type="button"
               onClick={() => onRemovePlugin(plugin)}
-              className="hover:text-red-400 transition-colors"
+              className="hover:text-red-600 transition-colors"
               aria-label={`Remove ${plugin}`}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

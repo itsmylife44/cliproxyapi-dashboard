@@ -478,12 +478,12 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   if (apiKeys.length === 0) {
     return (
       <div className="space-y-3">
-        <div className="border-l-4 border-amber-400/60 backdrop-blur-xl bg-amber-500/10 p-4 rounded-r-xl">
-          <div className="text-sm font-medium text-white mb-1">API Key Required</div>
-          <p className="text-sm text-white/70">Create an API key to generate your configuration.</p>
+        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 rounded-r-xl">
+          <div className="text-sm font-medium text-black mb-1">API Key Required</div>
+          <p className="text-sm text-[#4e4e4e]">Create an API key to generate your configuration.</p>
           <Link
             href="/dashboard/api-keys"
-            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-500/20 border border-violet-400/30 text-violet-300 text-sm font-medium hover:bg-violet-500/30 transition-colors"
+            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] text-black text-sm font-medium hover:bg-[#eee] transition-colors"
           >
             Create API Key →
           </Link>
@@ -495,13 +495,13 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   if (!hasModels || !ohMyConfig) {
     return (
       <div className="space-y-4">
-        <div className="border-l-4 border-amber-400/60 bg-amber-500/10 backdrop-blur-xl p-4 text-sm rounded-r-xl">
-          <p className="text-white/90 font-medium mb-1">No providers configured</p>
-          <p className="text-white/60 text-xs">
+        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 text-sm rounded-r-xl">
+          <p className="text-black font-medium mb-1">No providers configured</p>
+          <p className="text-[#777169] text-xs">
             You need to configure at least one AI provider before generating an Oh My Open Agent config. Head to the{" "}
             <Link
               href="/dashboard/providers"
-              className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30"
+              className="text-[#4e4e4e] font-medium hover:text-black underline underline-offset-2 decoration-[#ccc]"
             >
               Providers
             </Link>{" "}
@@ -603,15 +603,15 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <p className="text-sm text-white/70">
+        <p className="text-sm text-[#4e4e4e]">
           Assignments are grouped by tier so core agents stay separated from fast and creative workflows. Click any
           model to override it. Changes save automatically and sync via Config Sync.
-          {saving && <span className="ml-2 text-amber-300/70 text-xs">Saving...</span>}
+          {saving && <span className="ml-2 text-amber-700/70 text-xs">Saving...</span>}
         </p>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-white/60">Preset:</span>
+          <span className="text-sm text-[#777169]">Preset:</span>
           <select
-            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-white/90 focus:outline-none focus:border-violet-400/50"
+            className="px-3 py-1.5 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] text-sm text-black focus:outline-none focus:border-black/20/50"
             disabled={presetsLoading || presets.length === 0}
             onChange={(e) => {
               const presetName = e.target.value;
@@ -678,7 +678,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-xs font-medium text-white/60 hover:text-white/90 transition-colors"
+        className="flex items-center gap-2 text-xs font-medium text-[#777169] hover:text-black transition-colors"
       >
         <svg
           width="12"

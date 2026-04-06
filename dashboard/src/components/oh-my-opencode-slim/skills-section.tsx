@@ -76,13 +76,13 @@ export function AgentSkillsSection({ agentName, config, onSkillsChange }: AgentS
             title={`${skill.description}${excluded ? " (excluded)" : ""}`}
             className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors ${
               enabled
-                ? "border-teal-400/40 bg-teal-500/15 text-teal-300"
+                ? "border-[#e5e5e5] bg-[#f5f5f5] text-black"
                 : excluded
-                  ? "border-red-400/30 bg-red-500/10 text-red-300/70 line-through"
-                  : "border-white/10 bg-white/5 text-white/40 hover:text-white/60 hover:border-white/20"
+                  ? "border-red-200 bg-red-50 text-red-600/70 line-through"
+                  : "border-[#e5e5e5] bg-[#f5f5f5] text-[#999] hover:text-[#777169] hover:border-[#ddd]"
             }`}
           >
-            <span className={`inline-block w-1.5 h-1.5 rounded-full ${enabled ? "bg-teal-400" : excluded ? "bg-red-400/50" : "bg-white/20"}`} />
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${enabled ? "bg-emerald-500" : excluded ? "bg-red-400" : "bg-[#ddd]"}`} />
             {skill.label}
           </button>
         );

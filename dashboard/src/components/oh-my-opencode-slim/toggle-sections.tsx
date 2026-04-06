@@ -28,18 +28,18 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03]">
+    <div className="rounded-lg border border-[#e5e5e5] bg-[#fafafa]">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={isExpanded}
         className="flex w-full items-center justify-between px-3 py-2.5 text-left"
       >
-        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-white/50">{label} {tooltip && <HelpTooltip content={tooltip} />}</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[#777169]">{label} {tooltip && <HelpTooltip content={tooltip} />}</span>
         <svg
           width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          className={`text-white/40 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
+          className={`text-[#999] transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
           aria-hidden="true"
         >
           <polyline points="9 18 15 12 9 6" />
@@ -94,7 +94,7 @@ export function SlimToggleSections({
         <div className="flex-1 space-y-3">
           {/* Tmux */}
           <Section label="Tmux" isExpanded={showTmux} onToggle={() => setShowTmux(!showTmux)} tooltip="Split your terminal into panes to monitor agent activity in real-time">
-            <label className="flex items-center gap-2 text-xs text-white/70">
+            <label className="flex items-center gap-2 text-xs text-[#4e4e4e]">
               <input
                 type="checkbox"
                 checked={tmux.enabled ?? false}
@@ -102,29 +102,29 @@ export function SlimToggleSections({
                   const newEnabled = !tmux.enabled;
                   onTmuxChange(newEnabled ? { enabled: true, layout: tmux.layout ?? "main-vertical", main_pane_size: tmux.main_pane_size ?? 60 } : undefined);
                 }}
-                className="accent-violet-500"
+                className="accent-black"
               />
               Enable tmux integration
             </label>
             {tmux.enabled && (
               <>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-white/50 w-16">Layout</span>
+                  <span className="text-xs text-[#777169] w-16">Layout</span>
                   <select
                     value={tmux.layout ?? "main-vertical"}
                     onChange={(e) => onTmuxChange({ ...tmux, layout: e.target.value as SlimTmuxConfig["layout"] })}
-                    className="flex-1 rounded border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/80"
+                    className="flex-1 rounded border border-[#e5e5e5] bg-[#f0f0f0] px-2 py-1 text-xs text-[#4e4e4e]"
                   >
                     {SLIM_TMUX_LAYOUTS.map((l) => <option key={l} value={l}>{l}</option>)}
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-white/50 w-16">Pane %</span>
+                  <span className="text-xs text-[#777169] w-16">Pane %</span>
                   <input
                     type="number" min={20} max={80}
                     value={tmux.main_pane_size ?? 60}
                     onChange={(e) => { const v = parseInt(e.target.value, 10); onTmuxChange({ ...tmux, main_pane_size: isNaN(v) ? 60 : v }); }}
-                    className="w-20 rounded border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/80"
+                    className="w-20 rounded border border-[#e5e5e5] bg-[#f0f0f0] px-2 py-1 text-xs text-[#4e4e4e]"
                   />
                 </div>
               </>
@@ -134,7 +134,7 @@ export function SlimToggleSections({
           {/* Background */}
           <Section label="Background" isExpanded={showBackground} onToggle={() => setShowBackground(!showBackground)} tooltip="Limit how many agent tasks can run simultaneously">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-white/50">Max concurrent</span>
+              <span className="text-xs text-[#777169]">Max concurrent</span>
               <input
                 type="number" min={1} max={50}
                 value={bg.maxConcurrentStarts ?? 10}
@@ -142,7 +142,7 @@ export function SlimToggleSections({
                   const val = parseInt(e.target.value, 10);
                   onBackgroundChange(val > 0 ? { maxConcurrentStarts: Math.min(50, val) } : undefined);
                 }}
-                className="w-20 rounded border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/80"
+                className="w-20 rounded border border-[#e5e5e5] bg-[#f0f0f0] px-2 py-1 text-xs text-[#4e4e4e]"
               />
             </div>
           </Section>
@@ -150,21 +150,21 @@ export function SlimToggleSections({
           {/* Scoring Engine */}
           <Section label="Scoring & Balance" isExpanded={showScoring} onToggle={() => setShowScoring(!showScoring)} tooltip="Scoring engine ranks models for auto-assignment. Balance distributes requests across providers to avoid rate limits.">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-white/50 w-28">Scoring engine</span>
+              <span className="text-xs text-[#777169] w-28">Scoring engine</span>
               <select
                 value={overrides.scoringEngineVersion ?? "v1"}
                 onChange={(e) => onScalarChange("scoringEngineVersion", e.target.value)}
-                className="flex-1 rounded border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/80"
+                className="flex-1 rounded border border-[#e5e5e5] bg-[#f0f0f0] px-2 py-1 text-xs text-[#4e4e4e]"
               >
                 {SLIM_SCORING_VERSIONS.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
             </div>
-            <label className="flex items-center gap-2 text-xs text-white/70">
+            <label className="flex items-center gap-2 text-xs text-[#4e4e4e]">
               <input
                 type="checkbox"
                 checked={overrides.balanceProviderUsage ?? false}
                 onChange={() => onScalarChange("balanceProviderUsage", !overrides.balanceProviderUsage)}
-                className="accent-violet-500"
+                className="accent-black"
               />
               Balance provider usage
             </label>
@@ -174,33 +174,33 @@ export function SlimToggleSections({
         <div className="flex-1 space-y-3">
           {/* Fallback */}
           <Section label="Fallback" isExpanded={showFallback} onToggle={() => setShowFallback(!showFallback)} tooltip="When a model times out, automatically retry with the next model in the fallback chain">
-            <label className="flex items-center gap-2 text-xs text-white/70">
+            <label className="flex items-center gap-2 text-xs text-[#4e4e4e]">
               <input
                 type="checkbox"
                 checked={fb.enabled ?? true}
                 onChange={() => onFallbackChange({ ...fb, enabled: !(fb.enabled ?? true) })}
-                className="accent-violet-500"
+                className="accent-black"
               />
               Enable fallback
             </label>
             {(fb.enabled ?? true) && (
               <>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-white/50 w-24">Timeout (ms)</span>
+                  <span className="text-xs text-[#777169] w-24">Timeout (ms)</span>
                   <input
                     type="number" min={0}
                     value={fb.timeoutMs ?? 15000}
                     onChange={(e) => { const v = parseInt(e.target.value, 10); onFallbackChange({ ...fb, timeoutMs: isNaN(v) ? 15000 : v }); }}
-                    className="w-24 rounded border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/80"
+                    className="w-24 rounded border border-[#e5e5e5] bg-[#f0f0f0] px-2 py-1 text-xs text-[#4e4e4e]"
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-white/50 w-24">Retry delay</span>
+                  <span className="text-xs text-[#777169] w-24">Retry delay</span>
                   <input
                     type="number" min={0}
                     value={fb.retryDelayMs ?? 500}
                     onChange={(e) => { const v = parseInt(e.target.value, 10); onFallbackChange({ ...fb, retryDelayMs: isNaN(v) ? 500 : v }); }}
-                    className="w-24 rounded border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/80"
+                    className="w-24 rounded border border-[#e5e5e5] bg-[#f0f0f0] px-2 py-1 text-xs text-[#4e4e4e]"
                   />
                 </div>
               </>
@@ -212,9 +212,9 @@ export function SlimToggleSections({
             {(overrides.disabled_mcps ?? []).length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {(overrides.disabled_mcps ?? []).map((mcp) => (
-                  <span key={mcp} className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-white/70">
+                  <span key={mcp} className="inline-flex items-center gap-1 rounded-full border border-[#e5e5e5] bg-[#f5f5f5] px-2 py-0.5 text-[11px] text-[#4e4e4e]">
                     {mcp}
-                    <button type="button" onClick={() => onDisabledMcpRemove(mcp)} className="text-white/40 hover:text-white/80" aria-label={`Remove ${mcp}`}>&times;</button>
+                    <button type="button" onClick={() => onDisabledMcpRemove(mcp)} className="text-[#999] hover:text-[#4e4e4e]" aria-label={`Remove ${mcp}`}>&times;</button>
                   </span>
                 ))}
               </div>
@@ -231,12 +231,12 @@ export function SlimToggleSections({
                   }
                 }}
                 placeholder="MCP name to disable"
-                className="flex-1 rounded border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/80 placeholder:text-white/30"
+                className="flex-1 rounded border border-[#e5e5e5] bg-[#f0f0f0] px-2 py-1 text-xs text-[#4e4e4e] placeholder:text-[#aaa]"
               />
               <button
                 type="button"
                 onClick={() => { if (onDisabledMcpAdd(mcpInput)) setMcpInput(""); }}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white/60 hover:text-white/90"
+                className="rounded border border-[#e5e5e5] bg-[#f5f5f5] px-2 py-1 text-xs text-[#777169] hover:text-black"
               >
                 Add
               </button>

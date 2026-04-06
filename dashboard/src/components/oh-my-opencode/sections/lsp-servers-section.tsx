@@ -22,10 +22,10 @@ const LSP_PRESETS = [
 ] as const;
 
 const PRESET_BUTTON_STYLES: Record<string, string> = {
-  emerald: "bg-emerald-500/10 border-emerald-400/20 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400/40",
-  cyan: "bg-cyan-500/10 border-cyan-400/20 text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-400/40",
-  teal: "bg-teal-500/10 border-teal-400/20 text-teal-300 hover:bg-teal-500/20 hover:border-teal-400/40",
-  blue: "bg-blue-500/10 border-blue-400/20 text-blue-300 hover:bg-blue-500/20 hover:border-blue-400/40",
+  emerald: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300",
+  cyan: "bg-[#f5f5f5] border-[#e5e5e5] text-[#4e4e4e] hover:bg-[#eee] hover:border-[#ccc]",
+  teal: "bg-[#f5f5f5] border-[#e5e5e5] text-[#4e4e4e] hover:bg-[#eee] hover:border-[#ccc]",
+  blue: "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 hover:border-blue-300",
 };
 
 export function LspServersSection({
@@ -42,10 +42,10 @@ export function LspServersSection({
   const lspEntries = Object.entries(overrides.lsp ?? {});
 
   return (
-    <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/5 p-4 space-y-3">
+    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-emerald-300 flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-emerald-700 flex items-center gap-2">
             <svg
               width="16"
               height="16"
@@ -62,12 +62,12 @@ export function LspServersSection({
             </svg>
             LSP Servers
           </h3>
-          <p className="text-xs text-white/50 mt-1">Configure Language Server Protocol for code intelligence</p>
-          <code className="text-[10px] text-emerald-300/60 font-mono block mt-1.5 bg-black/20 px-2 py-1 rounded">
+          <p className="text-xs text-[#777169] mt-1">Configure Language Server Protocol for code intelligence</p>
+          <code className="text-[10px] text-emerald-700/60 font-mono block mt-1.5 bg-[#1a1a1a] px-2 py-1 rounded">
             {`"lsp": { "typescript": { "command": ["typescript-language-server", "--stdio"] } }`}
           </code>
         </div>
-        <span className="px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-400/20 text-emerald-300 text-xs font-mono shrink-0">
+        <span className="px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-mono shrink-0">
           {Object.keys(overrides.lsp ?? {}).length} configured
         </span>
       </div>
@@ -95,14 +95,14 @@ export function LspServersSection({
           placeholder="language"
           value={lspLanguage}
           onChange={(e) => onLspLanguageChange(e.target.value)}
-          className="px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400/40"
+          className="px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black placeholder:text-[#aaa] focus:outline-none focus:border-black/20"
         />
         <input
           type="text"
           placeholder="command"
           value={lspCommand}
           onChange={(e) => onLspCommandChange(e.target.value)}
-          className="px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400/40"
+          className="px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black placeholder:text-[#aaa] focus:outline-none focus:border-black/20"
         />
         <input
           type="text"
@@ -115,12 +115,12 @@ export function LspServersSection({
               onLspAdd();
             }
           }}
-          className="px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400/40"
+          className="px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black placeholder:text-[#aaa] focus:outline-none focus:border-black/20"
         />
         <button
           type="button"
           onClick={onLspAdd}
-          className="px-3 py-1.5 text-xs bg-emerald-500/20 text-emerald-300 rounded-lg hover:bg-emerald-500/30"
+          className="px-3 py-1.5 text-xs bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100"
         >
           Add
         </button>
@@ -131,23 +131,23 @@ export function LspServersSection({
           {lspEntries.map(([language, entry]) => (
             <div
               key={language}
-              className="flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-400/20"
+              className="flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200"
             >
               <div className="flex items-center gap-2 text-xs font-mono">
-                <span className="text-emerald-300">{language}</span>
-                <span className="text-white/30">&rarr;</span>
-                <span className="text-white/60">{entry.command.join(" ")}</span>
+                <span className="text-emerald-700">{language}</span>
+                <span className="text-[#aaa]">&rarr;</span>
+                <span className="text-[#777169]">{entry.command.join(" ")}</span>
                 {entry.extensions && entry.extensions.length > 0 && (
                   <>
-                    <span className="text-white/30">|</span>
-                    <span className="text-white/50">{entry.extensions.join(", ")}</span>
+                    <span className="text-[#aaa]">|</span>
+                    <span className="text-[#777169]">{entry.extensions.join(", ")}</span>
                   </>
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => onLspRemove(language)}
-                className="text-white/40 hover:text-red-400 transition-colors"
+                className="text-[#999] hover:text-red-600 transition-colors"
               >
                 &times;
               </button>

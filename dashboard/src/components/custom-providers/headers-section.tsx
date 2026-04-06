@@ -27,7 +27,7 @@ export function HeadersSection({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <label htmlFor="headers" className="text-sm font-semibold text-white">Headers (Optional)</label>
+        <label htmlFor="headers" className="text-sm font-semibold text-black">Headers (Optional)</label>
         <Button variant="ghost" onClick={onAddHeader} className="px-3 py-1.5 text-xs" disabled={saving}>
           + Add Header
         </Button>

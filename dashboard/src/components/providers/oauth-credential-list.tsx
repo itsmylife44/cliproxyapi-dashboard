@@ -52,7 +52,7 @@ function OAuthStatusBadge({
 
   if (status === "active" && !unavailable) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400" title="Token is valid and working">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600" title="Token is valid and working">
         <span className="size-1.5 rounded-full bg-emerald-400" />
         Active
       </span>
@@ -62,7 +62,7 @@ function OAuthStatusBadge({
   if (status === "error" || unavailable) {
     return (
       <span
-        className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-medium text-red-400"
+        className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600"
         title={message || "Account has an error"}
       >
         <span className="size-1.5 rounded-full bg-red-400" />
@@ -75,8 +75,8 @@ function OAuthStatusBadge({
 
   if (status === "disabled") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-slate-500/15 px-2 py-0.5 text-[10px] font-medium text-slate-400" title="Account is disabled">
-        <span className="size-1.5 rounded-full bg-slate-400" />
+      <span className="inline-flex items-center gap-1 rounded-full bg-[#f5f5f5] px-2 py-0.5 text-[10px] font-medium text-[#777169]" title="Account is disabled">
+        <span className="size-1.5 rounded-full bg-[#999]" />
         Disabled
       </span>
     );
@@ -100,37 +100,37 @@ export function OAuthCredentialList({
   return (
     <>
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Connected Accounts</h3>
-        <p className="mt-1 text-xs text-slate-500">Active OAuth provider connections</p>
+        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#777169]">Connected Accounts</h3>
+        <p className="mt-1 text-xs text-[#777169]">Active OAuth provider connections</p>
       </div>
       {loading ? (
-        <div className="flex items-center justify-center rounded-md border border-slate-700/70 bg-slate-900/25 p-8">
+        <div className="flex items-center justify-center rounded-md border border-[#e5e5e5] bg-white p-8">
           <div className="flex flex-col items-center gap-3">
-            <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-blue-500"></div>
-            <p className="text-sm text-slate-400">Loading accounts...</p>
+            <div className="size-8 animate-spin rounded-full border-4 border-[#ddd] border-t-blue-500"></div>
+            <p className="text-sm text-[#777169]">Loading accounts...</p>
           </div>
         </div>
       ) : accounts.length === 0 ? (
-        <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3 text-xs text-slate-400">
+        <div className="rounded-sm border border-[#e5e5e5] bg-white p-3 text-xs text-[#777169]">
           No OAuth accounts connected yet. Connect your first account below.
         </div>
       ) : (
-        <div className="divide-y divide-slate-700/70 rounded-md border border-slate-700/70 bg-slate-900/25">
+        <div className="divide-y divide-[#e5e5e5] rounded-md border border-[#e5e5e5] bg-white">
           {accounts.map((account) => (
             <div key={account.id} className="group p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-100">{account.provider}</span>
+                    <span className="text-sm font-semibold text-black">{account.provider}</span>
                     {currentUser && (
                       <OwnerBadge ownerUsername={account.ownerUsername} isOwn={account.isOwn} />
                     )}
                     <OAuthStatusBadge status={account.status} statusMessage={account.statusMessage} unavailable={account.unavailable} />
                   </div>
                   {account.accountEmail && (
-                    <p className="truncate text-xs text-slate-300">{account.accountEmail}</p>
+                    <p className="truncate text-xs text-[#4e4e4e]">{account.accountEmail}</p>
                   )}
-                  <p className="truncate text-xs font-mono text-slate-500">{account.accountName}</p>
+                  <p className="truncate text-xs font-mono text-[#777169]">{account.accountName}</p>
                 </div>
                 {currentUser && (account.isOwn || currentUser.isAdmin) && (
                   <div className="flex shrink-0 items-center gap-2">

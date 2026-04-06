@@ -40,9 +40,9 @@ export function GroupList({
         return (
           <div
             key={group.id}
-            className={`rounded-sm border border-slate-700/70 bg-slate-900/30 overflow-hidden transition-opacity duration-200 ${!group.isActive ? 'opacity-60 grayscale-[30%]' : ''}`}
+            className={`rounded-sm border border-[#e5e5e5] bg-white overflow-hidden transition-opacity duration-200 ${!group.isActive ? 'opacity-60 grayscale-[30%]' : ''}`}
           >
-            <div className="flex items-center justify-between border-b border-slate-700/70 bg-slate-900/60 px-3 py-2">
+            <div className="flex items-center justify-between border-b border-[#e5e5e5] bg-white/60 px-3 py-2">
               <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => onToggleCollapse(group.id)}>
                 {group.color && (
                   <span
@@ -51,10 +51,10 @@ export function GroupList({
                     aria-hidden="true"
                   />
                 )}
-                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-300">
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#4e4e4e]">
                   {group.name}
                 </span>
-                <span className="text-xs text-slate-500 bg-slate-800/50 px-1.5 py-0.5 rounded-md">
+                <span className="text-xs text-[#777169] bg-[#f5f5f5] px-1.5 py-0.5 rounded-md">
                   {group.providers.length}
                 </span>
               </div>
@@ -63,7 +63,7 @@ export function GroupList({
                 <button
                   type="button"
                   onClick={() => onToggleGroupActive(group.id, group.isActive)}
-                  className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-sm transition-colors ${group.isActive ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}
+                  className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-sm transition-colors ${group.isActive ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-[#e5e5e5] text-[#777169] hover:bg-[#e5e5e5]'}`}
                 >
                   {group.isActive ? "Active" : "Disabled"}
                 </button>
@@ -73,7 +73,7 @@ export function GroupList({
                     type="button"
                     onClick={() => onMoveGroupUp(group.id, groupIndex)}
                     disabled={groupIndex === 0}
-                    className="text-slate-400 hover:text-white disabled:opacity-30 p-1"
+                    className="text-[#777169] hover:text-black disabled:opacity-30 p-1"
                     title="Move Group Up"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
@@ -82,24 +82,24 @@ export function GroupList({
                     type="button"
                     onClick={() => onMoveGroupDown(group.id, groupIndex)}
                     disabled={groupIndex === groups.length - 1}
-                    className="text-slate-400 hover:text-white disabled:opacity-30 p-1"
+                    className="text-[#777169] hover:text-black disabled:opacity-30 p-1"
                     title="Move Group Down"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                   </button>
                 </div>
 
-                <div className="flex items-center gap-1 border-l border-slate-700/70 pl-3">
+                <div className="flex items-center gap-1 border-l border-[#e5e5e5] pl-3">
                   <Button variant="ghost" onClick={() => onEditGroup(group)} className="px-2 py-1 text-[10px] h-auto">
                     Edit
                   </Button>
-                  <Button variant="ghost" onClick={() => onDeleteGroup(group.id)} className="px-2 py-1 text-[10px] h-auto text-red-400 hover:text-red-300 hover:bg-red-400/10">
+                  <Button variant="ghost" onClick={() => onDeleteGroup(group.id)} className="px-2 py-1 text-[10px] h-auto text-red-600 hover:text-red-600 hover:bg-red-400/10">
                     Delete
                   </Button>
                   <button
                     type="button"
                     onClick={() => onToggleCollapse(group.id)}
-                    className="p-1 ml-1 text-slate-400 hover:text-white transition-transform"
+                    className="p-1 ml-1 text-[#777169] hover:text-black transition-transform"
                     style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0)' }}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
@@ -112,12 +112,12 @@ export function GroupList({
               <div className="overflow-x-auto">
                 <div className="min-w-[600px]">
                   {group.providers.length === 0 ? (
-                    <div className="px-3 py-6 text-center text-xs text-slate-500 italic">
+                    <div className="px-3 py-6 text-center text-xs text-[#777169] italic">
                       No providers in this group
                     </div>
                   ) : (
                     <>
-                      <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] border-b border-slate-800 bg-slate-900/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] border-b border-[#e5e5e5] bg-white px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
                         <span>Name</span>
                         <span>Endpoint</span>
                         <span>Models</span>

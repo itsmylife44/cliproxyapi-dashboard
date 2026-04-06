@@ -73,7 +73,7 @@ export const API_KEY_PROVIDERS = PROVIDERS.filter(
 export function OwnerBadge({ ownerUsername, isOwn }: OwnerBadgeProps) {
   if (isOwn) {
     return (
-      <span className="inline-flex items-center rounded-sm border border-blue-400/50 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-200">
+      <span className="inline-flex items-center rounded-sm border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
         You
       </span>
     );
@@ -81,14 +81,14 @@ export function OwnerBadge({ ownerUsername, isOwn }: OwnerBadgeProps) {
 
   if (ownerUsername) {
     return (
-      <span className="inline-flex items-center rounded-sm border border-slate-600/70 bg-slate-800/60 px-2 py-0.5 text-[11px] font-medium text-slate-300">
+      <span className="inline-flex items-center rounded-sm border border-[#e5e5e5]/70 bg-[#f5f5f5] px-2 py-0.5 text-[11px] font-medium text-[#4e4e4e]">
         {ownerUsername}
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center rounded-sm border border-slate-700/70 bg-slate-800/40 px-2 py-0.5 text-[11px] font-medium text-slate-400">
+    <span className="inline-flex items-center rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] px-2 py-0.5 text-[11px] font-medium text-[#777169]">
       Team
     </span>
   );
@@ -209,15 +209,15 @@ export function ApiKeySection({
       <div id="provider-api-keys" className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-slate-100">API Key Providers</h2>
-            <p className="text-xs text-slate-400">Direct provider access keys</p>
+            <h2 className="text-sm font-semibold text-black">API Key Providers</h2>
+            <p className="text-xs text-[#777169]">Direct provider access keys</p>
           </div>
-          <span className="text-xs font-medium text-slate-400">{totalApiKeys} keys total</span>
+          <span className="text-xs font-medium text-[#777169]">{totalApiKeys} keys total</span>
         </div>
 
         <div className="overflow-x-auto">
-          <div className="min-w-[600px] overflow-hidden rounded-md border border-slate-700/70 bg-slate-900/20">
-            <div className="grid grid-cols-[minmax(0,1.6fr)_96px_120px_128px] items-center border-b border-slate-700/70 bg-slate-900/60 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+          <div className="min-w-[600px] overflow-hidden rounded-md border border-[#e5e5e5] bg-white">
+            <div className="grid grid-cols-[minmax(0,1.6fr)_96px_120px_128px] items-center border-b border-[#e5e5e5] bg-white/60 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
               <span>Provider</span>
               <span>Status</span>
               <span>Keys</span>
@@ -230,16 +230,16 @@ export function ApiKeySection({
               const isConfigured = configuredCount > 0;
 
               return (
-                <div key={provider.id} className="border-b border-slate-700/70 last:border-b-0">
+                <div key={provider.id} className="border-b border-[#e5e5e5] last:border-b-0">
                   <div className="grid grid-cols-[minmax(0,1.6fr)_96px_120px_128px] items-center gap-3 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-100">{provider.name}</p>
-                      <p className="truncate text-xs text-slate-400">{provider.description}</p>
+                      <p className="truncate text-sm font-medium text-black">{provider.name}</p>
+                      <p className="truncate text-xs text-[#777169]">{provider.description}</p>
                     </div>
-                    <span className={`text-xs font-medium ${isConfigured ? "text-emerald-300" : "text-slate-400"}`}>
+                    <span className={`text-xs font-medium ${isConfigured ? "text-emerald-700" : "text-[#777169]"}`}>
                       {isConfigured ? "Active" : "Inactive"}
                     </span>
-                    <span className="text-xs text-slate-300">
+                    <span className="text-xs text-[#4e4e4e]">
                       {configuredCount} {configuredCount === 1 ? "key" : "keys"}
                     </span>
                     <div className="flex justify-end">
@@ -258,17 +258,17 @@ export function ApiKeySection({
                       {config.keys.map((keyInfo) => (
                         <div
                           key={keyInfo.keyHash}
-                          className="group flex items-center justify-between gap-3 border-t border-slate-700/50 px-1 py-1.5 first:border-t-0"
+                          className="group flex items-center justify-between gap-3 border-t border-[#e5e5e5] px-1 py-1.5 first:border-t-0"
                         >
                           <div className="flex min-w-0 items-center gap-2">
-                            <span className="truncate font-mono text-xs text-slate-300">{keyInfo.maskedKey}</span>
+                            <span className="truncate font-mono text-xs text-[#4e4e4e]">{keyInfo.maskedKey}</span>
                             {currentUser && (
                               <OwnerBadge ownerUsername={keyInfo.ownerUsername} isOwn={keyInfo.isOwn} />
                             )}
                           </div>
                           <div className="flex items-center gap-3">
                             {currentUser && (
-                              <span className="text-[11px] text-slate-500">{userKeyCount}/{maxKeysPerUser}</span>
+                              <span className="text-[11px] text-[#777169]">{userKeyCount}/{maxKeysPerUser}</span>
                             )}
                             {currentUser && (keyInfo.isOwn || currentUser.isAdmin) && (
                               <Button
@@ -300,8 +300,8 @@ export function ApiKeySection({
         <ModalContent>
           <div className="space-y-4">
             <div>
-              <label htmlFor="api-key" className="mb-2 block text-sm font-semibold text-white">
-                API Key <span className="text-red-400">*</span>
+              <label htmlFor="api-key" className="mb-2 block text-sm font-semibold text-black">
+                API Key <span className="text-red-600">*</span>
               </label>
               <Input
                 type="password"
@@ -312,11 +312,11 @@ export function ApiKeySection({
                 required
                 disabled={saving}
               />
-              <p className="mt-1.5 text-xs text-white/50">Your API key will be stored securely and associated with your account</p>
+              <p className="mt-1.5 text-xs text-[#777169]">Your API key will be stored securely and associated with your account</p>
             </div>
             {currentUser && (
-              <div className="rounded-sm border-l-4 border-blue-400/60 bg-blue-500/10 p-3 text-sm">
-                <p className="text-white/90">
+              <div className="rounded-sm border-l-4 border-blue-300 bg-blue-50 p-3 text-sm">
+                <p className="text-black">
                   <strong>Usage:</strong> You have contributed {currentUser ? configs[PROVIDER_IDS.CLAUDE].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.GEMINI].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.CODEX].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.OPENAI].keys.filter((k) => k.isOwn).length : 0} / {maxKeysPerUser} keys total
                 </p>
               </div>

@@ -23,7 +23,7 @@ export function ExcludedModels({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <label htmlFor="excludedModels" className="text-sm font-semibold text-white">Excluded Models (Optional)</label>
+        <label htmlFor="excludedModels" className="text-sm font-semibold text-black">Excluded Models (Optional)</label>
         <Button variant="ghost" onClick={onAddExcludedModel} className="px-3 py-1.5 text-xs" disabled={saving}>
           + Add Exclusion
         </Button>
@@ -49,7 +49,7 @@ export function ExcludedModels({
         </div>
       )}
       {excludedModels.length === 0 && (
-        <p className="text-xs text-white/50">Supports wildcards: gpt-4, claude-*, *-mini</p>
+        <p className="text-xs text-[#777169]">Supports wildcards: gpt-4, claude-*, *-mini</p>
       )}
     </div>
   );

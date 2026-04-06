@@ -12,6 +12,6 @@ export async function GET() {
     const presets = await loadOfficialOhMyOpenCodePresets();
     return apiSuccess({ presets });
   } catch (error) {
-    return Errors.internal("Failed to load oh-my-opencode presets", error);
+    return Errors.internal("Failed to load OhMyOpenAgent presets", error);
   }
 }

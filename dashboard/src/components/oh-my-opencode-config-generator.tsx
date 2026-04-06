@@ -12,13 +12,15 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import {
-  AGENT_ROLES,
-  CATEGORY_ROLES,
+  AGENT_ROLE_LABELS as AGENT_ROLES,
+  CATEGORY_ROLE_LABELS as CATEGORY_ROLES,
+  UPSTREAM_AGENT_CHAINS,
+  UPSTREAM_CATEGORY_CHAINS,
+  resolveChain,
   buildOhMyOpenCodeConfig,
   applyPreset,
   type ConfigData,
   type OAuthAccount,
-  pickBestModel,
 } from "@/lib/config-generators/oh-my-opencode";
 import type {
   AgentConfigEntry,
@@ -519,7 +521,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     label: string;
   }[] = [];
 
-  for (const [agent, role] of Object.entries(AGENT_ROLES)) {
+  for (const [agent, chain] of Object.entries(UPSTREAM_AGENT_CHAINS)) {
     const agentConfig = overrides?.agents?.[agent] ?? {};
     const overrideModel = agentConfig.model;
     if (overrideModel && availableModelIds.includes(overrideModel)) {
@@ -528,19 +530,21 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
         model: overrideModel,
         isOverride: true,
         config: agentConfig,
-        tier: role.tier,
-        label: role.label,
+        tier: 1,
+        label: AGENT_ROLES[agent] ?? agent,
       });
     } else {
-      const model = pickBestModel(availableModelIds, role.tier);
-      if (model) {
+      const resolution = resolveChain(chain, availableModelIds);
+      if (resolution) {
+        const chainIdx = chain.indexOf(resolution.model);
+        const tier = chainIdx <= 1 ? 1 as const : chainIdx <= 3 ? 2 as const : 3 as const;
         agentAssignments.push({
           name: agent,
-          model,
-          isOverride: !!overrideModel,
+          model: resolution.model,
+          isOverride: false,
           config: agentConfig,
-          tier: role.tier,
-          label: role.label,
+          tier,
+          label: AGENT_ROLES[agent] ?? agent,
         });
       }
     }
@@ -556,7 +560,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     label: string;
   }[] = [];
 
-  for (const [category, role] of Object.entries(CATEGORY_ROLES)) {
+  for (const [category, chain] of Object.entries(UPSTREAM_CATEGORY_CHAINS)) {
     const categoryConfig = overrides?.categories?.[category] ?? {};
     const overrideModel = categoryConfig.model;
     if (overrideModel && availableModelIds.includes(overrideModel)) {
@@ -565,19 +569,21 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
         model: overrideModel,
         isOverride: true,
         config: categoryConfig,
-        tier: role.tier,
-        label: role.label,
+        tier: 1,
+        label: CATEGORY_ROLES[category] ?? category,
       });
     } else {
-      const model = pickBestModel(availableModelIds, role.tier);
-      if (model) {
+      const resolution = resolveChain(chain, availableModelIds);
+      if (resolution) {
+        const chainIdx = chain.indexOf(resolution.model);
+        const tier = chainIdx <= 1 ? 1 as const : chainIdx <= 3 ? 2 as const : 3 as const;
         categoryAssignments.push({
           name: category,
-          model,
-          isOverride: !!overrideModel,
+          model: resolution.model,
+          isOverride: false,
           config: categoryConfig,
-          tier: role.tier,
-          label: role.label,
+          tier,
+          label: CATEGORY_ROLES[category] ?? category,
         });
       }
     }

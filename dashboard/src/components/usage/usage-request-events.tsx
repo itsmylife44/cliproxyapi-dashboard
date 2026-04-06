@@ -44,10 +44,10 @@ function formatTimestamp(timestamp: string): string {
 }
 
 function getLatencyClasses(latencyMs: number): string {
-  if (latencyMs <= 0) return "border-slate-700/70 bg-slate-800/70 text-slate-500";
-  if (latencyMs < 1000) return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
-  if (latencyMs < 5000) return "border-amber-500/30 bg-amber-500/10 text-amber-300";
-  return "border-rose-500/30 bg-rose-500/10 text-rose-300";
+  if (latencyMs <= 0) return "border-[#e5e5e5] bg-[#f5f5f5]/70 text-[#777169]";
+  if (latencyMs < 1000) return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (latencyMs < 5000) return "border-amber-200 bg-amber-50 text-amber-700";
+  return "border-rose-200 bg-rose-50 text-rose-600";
 }
 
 function formatLatency(latencyMs: number): string {
@@ -71,68 +71,68 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
 
   if (safeEvents.length === 0) {
     return (
-      <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Request Event Details</h2>
-        <p className="mt-3 text-sm text-slate-400">No request events found in the selected period</p>
+      <section className="rounded-md border border-[#e5e5e5] bg-white p-6 text-center">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#777169]">Request Event Details</h2>
+        <p className="mt-3 text-sm text-[#777169]">No request events found in the selected period</p>
       </section>
     );
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/40">
-      <div className="flex flex-col gap-2 border-b border-slate-700/70 bg-slate-900/50 px-3 py-3 sm:flex-row sm:items-end sm:justify-between">
+    <section className="overflow-hidden rounded-lg border border-[#e5e5e5] bg-white">
+      <div className="flex flex-col gap-2 border-b border-[#e5e5e5] bg-[#f5f5f5] px-3 py-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Request Event Details</h2>
-          <p className="mt-1 text-xs text-slate-500">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#777169]">Request Event Details</h2>
+          <p className="mt-1 text-xs text-[#777169]">
             Showing the most recent {safeEvents.length} requests in the selected window.
             {truncated ? " Larger result sets were truncated on the server." : ""}
           </p>
         </div>
         {hasMissingLatency ? (
-          <p className="text-[11px] text-slate-500">\u2014 means latency was not available for that collected request</p>
+          <p className="text-[11px] text-[#777169]">\u2014 means latency was not available for that collected request</p>
         ) : null}
       </div>
 
       <div className="max-h-[clamp(320px,62vh,760px)] overflow-auto">
         <table className="w-full min-w-[880px] text-sm">
           <thead>
-            <tr className="sticky top-0 z-10 border-b border-slate-700/70 bg-slate-900/95 backdrop-blur-sm">
-              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Time</th>
-              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Key</th>
+            <tr className="sticky top-0 z-10 border-b border-[#e5e5e5] bg-white">
+              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Time</th>
+              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Key</th>
               {isAdmin ? (
-                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">User</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">User</th>
               ) : null}
-              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Model</th>
-              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Status</th>
-              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Latency</th>
-              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Input</th>
-              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Output</th>
-              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Tokens</th>
+              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Model</th>
+              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Status</th>
+              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Latency</th>
+              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Input</th>
+              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Output</th>
+              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Tokens</th>
             </tr>
           </thead>
           <tbody>
             {pagedEvents.map((event, index) => (
               <tr
                 key={`${event.timestamp}-${event.model}-${index}`}
-                className={`border-b border-slate-700/60 last:border-b-0 ${event.failed ? "bg-rose-500/[0.03]" : "hover:bg-slate-800/30"}`}
+                className={`border-b border-[#e5e5e5] last:border-b-0 ${event.failed ? "bg-rose-500/[0.03]" : "hover:bg-[#f5f5f5]"}`}
               >
                 <td className="px-3 py-2">
                   <div className="flex flex-col">
-                    <span className="text-xs text-slate-200">{formatRelativeTime(event.timestamp)}</span>
-                    <span className="text-[10px] text-slate-500">{formatTimestamp(event.timestamp)}</span>
+                    <span className="text-xs text-black">{formatRelativeTime(event.timestamp)}</span>
+                    <span className="text-[10px] text-[#777169]">{formatTimestamp(event.timestamp)}</span>
                   </div>
                 </td>
-                <td className="px-3 py-2 font-mono text-[11px] text-slate-200">{event.keyName}</td>
+                <td className="px-3 py-2 font-mono text-[11px] text-black">{event.keyName}</td>
                 {isAdmin ? (
-                  <td className="px-3 py-2 text-xs text-slate-300">{event.username ?? "\u2014"}</td>
+                  <td className="px-3 py-2 text-xs text-[#4e4e4e]">{event.username ?? "\u2014"}</td>
                 ) : null}
-                <td className="px-3 py-2 font-mono text-[11px] text-slate-300">{event.model}</td>
+                <td className="px-3 py-2 font-mono text-[11px] text-[#4e4e4e]">{event.model}</td>
                 <td className="px-3 py-2">
                   <span
                     className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${
                       event.failed
-                        ? "border-rose-500/30 bg-rose-500/10 text-rose-300"
-                        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                        ? "border-rose-200 bg-rose-50 text-rose-600"
+                        : "border-emerald-200 bg-emerald-50 text-emerald-700"
                     }`}
                   >
                     {event.failed ? "Failed" : "Success"}
@@ -143,9 +143,9 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
                     {formatLatency(event.latencyMs)}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-right text-xs tabular-nums text-slate-400">{event.inputTokens.toLocaleString()}</td>
-                <td className="px-3 py-2 text-right text-xs tabular-nums text-slate-400">{event.outputTokens.toLocaleString()}</td>
-                <td className="px-3 py-2 text-right text-xs tabular-nums text-slate-200">{event.totalTokens.toLocaleString()}</td>
+                <td className="px-3 py-2 text-right text-xs tabular-nums text-[#777169]">{event.inputTokens.toLocaleString()}</td>
+                <td className="px-3 py-2 text-right text-xs tabular-nums text-[#777169]">{event.outputTokens.toLocaleString()}</td>
+                <td className="px-3 py-2 text-right text-xs tabular-nums text-black">{event.totalTokens.toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
@@ -153,7 +153,7 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
       </div>
 
       {totalPages > 1 ? (
-        <div className="flex items-center justify-between border-t border-slate-700/70 px-3 py-2">
+        <div className="flex items-center justify-between border-t border-[#e5e5e5] px-3 py-2">
           <Button
             variant="ghost"
             onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
@@ -162,7 +162,7 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
           >
             Previous
           </Button>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-[#777169]">
             Page {activePage} of {totalPages}
           </span>
           <Button

@@ -24,8 +24,8 @@ export function TimeFilter({
   onCustomDateApply,
 }: TimeFilterProps) {
   return (
-    <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Time Period</h2>
+    <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#777169]">Time Period</h2>
       <div className="flex flex-wrap gap-2">
         <Button
           onClick={() => onFilterChange("today")}
@@ -58,23 +58,23 @@ export function TimeFilter({
       </div>
       <div className="mt-3 flex flex-wrap items-end gap-2">
         <div>
-          <label htmlFor="custom-from" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">From</label>
+          <label htmlFor="custom-from" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">From</label>
           <input
             id="custom-from"
             type="date"
             value={customFrom}
             onChange={(e) => onCustomFromChange(e.target.value)}
-            className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2 py-1 text-xs text-slate-100"
+            className="rounded-md border border-[#e5e5e5] bg-white px-2 py-1 text-xs text-black"
           />
         </div>
         <div>
-          <label htmlFor="custom-to" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">To</label>
+          <label htmlFor="custom-to" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">To</label>
           <input
             id="custom-to"
             type="date"
             value={customTo}
             onChange={(e) => onCustomToChange(e.target.value)}
-            className="rounded-md border border-slate-700/70 bg-slate-900/25 px-2 py-1 text-xs text-slate-100"
+            className="rounded-md border border-[#e5e5e5] bg-white px-2 py-1 text-xs text-black"
           />
         </div>
         <Button onClick={onCustomDateApply} disabled={!customFrom || !customTo} className="text-xs">

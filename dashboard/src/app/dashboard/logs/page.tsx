@@ -90,11 +90,11 @@ function getLogLevel(line: string): LogLevel {
 function getLevelColor(level: LogLevel) {
   switch (level) {
     case LOG_LEVEL.ERROR:
-      return "text-red-600";
+      return "text-red-400";
     case LOG_LEVEL.WARN:
-      return "text-yellow-700";
+      return "text-yellow-300";
     case LOG_LEVEL.INFO:
-      return "text-blue-600";
+      return "text-blue-300";
     default:
       return "text-zinc-300";
   }

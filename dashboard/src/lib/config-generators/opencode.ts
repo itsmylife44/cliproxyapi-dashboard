@@ -347,7 +347,7 @@ export function generateConfigJson(
  
    const plugins = options?.plugins ?? [
      "opencode-cliproxyapi-sync@latest",
-     "oh-my-opencode@latest",
+     "oh-my-openagent@latest",
    ];
  
    const configObj: Record<string, unknown> = {

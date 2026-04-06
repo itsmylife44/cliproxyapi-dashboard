@@ -92,7 +92,7 @@ The dashboard supports two OpenCode orchestration variants. Toggle between them 
 **First-time setup** (run once per variant):
 
 ```bash
-bunx oh-my-opencode@latest install          # Normal variant
+bunx oh-my-openagent@latest install          # Normal variant
 bunx oh-my-opencode-slim@latest install     # Slim variant
 ```
 

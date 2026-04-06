@@ -101,7 +101,7 @@ Or add manually to your `opencode.json`:
 {
   "plugin": [
     "opencode-cliproxyapi-sync",
-    "oh-my-opencode@latest"
+    "oh-my-openagent@latest"
   ]
 }
 ```

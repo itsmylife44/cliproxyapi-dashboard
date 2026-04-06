@@ -45,7 +45,7 @@ function downloadFile(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-const PLUGIN_OH_MY_OPENCODE = "oh-my-opencode@latest";
+const PLUGIN_OH_MY_OPENCODE = "oh-my-openagent@latest";
 const PLUGIN_OH_MY_OPENCODE_SLIM = "oh-my-opencode-slim@latest";
 
 const DEFAULT_PLUGINS = [

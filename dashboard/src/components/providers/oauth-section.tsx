@@ -213,6 +213,8 @@ export function OAuthSection({
   const selectedOAuthProviderIdRef = useRef<OAuthProviderId | null>(null);
   const [deviceCodeInfo, setDeviceCodeInfo] = useState<{ verificationUrl: string; userCode: string } | null>(null);
   const deviceCodePopupOpenedRef = useRef(false);
+  const incognitoRef = useRef(incognitoBrowserEnabled);
+  incognitoRef.current = incognitoBrowserEnabled;
   const [accounts, setAccounts] = useState<OAuthAccountWithOwnership[]>([]);
   const [oauthAccountsLoading, setOauthAccountsLoading] = useState(true);
   const [showConfirmOAuthDelete, setShowConfirmOAuthDelete] = useState(false);
@@ -356,7 +358,8 @@ export function OAuthSection({
             verificationUrl: data.verification_url,
             userCode: data.user_code,
           });
-          if (!deviceCodePopupOpenedRef.current) {
+          setAuthLaunchUrl(data.verification_url);
+          if (!deviceCodePopupOpenedRef.current && !incognitoRef.current) {
             deviceCodePopupOpenedRef.current = true;
             window.open(data.verification_url, "oauth", "width=600,height=800");
           }

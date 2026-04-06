@@ -91,21 +91,25 @@ export default function ProvidersPage() {
     }
   }, []);
 
+  const loadIncognitoSetting = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const res = await fetch(API_ENDPOINTS.PROXY.OAUTH_SETTINGS, { signal });
+      if (res.ok) {
+        const data = await res.json();
+        setIncognitoBrowserEnabled(Boolean(data.incognitoBrowser));
+      }
+    } catch {
+      if (!signal?.aborted) {
+        setIncognitoBrowserEnabled(false);
+      }
+    }
+  }, []);
+
   const refreshProviders = async () => {
     setLoading(true);
     const newConfigs = await loadProvidersData();
     setConfigs(newConfigs);
-    if (currentUser?.isAdmin) {
-      try {
-        const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG);
-        if (res.ok) {
-          const data = await res.json();
-          setIncognitoBrowserEnabled(Boolean(data["incognito-browser"]));
-        }
-      } catch {
-        // best-effort only
-      }
-    }
+    await loadIncognitoSetting();
     setLoading(false);
   };
 
@@ -116,19 +120,7 @@ export default function ProvidersPage() {
       if (controller.signal.aborted) return;
       setConfigs(newConfigs);
 
-      if (currentUser?.isAdmin) {
-        try {
-          const configRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG, { signal: controller.signal });
-          if (configRes.ok) {
-            const configData = await configRes.json();
-            setIncognitoBrowserEnabled(Boolean(configData["incognito-browser"]));
-          }
-        } catch {
-          if (!controller.signal.aborted) {
-            setIncognitoBrowserEnabled(false);
-          }
-        }
-      }
+      await loadIncognitoSetting(controller.signal);
 
       setLoading(false);
 
@@ -143,7 +135,7 @@ export default function ProvidersPage() {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [currentUser, loadMaxKeysPerUser]);
+  }, [currentUser, loadMaxKeysPerUser, loadIncognitoSetting]);
 
   const providerStats = API_KEY_PROVIDERS.map((provider) => ({
     id: provider.id,

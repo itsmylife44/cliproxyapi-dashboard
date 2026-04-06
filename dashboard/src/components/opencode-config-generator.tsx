@@ -455,7 +455,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs font-medium text-white/50 uppercase tracking-wider">Oh My OpenCode Variant <HelpTooltip content="Normal: 9 specialized agents with categories for fine-grained control. Slim: 6 agents, lower token usage, built-in fallback chains. Both use your proxy models." /></p>
+            <p className="text-xs font-medium text-white/50 uppercase tracking-wider">Oh My Open Agent Variant <HelpTooltip content="Normal: 9 specialized agents with categories for fine-grained control. Slim: 6 agents, lower token usage, built-in fallback chains. Both use your proxy models." /></p>
            <div className="flex gap-2">
              <button
                type="button"
@@ -466,7 +466,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
                    : "border-white/10 bg-white/5 text-white/50 hover:text-white/70 hover:border-white/20"
                }`}
              >
-               <div className="font-semibold">Oh My OpenCode</div>
+                <div className="font-semibold">Oh My Open Agent</div>
                <div className="mt-0.5 text-[10px] opacity-70">9 agents + categories</div>
              </button>
              <button
@@ -478,7 +478,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
                    : "border-white/10 bg-white/5 text-white/50 hover:text-white/70 hover:border-white/20"
                }`}
              >
-               <div className="font-semibold">Oh My OpenCode Slim</div>
+                <div className="font-semibold">Oh My OpenCode Slim</div>
                <div className="mt-0.5 text-[10px] opacity-70">6 agents, less tokens</div>
              </button>
            </div>

@@ -158,7 +158,7 @@ export function QuickStartConfigSection({
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                 <span className="flex items-center gap-3 text-sm font-semibold text-slate-100">
                   <span className="flex h-6 w-6 items-center justify-center rounded-md border border-fuchsia-400/30 bg-fuchsia-500/15 text-sm text-fuchsia-300" aria-hidden="true">&#9654;</span>
-                  Advanced Config: Oh-My-OpenCode Assignments
+                  Advanced Config: Oh-My-Open-Agent Assignments
                 </span>
                 <span className="text-xs font-medium uppercase tracking-[0.1em] text-slate-400 transition-transform duration-200 group-open:rotate-180">&#8964;</span>
               </summary>

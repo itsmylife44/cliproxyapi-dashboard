@@ -49,7 +49,7 @@ Open **http://localhost:3000** → create admin account → done.
 - **Quota Tracking** — Rate limits and usage per provider (Claude, Codex, Kimi, Antigravity)
 - **Telegram Quota Alerts** — Automatic notifications when OAuth quota drops below threshold (configurable per-provider, 1-hour cooldown)
 - **Usage Analytics** — Request counts, provider breakdown, model stats, error rates
-- **Oh-My-OpenCode Variant Toggle** — Choose between [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) (9 agents + categories) and [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (6 agents, lower tokens, fallback chains) with per-agent model/skills configuration
+- **Oh-My-Open-Agent Variant Toggle** — Choose between [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (9 agents + categories) and [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (6 agents, lower tokens, fallback chains) with per-agent model/skills configuration
 - **Config Sync** — Auto-sync OpenCode configs via the [`opencode-cliproxyapi-sync`](https://github.com/itsmylife44/opencode-cliproxyapi-sync) plugin (includes slim config)
 - **Config Sharing** — Share model configs with others via share codes (`XXXX-XXXX`)
 - **One-Click Updates** — Update both Dashboard (GHCR) and CLIProxyAPIPlus (Docker Hub) from the admin panel
@@ -73,13 +73,13 @@ Get notified on Telegram when your OAuth provider quota is running low.
 
 Use the **Test Message** button to verify your configuration before enabling.
 
-## Oh-My-OpenCode Integration
+## Oh-My-Open-Agent Integration
 
 The dashboard supports two OpenCode orchestration variants. Toggle between them in the **Using with OpenCode** section:
 
 | Variant | Agents | Description |
 |---------|--------|-------------|
-| **Oh-My-OpenCode** | 9 agents + 8 categories | Full-featured orchestration with sisyphus, atlas, prometheus, oracle, and more |
+| **Oh-My-Open-Agent** | 9 agents + 8 categories | Full-featured orchestration with sisyphus, atlas, prometheus, oracle, and more |
 | **Oh-My-OpenCode Slim** | 6 agents | Lightweight: orchestrator, oracle, designer, explorer, librarian, fixer. Lower token usage with dedicated fallback chains |
 
 **How it works:**

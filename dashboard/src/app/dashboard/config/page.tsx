@@ -356,7 +356,7 @@ export default function ConfigPage() {
       // of the auth directory, making them invisible to the management API.
       // This runs *before* the yamlChanges gate so endpoint-only saves
       // (e.g. debug, proxy-url) still trigger the yaml write when needed.
-      if (liveConfig && !liveConfig["auth-dir"] && !yamlChanges["auth-dir"]) {
+      if (liveConfig && !("auth-dir" in liveConfig) && !("auth-dir" in yamlChanges)) {
         yamlChanges["auth-dir"] = config["auth-dir"] || "~/.cli-proxy-api";
       }
 
@@ -395,8 +395,12 @@ export default function ConfigPage() {
         showToast(`Configuration saved (${successCount} field${successCount > 1 ? "s" : ""} updated)`, "success");
       }
 
-      setOriginalConfig(config);
-      setRawJson(JSON.stringify(stripOAuthIds(config), null, 2));
+      // Only mark config as "clean" when every change was persisted
+      // successfully. Otherwise the form stays dirty so the user can retry.
+      if (errors.length === 0) {
+        setOriginalConfig(config);
+        setRawJson(JSON.stringify(stripOAuthIds(config), null, 2));
+      }
       setSaving(false);
 
       // Re-fetch after a short delay to confirm changes

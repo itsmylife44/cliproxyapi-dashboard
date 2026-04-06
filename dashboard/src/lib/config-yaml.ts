@@ -11,17 +11,21 @@ export function parseConfigYaml(rawYaml: string): ConfigYamlObject {
     return {};
   }
 
+  let parsed: unknown;
   try {
-    const parsed = yaml.load(rawYaml);
-    if (!isPlainObject(parsed)) {
-      return {};
-    }
-
-    return parsed;
+    parsed = yaml.load(rawYaml);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Invalid current config.yaml: ${message}`);
   }
+
+  if (!isPlainObject(parsed)) {
+    throw new Error(
+      "Invalid current config.yaml: root value is not a YAML mapping"
+    );
+  }
+
+  return parsed;
 }
 
 export function mergeConfigYaml(rawYaml: string, changes: ConfigYamlObject): string {

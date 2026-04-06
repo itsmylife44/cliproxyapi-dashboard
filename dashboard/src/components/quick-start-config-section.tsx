@@ -105,20 +105,20 @@ export function QuickStartConfigSection({
               )}
             </p>
 
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold text-red-600 shrink-0">First-time setup:</span>
-                <code className="text-xs font-mono select-all truncate text-red-600">
-                  {omoVariant === "slim"
-                    ? "bunx oh-my-opencode-slim@latest install --no-tui --skills=no"
-                    : "bunx oh-my-openagent@latest install --no-tui --skills=no"}
-                </code>
-                <span className="text-[10px] text-red-600/70 shrink-0">(run once)</span>
+            {omoVariant === "slim" && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-red-600 shrink-0">First-time setup:</span>
+                  <code className="text-xs font-mono select-all truncate text-red-600">
+                    bunx oh-my-opencode-slim@latest install --no-tui --skills=no
+                  </code>
+                  <span className="text-[10px] text-red-600/70 shrink-0">(run once)</span>
+                </div>
+                <p className="text-[10px] text-red-600/50">
+                  Registers agents and hooks in OpenCode. Use <code className="text-red-600/60">--skills=yes</code> to also install recommended skills (simplify, cartography).
+                </p>
               </div>
-              <p className="text-[10px] text-red-600/50">
-                Registers agents and hooks in OpenCode. Use <code className="text-red-600/60">--skills=yes</code> to also install recommended skills (simplify, cartography).
-              </p>
-            </div>
+            )}
 
             <OpenCodeConfigGenerator
                apiKeys={apiKeys}

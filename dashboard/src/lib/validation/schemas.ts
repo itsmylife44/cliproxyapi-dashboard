@@ -142,8 +142,9 @@ export const AgentConfigOverridesSchema = z.object({
   mcpServers: z.array(McpEntrySchema).optional(),
   customPlugins: z.array(z.string()).optional(),
   configSchemaVersion: z.number().positive().optional(),
-  hashline_edit: z.boolean().optional(),
-  experimental: ExperimentalConfigSchema.optional(),
+   hashline_edit: z.boolean().optional(),
+   defaultModel: z.string().min(1).max(200).optional(),
+   experimental: ExperimentalConfigSchema.optional(),
 });
 
 export const AgentConfigSchema = z.object({

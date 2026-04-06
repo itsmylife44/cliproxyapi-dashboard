@@ -60,7 +60,10 @@ function validateUserConfigRequest(body: unknown): UserConfigRequest | null {
 
   if (obj.defaultModel !== undefined) {
     if (typeof obj.defaultModel !== "string") return null;
-    result.defaultModel = obj.defaultModel.trim();
+    const trimmed = obj.defaultModel.trim();
+    if (trimmed.length > 0) {
+      result.defaultModel = trimmed;
+    }
   }
   
   return result;

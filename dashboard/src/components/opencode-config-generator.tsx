@@ -45,12 +45,12 @@ function downloadFile(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-const PLUGIN_OH_MY_OPENCODE = "oh-my-openagent@latest";
+const PLUGIN_OH_MY_OPENAGENT = "oh-my-openagent@latest";
 const PLUGIN_OH_MY_OPENCODE_SLIM = "oh-my-opencode-slim@latest";
 
 const DEFAULT_PLUGINS = [
   "opencode-cliproxyapi-sync@latest",
-  PLUGIN_OH_MY_OPENCODE,
+  PLUGIN_OH_MY_OPENAGENT,
 ];
 
 export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
@@ -204,8 +204,8 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
     });
 
   const handleOmoVariantChange = (variant: OmoVariant) => {
-    const removePlugin = variant === "slim" ? PLUGIN_OH_MY_OPENCODE : PLUGIN_OH_MY_OPENCODE_SLIM;
-    const addPlugin = variant === "slim" ? PLUGIN_OH_MY_OPENCODE_SLIM : PLUGIN_OH_MY_OPENCODE;
+    const removePlugin = variant === "slim" ? PLUGIN_OH_MY_OPENAGENT : PLUGIN_OH_MY_OPENCODE_SLIM;
+    const addPlugin = variant === "slim" ? PLUGIN_OH_MY_OPENCODE_SLIM : PLUGIN_OH_MY_OPENAGENT;
     const filtered = plugins.filter((p) => p !== removePlugin && p !== addPlugin);
     const insertIdx = Math.min(1, filtered.length);
     const newPlugins = [...filtered.slice(0, insertIdx), addPlugin, ...filtered.slice(insertIdx)];

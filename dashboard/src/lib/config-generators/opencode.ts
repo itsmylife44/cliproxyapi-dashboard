@@ -184,7 +184,7 @@ export function inferModelDefinition(
 function deduplicateProxyModels(proxyModels: ProxyModel[]): ProxyModel[] {
   const idSet = new Set(proxyModels.map((m) => m.id));
   
-  return proxyModels.filter((pm) => {
+  const filtered = proxyModels.filter((pm) => {
     const id = pm.id;
     
     // 1. Drop dated variants (-YYYYMMDD) if the undated base exists
@@ -204,6 +204,11 @@ function deduplicateProxyModels(proxyModels: ProxyModel[]): ProxyModel[] {
     if (dotVersion !== id && idSet.has(dotVersion)) return false;
     
     return true;
+  });
+
+  return filtered.map((pm) => {
+    const dotId = hyphenatedToDot(pm.id);
+    return dotId !== pm.id ? { ...pm, id: dotId } : pm;
   });
 }
 

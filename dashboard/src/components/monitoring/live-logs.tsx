@@ -135,10 +135,10 @@ export function LiveLogs({
                     key={log.id}
                     className={cn(
                       "mb-1 break-all",
-                      log.level === "error" && "text-red-600",
-                      log.level === "warn" && "text-yellow-700",
-                      log.level === "info" && "text-black",
-                      log.level === "debug" && "text-blue-600"
+                      log.level === "error" && "text-red-400",
+                      log.level === "warn" && "text-yellow-300",
+                      log.level === "info" && "text-zinc-200",
+                      log.level === "debug" && "text-blue-300"
                     )}
                   >
                     {log.timestamp && (

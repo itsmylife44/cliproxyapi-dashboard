@@ -63,7 +63,7 @@ export function LspServersSection({
             LSP Servers
           </h3>
           <p className="text-xs text-[#777169] mt-1">Configure Language Server Protocol for code intelligence</p>
-          <code className="text-[10px] text-emerald-700/60 font-mono block mt-1.5 bg-[#1a1a1a] px-2 py-1 rounded">
+          <code className="text-[10px] text-emerald-700/70 font-mono block mt-1.5 bg-emerald-100/60 border border-emerald-200/60 px-2 py-1 rounded">
             {`"lsp": { "typescript": { "command": ["typescript-language-server", "--stdio"] } }`}
           </code>
         </div>

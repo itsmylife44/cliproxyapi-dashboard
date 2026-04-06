@@ -31,7 +31,7 @@ export default function DashboardNotFound() {
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <Link href="/dashboard" className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 bg-black text-white border-black hover:bg-gray-900">
+          <Link href="/dashboard" className="glass-button-primary inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200">
             Back to Dashboard
           </Link>
         </div>

@@ -23,11 +23,12 @@
 
 <p align="center">
   <a href="https://discord.gg/RngVxcNvfg">
-    <img src="https://img.shields.io/badge/Join%20our%20Discord%20Community-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord">
+    <img src="https://img.shields.io/badge/Discord%20Community-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white" alt="Discord">
   </a>
 </p>
 <p align="center">
-  Get help, share configs, follow releases → <strong><a href="https://discord.gg/RngVxcNvfg">discord.gg/RngVxcNvfg</a></strong>
+  We have a Discord server — installation help, release announcements, and community chat.<br>
+  <strong><a href="https://discord.gg/RngVxcNvfg">discord.gg/RngVxcNvfg</a></strong>
 </p>
 
 ---

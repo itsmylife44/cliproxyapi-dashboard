@@ -30,8 +30,8 @@ const LEVEL_COLORS: Record<string, string> = {
   fatal: "text-red-600 bg-red-50 border-red-200",
   warn: "text-yellow-700 bg-yellow-50 border-yellow-200",
   info: "text-blue-600 bg-blue-50 border-blue-200",
-  debug: "text-gray-400 bg-gray-50 border-gray-200",
-  trace: "text-gray-500 bg-gray-50 border-gray-200",
+  debug: "text-gray-600 bg-gray-50 border-gray-200",
+  trace: "text-gray-600 bg-gray-50 border-gray-200",
 };
 
 const LEVEL_FILTERS = ["all", "error", "warn", "info", "debug"] as const;

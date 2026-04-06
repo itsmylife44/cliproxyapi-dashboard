@@ -59,7 +59,7 @@ export default function MonitoringLoading() {
             {Array.from({ length: 12 }).map((_, idx) => (
               <div
                 key={`logline-${idx}`}
-                className="h-3 animate-pulse rounded bg-[#f5f5f5]"
+                className="h-3 animate-pulse rounded bg-white/10"
                 style={{ width: `${50 + (idx * 13 + 9) % 45}%` }}
               />
             ))}

@@ -21,7 +21,7 @@ export default function LogsLoading() {
             {Array.from({ length: 18 }).map((_, idx) => (
               <div
                 key={`log-${idx}`}
-                className="h-3 animate-pulse rounded bg-[#f5f5f5]"
+                className="h-3 animate-pulse rounded bg-white/10"
                 style={{ width: `${55 + (idx * 17 + 7) % 40}%` }}
               />
             ))}

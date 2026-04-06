@@ -195,10 +195,10 @@ export function TelegramSettings({
                 <div className="space-y-4">
                   <div className="rounded-sm border border-[#e5e5e5] bg-white p-3">
                     <div className="mb-2 text-xs font-medium text-black">Standard:</div>
-                    <div className="mb-2 font-mono text-xs text-[#777169]">
+                    <div className="mb-2 font-mono text-xs text-[#777169] break-all">
                       ~/.config/opencode-cliproxyapi-sync/config.json
                     </div>
-                    <div className="rounded-sm border border-[#e5e5e5] bg-white p-2 font-mono text-xs">
+                    <div className="overflow-x-auto rounded-sm border border-[#e5e5e5] bg-white p-2 font-mono text-xs">
                       {`{
   "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
   "syncToken": "paste-token-here",
@@ -209,10 +209,10 @@ export function TelegramSettings({
 
                   <div className="rounded-sm border border-emerald-200 bg-emerald-50 p-3">
                     <div className="mb-2 text-xs font-medium text-emerald-700">With OCX Profile:</div>
-                    <div className="mb-2 font-mono text-xs text-emerald-700">
+                    <div className="mb-2 font-mono text-xs text-emerald-700 break-all">
                       ~/.config/opencode/profiles/&lt;profilename&gt;/opencode-cliproxyapi-sync/config.json
                     </div>
-                    <div className="rounded-sm border border-[#e5e5e5] bg-white p-2 font-mono text-xs">
+                    <div className="overflow-x-auto rounded-sm border border-[#e5e5e5] bg-white p-2 font-mono text-xs">
                       {`{
   "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
   "syncToken": "paste-token-here",

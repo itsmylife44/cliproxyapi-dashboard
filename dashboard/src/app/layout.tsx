@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   },
   description: "Management dashboard for CLIProxyAPI",
   other: {
-    "theme-color": "#080b11",
+    "theme-color": "#f5f5f5",
   },
 };
 
@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" style={{ colorScheme: "dark" }}>
+    <html lang="en" style={{ colorScheme: "light" }}>
       <body
         className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}
       >

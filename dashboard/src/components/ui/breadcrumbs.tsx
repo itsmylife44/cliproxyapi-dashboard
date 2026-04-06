@@ -23,7 +23,7 @@ function ChevronRight() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="shrink-0 text-slate-600"
+      className="shrink-0 text-[#e5e5e5]"
       aria-hidden="true"
     >
       <path d="m9 18 6-6-6-6" />
@@ -35,17 +35,17 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
   return (
     <nav
       aria-label="Breadcrumb"
-      className={cn("flex items-center gap-1.5 text-sm text-slate-400 mb-4", className)}
+      className={cn("flex items-center gap-1.5 text-sm text-[#777169] mb-4", className)}
     >
-      <ol className="flex items-center gap-1.5" role="list">
+      <ol className="flex items-center gap-1.5">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
           return (
-            <li key={index} className="flex items-center gap-1.5">
+            <li key={`${item.href ?? ""}-${item.label}`} className="flex items-center gap-1.5">
               {isLast || !item.href ? (
                 <span
                   className={cn(
-                    isLast ? "text-slate-200 font-medium" : "text-slate-400"
+                    isLast ? "text-black font-medium" : "text-[#777169]"
                   )}
                   aria-current={isLast ? "page" : undefined}
                 >
@@ -54,7 +54,7 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
               ) : (
                 <Link
                   href={item.href}
-                  className="hover:text-slate-200 transition-colors duration-150"
+                  className="hover:text-black transition-colors duration-150"
                 >
                   {item.label}
                 </Link>

@@ -81,20 +81,33 @@ describe("generateConfigJson", () => {
 });
 
 describe("getProxyUrl", () => {
+  const originalApiUrl = process.env.API_URL;
+  const originalMgmtUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL;
+
   afterEach(() => {
-    vi.unstubAllEnvs();
+    // Restore env vars manually (Bun 1.3.7 does not support vi.stubEnv)
+    if (originalApiUrl === undefined) {
+      delete process.env.API_URL;
+    } else {
+      process.env.API_URL = originalApiUrl;
+    }
+    if (originalMgmtUrl === undefined) {
+      delete process.env.CLIPROXYAPI_MANAGEMENT_URL;
+    } else {
+      process.env.CLIPROXYAPI_MANAGEMENT_URL = originalMgmtUrl;
+    }
   });
 
   it("uses API_URL when provided", () => {
-    vi.stubEnv("API_URL", "http://localhost:8317");
-    vi.stubEnv("CLIPROXYAPI_MANAGEMENT_URL", "http://localhost:28317/v0/management");
+    process.env.API_URL = "http://localhost:8317";
+    process.env.CLIPROXYAPI_MANAGEMENT_URL = "http://localhost:28317/v0/management";
 
     expect(getProxyUrl()).toBe("http://localhost:8317");
   });
 
   it("falls back to the management URL origin when API_URL is missing", () => {
-    vi.stubEnv("API_URL", "");
-    vi.stubEnv("CLIPROXYAPI_MANAGEMENT_URL", "http://localhost:8317/v0/management");
+    delete process.env.API_URL;
+    process.env.CLIPROXYAPI_MANAGEMENT_URL = "http://localhost:8317/v0/management";
 
     expect(getProxyUrl()).toBe("http://localhost:8317");
   });

@@ -22,6 +22,7 @@ $EnvLocalFile = Join-Path $ScriptDir ".env.local"
 # Container names
 $PostgresContainer = "cliproxyapi-dev-postgres"
 $ApiContainer = "cliproxyapi-dev-api"
+$KnownBootstrapDriftMigration = "20260329_add_custom_provider_encrypted_key"
 
 function Write-Info($Message) {
     Write-Host "  i  $Message" -ForegroundColor Cyan
@@ -37,6 +38,35 @@ function Write-Warn($Message) {
 
 function Write-Err($Message) {
     Write-Host "  x  $Message" -ForegroundColor Red
+}
+
+function Get-MigrationDirs {
+    Get-ChildItem -Path (Join-Path $ScriptDir "prisma/migrations") -Directory |
+        Sort-Object Name |
+        ForEach-Object { $_.Name }
+}
+
+function Resolve-AllMigrationsApplied {
+    foreach ($migration in Get-MigrationDirs) {
+        npx prisma migrate resolve --applied $migration 2>&1 | Out-Null
+    }
+}
+
+function Repair-KnownLocalMigrationDrift {
+    $failedMigration = docker exec $PostgresContainer psql -U cliproxyapi -d cliproxyapi -tAc "SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL ORDER BY started_at DESC LIMIT 1" 2>$null
+    $failedMigration = ($failedMigration | Out-String).Trim()
+
+    if ($failedMigration -ne $KnownBootstrapDriftMigration) {
+        return
+    }
+
+    $hasColumn = docker exec $PostgresContainer psql -U cliproxyapi -d cliproxyapi -tAc "SELECT 1 FROM information_schema.columns WHERE table_name = 'custom_providers' AND column_name = 'apiKeyEncrypted' LIMIT 1" 2>$null
+    $hasColumn = ($hasColumn | Out-String).Trim()
+
+    if ($hasColumn -eq "1") {
+        Write-Warn "Recovering local migration state for $failedMigration"
+        npx prisma migrate resolve --applied $failedMigration 2>&1 | Out-Null
+    }
 }
 
 function Assert-DockerAvailable {
@@ -121,32 +151,10 @@ function Invoke-Migrations {
     if ($LASTEXITCODE -ne 0) {
         Write-Info "Fresh database detected, bootstrapping schema via prisma db push..."
         npx prisma db push --accept-data-loss
-
-        # Mark all existing migrations as applied
-        $migrations = @(
-            "20250206_add_model_preferences",
-            "20260206_add_sync_tokens",
-            "20260207_add_user_api_keys_and_admin",
-            "20260207_add_config_sharing",
-            "20260207_add_provider_ownership_models",
-            "20260208_add_name_to_provider_key_ownership",
-            "20260208_add_custom_providers",
-            "20260208_add_sync_token_hash_index",
-            "20260208_add_provider_key_composite_index",
-            "20260209_add_audit_logs",
-            "20260210_add_user_session_version",
-            "20260221_add_perplexity_cookies",
-            "20260225_add_provider_groups",
-            "20260213000000_add_usage_tracking",
-            "20260216_add_collected_at_index",
-            "20260217_add_audit_target_usage_source_indexes",
-            "20260320_add_usage_latency_ms",
-            "20260327_add_slim_overrides"
-        )
-        foreach ($m in $migrations) {
-            npx prisma migrate resolve --applied $m 2>&1 | Out-Null
-        }
+        Resolve-AllMigrationsApplied
     }
+
+    Repair-KnownLocalMigrationDrift
 
     npx prisma migrate deploy
     if ($LASTEXITCODE -ne 0) {

@@ -16,6 +16,12 @@ export function downloadFile(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+export interface AgentUltraworkConfig {
+  model?: string;
+  variant?: string;
+  temperature?: number;
+}
+
 export interface ExtraFieldConfig {
   variant?: string;
   temperature?: number;
@@ -23,7 +29,16 @@ export interface ExtraFieldConfig {
   thirdFieldKey: string;
   thirdFieldPlaceholder: string;
   fallback_models?: string[];
+  supportsUltrawork?: boolean;
+  ultrawork?: AgentUltraworkConfig;
 }
+
+export type ModelBadgeFieldValue =
+  | string
+  | number
+  | string[]
+  | AgentUltraworkConfig
+  | undefined;
 
 export const TIER_META: Record<1 | 2 | 3 | 4, { label: string; hint: string }> = {
   1: { label: "Tier 1", hint: "Critical reasoning" },
@@ -41,7 +56,7 @@ interface ModelBadgeProps {
   modelSourceMap?: Map<string, string>;
   onSelect: (value: string | undefined) => void;
   extraFields?: ExtraFieldConfig;
-  onFieldChange?: (field: string, value: string | number | string[] | undefined) => void;
+  onFieldChange?: (field: string, value: ModelBadgeFieldValue) => void;
 }
 
 export function ModelBadge({
@@ -63,8 +78,19 @@ export function ModelBadge({
   const btnRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const hasUltraworkValues = Boolean(
+    extraFields?.ultrawork &&
+      (extraFields.ultrawork.model ||
+        extraFields.ultrawork.variant ||
+        extraFields.ultrawork.temperature !== undefined)
+  );
   const hasExtraValues =
-    extraFields && (extraFields.variant || extraFields.temperature !== undefined || extraFields.thirdField || (extraFields.fallback_models && extraFields.fallback_models.length > 0));
+    extraFields &&
+    (extraFields.variant ||
+      extraFields.temperature !== undefined ||
+      extraFields.thirdField ||
+      (extraFields.fallback_models && extraFields.fallback_models.length > 0) ||
+      hasUltraworkValues);
 
   useEffect(() => {
     if (!open) return;
@@ -227,6 +253,69 @@ export function ModelBadge({
               })()}
             </div>
           </div>
+          {extraFields?.supportsUltrawork && (
+            <div className="space-y-1 pt-1 border-t border-white/10">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/35">Ultrawork</p>
+                {hasUltraworkValues && (
+                  <button
+                    type="button"
+                    onClick={() => onFieldChange("ultrawork", undefined)}
+                    className="text-[10px] text-white/35 hover:text-red-400/80 transition-colors cursor-pointer"
+                  >
+                    clear
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={extraFields.ultrawork?.model ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value || undefined;
+                    onFieldChange("ultrawork", {
+                      ...extraFields?.ultrawork,
+                      model: value,
+                    });
+                  }}
+                  className="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] font-mono bg-white/5 border border-white/10 rounded text-white/70 focus:outline-none focus:border-violet-400/30 cursor-pointer"
+                >
+                  <option value="" className="bg-gray-900">select model...</option>
+                  {availableModels.map((m) => (
+                    <option key={m} value={m} className="bg-gray-900">{m}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  placeholder="variant"
+                  value={extraFields.ultrawork?.variant ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value || undefined;
+                    onFieldChange("ultrawork", {
+                      ...extraFields?.ultrawork,
+                      variant: value,
+                    });
+                  }}
+                  className="w-16 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
+                />
+                <input
+                  type="number"
+                  placeholder="temp"
+                  step={0.1}
+                  min={0}
+                  max={2}
+                  value={extraFields.ultrawork?.temperature ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value ? Number(e.target.value) : undefined;
+                    onFieldChange("ultrawork", {
+                      ...extraFields?.ultrawork,
+                      temperature: value,
+                    });
+                  }}
+                  className="w-14 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 

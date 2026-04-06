@@ -7,3 +7,4 @@ export { BrowserSection } from "./browser-section";
 export { BackgroundTasksSection } from "./background-tasks-section";
 export { GitMasterSection } from "./git-master-section";
 export { DisabledMcpsSection } from "./disabled-mcps-section";
+export { AdvancedOptionsSection } from "./advanced-options-section";

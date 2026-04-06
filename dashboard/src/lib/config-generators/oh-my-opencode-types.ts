@@ -47,12 +47,31 @@ export interface LspEntry {
   extensions?: string[];
 }
 
+export interface AgentPermissionConfig {
+  edit?: "allow" | "deny" | "prompt";
+  bash?: { git?: "allow" | "deny" | "prompt"; test?: "allow" | "deny" | "prompt" } | "allow" | "deny" | "prompt";
+}
+
+export interface AgentThinkingConfig {
+  type: "enabled" | "disabled";
+  budgetTokens?: number;
+}
+
+export interface AgentUltraworkConfig {
+  model?: string;
+  variant?: string;
+  temperature?: number;
+}
+
 export interface AgentConfigEntry {
   model?: string;
   variant?: string;
   temperature?: number;
   prompt_append?: string;
   fallback_models?: string[];
+  permission?: AgentPermissionConfig;
+  thinking?: AgentThinkingConfig;
+  ultrawork?: AgentUltraworkConfig;
 }
 
 export interface CategoryConfigEntry {
@@ -62,6 +81,11 @@ export interface CategoryConfigEntry {
   description?: string;
   fallback_models?: string[];
 }
+export interface ExperimentalConfig {
+  aggressive_truncation?: boolean;
+  task_system?: boolean;
+}
+
 export interface OhMyOpenCodeFullConfig {
   agents?: Record<string, AgentConfigEntry>;
   categories?: Record<string, CategoryConfigEntry>;
@@ -79,6 +103,18 @@ export interface OhMyOpenCodeFullConfig {
   mcpServers?: McpEntry[];
   customPlugins?: string[];
   configSchemaVersion?: number;
+  hashline_edit?: boolean;
+  experimental?: ExperimentalConfig;
+}
+
+// ============================================================================
+// PRESETS
+// ============================================================================
+
+export interface OhMyOpenCodePreset {
+  name: string;
+  description: string;
+  config: OhMyOpenCodeFullConfig;
 }
 
 // ============================================================================
@@ -87,6 +123,7 @@ export interface OhMyOpenCodeFullConfig {
 
 export const AVAILABLE_AGENTS = [
   "sisyphus",
+  "hephaestus",
   "prometheus",
   "oracle",
   "librarian",
@@ -95,6 +132,7 @@ export const AVAILABLE_AGENTS = [
   "metis",
   "momus",
   "atlas",
+  "sisyphus-junior",
 ] as const;
 
 export const AVAILABLE_SKILLS = [
@@ -213,6 +251,70 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
         if (Array.isArray(entryObj.fallback_models)) {
           const fallbacks = entryObj.fallback_models.filter((v: unknown): v is string => typeof v === "string");
           if (fallbacks.length > 0) entry.fallback_models = fallbacks;
+        }
+        if (entryObj.permission && typeof entryObj.permission === "object" && !Array.isArray(entryObj.permission)) {
+          const permissionObj = entryObj.permission as Record<string, unknown>;
+          const permission: AgentPermissionConfig = {};
+
+          if (
+            permissionObj.edit === "allow" ||
+            permissionObj.edit === "deny" ||
+            permissionObj.edit === "prompt"
+          ) {
+            permission.edit = permissionObj.edit;
+          }
+
+          if (
+            permissionObj.bash === "allow" ||
+            permissionObj.bash === "deny" ||
+            permissionObj.bash === "prompt"
+          ) {
+            permission.bash = permissionObj.bash;
+          } else if (
+            permissionObj.bash &&
+            typeof permissionObj.bash === "object" &&
+            !Array.isArray(permissionObj.bash)
+          ) {
+            const bashObj = permissionObj.bash as Record<string, unknown>;
+            const bashPermission: NonNullable<Exclude<AgentPermissionConfig["bash"], string>> = {};
+            if (bashObj.git === "allow" || bashObj.git === "deny" || bashObj.git === "prompt") {
+              bashPermission.git = bashObj.git;
+            }
+            if (bashObj.test === "allow" || bashObj.test === "deny" || bashObj.test === "prompt") {
+              bashPermission.test = bashObj.test;
+            }
+            if (Object.keys(bashPermission).length > 0) {
+              permission.bash = bashPermission;
+            }
+          }
+
+          if (Object.keys(permission).length > 0) {
+            entry.permission = permission;
+          }
+        }
+        if (entryObj.thinking && typeof entryObj.thinking === "object" && !Array.isArray(entryObj.thinking)) {
+          const thinkingObj = entryObj.thinking as Record<string, unknown>;
+          if (thinkingObj.type === "enabled" || thinkingObj.type === "disabled") {
+            const thinking: AgentThinkingConfig = { type: thinkingObj.type };
+            if (typeof thinkingObj.budgetTokens === "number" && thinkingObj.budgetTokens >= 0) {
+              thinking.budgetTokens = thinkingObj.budgetTokens;
+            }
+            entry.thinking = thinking;
+          }
+        }
+        if (entryObj.ultrawork && typeof entryObj.ultrawork === "object" && !Array.isArray(entryObj.ultrawork)) {
+          const ultraworkObj = entryObj.ultrawork as Record<string, unknown>;
+          const ultrawork: AgentUltraworkConfig = {};
+          if (typeof ultraworkObj.model === "string") ultrawork.model = ultraworkObj.model;
+          if (typeof ultraworkObj.variant === "string") ultrawork.variant = ultraworkObj.variant;
+          if (
+            typeof ultraworkObj.temperature === "number" &&
+            ultraworkObj.temperature >= 0 &&
+            ultraworkObj.temperature <= 2
+          ) {
+            ultrawork.temperature = ultraworkObj.temperature;
+          }
+          if (Object.keys(ultrawork).length > 0) entry.ultrawork = ultrawork;
         }
         validatedAgents[key] = entry;
       }
@@ -552,6 +654,27 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
    // Validate configSchemaVersion number
    if (typeof obj.configSchemaVersion === "number" && obj.configSchemaVersion > 0) {
      result.configSchemaVersion = obj.configSchemaVersion;
+   }
+
+   if (typeof obj.hashline_edit === "boolean") {
+     result.hashline_edit = obj.hashline_edit;
+   }
+
+   if (obj.experimental && typeof obj.experimental === "object" && !Array.isArray(obj.experimental)) {
+     const experimentalObj = obj.experimental as Record<string, unknown>;
+     const experimental: ExperimentalConfig = {};
+
+     if (typeof experimentalObj.aggressive_truncation === "boolean") {
+       experimental.aggressive_truncation = experimentalObj.aggressive_truncation;
+     }
+
+     if (typeof experimentalObj.task_system === "boolean") {
+       experimental.task_system = experimentalObj.task_system;
+     }
+
+     if (Object.keys(experimental).length > 0) {
+       result.experimental = experimental;
+     }
    }
 
    return result;

@@ -5,18 +5,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CopyBlock } from "@/components/copy-block";
 import { downloadFile } from "@/components/oh-my-opencode/model-badge";
+import type { ModelBadgeFieldValue } from "@/components/oh-my-opencode/model-badge";
 import { TierAssignments } from "@/components/oh-my-opencode/tier-assignments";
 import { ToggleSections } from "@/components/oh-my-opencode/toggle-sections";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import {
-  AGENT_ROLES,
-  CATEGORY_ROLES,
+  AGENT_ROLE_LABELS as AGENT_ROLES,
+  CATEGORY_ROLE_LABELS as CATEGORY_ROLES,
+  UPSTREAM_AGENT_CHAINS,
+  UPSTREAM_CATEGORY_CHAINS,
+  resolveChain,
   buildOhMyOpenCodeConfig,
+  applyPreset,
   type ConfigData,
   type OAuthAccount,
-  pickBestModel,
 } from "@/lib/config-generators/oh-my-opencode";
 import type {
   AgentConfigEntry,
@@ -25,6 +29,7 @@ import type {
   CategoryConfigEntry,
   GitMasterConfig,
   OhMyOpenCodeFullConfig,
+  OhMyOpenCodePreset,
   SisyphusAgentConfig,
   TmuxConfig,
 } from "@/lib/config-generators/oh-my-opencode-types";
@@ -45,9 +50,11 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   const [overrides, setOverrides] = useState<OhMyOpenCodeFullConfig>(initialOverrides ?? { agents: {}, categories: {} });
   const [saving, setSaving] = useState(false);
   const nextIdRef = useRef(0);
-  const nextId = () => `row-${nextIdRef.current++}`;
+  const nextId = useCallback(() => `row-${nextIdRef.current++}`, []);
   const [providerConcurrencyRows, setProviderConcurrencyRows] = useState<Array<{ _id: string; key: string; value: number }>>([]);
   const [modelConcurrencyRows, setModelConcurrencyRows] = useState<Array<{ _id: string; key: string; value: number }>>([]);
+  const [presets, setPresets] = useState<OhMyOpenCodePreset[]>([]);
+  const [presetsLoading, setPresetsLoading] = useState(true);
   const tmuxDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const { showToast } = useToast();
 
@@ -69,7 +76,41 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
       const entries = Object.entries(initialOverrides.background_task.modelConcurrency);
       setModelConcurrencyRows(entries.map(([key, value]) => ({ _id: nextId(), key, value })));
     }
-  }, [initialOverrides]);
+  }, [initialOverrides, nextId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadPresets() {
+      try {
+        setPresetsLoading(true);
+        const response = await fetch(API_ENDPOINTS.OH_MY_OPENCODE_PRESETS);
+        if (!response.ok) {
+          throw new Error("Failed to load presets");
+        }
+
+        const data = await response.json() as { presets?: OhMyOpenCodePreset[] };
+        if (isMounted) {
+          setPresets(Array.isArray(data.presets) ? data.presets : []);
+        }
+      } catch {
+        if (isMounted) {
+          setPresets([]);
+          showToast("Failed to load preset source", "error");
+        }
+      } finally {
+        if (isMounted) {
+          setPresetsLoading(false);
+        }
+      }
+    }
+
+    void loadPresets();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [showToast]);
 
   const latestSaveRef = useRef<OhMyOpenCodeFullConfig>(overrides);
 
@@ -125,10 +166,16 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     saveOverrides(newOverrides);
   };
 
-  const handleAgentFieldChange = (agent: string, field: string, value: string | number | string[] | undefined) => {
+  const handleAgentFieldChange = (agent: string, field: string, value: ModelBadgeFieldValue) => {
     const existing = overrides.agents?.[agent] ?? {};
     const newAgents = { ...overrides.agents };
-    if (value === undefined || value === "" || (Array.isArray(value) && value.length === 0)) {
+    const isEmptyObject =
+      typeof value === "object" &&
+      value !== null &&
+      !Array.isArray(value) &&
+      Object.values(value).every((entry) => entry === undefined || entry === "");
+
+    if (value === undefined || value === "" || (Array.isArray(value) && value.length === 0) || isEmptyObject) {
       const updated = { ...existing } as Record<string, unknown>;
       delete updated[field];
       if (Object.keys(updated).length === 0) {
@@ -350,6 +397,20 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     saveOverrides(newOverrides);
   };
 
+  const handleHashlineEditToggle = () => {
+    const newOverrides = { ...overrides, hashline_edit: !(overrides.hashline_edit ?? false) };
+    setOverrides(newOverrides);
+    saveOverrides(newOverrides);
+  };
+
+  const handleExperimentalToggle = (field: keyof NonNullable<OhMyOpenCodeFullConfig["experimental"]>) => {
+    const currentExperimental = overrides.experimental ?? {};
+    const newExperimental = { ...currentExperimental, [field]: !currentExperimental[field] };
+    const newOverrides = { ...overrides, experimental: newExperimental };
+    setOverrides(newOverrides);
+    saveOverrides(newOverrides);
+  };
+
   const handleBrowserProviderChange = (provider: string) => {
     const newBrowser: BrowserAutomationConfig = { provider };
     const newOverrides = { ...overrides, browser_automation_engine: newBrowser };
@@ -460,28 +521,32 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     label: string;
   }[] = [];
 
-  for (const [agent, role] of Object.entries(AGENT_ROLES)) {
+  for (const [agent, chain] of Object.entries(UPSTREAM_AGENT_CHAINS)) {
     const agentConfig = overrides?.agents?.[agent] ?? {};
     const overrideModel = agentConfig.model;
     if (overrideModel && availableModelIds.includes(overrideModel)) {
+      const overrideChainIdx = chain.indexOf(overrideModel);
+      const overrideTier = overrideChainIdx <= 1 ? 1 as const : overrideChainIdx <= 3 ? 2 as const : 3 as const;
       agentAssignments.push({
         name: agent,
         model: overrideModel,
         isOverride: true,
         config: agentConfig,
-        tier: role.tier,
-        label: role.label,
+        tier: overrideTier,
+        label: AGENT_ROLES[agent] ?? agent,
       });
     } else {
-      const model = pickBestModel(availableModelIds, role.tier);
-      if (model) {
+      const resolution = resolveChain(chain, availableModelIds);
+      if (resolution) {
+        const chainIdx = chain.indexOf(resolution.model);
+        const tier = chainIdx <= 1 ? 1 as const : chainIdx <= 3 ? 2 as const : 3 as const;
         agentAssignments.push({
           name: agent,
-          model,
-          isOverride: !!overrideModel,
+          model: resolution.model,
+          isOverride: false,
           config: agentConfig,
-          tier: role.tier,
-          label: role.label,
+          tier,
+          label: AGENT_ROLES[agent] ?? agent,
         });
       }
     }
@@ -497,28 +562,32 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     label: string;
   }[] = [];
 
-  for (const [category, role] of Object.entries(CATEGORY_ROLES)) {
+  for (const [category, chain] of Object.entries(UPSTREAM_CATEGORY_CHAINS)) {
     const categoryConfig = overrides?.categories?.[category] ?? {};
     const overrideModel = categoryConfig.model;
     if (overrideModel && availableModelIds.includes(overrideModel)) {
+      const overrideChainIdx = chain.indexOf(overrideModel);
+      const overrideTier = overrideChainIdx <= 1 ? 1 as const : overrideChainIdx <= 3 ? 2 as const : 3 as const;
       categoryAssignments.push({
         name: category,
         model: overrideModel,
         isOverride: true,
         config: categoryConfig,
-        tier: role.tier,
-        label: role.label,
+        tier: overrideTier,
+        label: CATEGORY_ROLES[category] ?? category,
       });
     } else {
-      const model = pickBestModel(availableModelIds, role.tier);
-      if (model) {
+      const resolution = resolveChain(chain, availableModelIds);
+      if (resolution) {
+        const chainIdx = chain.indexOf(resolution.model);
+        const tier = chainIdx <= 1 ? 1 as const : chainIdx <= 3 ? 2 as const : 3 as const;
         categoryAssignments.push({
           name: category,
-          model,
-          isOverride: !!overrideModel,
+          model: resolution.model,
+          isOverride: false,
           config: categoryConfig,
-          tier: role.tier,
-          label: role.label,
+          tier,
+          label: CATEGORY_ROLES[category] ?? category,
         });
       }
     }
@@ -527,17 +596,44 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
 
   const handleDownload = () => {
     if (configJson) {
-      downloadFile(configJson, "oh-my-opencode.json");
+      downloadFile(configJson, "oh-my-openagent.json");
     }
   };
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-white/70">
-        Assignments are grouped by tier so core agents stay separated from fast and creative workflows. Click any
-        model to override it. Changes save automatically and sync via Config Sync.
-        {saving && <span className="ml-2 text-amber-300/70 text-xs">Saving...</span>}
-      </p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <p className="text-sm text-white/70">
+          Assignments are grouped by tier so core agents stay separated from fast and creative workflows. Click any
+          model to override it. Changes save automatically and sync via Config Sync.
+          {saving && <span className="ml-2 text-amber-300/70 text-xs">Saving...</span>}
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-white/60">Preset:</span>
+          <select
+            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-white/90 focus:outline-none focus:border-violet-400/50"
+            disabled={presetsLoading || presets.length === 0}
+            onChange={(e) => {
+              const presetName = e.target.value;
+              if (!presetName) return;
+              const preset = presets.find((p) => p.name === presetName);
+              if (preset) {
+                const newOverrides = applyPreset(preset, overrides);
+                setOverrides(newOverrides);
+                saveOverrides(newOverrides);
+              }
+            }}
+            value=""
+          >
+            <option value="">{presetsLoading ? "Loading presets..." : "Apply preset..."}</option>
+            {presets.map((preset) => (
+              <option key={preset.name} value={preset.name}>
+                {preset.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <TierAssignments
         agentAssignments={agentAssignments}
@@ -570,6 +666,8 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
         onModelConcurrencyRemove={handleModelConcurrencyRemove}
         onSisyphusToggle={handleSisyphusToggle}
         onGitMasterToggle={handleGitMasterToggle}
+        onHashlineEditToggle={handleHashlineEditToggle}
+        onExperimentalToggle={handleExperimentalToggle}
         onBrowserProviderChange={handleBrowserProviderChange}
         onMcpAdd={handleMcpAdd}
         onMcpRemove={handleMcpRemove}
@@ -620,7 +718,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Download oh-my-opencode.json
+              Download oh-my-openagent.json
             </Button>
           </div>
         </div>

@@ -13,6 +13,12 @@ const globalForScheduler = globalThis as typeof globalThis & {
   __quotaSchedulerRegistered?: boolean;
 };
 
+function scheduleTimeout(callback: () => void | Promise<void>, delayMs: number) {
+  const timer = setTimeout(callback, delayMs);
+  timer.unref?.();
+  return timer;
+}
+
 export function registerNodeInstrumentation() {
   if (globalForScheduler.__quotaSchedulerRegistered) return;
   globalForScheduler.__quotaSchedulerRegistered = true;
@@ -20,11 +26,11 @@ export function registerNodeInstrumentation() {
   // Delay start to let the server fully initialize
   const STARTUP_DELAY_MS = 30_000; // 30 seconds
 
-  setTimeout(() => {
+  scheduleTimeout(() => {
     startQuotaAlertScheduler();
   }, STARTUP_DELAY_MS);
 
-  setTimeout(() => {
+  scheduleTimeout(() => {
     resyncCustomProviders().catch((err) => {
       logger.error({ err }, "Startup custom provider resync failed");
     });
@@ -82,10 +88,10 @@ function startQuotaAlertScheduler() {
     await run();
     try {
       const intervalMs = await getCheckIntervalMs();
-      setTimeout(scheduleNext, intervalMs);
+      scheduleTimeout(scheduleNext, intervalMs);
     } catch {
       // Fallback to 5 minutes if DB read fails
-      setTimeout(scheduleNext, 5 * 60 * 1000);
+      scheduleTimeout(scheduleNext, 5 * 60 * 1000);
     }
   };
 

@@ -47,3 +47,6 @@ next-env.d.ts
 # local-only helper files
 DEV.md
 dev.sh
+
+# local config (copied from .example)
+config.dev.yaml

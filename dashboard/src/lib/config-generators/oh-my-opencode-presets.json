@@ -1,0 +1,166 @@
+[
+  {
+    "name": "default",
+    "description": "Balanced defaults for general development. Tuned for reliability across diverse tasks without overspending.",
+    "config": {
+      "agents": {
+        "sisyphus": {
+          "model": "claude-opus-4.6",
+          "ultrawork": { "model": "claude-opus-4.6", "variant": "max" }
+        },
+        "hephaestus": {
+          "model": "gpt-5.4",
+          "prompt_append": "Explore thoroughly, then implement. Prefer small, testable changes."
+        },
+        "prometheus": {
+          "prompt_append": "Always interview first. Validate scope before planning."
+        },
+        "oracle": { "model": "gpt-5.4", "variant": "high" },
+        "librarian": { "model": "gemini-3-flash" },
+        "explore": { "model": "grok-code-fast-1" },
+        "multimodal-looker": { "model": "gemini-3.1-pro" },
+        "metis": {},
+        "momus": {},
+        "atlas": {},
+        "sisyphus-junior": { "model": "gpt-5-nano" }
+      },
+      "categories": {
+        "quick": { "model": "gpt-5-nano" },
+        "unspecified-low": { "model": "claude-sonnet-4.6" },
+        "unspecified-high": { "model": "claude-opus-4.6", "variant": "max" },
+        "writing": { "model": "gemini-3-flash" },
+        "visual-engineering": { "model": "gemini-3.1-pro", "variant": "high" },
+        "deep": { "model": "gpt-5.3-codex" },
+        "ultrabrain": { "model": "gpt-5.4", "variant": "xhigh" }
+      },
+      "background_task": {
+        "providerConcurrency": {
+          "anthropic": 3,
+          "openai": 3,
+          "google": 5,
+          "opencode": 10
+        }
+      },
+      "experimental": { "aggressive_truncation": true }
+    }
+  },
+  {
+    "name": "coding-focused",
+    "description": "Optimized for intensive coding sessions. Prioritizes deep implementation agents and fast feedback loops.",
+    "config": {
+      "agents": {
+        "sisyphus": {
+          "model": "k2p5",
+          "ultrawork": { "model": "claude-opus-4.6", "variant": "max" },
+          "prompt_append": "Delegate heavily to hephaestus for implementation. Parallelize exploration."
+        },
+        "hephaestus": {
+          "model": "gpt-5.4",
+          "prompt_append": "You are the primary implementation agent. Own the codebase. Explore, decide, execute. Use LSP and AST-grep aggressively.",
+          "permission": { "edit": "allow", "bash": { "git": "allow", "test": "allow" } }
+        },
+        "prometheus": {
+          "model": "gpt-5-nano",
+          "prompt_append": "Keep plans concise. Focus on file structure and key decisions."
+        },
+        "oracle": { "model": "gpt-5.4", "variant": "high" },
+        "librarian": { "model": "grok-code-fast-1" },
+        "explore": { "model": "grok-code-fast-1" },
+        "multimodal-looker": { "model": "gemini-3.1-pro" },
+        "metis": { "model": "gpt-5-nano" },
+        "momus": { "prompt_append": "Focus on code quality, edge cases, and test coverage." },
+        "atlas": {},
+        "sisyphus-junior": { "model": "gpt-5-nano" }
+      },
+      "categories": {
+        "quick": { "model": "gpt-5-nano" },
+        "unspecified-low": { "model": "claude-sonnet-4.6" },
+        "unspecified-high": { "model": "gpt-5.3-codex" },
+        "visual-engineering": { "model": "gemini-3.1-pro", "variant": "high" },
+        "deep": { "model": "gpt-5.3-codex" },
+        "ultrabrain": { "model": "gpt-5.4", "variant": "xhigh" }
+      },
+      "background_task": {
+        "defaultConcurrency": 8,
+        "providerConcurrency": {
+          "anthropic": 5,
+          "openai": 5,
+          "google": 10,
+          "github-copilot": 10,
+          "opencode": 15
+        }
+      },
+      "hashline_edit": true,
+      "experimental": { "aggressive_truncation": true, "task_system": true }
+    }
+  },
+  {
+    "name": "planning-focused",
+    "description": "Optimized for strategic planning, architecture, and complex project design. Prioritizes deep thinking agents.",
+    "config": {
+      "agents": {
+        "sisyphus": {
+          "model": "claude-opus-4.6",
+          "ultrawork": { "model": "claude-opus-4.6", "variant": "max" },
+          "prompt_append": "Always consult prometheus and atlas for planning. Never rush to implementation."
+        },
+        "hephaestus": {
+          "model": "gpt-5.4",
+          "prompt_append": "Follow established plans precisely. Ask for clarification when plans are ambiguous."
+        },
+        "prometheus": {
+          "model": "claude-opus-4.6",
+          "thinking": { "type": "enabled", "budgetTokens": 160000 },
+          "prompt_append": "Interview extensively. Question assumptions. Build exhaustive plans with milestones, risks, and contingencies."
+        },
+        "oracle": {
+          "model": "gpt-5.4",
+          "variant": "xhigh",
+          "thinking": { "type": "enabled", "budgetTokens": 120000 }
+        },
+        "librarian": { "model": "gemini-3-flash" },
+        "explore": { "model": "grok-code-fast-1" },
+        "multimodal-looker": { "model": "gemini-3.1-pro", "variant": "high" },
+        "metis": {
+          "model": "claude-opus-4.6",
+          "prompt_append": "Critically evaluate plans. Identify gaps, risks, and improvements. Be thorough."
+        },
+        "momus": {
+          "model": "gpt-5.4",
+          "prompt_append": "Challenge all assumptions in plans. Look for edge cases, failure modes, and overlooked requirements."
+        },
+        "atlas": {
+          "prompt_append": "Preserve context across long planning sessions. Track evolving decisions."
+        },
+        "sisyphus-junior": { "model": "gpt-5-nano" }
+      },
+      "categories": {
+        "quick": { "model": "gpt-5-nano" },
+        "unspecified-low": { "model": "claude-sonnet-4.6" },
+        "unspecified-high": { "model": "gpt-5.4", "variant": "xhigh" },
+        "writing": { "model": "gemini-3-flash" },
+        "visual-engineering": { "model": "gemini-3.1-pro", "variant": "high" },
+        "deep": { "model": "gpt-5.3-codex" },
+        "ultrabrain": { "model": "gpt-5.4", "variant": "xhigh" },
+        "artistry": { "model": "gemini-3.1-pro", "variant": "high" }
+      },
+      "background_task": {
+        "defaultConcurrency": 5,
+        "staleTimeoutMs": 300000,
+        "providerConcurrency": {
+          "anthropic": 3,
+          "openai": 3
+        },
+        "modelConcurrency": {
+          "claude-opus-4.6": 2,
+          "gpt-5.4": 2
+        }
+      },
+      "sisyphus_agent": {
+        "planner_enabled": true,
+        "replace_plan": true
+      },
+      "experimental": { "aggressive_truncation": true }
+    }
+  }
+]

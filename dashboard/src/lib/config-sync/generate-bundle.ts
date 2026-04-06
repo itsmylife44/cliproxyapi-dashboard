@@ -350,11 +350,11 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
    
    // Use slim plugin if user's customPlugins include it, otherwise default to normal
    const hasSlimPlugin = customPlugins.includes("oh-my-opencode-slim@latest");
-   const omoPlugin = hasSlimPlugin ? "oh-my-opencode-slim@latest" : "oh-my-opencode@latest";
+   const omoPlugin = hasSlimPlugin ? "oh-my-opencode-slim@latest" : "oh-my-openagent@latest";
    const defaultPlugins = ["opencode-cliproxyapi-sync@latest", omoPlugin];
    const pluginSet = new Set([...defaultPlugins, ...customPlugins]);
    // Ensure both variants aren't included simultaneously
-   if (hasSlimPlugin) pluginSet.delete("oh-my-opencode@latest");
+   if (hasSlimPlugin) pluginSet.delete("oh-my-openagent@latest");
    else pluginSet.delete("oh-my-opencode-slim@latest");
    const plugins = Array.from(pluginSet).sort();
 

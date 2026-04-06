@@ -7,7 +7,22 @@ import { modelsDevCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";
 export type { OAuthAccount, ConfigData } from "./shared";
 
 export function getProxyUrl(): string {
-  return process.env.API_URL || "";
+  const apiUrl = process.env.API_URL?.trim();
+  if (apiUrl) {
+    return apiUrl;
+  }
+
+  const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL?.trim();
+  if (!managementUrl) {
+    return "";
+  }
+
+  try {
+    const url = new URL(managementUrl);
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return "";
+  }
 }
 
 export function getInternalProxyUrl(): string {
@@ -169,7 +184,7 @@ export function inferModelDefinition(
 function deduplicateProxyModels(proxyModels: ProxyModel[]): ProxyModel[] {
   const idSet = new Set(proxyModels.map((m) => m.id));
   
-  return proxyModels.filter((pm) => {
+  const filtered = proxyModels.filter((pm) => {
     const id = pm.id;
     
     // 1. Drop dated variants (-YYYYMMDD) if the undated base exists
@@ -189,6 +204,11 @@ function deduplicateProxyModels(proxyModels: ProxyModel[]): ProxyModel[] {
     if (dotVersion !== id && idSet.has(dotVersion)) return false;
     
     return true;
+  });
+
+  return filtered.map((pm) => {
+    const dotId = hyphenatedToDot(pm.id);
+    return dotId !== pm.id ? { ...pm, id: dotId } : pm;
   });
 }
 
@@ -279,10 +299,34 @@ export interface LspEntry {
   extensions?: string[];
 }
 
+export interface PermissionConfig {
+  edit?: "allow" | "deny";
+  bash?: {
+    git?: "allow" | "deny";
+    test?: "allow" | "deny";
+    [command: string]: "allow" | "deny" | undefined;
+  };
+}
+
 export interface GenerateConfigOptions {
   plugins?: string[];
   mcps?: McpEntry[];
   lsps?: LspEntry[];
+  defaultModel?: string;
+  permission?: PermissionConfig;
+}
+
+function resolveConfigModel(
+  models: Record<string, ModelDefinition>,
+  options?: GenerateConfigOptions,
+): string {
+  const manualModel = options?.defaultModel?.trim();
+  if (manualModel) {
+    return manualModel.includes("/") ? manualModel : `cliproxyapi/${manualModel}`;
+  }
+
+  const fallbackModelId = Object.keys(models)[0] ?? "gemini-2.5-flash";
+  return `cliproxyapi/${fallbackModelId}`;
 }
 
 export function generateConfigJson(
@@ -304,11 +348,11 @@ export function generateConfigJson(
      }
      modelEntries[id] = entry;
    }
-   const firstModelId = Object.keys(models)[0] ?? "gemini-2.5-flash";
+   const configModel = resolveConfigModel(models, options);
  
    const plugins = options?.plugins ?? [
      "opencode-cliproxyapi-sync@latest",
-     "oh-my-opencode@latest",
+     "oh-my-openagent@latest",
    ];
  
    const configObj: Record<string, unknown> = {
@@ -324,9 +368,9 @@ export function generateConfigJson(
          },
          models: modelEntries,
        },
-     },
-     model: `cliproxyapi/${firstModelId}`,
-   };
+      },
+       model: configModel,
+    };
 
   if (options?.mcps && options.mcps.length > 0) {
     const mcpServers: Record<string, Record<string, unknown>> = {};
@@ -363,6 +407,10 @@ export function generateConfigJson(
       lspServers[lsp.language] = lspEntry;
     }
     configObj.lsp = lspServers;
+  }
+
+  if (options?.permission) {
+    configObj.permission = options.permission;
   }
 
   return JSON.stringify(configObj, null, 2);

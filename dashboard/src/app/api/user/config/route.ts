@@ -8,6 +8,7 @@ import { Errors, apiSuccess } from "@/lib/errors";
 interface UserConfigRequest {
   mcpServers?: McpEntry[];
   customPlugins?: string[];
+  defaultModel?: string;
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {
@@ -55,6 +56,14 @@ function validateUserConfigRequest(body: unknown): UserConfigRequest | null {
     const customPlugins = obj.customPlugins.filter((v): v is string => typeof v === "string" && v.length > 0);
     if (customPlugins.length !== obj.customPlugins.length) return null;
     result.customPlugins = customPlugins;
+  }
+
+  if (obj.defaultModel !== undefined) {
+    if (typeof obj.defaultModel !== "string") return null;
+    const trimmed = obj.defaultModel.trim();
+    if (trimmed.length > 0) {
+      result.defaultModel = trimmed;
+    }
   }
   
   return result;
@@ -124,6 +133,10 @@ export async function PUT(request: NextRequest) {
     
     if (validatedConfig.customPlugins !== undefined) {
       updatedOverrides.customPlugins = validatedConfig.customPlugins;
+    }
+
+    if (validatedConfig.defaultModel !== undefined) {
+      updatedOverrides.defaultModel = validatedConfig.defaultModel;
     }
     
     const override = await prisma.agentModelOverride.upsert({

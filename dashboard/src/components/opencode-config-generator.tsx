@@ -45,12 +45,12 @@ function downloadFile(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-const PLUGIN_OH_MY_OPENCODE = "oh-my-opencode@latest";
+const PLUGIN_OH_MY_OPENAGENT = "oh-my-openagent@latest";
 const PLUGIN_OH_MY_OPENCODE_SLIM = "oh-my-opencode-slim@latest";
 
 const DEFAULT_PLUGINS = [
   "opencode-cliproxyapi-sync@latest",
-  PLUGIN_OH_MY_OPENCODE,
+  PLUGIN_OH_MY_OPENAGENT,
 ];
 
 export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
@@ -67,10 +67,11 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   const [mcpUrl, setMcpUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [defaultModel, setDefaultModel] = useState("");
   const [envRows, setEnvRows] = useState<Array<{ id: number; key: string; value: string }>>([]);
   const envIdCounter = useRef(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingDataRef = useRef<{ mcps: McpEntry[]; plugins: string[] } | null>(null);
+  const pendingDataRef = useRef<{ mcps: McpEntry[]; plugins: string[]; defaultModel: string } | null>(null);
 
   useEffect(() => {
     async function loadConfig() {
@@ -98,18 +99,21 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           setPlugins(DEFAULT_PLUGINS);
           onVariantChange?.("normal");
         }
+        if (typeof data.defaultModel === "string") {
+          setDefaultModel(data.defaultModel);
+        }
       } catch {
       } finally {
         setIsLoading(false);
       }
     }
     loadConfig();
-  }, []);
+  }, [onVariantChange]);
 
   useEffect(() => {
     if (isLoading) return;
 
-    pendingDataRef.current = { mcps, plugins };
+    pendingDataRef.current = { mcps, plugins, defaultModel };
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -125,6 +129,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           body: JSON.stringify({
             mcpServers: mcps,
             customPlugins: plugins,
+            defaultModel,
           }),
         });
         if (!response.ok) {
@@ -141,16 +146,16 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [mcps, plugins, isLoading]);
+  }, [mcps, plugins, defaultModel, isLoading]);
 
   useEffect(() => {
     return () => {
       if (pendingDataRef.current) {
-        const { mcps: m, plugins: p } = pendingDataRef.current;
+        const { mcps: m, plugins: p, defaultModel: d } = pendingDataRef.current;
         fetch(API_ENDPOINTS.USER.CONFIG, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mcpServers: m, customPlugins: p }),
+          body: JSON.stringify({ mcpServers: m, customPlugins: p, defaultModel: d }),
           keepalive: true,
         }).catch(() => {});
       }
@@ -182,15 +187,25 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
     ? apiKeys[selectedKeyIndex] ?? apiKeys[0]
     : null;
   const activeKey = selectedEntry?.key ?? "your-api-key-from-dashboard";
+  const availableModelOptions = Object.keys(availableModels).map((modelId) => ({
+    id: modelId,
+    value: `cliproxyapi/${modelId}`,
+    label: availableModels[modelId]?.name ?? modelId,
+  }));
+  const fallbackModel = availableModelOptions[0]?.value ?? "cliproxyapi/gemini-2.5-flash";
+  const hasCustomDefaultModel = Boolean(defaultModel.trim())
+    && !availableModelOptions.some((option) => option.value === defaultModel.trim());
+  const resolvedDefaultModel = defaultModel.trim() || fallbackModel;
 
    const configJson = generateConfigJson(activeKey, availableModels, proxyUrl, {
-     plugins,
-     mcps,
-   });
+      plugins,
+      mcps,
+      defaultModel: resolvedDefaultModel,
+    });
 
   const handleOmoVariantChange = (variant: OmoVariant) => {
-    const removePlugin = variant === "slim" ? PLUGIN_OH_MY_OPENCODE : PLUGIN_OH_MY_OPENCODE_SLIM;
-    const addPlugin = variant === "slim" ? PLUGIN_OH_MY_OPENCODE_SLIM : PLUGIN_OH_MY_OPENCODE;
+    const removePlugin = variant === "slim" ? PLUGIN_OH_MY_OPENAGENT : PLUGIN_OH_MY_OPENCODE_SLIM;
+    const addPlugin = variant === "slim" ? PLUGIN_OH_MY_OPENCODE_SLIM : PLUGIN_OH_MY_OPENAGENT;
     const filtered = plugins.filter((p) => p !== removePlugin && p !== addPlugin);
     const insertIdx = Math.min(1, filtered.length);
     const newPlugins = [...filtered.slice(0, insertIdx), addPlugin, ...filtered.slice(insertIdx)];
@@ -409,9 +424,38 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
         </div>
        )}
 
-       <div className="space-y-4 border-t border-white/10 pt-4">
-         <div className="space-y-2">
-           <p className="text-xs font-medium text-white/50 uppercase tracking-wider">Oh My OpenCode Variant <HelpTooltip content="Normal: 9 specialized agents with categories for fine-grained control. Slim: 6 agents, lower token usage, built-in fallback chains. Both use your proxy models." /></p>
+        <div className="space-y-4 border-t border-white/10 pt-4">
+          <div className="space-y-2">
+            <label htmlFor="default-model-select" className="text-xs font-medium text-white/50 uppercase tracking-wider">
+              Default Model <HelpTooltip content="Choose one of the available OpenCode models for the `model` field in opencode.json. If you already saved a custom value that is not in the discovered list, it will appear as a custom option." />
+            </label>
+            <select
+              id="default-model-select"
+              value={hasCustomDefaultModel ? defaultModel.trim() : (defaultModel.trim() || "")}
+              onChange={(e) => setDefaultModel(e.target.value)}
+              className="w-full backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-4 py-2.5 text-sm text-white/90 font-mono focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+            >
+              <option value="" className="bg-[#1a1a2e] text-white">
+                Auto fallback ({fallbackModel})
+              </option>
+              {hasCustomDefaultModel ? (
+                <option value={defaultModel.trim()} className="bg-[#1a1a2e] text-white">
+                  Custom saved value ({defaultModel.trim()})
+                </option>
+              ) : null}
+              {availableModelOptions.map((option) => (
+                <option key={option.value} value={option.value} className="bg-[#1a1a2e] text-white">
+                  {option.label} ({option.value})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-white/45">
+              Choose a discovered model, or leave it on auto fallback to use <span className="font-mono text-white/60">{fallbackModel}</span>.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-white/50 uppercase tracking-wider">Oh My OpenCode Variant <HelpTooltip content="Normal: 9 specialized agents with categories for fine-grained control. Slim: 6 agents, lower token usage, built-in fallback chains. Both use your proxy models." /></p>
            <div className="flex gap-2">
              <button
                type="button"

@@ -81,7 +81,16 @@ export function SlimTierAssignments({
                         thirdFieldPlaceholder: "mcps (comma-separated)",
                         fallback_models: undefined,
                       }}
-                      onFieldChange={(field, value) => onAgentFieldChange(name, field, value)}
+                      onFieldChange={(field, value) => {
+                        if (
+                          value === undefined ||
+                          typeof value === "string" ||
+                          typeof value === "number" ||
+                          Array.isArray(value)
+                        ) {
+                          onAgentFieldChange(name, field, value);
+                        }
+                      }}
                     />
                   </div>
                   <div>

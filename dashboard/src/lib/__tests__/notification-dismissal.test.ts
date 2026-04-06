@@ -23,7 +23,7 @@ const localStorageMock = (() => {
   };
 })();
 
-vi.stubGlobal("localStorage", localStorageMock);
+Object.defineProperty(global, "localStorage", { value: localStorageMock, writable: true });
 
 beforeEach(() => {
   localStorageMock.clear();

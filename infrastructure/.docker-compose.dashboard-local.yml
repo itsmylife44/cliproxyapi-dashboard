@@ -1,0 +1,3 @@
+services:
+  dashboard:
+    image: ghcr.io/itsmylife44/cliproxyapi-dashboard/dashboard:latest

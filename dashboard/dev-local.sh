@@ -21,6 +21,7 @@ ENV_LOCAL_FILE="$SCRIPT_DIR/.env.local"
 # Container names
 POSTGRES_CONTAINER="cliproxyapi-dev-postgres"
 API_CONTAINER="cliproxyapi-dev-api"
+KNOWN_BOOTSTRAP_DRIFT_MIGRATION="20260329_add_custom_provider_encrypted_key"
 
 # Function to print colored status messages
 log_info() {
@@ -37,6 +38,41 @@ log_error() {
 
 log_warning() {
     echo -e "${YELLOW}⚠${NC}  $1"
+}
+
+get_migration_dirs() {
+    find "$SCRIPT_DIR/prisma/migrations" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort
+}
+
+mark_all_migrations_applied() {
+    while IFS= read -r migration; do
+        npx prisma migrate resolve --applied "$migration" >/dev/null 2>&1 || true
+    done < <(get_migration_dirs)
+}
+
+repair_known_local_migration_drift() {
+    local failed_migration
+    failed_migration="$(
+        docker exec "$POSTGRES_CONTAINER" psql -U cliproxyapi -d cliproxyapi -tAc \
+            "SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL ORDER BY started_at DESC LIMIT 1" \
+            2>/dev/null | tr -d '[:space:]'
+    )"
+
+    if [ "$failed_migration" != "$KNOWN_BOOTSTRAP_DRIFT_MIGRATION" ]; then
+        return 0
+    fi
+
+    local has_column
+    has_column="$(
+        docker exec "$POSTGRES_CONTAINER" psql -U cliproxyapi -d cliproxyapi -tAc \
+            "SELECT 1 FROM information_schema.columns WHERE table_name = 'custom_providers' AND column_name = 'apiKeyEncrypted' LIMIT 1" \
+            2>/dev/null | tr -d '[:space:]'
+    )"
+
+    if [ "$has_column" = "1" ]; then
+        log_warning "Recovering local migration state for ${failed_migration}"
+        npx prisma migrate resolve --applied "$failed_migration" >/dev/null 2>&1 || true
+    fi
 }
 
 # Function to check if Docker daemon is running
@@ -127,25 +163,10 @@ run_migrations() {
     if ! docker exec "$POSTGRES_CONTAINER" psql -U cliproxyapi -d cliproxyapi -tAc "SELECT 1 FROM _prisma_migrations LIMIT 1" >/dev/null 2>&1; then
         log_info "Fresh database detected, bootstrapping schema via prisma db push..."
         npx prisma db push --accept-data-loss >/dev/null 2>&1
-        npx prisma migrate resolve --applied 20250206_add_model_preferences >/dev/null 2>&1 || true
-        npx prisma migrate resolve --applied 20260206_add_sync_tokens >/dev/null 2>&1 || true
-        npx prisma migrate resolve --applied 20260207_add_user_api_keys_and_admin >/dev/null 2>&1 || true
-        npx prisma migrate resolve --applied 20260207_add_config_sharing >/dev/null 2>&1 || true
-        npx prisma migrate resolve --applied 20260207_add_provider_ownership_models >/dev/null 2>&1 || true
-         npx prisma migrate resolve --applied 20260208_add_name_to_provider_key_ownership >/dev/null 2>&1 || true
-         npx prisma migrate resolve --applied 20260208_add_custom_providers >/dev/null 2>&1 || true
-         npx prisma migrate resolve --applied 20260208_add_sync_token_hash_index >/dev/null 2>&1 || true
-         npx prisma migrate resolve --applied 20260208_add_provider_key_composite_index >/dev/null 2>&1 || true
-         npx prisma migrate resolve --applied 20260209_add_audit_logs >/dev/null 2>&1 || true
-         npx prisma migrate resolve --applied 20260210_add_user_session_version >/dev/null 2>&1 || true
-         npx prisma migrate resolve --applied 20260221_add_perplexity_cookies >/dev/null 2>&1 || true
-         npx prisma migrate resolve --applied 20260225_add_provider_groups >/dev/null 2>&1 || true
-         npx prisma migrate resolve --applied 20260213000000_add_usage_tracking >/dev/null 2>&1 || true
-         npx prisma migrate resolve --applied 20260216_add_collected_at_index >/dev/null 2>&1 || true
-         npx prisma migrate resolve --applied 20260217_add_audit_target_usage_source_indexes >/dev/null 2>&1 || true
-         npx prisma migrate resolve --applied 20260320_add_usage_latency_ms >/dev/null 2>&1 || true
-         npx prisma migrate resolve --applied 20260327_add_slim_overrides >/dev/null 2>&1 || true
-       fi
+        mark_all_migrations_applied
+    fi
+
+    repair_known_local_migration_drift
     
     if npx prisma migrate deploy; then
         log_success "Migrations applied"
@@ -191,6 +212,22 @@ detect_docker_host() {
             echo "unix:///var/run/docker.sock"
             ;;
     esac
+}
+
+ensure_config_dev() {
+    local config_file="$SCRIPT_DIR/config.dev.yaml"
+    local config_example="$SCRIPT_DIR/config.dev.yaml.example"
+
+    if [ ! -f "$config_file" ]; then
+        if [ -f "$config_example" ]; then
+            log_info "Creating config.dev.yaml from example..."
+            cp "$config_example" "$config_file"
+            log_success "config.dev.yaml created"
+        else
+            log_error "config.dev.yaml.example not found!"
+            exit 1
+        fi
+    fi
 }
 
 # Function to write .env.local file
@@ -284,7 +321,9 @@ main() {
     esac
     
     cd "$SCRIPT_DIR"
-    
+
+    ensure_config_dev
+
     # Startup sequence
     check_docker
     start_containers

@@ -18,13 +18,13 @@ vi.mock("@/lib/db", () => ({
   prisma: {},
 }));
 
+// Set required env vars
+process.env.MANAGEMENT_API_KEY = "test-key";
+process.env.CLIPROXYAPI_MANAGEMENT_URL = "http://test:8317/v0/management";
+
 // Track all fetch calls
 const fetchMock = vi.fn();
-vi.stubGlobal("fetch", fetchMock);
-
-// Set required env vars
-vi.stubEnv("MANAGEMENT_API_KEY", "test-key");
-vi.stubEnv("CLIPROXYAPI_MANAGEMENT_URL", "http://test:8317/v0/management");
+Object.defineProperty(global, "fetch", { value: fetchMock, writable: true, configurable: true });
 
 describe("GET /api/quota — Gemini CLI support (issue #125)", () => {
   beforeEach(() => {

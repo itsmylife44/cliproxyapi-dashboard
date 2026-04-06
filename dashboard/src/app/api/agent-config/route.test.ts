@@ -32,12 +32,12 @@ vi.mock("@/lib/config-generators/opencode", () => ({
   extractOAuthModelAliases: extractOAuthModelAliasesMock,
 }));
 
-vi.mock("@/lib/config-generators/shared", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/config-generators/shared")>(
-    "@/lib/config-generators/shared"
-  );
+vi.mock("@/lib/config-generators/shared", () => {
   return {
-    ...actual,
+    isRecord: (value: unknown): value is Record<string, unknown> =>
+      typeof value === "object" && value !== null,
+    buildAvailableModelIds: (proxyModels: Array<{ id: string }>, oauthAliasIds: string[]): string[] =>
+      [...new Set([...proxyModels.map((m) => m.id), ...oauthAliasIds])].sort((a, b) => a.localeCompare(b)),
     fetchProxyModels: fetchProxyModelsMock,
   };
 });
@@ -86,7 +86,7 @@ describe("GET /api/agent-config", () => {
       .fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({}), body: { cancel: vi.fn() } })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ files: [] }), body: { cancel: vi.fn() } });
-    vi.stubGlobal("fetch", fetchMock);
+    Object.defineProperty(global, "fetch", { value: fetchMock, writable: true, configurable: true });
 
     const { GET } = await import("./route");
     const response = await GET();

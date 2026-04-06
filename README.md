@@ -13,7 +13,7 @@
   <a href="https://github.com/itsmylife44/cliproxyapi-dashboard/actions/workflows/release.yml"><img src="https://github.com/itsmylife44/cliproxyapi-dashboard/actions/workflows/release.yml/badge.svg" alt="Build"></a>
   <a href="https://github.com/itsmylife44/cliproxyapi-dashboard/pkgs/container/cliproxyapi-dashboard%2Fdashboard"><img src="https://img.shields.io/badge/Docker-GHCR-blue?logo=docker" alt="Docker"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"></a>
-  <a href="https://discord.gg/RngVxcNvfg"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://discord.gg/7SrXxNueGA"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
   <img src="https://img.shields.io/badge/Next.js-16-black?logo=next.js" alt="Next.js 16">
   <img src="https://img.shields.io/badge/React-19-blue?logo=react" alt="React 19">
   <img src="https://img.shields.io/badge/TypeScript-5-blue?logo=typescript" alt="TypeScript">
@@ -22,13 +22,13 @@
 ---
 
 <p align="center">
-  <a href="https://discord.gg/RngVxcNvfg">
+  <a href="https://discord.gg/7SrXxNueGA">
     <img src="https://img.shields.io/badge/Discord%20Community-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white" alt="Discord">
   </a>
 </p>
 <p align="center">
   We have a Discord server — installation help, release announcements, and community chat.<br>
-  <strong><a href="https://discord.gg/RngVxcNvfg">discord.gg/RngVxcNvfg</a></strong>
+  <strong><a href="https://discord.gg/7SrXxNueGA">discord.gg/7SrXxNueGA</a></strong>
 </p>
 
 ---
@@ -197,7 +197,7 @@ Release-Please auto-generates releases from commit messages.
 
 ## Support
 
-- **[Discord](https://discord.gg/RngVxcNvfg)** — Community chat, installation help, announcements
+- **[Discord](https://discord.gg/7SrXxNueGA)** — Community chat, installation help, announcements
 - **[CLIProxyAPIPlus](https://github.com/router-for-me/CLIProxyAPIPlus)** — Core proxy documentation
 - **[Issues](https://github.com/itsmylife44/cliproxyapi-dashboard/issues)** — Bug reports and feature requests
 - **[Discussions](https://github.com/itsmylife44/cliproxyapi-dashboard/discussions)** — Questions and community

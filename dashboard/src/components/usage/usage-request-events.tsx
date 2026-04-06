@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 interface RequestEvent {
@@ -58,17 +58,14 @@ function formatLatency(latencyMs: number): string {
 export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestEventsProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
-  const safeEvents = events ?? [];
+  const safeEvents = useMemo(() => events ?? [], [events]);
   const totalPages = Math.max(1, Math.ceil(safeEvents.length / EVENTS_PER_PAGE));
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [events]);
+  const activePage = Math.min(currentPage, totalPages);
 
   const pagedEvents = useMemo(() => {
-    const start = (currentPage - 1) * EVENTS_PER_PAGE;
+    const start = (activePage - 1) * EVENTS_PER_PAGE;
     return safeEvents.slice(start, start + EVENTS_PER_PAGE);
-  }, [currentPage, safeEvents]);
+  }, [activePage, safeEvents]);
 
   const hasMissingLatency = safeEvents.some((event) => event.latencyMs <= 0);
 
@@ -160,18 +157,18 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
           <Button
             variant="ghost"
             onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-            disabled={currentPage === 1}
+            disabled={activePage === 1}
             className="px-2.5 py-1 text-xs"
           >
             Previous
           </Button>
           <span className="text-xs text-slate-400">
-            Page {currentPage} of {totalPages}
+            Page {activePage} of {totalPages}
           </span>
           <Button
             variant="ghost"
             onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-            disabled={currentPage === totalPages}
+            disabled={activePage === totalPages}
             className="px-2.5 py-1 text-xs"
           >
             Next

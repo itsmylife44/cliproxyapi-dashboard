@@ -124,15 +124,11 @@ export default function AdminLogsPage() {
     }
   }, [levelFilter, router, showToast]);
 
-  // Reset page when filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [levelFilter]);
-
-  const totalPages = Math.ceil(logs.length / LOGS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(logs.length / LOGS_PER_PAGE));
+  const activePage = Math.min(currentPage, totalPages);
   const pagedLogs = logs.slice(
-    (currentPage - 1) * LOGS_PER_PAGE,
-    currentPage * LOGS_PER_PAGE
+    (activePage - 1) * LOGS_PER_PAGE,
+    activePage * LOGS_PER_PAGE
   );
 
   useEffect(() => {
@@ -232,7 +228,10 @@ export default function AdminLogsPage() {
               <select
                 id="level-filter"
                 value={levelFilter}
-                onChange={(e) => setLevelFilter(e.target.value as LevelFilter)}
+                onChange={(e) => {
+                  setLevelFilter(e.target.value as LevelFilter);
+                  setCurrentPage(1);
+                }}
                 className="rounded-sm border border-slate-700/70 bg-slate-900/50 px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-blue-400/50 transition-colors"
               >
                 {LEVEL_FILTERS.map((level) => (
@@ -281,7 +280,7 @@ export default function AdminLogsPage() {
           <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Log Entries</span>
           <span className="text-xs text-slate-400">
             {logs.length > 0
-              ? `Showing ${(currentPage - 1) * LOGS_PER_PAGE + 1}–${Math.min(currentPage * LOGS_PER_PAGE, logs.length)} of ${logs.length} logs`
+              ? `Showing ${(activePage - 1) * LOGS_PER_PAGE + 1}–${Math.min(activePage * LOGS_PER_PAGE, logs.length)} of ${logs.length} logs`
               : `${total} logs`}
           </span>
         </div>
@@ -315,7 +314,7 @@ export default function AdminLogsPage() {
               </thead>
               <tbody>
                 {pagedLogs.map((log, index) => {
-                  const globalIndex = (currentPage - 1) * LOGS_PER_PAGE + index;
+                  const globalIndex = (activePage - 1) * LOGS_PER_PAGE + index;
                   return (
                   <React.Fragment key={`log-${log.time}-${globalIndex}`}>
                     <tr
@@ -376,18 +375,18 @@ export default function AdminLogsPage() {
             <Button
               variant="ghost"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
+              disabled={activePage === 1}
               className="px-2.5 py-1 text-xs"
             >
               Previous
             </Button>
             <span className="text-xs text-slate-400">
-              Page {currentPage} of {totalPages}
+              Page {activePage} of {totalPages}
             </span>
             <Button
               variant="ghost"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
+              disabled={activePage === totalPages}
               className="px-2.5 py-1 text-xs"
             >
               Next

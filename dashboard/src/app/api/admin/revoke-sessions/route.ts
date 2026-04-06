@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { verifySession, createSession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { signToken } from "@/lib/auth/jwt";

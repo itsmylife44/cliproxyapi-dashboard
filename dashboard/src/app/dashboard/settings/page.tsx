@@ -80,7 +80,7 @@ export default function SettingsPage() {
         const data = await res.json();
         setProxyUpdateInfo(data);
       }
-    } catch (err) {
+    } catch {
       if (signal?.aborted) return;
     } finally {
       if (!signal?.aborted) setProxyUpdateLoading(false);
@@ -95,7 +95,7 @@ export default function SettingsPage() {
         const data = await res.json();
         setDashboardUpdateInfo(data);
       }
-    } catch (err) {
+    } catch {
       if (signal?.aborted) return;
     } finally {
       if (!signal?.aborted) setDashboardUpdateLoading(false);
@@ -113,7 +113,7 @@ export default function SettingsPage() {
           setAvailableApiKeys(data.apiKeys);
         }
       }
-    } catch (err) {
+    } catch {
       if (signal?.aborted) return;
     } finally {
       if (!signal?.aborted) setSyncTokensLoading(false);

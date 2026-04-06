@@ -3,9 +3,9 @@
 import { useHealthStatus } from "@/hooks/use-health-status";
 
 function getLatencyColor(ms: number): string {
-  if (ms < 100) return "text-emerald-400";
-  if (ms < 300) return "text-amber-400";
-  return "text-red-400";
+  if (ms < 100) return "text-emerald-600";
+  if (ms < 300) return "text-amber-600";
+  return "text-red-600";
 }
 
 function getLatencyDotColor(ms: number): string {
@@ -23,7 +23,7 @@ export function LatencyIndicator() {
     return (
       <div className="flex items-center gap-1.5" title="Proxy unreachable">
         <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
-        <span className="text-xs text-red-400">--ms</span>
+        <span className="text-xs text-red-600">--ms</span>
       </div>
     );
   }

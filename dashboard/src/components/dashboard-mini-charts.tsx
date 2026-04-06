@@ -118,13 +118,13 @@ function MiniSparkCard({
   gradientId: string;
 }) {
   return (
-    <div className="rounded-md border border-slate-700/70 bg-slate-900/25 px-3 py-2">
+    <div className="rounded-md border border-[#e5e5e5] bg-white px-3 py-2">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
             {label}
           </p>
-          <p className="mt-0.5 text-sm font-semibold text-slate-100">{value}</p>
+          <p className="mt-0.5 text-sm font-semibold text-black">{value}</p>
         </div>
       </div>
       <div className="mt-1.5 h-10" role="img" aria-label={`${label}: ${value}`}>

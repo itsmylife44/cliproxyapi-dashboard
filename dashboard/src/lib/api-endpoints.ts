@@ -101,6 +101,7 @@ export const API_ENDPOINTS = {
   },
   PROXY: {
     STATUS: "/api/proxy/status",
+    OAUTH_SETTINGS: "/api/proxy/oauth-settings",
   },
   CONFIG_SYNC: {
     TOKENS: "/api/config-sync/tokens",

@@ -498,7 +498,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
         <div className="border-l-4 border-amber-400/60 bg-amber-500/10 backdrop-blur-xl p-4 text-sm rounded-r-xl">
           <p className="text-white/90 font-medium mb-1">No providers configured</p>
           <p className="text-white/60 text-xs">
-            You need to configure at least one AI provider before generating an Oh My OpenCode config. Head to the{" "}
+            You need to configure at least one AI provider before generating an Oh My Open Agent config. Head to the{" "}
             <Link
               href="/dashboard/providers"
               className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30"

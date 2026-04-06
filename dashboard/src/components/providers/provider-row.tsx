@@ -25,30 +25,30 @@ export function ProviderRow({
   onMoveDown,
 }: ProviderRowProps) {
   return (
-    <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] items-center border-b border-slate-700/60 px-3 py-2 last:border-b-0">
+    <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] items-center border-b border-[#e5e5e5] px-3 py-2 last:border-b-0">
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className="truncate text-sm font-medium text-slate-100">{provider.name}</p>
+          <p className="truncate text-sm font-medium text-black">{provider.name}</p>
           {!provider.hasEncryptedKey && (
             <span
               title="Re-save this provider to enable auto-resync after proxy restarts"
-              className="shrink-0 rounded-sm border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-300"
+              className="shrink-0 rounded-sm border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
             >
               re-save
             </span>
           )}
         </div>
-        <p className="truncate text-xs text-slate-500">{provider.providerId}</p>
+        <p className="truncate text-xs text-[#777169]">{provider.providerId}</p>
       </div>
-      <p className="truncate text-xs text-slate-300 pr-2">{provider.baseUrl}</p>
-      <p className="text-xs text-slate-300">{provider.models.length}</p>
+      <p className="truncate text-xs text-[#4e4e4e] pr-2">{provider.baseUrl}</p>
+      <p className="text-xs text-[#4e4e4e]">{provider.models.length}</p>
 
       <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={() => onMoveUp(provider.id, provider.groupId, index)}
           disabled={isFirst}
-          className="flex size-6 items-center justify-center rounded-sm border border-slate-700/70 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white disabled:opacity-30 disabled:hover:bg-slate-800 disabled:hover:text-slate-300 transition-colors"
+          className="flex size-6 items-center justify-center rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] text-[#4e4e4e] hover:bg-[#e5e5e5] hover:text-black disabled:opacity-30 disabled:hover:bg-[#f5f5f5] disabled:hover:text-[#4e4e4e] transition-colors"
           title="Move Up"
           aria-label={`Move ${provider.name} up`}
         >
@@ -58,7 +58,7 @@ export function ProviderRow({
           type="button"
           onClick={() => onMoveDown(provider.id, provider.groupId, index)}
           disabled={isLast}
-          className="flex size-6 items-center justify-center rounded-sm border border-slate-700/70 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white disabled:opacity-30 disabled:hover:bg-slate-800 disabled:hover:text-slate-300 transition-colors"
+          className="flex size-6 items-center justify-center rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] text-[#4e4e4e] hover:bg-[#e5e5e5] hover:text-black disabled:opacity-30 disabled:hover:bg-[#f5f5f5] disabled:hover:text-[#4e4e4e] transition-colors"
           title="Move Down"
           aria-label={`Move ${provider.name} down`}
         >

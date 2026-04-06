@@ -107,8 +107,8 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
         <ModalContent>
           <div className="space-y-6">
             <div>
-              <label htmlFor="groupName" className="mb-2 block text-sm font-semibold text-white">
-                Group Name <span className="text-red-400">*</span>
+              <label htmlFor="groupName" className="mb-2 block text-sm font-semibold text-black">
+                Group Name <span className="text-red-600">*</span>
               </label>
               <Input
                 id="groupName"
@@ -122,7 +122,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
             </div>
             
             <div>
-              <label className="mb-2 block text-sm font-semibold text-white">
+              <label className="mb-2 block text-sm font-semibold text-black">
                 Color (Optional)
               </label>
               <div className="flex flex-wrap gap-2">
@@ -132,7 +132,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
                     type="button"
                     onClick={() => setSelectedColor(color)}
                     disabled={saving}
-                    className={`w-7 h-7 rounded-full border-2 transition-[border-color,transform] ${selectedColor === color ? "border-white scale-110" : "border-transparent hover:border-white/50"} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className={`w-7 h-7 rounded-full border-2 transition-[border-color,transform] ${selectedColor === color ? "border-black scale-110" : "border-transparent hover:border-[#aaa]"} disabled:opacity-50 disabled:cursor-not-allowed`}
                     style={{ backgroundColor: color }}
                     aria-label={`Select color ${color}`}
                   />
@@ -143,7 +143,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
                   type="button"
                   onClick={() => setSelectedColor(null)} 
                   disabled={saving}
-                  className={`w-7 h-7 rounded-full border-2 border-dashed flex items-center justify-center text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${selectedColor === null ? "border-white text-white bg-white/10" : "border-slate-500 text-slate-400 hover:border-white/50"}`}
+                  className={`w-7 h-7 rounded-full border-2 border-dashed flex items-center justify-center text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${selectedColor === null ? "border-black text-black bg-[#f0f0f0]" : "border-[#ccc] text-[#777169] hover:border-[#aaa]"}`}
                   aria-label="No color"
                 >
                   ✕

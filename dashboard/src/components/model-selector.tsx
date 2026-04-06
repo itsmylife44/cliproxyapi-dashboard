@@ -184,7 +184,7 @@ export function ModelSelector({
 
   return (
     <div
-      className="rounded-lg border border-slate-700/70 bg-slate-900/40"
+      className="rounded-lg border border-[#e5e5e5] bg-white"
       data-testid="model-selector"
     >
       <div className="flex items-center justify-between gap-3 p-4">
@@ -193,7 +193,7 @@ export function ModelSelector({
             type="button"
             onClick={() => setIsOpen(!isOpen)}
             aria-expanded={isOpen}
-            className="flex items-center gap-2 text-xs font-medium text-white/60 hover:text-white/90 transition-colors"
+            className="flex items-center gap-2 text-xs font-medium text-[#777169] hover:text-black transition-colors"
             disabled={isLocked}
           >
             <svg
@@ -210,32 +210,32 @@ export function ModelSelector({
             >
               <polyline points="9 18 15 12 9 6" />
             </svg>
-            <span className="text-sm font-semibold text-white">
+            <span className="text-sm font-semibold text-black">
               Model Selection <HelpTooltip content="Deselect models to exclude them from your config. Excluded models won't appear in opencode.json or be assigned to agents." />
             </span>
             {isLocked && (
-              <span className="text-amber-400" title="Locked by subscription">
+              <span className="text-amber-600" title="Locked by subscription">
                 🔒
               </span>
             )}
           </button>
 
-          <span className="px-2 py-0.5 rounded-full bg-white/10 text-xs text-white/50">
+          <span className="px-2 py-0.5 rounded-full bg-[#f0f0f0] text-xs text-[#777169]">
             {selectedCount} of {availableModels.length} selected
           </span>
         </div>
 
         {isLocked ? (
-          <span className="text-xs text-amber-400/80">
+          <span className="text-xs text-amber-600/80">
             Publisher-controlled
           </span>
         ) : (
           <>
             {saveStatus === SAVE_STATUS.SAVING && (
-              <span className="text-xs text-white/50">Saving...</span>
+              <span className="text-xs text-[#777169]">Saving...</span>
             )}
             {saveStatus === SAVE_STATUS.SAVED && (
-              <span className="flex items-center gap-1 text-xs text-green-400">
+              <span className="flex items-center gap-1 text-xs text-green-600">
                 <svg
                   width="12"
                   height="12"
@@ -260,9 +260,9 @@ export function ModelSelector({
       {isOpen && (
         <div className="space-y-4 px-4 pb-4">
           {isLocked && (
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-400/30">
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
               <span className="text-lg">🔒</span>
-              <p className="text-sm text-amber-200/90">
+              <p className="text-sm text-amber-700">
                 Model selection is controlled by your publisher. Unsubscribe to regain control.
               </p>
             </div>
@@ -272,16 +272,16 @@ export function ModelSelector({
             <button
               type="button"
               onClick={handleSelectAll}
-              className="text-xs font-medium text-white/60 hover:text-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-xs font-medium text-[#777169] hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isLocked}
             >
               Select All
             </button>
-            <span className="text-white/30">|</span>
+            <span className="text-[#aaa]">|</span>
             <button
               type="button"
               onClick={handleDeselectAll}
-              className="text-xs font-medium text-white/60 hover:text-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-xs font-medium text-[#777169] hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isLocked}
             >
               Deselect All
@@ -303,7 +303,7 @@ export function ModelSelector({
                       type="button"
                       onClick={() => toggleGroupExpansion(group.provider)}
                       aria-expanded={isExpanded}
-                      className="flex items-center gap-2 text-sm font-semibold text-white/90 hover:text-white transition-colors"
+                      className="flex items-center gap-2 text-sm font-semibold text-black hover:text-black transition-colors"
                     >
                       <svg
                         width="12"
@@ -320,7 +320,7 @@ export function ModelSelector({
                         <polyline points="9 18 15 12 9 6" />
                       </svg>
                       {group.provider}
-                      <span className="px-2 py-0.5 rounded-full bg-white/10 text-xs font-normal text-white/50">
+                      <span className="px-2 py-0.5 rounded-full bg-[#f0f0f0] text-xs font-normal text-[#777169]">
                         {groupSelectedCount}/{groupTotalCount} selected
                       </span>
                     </button>
@@ -329,16 +329,16 @@ export function ModelSelector({
                         <button
                           type="button"
                           onClick={() => handleGroupSelectAll(group.models)}
-                          className="text-xs font-medium text-white/50 hover:text-white/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="text-xs font-medium text-[#777169] hover:text-[#4e4e4e] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={isLocked}
                         >
                           Select all
                         </button>
-                        <span className="text-white/20">|</span>
+                        <span className="text-[#bbb]">|</span>
                         <button
                           type="button"
                           onClick={() => handleGroupDeselectAll(group.models)}
-                          className="text-xs font-medium text-white/50 hover:text-white/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="text-xs font-medium text-[#777169] hover:text-[#4e4e4e] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={isLocked}
                         >
                           Deselect all
@@ -356,10 +356,10 @@ export function ModelSelector({
                         return (
                           <label
                             key={modelId}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 ${
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] ${
                               isLocked
                                 ? "cursor-not-allowed opacity-60"
-                                : "cursor-pointer group hover:bg-white/8 hover:border-white/15"
+                                : "cursor-pointer group hover:bg-[#f5f5f5] hover:border-[#e5e5e5]"
                             } transition-colors`}
                           >
                             <input
@@ -367,18 +367,18 @@ export function ModelSelector({
                               checked={isChecked}
                               onChange={() => handleToggle(modelId)}
                               disabled={isLocked}
-                              className="size-4 shrink-0 rounded border-white/20 bg-white/5 text-purple-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer disabled:cursor-not-allowed"
+                              className="size-4 shrink-0 rounded border-[#ddd] bg-[#f5f5f5] text-black focus:ring-2 focus:ring-black/20 focus:ring-offset-0 cursor-pointer disabled:cursor-not-allowed"
                             />
                             <div className="min-w-0 flex-1">
                               <span className={`font-mono text-xs ${
-                                isLocked ? "text-white/50" : "text-white/70 group-hover:text-white/90"
+                                isLocked ? "text-[#777169]" : "text-[#4e4e4e] group-hover:text-black"
                               } transition-colors truncate block`}>
                                 {modelId}
                               </span>
                               {hasMultipleProviders && (
                                 <div className="flex flex-wrap gap-1 mt-0.5">
                                   {providers.map((p) => (
-                                    <span key={p} className="inline-block rounded-sm bg-white/8 border border-white/10 px-1 py-px text-[9px] text-white/45">
+                                    <span key={p} className="inline-block rounded-sm bg-[#f5f5f5] border border-[#e5e5e5] px-1 py-px text-[9px] text-[#999]">
                                       {p}
                                     </span>
                                   ))}

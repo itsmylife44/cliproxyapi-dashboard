@@ -21,7 +21,7 @@ export function GroupSelect({
 }: GroupSelectProps) {
   return (
     <div>
-      <label htmlFor="group-select" className="mb-2 block text-sm font-semibold text-white">
+      <label htmlFor="group-select" className="mb-2 block text-sm font-semibold text-black">
         Group (Optional)
       </label>
       <select
@@ -29,14 +29,14 @@ export function GroupSelect({
         value={groupId ?? ""}
         onChange={(e) => onGroupIdChange(e.target.value || null)}
         disabled={saving}
-        className="w-full px-3 py-2 text-sm rounded-md glass-input text-white focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 bg-slate-900 border border-slate-700/70"
+        className="w-full px-3 py-2 text-sm rounded-md glass-input text-black focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 bg-white border border-[#e5e5e5]"
       >
-        <option value="" className="bg-slate-900 text-white">No group</option>
+        <option value="" className="bg-white text-black">No group</option>
         {groups.map(g => (
-          <option key={g.id} value={g.id} className="bg-slate-900 text-white">{g.name}</option>
+          <option key={g.id} value={g.id} className="bg-white text-black">{g.name}</option>
         ))}
       </select>
-      <p className="mt-1.5 text-xs text-white/50">Assign this provider to a group for organization</p>
+      <p className="mt-1.5 text-xs text-[#777169]">Assign this provider to a group for organization</p>
     </div>
   );
 }

@@ -266,68 +266,68 @@ export default async function QuickStartPage() {
   const completedSetupItems = setupItems.filter((item) => item.done).length;
   const shouldShowSetupChecklist = completedSetupItems < setupItems.length;
 
-  // Redirect to setup wizard if setup is incomplete
-  if (shouldShowSetupChecklist) {
+  // Redirect to setup wizard if setup is incomplete (unless skipped in dev)
+  if (shouldShowSetupChecklist && process.env.SKIP_SETUP_WIZARD !== "true") {
     redirect("/dashboard/setup");
   }
   const statusCards = [
     {
       label: "Service",
       value: isHealthy ? "Online" : "Offline",
-      tone: isHealthy ? "text-emerald-400" : "text-rose-400",
+      tone: isHealthy ? "text-emerald-600" : "text-rose-600",
       icon: "●",
-      iconTone: isHealthy ? "text-emerald-300" : "text-rose-300",
+      iconTone: isHealthy ? "text-emerald-700" : "text-rose-600",
     },
     {
       label: "Providers",
       value: `${providerCount} configured`,
-      tone: "text-slate-100",
+      tone: "text-black",
       icon: "◆",
-      iconTone: "text-blue-300",
+      iconTone: "text-blue-600",
     },
     {
       label: "API Keys",
       value: `${apiKeys.length} active`,
-      tone: "text-slate-100",
+      tone: "text-black",
       icon: "♟",
-      iconTone: "text-amber-300",
+      iconTone: "text-amber-700",
     },
     {
       label: "Proxy URL",
       value: getProxyUrl(),
-      tone: "text-slate-100",
+      tone: "text-black",
       icon: "◈",
-      iconTone: "text-cyan-300",
+      iconTone: "text-[#4e4e4e]",
       truncate: true,
     },
   ] as const;
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-100">Quick Start</h1>
-            <p className="mt-1 text-sm text-slate-400">
+            <h1 className="text-xl font-semibold tracking-tight text-black">Quick Start</h1>
+            <p className="mt-1 text-sm text-[#777169]">
               Configure providers, generate client config, and validate access from one place.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
               href="/dashboard/providers"
-              className="rounded-md border border-slate-600/80 bg-slate-800/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-slate-200 transition-colors hover:bg-slate-700/80"
+              className="rounded-md border border-[#e5e5e5]/80 bg-[#f5f5f5]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-black transition-colors hover:bg-[#e5e5e5]/80"
             >
               Providers
             </Link>
             <Link
               href="/dashboard/api-keys"
-              className="rounded-md border border-slate-600/80 bg-slate-800/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-slate-200 transition-colors hover:bg-slate-700/80"
+              className="rounded-md border border-[#e5e5e5]/80 bg-[#f5f5f5]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-black transition-colors hover:bg-[#e5e5e5]/80"
             >
               API Keys
             </Link>
             <Link
               href="/dashboard/settings"
-              className="rounded-md border border-slate-600/80 bg-slate-800/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-slate-200 transition-colors hover:bg-slate-700/80"
+              className="rounded-md border border-[#e5e5e5]/80 bg-[#f5f5f5]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-black transition-colors hover:bg-[#e5e5e5]/80"
             >
               Settings
             </Link>
@@ -338,9 +338,9 @@ export default async function QuickStartPage() {
       <section id="overview" className="scroll-mt-24">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
           {statusCards.map((card) => (
-            <div key={card.label} className="glass-card rounded-md border border-slate-700/70 px-2.5 py-2 transition-colors hover:border-slate-600">
+            <div key={card.label} className="glass-card rounded-md border border-[#e5e5e5] px-2.5 py-2 transition-colors hover:border-[#e5e5e5]">
               <div className="flex items-center justify-between">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{card.label}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777169]">{card.label}</div>
                 <span className={`text-xs ${card.iconTone}`} aria-hidden="true">{card.icon}</span>
               </div>
               <div className={`mt-0.5 text-xs font-semibold ${card.tone} ${"truncate" in card && card.truncate ? "truncate" : ""}`} title={String(card.value)}>
@@ -370,15 +370,15 @@ export default async function QuickStartPage() {
       />
 
       <section id="sharing" className="scroll-mt-24">
-        <details className="group rounded-lg border border-slate-700/70 bg-slate-900/40">
+        <details className="group rounded-lg border border-[#e5e5e5] bg-white">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-slate-100">Publisher / Subscriber</p>
-              <p className="text-xs text-slate-400">Share your config template or subscribe to another user.</p>
+              <p className="text-sm font-semibold text-black">Publisher / Subscriber</p>
+              <p className="text-xs text-[#777169]">Share your config template or subscribe to another user.</p>
             </div>
-            <svg className="h-4 w-4 text-slate-400 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+            <svg className="h-4 w-4 text-[#777169] transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
           </summary>
-          <div className="grid gap-3 border-t border-slate-700/70 px-4 py-3 2xl:grid-cols-2">
+          <div className="grid gap-3 border-t border-[#e5e5e5] px-4 py-3 2xl:grid-cols-2">
             {!isSubscriber && <ConfigPublisher />}
             {!isPublisher && <ConfigSubscriber hasApiKey={hasApiKey} />}
           </div>
@@ -386,27 +386,27 @@ export default async function QuickStartPage() {
       </section>
 
       <section id="integrations" className="scroll-mt-24">
-        <details className="group rounded-lg border border-slate-700/70 bg-slate-900/40">
+        <details className="group rounded-lg border border-[#e5e5e5] bg-white">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-slate-100">Integrations</p>
-              <p className="text-xs text-slate-400">Reference setup snippets for external clients.</p>
+              <p className="text-sm font-semibold text-black">Integrations</p>
+              <p className="text-xs text-[#777169]">Reference setup snippets for external clients.</p>
             </div>
-            <svg className="h-4 w-4 text-slate-400 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+            <svg className="h-4 w-4 text-[#777169] transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
           </summary>
-          <div className="border-t border-slate-700/70 px-4 py-3">
-            <div className="rounded-md border border-slate-700/70 bg-slate-900/30 p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-100">
+          <div className="border-t border-[#e5e5e5] px-4 py-3">
+            <div className="rounded-md border border-[#e5e5e5] bg-white p-4">
+              <h3 className="mb-3 text-sm font-semibold text-black">
                 <span className="flex items-center gap-3">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-blue-400/30 bg-blue-500/15 text-sm text-blue-300" aria-hidden="true">&#9654;</span>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-blue-200 bg-blue-50 text-sm text-blue-600" aria-hidden="true">&#9654;</span>
                   Using with Claude Code
                 </span>
               </h3>
-              <p className="mb-4 text-sm text-slate-300">
+              <p className="mb-4 text-sm text-[#4e4e4e]">
                 As an alternative, you can use CLIProxyAPI with Claude Code by setting environment variables before launching it.
-                Replace <code className="break-all rounded bg-slate-800/80 px-1.5 py-0.5 font-mono text-xs text-blue-200">your-api-key</code> with
+                Replace <code className="break-all rounded bg-[#f5f5f5] px-1.5 py-0.5 font-mono text-xs text-blue-600">your-api-key</code> with
                 your key from the{" "}
-                <Link href="/dashboard/api-keys" className="font-medium text-blue-300 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-200">
+                <Link href="/dashboard/api-keys" className="font-medium text-blue-600 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-800">
                   API Keys
                 </Link>{" "}
                 page.

@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function DashboardNotFound() {
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
-      <div className="w-full max-w-md space-y-6 rounded-lg border border-slate-700/70 bg-slate-900/40 p-8">
+      <div className="w-full max-w-md space-y-6 rounded-lg border border-[#e5e5e5] bg-white p-8">
         <div className="flex flex-col items-center space-y-4 text-center">
           <svg
             width="48"
@@ -11,7 +11,7 @@ export default function DashboardNotFound() {
             viewBox="0 0 48 48"
             fill="none"
             aria-hidden="true"
-            className="text-slate-500"
+            className="text-[#777169]"
           >
             <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="1.5" />
             <circle cx="24" cy="24" r="6" stroke="currentColor" strokeWidth="1.5" />
@@ -22,16 +22,16 @@ export default function DashboardNotFound() {
           </svg>
 
           <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">404</p>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-100">Page not found</h1>
-            <p className="text-sm text-slate-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#777169]">404</p>
+            <h1 className="text-xl font-semibold tracking-tight text-black">Page not found</h1>
+            <p className="text-sm text-[#777169]">
               This section does not exist or you may not have access to it.
             </p>
           </div>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <Link href="/dashboard" className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 glass-button-primary text-white shadow-[0_8px_20px_rgba(37,99,235,0.2)]">
+          <Link href="/dashboard" className="glass-button-primary inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200">
             Back to Dashboard
           </Link>
         </div>

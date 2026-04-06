@@ -18,11 +18,11 @@ export function ToggleListSection({
   onItemToggle,
 }: ToggleListSectionProps) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden transition-colors hover:border-white/15">
+    <div className="rounded-xl border border-[#e5e5e5] bg-[#fafafa] overflow-hidden transition-colors hover:border-[#e5e5e5]">
       <button
         type="button"
         onClick={onToggleExpand}
-        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-white/60 hover:text-white/90 hover:bg-white/[0.04] transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-[#777169] hover:text-black hover:bg-[#f5f5f5] transition-colors"
       >
         <svg
           width="10"
@@ -39,7 +39,7 @@ export function ToggleListSection({
           <polyline points="9 18 15 12 9 6" />
         </svg>
         <span className="flex-1 text-left">{label}</span>
-        <span className="px-1.5 py-0.5 rounded-md bg-white/5 text-white/50 text-[10px] font-mono">
+        <span className="px-1.5 py-0.5 rounded-md bg-[#f5f5f5] text-[#777169] text-[10px] font-mono">
           {disabledItems.length} disabled
         </span>
       </button>
@@ -48,13 +48,13 @@ export function ToggleListSection({
           {items.map((item) => {
             const isEnabled = !disabledItems.includes(item);
             return (
-              <div key={item} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-white/5">
-                <span className="text-xs text-white/70 font-mono">{item}</span>
+              <div key={item} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[#f5f5f5]">
+                <span className="text-xs text-[#4e4e4e] font-mono">{item}</span>
                 <button
                   type="button"
                   onClick={() => onItemToggle(item)}
                   className={`w-9 h-5 rounded-full transition-colors relative ${
-                    isEnabled ? "bg-emerald-500/60" : "bg-white/10"
+                    isEnabled ? "bg-emerald-500" : "bg-[#f0f0f0]"
                   }`}
                 >
                   <span

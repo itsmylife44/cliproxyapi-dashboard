@@ -131,16 +131,16 @@ export function ModelBadge({
           ref={btnRef}
           type="button"
           onClick={handleOpen}
-          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-l-lg text-xs font-mono cursor-pointer transition-colors hover:bg-white/10 ${
+          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-l-lg text-xs font-mono cursor-pointer transition-colors hover:bg-[#f0f0f0] ${
             isOverride
-              ? "bg-violet-500/10 border border-violet-400/20 text-white/80"
-              : "bg-white/5 border border-white/10 text-white/70"
+              ? "bg-[#f5f5f5] border border-[#e5e5e5] text-[#4e4e4e]"
+              : "bg-[#f5f5f5] border border-[#e5e5e5] text-[#4e4e4e]"
           }`}
         >
           {showName && (
             <>
-              <span className="text-pink-300">{name}</span>
-              <span className="text-white/30">&rarr;</span>
+              <span className="text-black">{name}</span>
+              <span className="text-[#aaa]">&rarr;</span>
             </>
           )}
           <span>{model}</span>
@@ -155,8 +155,8 @@ export function ModelBadge({
             }}
             className={`px-1.5 py-1 border border-l-0 rounded-r-lg text-[10px] transition-colors cursor-pointer ${
               showExtra || hasExtraValues
-                ? "bg-amber-500/10 border-amber-400/20 text-amber-300/80 hover:bg-amber-500/20"
-                : "bg-white/5 border-white/10 text-white/30 hover:text-white/60 hover:bg-white/10"
+                ? "bg-amber-50 border-amber-200 text-amber-700/80 hover:bg-amber-50"
+                : "bg-[#f5f5f5] border-[#e5e5e5] text-[#aaa] hover:text-[#777169] hover:bg-[#f0f0f0]"
             }`}
             title="Configure variant, temperature, and more"
           >
@@ -186,7 +186,7 @@ export function ModelBadge({
               placeholder="variant"
               value={extraFields?.variant ?? ""}
               onChange={(e) => onFieldChange("variant", e.target.value || undefined)}
-              className="w-16 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
+              className="w-16 px-1.5 py-0.5 text-[10px] bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#4e4e4e] placeholder:text-[#bbb] focus:outline-none focus:border-black/15"
             />
             <input
               type="number"
@@ -196,7 +196,7 @@ export function ModelBadge({
               max={2}
               value={extraFields?.temperature ?? ""}
               onChange={(e) => onFieldChange("temperature", e.target.value ? Number(e.target.value) : undefined)}
-              className="w-14 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
+              className="w-14 px-1.5 py-0.5 text-[10px] bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#4e4e4e] placeholder:text-[#bbb] focus:outline-none focus:border-black/15"
             />
             <input
               type="text"
@@ -206,16 +206,16 @@ export function ModelBadge({
                 const key = extraFields?.thirdFieldKey;
                 if (key) onFieldChange(key, e.target.value || undefined);
               }}
-              className="flex-1 min-w-0 w-24 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
+              className="flex-1 min-w-0 w-24 px-1.5 py-0.5 text-[10px] bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#4e4e4e] placeholder:text-[#bbb] focus:outline-none focus:border-black/15"
             />
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/35">Fallbacks</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#aaa]">Fallbacks</p>
             <div className="flex flex-wrap gap-1">
               {(extraFields?.fallback_models ?? []).map((fm) => (
                 <span
                   key={fm}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/5 border border-white/10 rounded text-white/60"
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#777169]"
                 >
                   {fm}
                   <button
@@ -224,7 +224,7 @@ export function ModelBadge({
                       const updated = (extraFields?.fallback_models ?? []).filter((m) => m !== fm);
                       onFieldChange("fallback_models", updated.length > 0 ? updated : undefined);
                     }}
-                    className="text-white/30 hover:text-red-400/80 transition-colors cursor-pointer leading-none"
+                    className="text-[#aaa] hover:text-red-600/80 transition-colors cursor-pointer leading-none"
                     aria-label={`Remove fallback ${fm}`}
                   >
                     ×
@@ -242,11 +242,11 @@ export function ModelBadge({
                       if (!e.target.value) return;
                       onFieldChange("fallback_models", [...current, e.target.value]);
                     }}
-                    className="px-1.5 py-0.5 text-[10px] font-mono bg-white/5 border border-white/10 rounded text-white/50 focus:outline-none focus:border-violet-400/30 cursor-pointer"
+                    className="px-1.5 py-0.5 text-[10px] font-mono bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#777169] focus:outline-none focus:border-black/15 cursor-pointer"
                   >
-                    <option value="" className="bg-gray-900">+ add fallback</option>
+                    <option value="" className="bg-white">+ add fallback</option>
                     {choices.map((m) => (
-                      <option key={m} value={m} className="bg-gray-900">{m}</option>
+                      <option key={m} value={m} className="bg-white">{m}</option>
                     ))}
                   </select>
                 );
@@ -254,14 +254,14 @@ export function ModelBadge({
             </div>
           </div>
           {extraFields?.supportsUltrawork && (
-            <div className="space-y-1 pt-1 border-t border-white/10">
+            <div className="space-y-1 pt-1 border-t border-[#e5e5e5]">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/35">Ultrawork</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#aaa]">Ultrawork</p>
                 {hasUltraworkValues && (
                   <button
                     type="button"
                     onClick={() => onFieldChange("ultrawork", undefined)}
-                    className="text-[10px] text-white/35 hover:text-red-400/80 transition-colors cursor-pointer"
+                    className="text-[10px] text-[#aaa] hover:text-red-600/80 transition-colors cursor-pointer"
                   >
                     clear
                   </button>
@@ -277,11 +277,11 @@ export function ModelBadge({
                       model: value,
                     });
                   }}
-                  className="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] font-mono bg-white/5 border border-white/10 rounded text-white/70 focus:outline-none focus:border-violet-400/30 cursor-pointer"
+                  className="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] font-mono bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#4e4e4e] focus:outline-none focus:border-black/15 cursor-pointer"
                 >
-                  <option value="" className="bg-gray-900">select model...</option>
+                  <option value="" className="bg-white">select model...</option>
                   {availableModels.map((m) => (
-                    <option key={m} value={m} className="bg-gray-900">{m}</option>
+                    <option key={m} value={m} className="bg-white">{m}</option>
                   ))}
                 </select>
                 <input
@@ -295,7 +295,7 @@ export function ModelBadge({
                       variant: value,
                     });
                   }}
-                  className="w-16 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
+                  className="w-16 px-1.5 py-0.5 text-[10px] bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#4e4e4e] placeholder:text-[#bbb] focus:outline-none focus:border-black/15"
                 />
                 <input
                   type="number"
@@ -311,7 +311,7 @@ export function ModelBadge({
                       temperature: value,
                     });
                   }}
-                  className="w-14 px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded text-white/70 placeholder:text-white/20 focus:outline-none focus:border-violet-400/30"
+                  className="w-14 px-1.5 py-0.5 text-[10px] bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#4e4e4e] placeholder:text-[#bbb] focus:outline-none focus:border-black/15"
                 />
               </div>
             </div>
@@ -321,18 +321,18 @@ export function ModelBadge({
 
       {open && (
         <div
-          className={`absolute z-[9999] w-72 max-h-64 overflow-hidden rounded-xl border border-white/15 bg-gray-900/95 backdrop-blur-xl shadow-2xl ${
+          className={`absolute z-[9999] w-72 max-h-64 overflow-hidden rounded-xl border border-[#e5e5e5] bg-white shadow-[rgba(0,0,0,0.06)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_4px_8px] ${
             openUp ? "bottom-full mb-1" : "top-full mt-1"
           } left-0`}
         >
-          <div className="p-2 border-b border-white/10">
+          <div className="p-2 border-b border-[#e5e5e5]">
             <input
               ref={inputRef}
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search models..."
-              className="w-full px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:border-violet-400/40"
+              className="w-full px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black placeholder:text-[#aaa] focus:outline-none focus:border-black/20"
             />
           </div>
           <div className="overflow-y-auto max-h-48">
@@ -343,15 +343,15 @@ export function ModelBadge({
                 setOpen(false);
                 setSearch("");
               }}
-              className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors hover:bg-white/10 ${
-                !isOverride ? "text-violet-300 bg-violet-500/10" : "text-white/60"
+              className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors hover:bg-[#f0f0f0] ${
+                !isOverride ? "text-[#4e4e4e] bg-[#f5f5f5]" : "text-[#777169]"
               }`}
             >
               Auto (default)
             </button>
             {groupedFilteredModels.map((group) => (
               <div key={group.provider} className="border-t border-white/5 first:border-t-0">
-                <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35">
+                <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#aaa]">
                   {group.provider}
                 </div>
                 {group.models.map((providerModel) => (
@@ -363,10 +363,10 @@ export function ModelBadge({
                       setOpen(false);
                       setSearch("");
                     }}
-                    className={`flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs font-mono transition-colors hover:bg-white/10 ${
+                    className={`flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs font-mono transition-colors hover:bg-[#f0f0f0] ${
                       isOverride && model === providerModel
-                        ? "text-violet-300 bg-violet-500/10"
-                        : "text-white/70"
+                        ? "text-[#4e4e4e] bg-[#f5f5f5]"
+                        : "text-[#4e4e4e]"
                     }`}
                   >
                     <span className="flex-1">{providerModel}</span>
@@ -375,7 +375,7 @@ export function ModelBadge({
               </div>
             ))}
             {groupedFilteredModels.length === 0 && (
-              <div className="px-3 py-2 text-xs text-white/30">No models found</div>
+              <div className="px-3 py-2 text-xs text-[#aaa]">No models found</div>
             )}
           </div>
         </div>

@@ -111,7 +111,7 @@ function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: 
 
 function getCapacityBarClass(value: number): string {
   if (value > 0.6) return "bg-emerald-500/80";
-  if (value > 0.2) return "bg-amber-500/80";
+  if (value > 0.2) return "bg-amber-500";
   return "bg-rose-500/80";
 }
 
@@ -125,10 +125,10 @@ interface QuotaDetailsProps {
 export function QuotaDetails({ filteredAccounts, expandedCards, onToggleCard, loading }: QuotaDetailsProps) {
   return (
     <section id="quota-accounts" className="scroll-mt-24 space-y-2">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Accounts</h2>
-      <div className="overflow-x-auto rounded-md border border-slate-700/70 bg-slate-900/25">
+      <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#777169]">Accounts</h2>
+      <div className="overflow-x-auto rounded-md border border-[#e5e5e5] bg-white">
         <div className="min-w-[650px]">
-        <div className="grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px] border-b border-slate-700/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+        <div className="grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px] border-b border-[#e5e5e5] bg-white/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
           <span></span>
           <span>Account</span>
           <span>Provider</span>
@@ -147,62 +147,62 @@ export function QuotaDetails({ filteredAccounts, expandedCards, onToggleCard, lo
           const statusLabel = account.supported ? (account.error ? "Error" : "Active") : "Unsupported";
 
           return (
-            <div key={account.auth_index} className="border-b border-slate-700/60 last:border-b-0">
+            <div key={account.auth_index} className="border-b border-[#e5e5e5] last:border-b-0">
               <button
                 type="button"
                 onClick={() => onToggleCard(account.auth_index)}
-                className="grid w-full grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px] items-center px-3 py-2 text-left transition-colors hover:bg-slate-800/40"
+                className="grid w-full grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px] items-center px-3 py-2 text-left transition-colors hover:bg-[#f5f5f5]"
               >
-                <span className={cn("text-xs text-slate-500 transition-transform", isRowExpanded && "rotate-180")}>⌄</span>
-                <span className="truncate text-xs text-slate-200">{maskEmail(account.email)}</span>
-                <span className="truncate text-xs capitalize text-slate-300">{account.provider}</span>
-                <span className={cn("text-xs", account.error ? "text-rose-300" : account.supported ? "text-emerald-300" : "text-amber-300")}>{statusLabel}</span>
+                <span className={cn("text-xs text-[#777169] transition-transform", isRowExpanded && "rotate-180")}>⌄</span>
+                <span className="truncate text-xs text-black">{maskEmail(account.email)}</span>
+                <span className="truncate text-xs capitalize text-[#4e4e4e]">{account.provider}</span>
+                <span className={cn("text-xs", account.error ? "text-rose-600" : account.supported ? "text-emerald-700" : "text-amber-700")}>{statusLabel}</span>
                 <span className="block pr-3">
                   {longMin !== null ? (
                     <>
-                      <span className="text-xs text-slate-300">{Math.round(longMin * 100)}%</span>
-                      <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-slate-700/70">
+                      <span className="text-xs text-[#4e4e4e]">{Math.round(longMin * 100)}%</span>
+                      <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[#f5f5f5]">
                         <span className={cn("block h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
                       </span>
                     </>
                   ) : (
-                    <span className="text-xs text-slate-500">-</span>
+                    <span className="text-xs text-[#777169]">-</span>
                   )}
                 </span>
                 <span className="block pr-3">
                   {shortMin !== null ? (
                     <>
-                      <span className="text-xs text-slate-300">{Math.round(shortMin * 100)}%</span>
-                      <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-slate-700/70">
+                      <span className="text-xs text-[#4e4e4e]">{Math.round(shortMin * 100)}%</span>
+                      <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[#f5f5f5]">
                         <span className={cn("block h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
                       </span>
                     </>
                   ) : (
-                    <span className="text-xs text-slate-500">-</span>
+                    <span className="text-xs text-[#777169]">-</span>
                   )}
                 </span>
                </button>
 
                 {isRowExpanded && (
-                  <div className="border-t border-slate-700/60 bg-slate-900/30 px-4 py-3">
+                  <div className="border-t border-[#e5e5e5] bg-white px-4 py-3">
                     {account.error && (
-                      <p className="mb-2 break-all text-xs text-rose-300">{account.error}</p>
+                      <p className="mb-2 break-all text-xs text-rose-600">{account.error}</p>
                     )}
                     {!account.supported && !account.error && (
-                      <p className="mb-2 text-xs text-amber-300">Quota monitoring not available for this provider.</p>
+                      <p className="mb-2 text-xs text-amber-700">Quota monitoring not available for this provider.</p>
                     )}
 
                     {account.groups && account.groups.length > 0 && (
-                      <div className="overflow-x-auto rounded-sm border border-slate-700/70">
+                      <div className="overflow-x-auto rounded-sm border border-[#e5e5e5]">
                         <div className="min-w-[400px]">
                         {account.groups.map((group) => {
                           const fraction = normalizeFraction(group.remainingFraction);
                           const pct = fraction === null ? null : Math.round(fraction * 100);
                           return (
-                            <div key={group.id} className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-slate-700/60 bg-slate-900/20 px-3 py-2 last:border-b-0">
-                              <span className="truncate text-xs text-slate-200">{group.label}</span>
-                              <span className="text-xs text-slate-300">{pct === null ? "-" : `${pct}%`}</span>
-                              <span className="truncate text-xs text-slate-500">{formatRelativeTime(group.resetTime)}</span>
+                            <div key={group.id} className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-[#e5e5e5] bg-white px-3 py-2 last:border-b-0">
+                              <span className="truncate text-xs text-black">{group.label}</span>
+                              <span className="text-xs text-[#4e4e4e]">{pct === null ? "-" : `${pct}%`}</span>
+                              <span className="truncate text-xs text-[#777169]">{formatRelativeTime(group.resetTime)}</span>
                             </div>
                           );
                         })}
@@ -218,7 +218,7 @@ export function QuotaDetails({ filteredAccounts, expandedCards, onToggleCard, lo
         </div>
 
       {filteredAccounts.length === 0 && !loading && (
-        <div className="rounded-md border border-slate-700/70 bg-slate-900/25 p-6 text-center text-sm text-slate-400">
+        <div className="rounded-md border border-[#e5e5e5] bg-white p-6 text-center text-sm text-[#777169]">
           No accounts found for the selected filter.
         </div>
       )}

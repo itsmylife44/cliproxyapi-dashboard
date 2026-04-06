@@ -26,12 +26,12 @@ interface LogStats {
 }
 
 const LEVEL_COLORS: Record<string, string> = {
-  error: "text-red-400 bg-red-500/10 border-red-500/30",
-  fatal: "text-red-400 bg-red-500/10 border-red-500/30",
-  warn: "text-yellow-400 bg-yellow-500/10 border-yellow-500/30",
-  info: "text-blue-400 bg-blue-500/10 border-blue-500/30",
-  debug: "text-gray-400 bg-gray-500/10 border-gray-500/30",
-  trace: "text-gray-500 bg-gray-500/10 border-gray-500/30",
+  error: "text-red-600 bg-red-50 border-red-200",
+  fatal: "text-red-600 bg-red-50 border-red-200",
+  warn: "text-yellow-700 bg-yellow-50 border-yellow-200",
+  info: "text-blue-600 bg-blue-50 border-blue-200",
+  debug: "text-gray-600 bg-gray-50 border-gray-200",
+  trace: "text-gray-600 bg-gray-50 border-gray-200",
 };
 
 const LEVEL_FILTERS = ["all", "error", "warn", "info", "debug"] as const;
@@ -214,15 +214,15 @@ export default function AdminLogsPage() {
   return (
     <div className="space-y-4">
       <Breadcrumbs items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Admin" }, { label: "Application Logs" }]} />
-      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-100">Application Logs</h1>
-            <p className="mt-1 text-xs text-slate-400">Dashboard application event log.</p>
+            <h1 className="text-xl font-semibold tracking-tight text-black">Application Logs</h1>
+            <p className="mt-1 text-xs text-[#777169]">Dashboard application event log.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2">
-              <label htmlFor="level-filter" className="text-xs text-slate-400">
+              <label htmlFor="level-filter" className="text-xs text-[#777169]">
                 Level:
               </label>
               <select
@@ -232,10 +232,10 @@ export default function AdminLogsPage() {
                   setLevelFilter(e.target.value as LevelFilter);
                   setCurrentPage(1);
                 }}
-                className="rounded-sm border border-slate-700/70 bg-slate-900/50 px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-blue-400/50 transition-colors"
+                className="rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] px-3 py-1.5 text-sm text-black focus:outline-none focus:border-blue-400/50 transition-colors"
               >
                 {LEVEL_FILTERS.map((level) => (
-                  <option key={level} value={level} className="bg-slate-900">
+                  <option key={level} value={level} className="bg-white">
                     {level.charAt(0).toUpperCase() + level.slice(1)}
                   </option>
                 ))}
@@ -247,9 +247,9 @@ export default function AdminLogsPage() {
                 type="checkbox"
                 checked={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="size-4 rounded border-slate-600/70 bg-slate-900/40 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                className="size-4 rounded border-[#e5e5e5]/70 bg-white text-black focus:ring-2 focus:ring-black/20 focus:ring-offset-0"
               />
-              <span className="text-xs text-slate-400">Auto-refresh (5s)</span>
+              <span className="text-xs text-[#777169]">Auto-refresh (5s)</span>
             </label>
 
             <Button onClick={() => void fetchLogs()} variant="secondary" className="px-2.5 py-1 text-xs">
@@ -264,7 +264,7 @@ export default function AdminLogsPage() {
       </section>
 
       {stats && (
-        <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+        <div className="flex flex-wrap gap-4 text-xs text-[#777169]">
           <span className="flex items-center gap-1.5">
             <span className={`size-2 rounded-full ${stats.persistent ? "bg-green-500" : "bg-yellow-500"}`} />
             Persistent storage {stats.persistent ? "enabled" : "disabled"}
@@ -275,10 +275,10 @@ export default function AdminLogsPage() {
         </div>
       )}
 
-      <section className="overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/40">
-        <div className="flex items-center justify-between border-b border-slate-700/70 bg-slate-900/50 px-3 py-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Log Entries</span>
-          <span className="text-xs text-slate-400">
+      <section className="overflow-hidden rounded-lg border border-[#e5e5e5] bg-white">
+        <div className="flex items-center justify-between border-b border-[#e5e5e5] bg-[#f5f5f5] px-3 py-2">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Log Entries</span>
+          <span className="text-xs text-[#777169]">
             {logs.length > 0
               ? `Showing ${(activePage - 1) * LOGS_PER_PAGE + 1}–${Math.min(activePage * LOGS_PER_PAGE, logs.length)} of ${logs.length} logs`
               : `${total} logs`}
@@ -286,10 +286,10 @@ export default function AdminLogsPage() {
         </div>
 
         {loading ? (
-          <div className="p-6 text-center text-sm text-slate-400">Loading...</div>
+          <div className="p-6 text-center text-sm text-[#777169]">Loading...</div>
         ) : logs.length === 0 ? (
           <div className="p-4">
-            <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4 text-sm text-slate-400">
+            <div className="rounded-sm border border-[#e5e5e5] bg-white p-4 text-sm text-[#777169]">
               No logs found. Logs will appear here when application events occur.
             </div>
           </div>
@@ -297,17 +297,17 @@ export default function AdminLogsPage() {
           <div className="max-h-[clamp(300px,60vh,700px)] overflow-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="sticky top-0 z-10 border-b border-slate-700/70 bg-slate-900/95 backdrop-blur-sm">
-                  <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 w-36">
+                <tr className="sticky top-0 z-10 border-b border-[#e5e5e5] bg-white/95">
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169] w-36">
                     Time
                   </th>
-                  <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 w-20">
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169] w-20">
                     Level
                   </th>
-                  <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
                     Message
                   </th>
-                  <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 w-20">
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169] w-20">
                     Details
                   </th>
                 </tr>
@@ -318,15 +318,15 @@ export default function AdminLogsPage() {
                   return (
                   <React.Fragment key={`log-${log.time}-${globalIndex}`}>
                     <tr
-                      className="border-b border-slate-700/60 last:border-b-0 hover:bg-slate-800/30 transition-colors cursor-pointer"
+                      className="border-b border-[#e5e5e5] last:border-b-0 hover:bg-[#f5f5f5] transition-colors cursor-pointer"
                       onClick={() => toggleRowExpansion(globalIndex)}
                     >
                       <td className="px-3 py-2">
                         <div className="flex flex-col">
-                          <span className="text-xs text-slate-200">
+                          <span className="text-xs text-black">
                             {formatRelativeTime(log.time)}
                           </span>
-                          <span className="text-[10px] text-slate-400">
+                          <span className="text-[10px] text-[#777169]">
                             {formatTimestamp(log.time)}
                           </span>
                         </div>
@@ -338,13 +338,13 @@ export default function AdminLogsPage() {
                           {log.levelLabel.toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-xs text-slate-200 font-mono break-all max-w-md">
+                      <td className="px-3 py-2 text-xs text-black font-mono break-all max-w-md">
                         {log.msg}
                       </td>
                       <td className="px-3 py-2">
                         <button
                           type="button"
-                          className="text-blue-400 hover:text-blue-300 text-xs underline"
+                          className="text-blue-600 hover:text-blue-800 text-xs underline"
                         >
                           {expandedRow === globalIndex ? "Hide" : "Show"}
                         </button>
@@ -354,9 +354,9 @@ export default function AdminLogsPage() {
                       <tr>
                         <td
                           colSpan={4}
-                          className="px-3 py-3 bg-slate-900/30 border-b border-slate-700/60"
+                          className="px-3 py-3 bg-white border-b border-[#e5e5e5]"
                         >
-                          <pre className="text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64">
+                          <pre className="text-xs text-[#777169] font-mono whitespace-pre-wrap overflow-auto max-h-64">
                             {renderLogDetails(log)}
                           </pre>
                         </td>
@@ -371,7 +371,7 @@ export default function AdminLogsPage() {
         )}
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-slate-700/70 px-3 py-2">
+          <div className="flex items-center justify-between border-t border-[#e5e5e5] px-3 py-2">
             <Button
               variant="ghost"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -380,7 +380,7 @@ export default function AdminLogsPage() {
             >
               Previous
             </Button>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-[#777169]">
               Page {activePage} of {totalPages}
             </span>
             <Button

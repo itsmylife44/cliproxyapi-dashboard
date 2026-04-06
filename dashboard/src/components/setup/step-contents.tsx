@@ -32,7 +32,7 @@ function CopyIcon() {
 function SpinnerIcon() {
   return (
     <div
-      className="h-4 w-4 animate-spin rounded-full border-2 border-slate-600 border-t-blue-400"
+      className="h-4 w-4 animate-spin rounded-full border-2 border-[#e5e5e5] border-t-blue-400"
       aria-hidden="true"
     />
   );
@@ -42,7 +42,7 @@ export function Step1Content({ done }: { done: boolean }) {
   if (done) return null;
   return (
     <div className="mt-3 space-y-3">
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-[#777169]">
         Open the Providers page in a new tab to add your first provider. This
         wizard will automatically detect when a provider is connected.
       </p>
@@ -50,7 +50,7 @@ export function Step1Content({ done }: { done: boolean }) {
         href="/dashboard/providers"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-block text-xs px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md border glass-button-primary text-white shadow-[0_8px_20px_rgba(37,99,235,0.2)]"
+        className="inline-block text-xs px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md border glass-button-primary"
       >
         Open Providers
       </a>
@@ -125,7 +125,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
 
   if (locked) {
     return (
-      <div className="mt-3 rounded-md border border-slate-700/50 bg-slate-800/30 px-3 py-2 text-xs text-slate-500">
+      <div className="mt-3 rounded-md border border-[#e5e5e5] bg-[#f5f5f5] px-3 py-2 text-xs text-[#777169]">
         Complete Step 1 first to unlock this step.
       </div>
     );
@@ -134,24 +134,24 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
   if (createdKey) {
     return (
       <div className="mt-3 space-y-2">
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
           Copy your API key now -- it will not be shown again.
         </div>
-        <div className="flex items-center gap-2 rounded-md border border-slate-700/70 bg-slate-900/60 px-3 py-2">
-          <code className="flex-1 truncate font-mono text-xs text-slate-200">
+        <div className="flex items-center gap-2 rounded-md border border-[#e5e5e5] bg-white/60 px-3 py-2">
+          <code className="flex-1 truncate font-mono text-xs text-black">
             {createdKey.key}
           </code>
           <button
             type="button"
             onClick={handleCopy}
-            className="flex flex-shrink-0 items-center gap-1 rounded border border-slate-600/60 bg-slate-800/70 px-2 py-1 text-[11px] font-medium text-slate-300 transition-colors hover:bg-slate-700/80 hover:text-slate-100"
+            className="flex flex-shrink-0 items-center gap-1 rounded border border-[#e5e5e5]/60 bg-[#f5f5f5]/70 px-2 py-1 text-[11px] font-medium text-[#4e4e4e] transition-colors hover:bg-[#e5e5e5]/80 hover:text-black"
           >
             <CopyIcon />
             {copied ? "Copied" : "Copy"}
           </button>
         </div>
-        <p className="text-xs text-slate-500">
-          Key name: <span className="text-slate-300">{createdKey.name}</span>
+        <p className="text-xs text-[#777169]">
+          Key name: <span className="text-[#4e4e4e]">{createdKey.name}</span>
         </p>
       </div>
     );
@@ -178,7 +178,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
           {submitting ? "Creating..." : "Create API Key"}
         </Button>
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-[#777169]">
         Give your key a memorable name, then click Create.
       </p>
     </div>
@@ -197,7 +197,7 @@ export function Step3Content({ done, locked, modelCount, statusLoaded }: Step3Co
 
   if (locked) {
     return (
-      <div className="mt-3 rounded-md border border-slate-700/50 bg-slate-800/30 px-3 py-2 text-xs text-slate-500">
+      <div className="mt-3 rounded-md border border-[#e5e5e5] bg-[#f5f5f5] px-3 py-2 text-xs text-[#777169]">
         Complete the previous steps first to unlock this step.
       </div>
     );
@@ -205,7 +205,7 @@ export function Step3Content({ done, locked, modelCount, statusLoaded }: Step3Co
 
   if (!statusLoaded) {
     return (
-      <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+      <div className="mt-3 flex items-center gap-2 text-sm text-[#777169]">
         <SpinnerIcon />
         Checking model catalog...
       </div>
@@ -214,7 +214,7 @@ export function Step3Content({ done, locked, modelCount, statusLoaded }: Step3Co
 
   if (modelCount === 0) {
     return (
-      <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+      <div className="mt-3 flex items-center gap-2 text-sm text-[#777169]">
         <SpinnerIcon />
         Waiting for models to become available...
       </div>

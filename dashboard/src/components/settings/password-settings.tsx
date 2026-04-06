@@ -29,13 +29,13 @@ export function PasswordSettings({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-sm font-semibold text-slate-100">Security & System</h2>
-        <p className="text-xs text-slate-400">Session management and system information</p>
+        <h2 className="text-sm font-semibold text-black">Security & System</h2>
+        <p className="text-xs text-[#777169]">Session management and system information</p>
       </div>
 
-      <div className="space-y-3 rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-        <h3 className="text-sm font-semibold text-slate-100">Session Control</h3>
-        <p className="text-sm text-slate-400">
+      <div className="space-y-3 rounded-sm border border-[#e5e5e5] bg-white p-4">
+        <h3 className="text-sm font-semibold text-black">Session Control</h3>
+        <p className="text-sm text-[#777169]">
           Immediately revoke all active user sessions across all devices.
         </p>
         <Button variant="danger" onClick={onConfirmRevokeSessions} disabled={revokingSessions}>
@@ -43,31 +43,31 @@ export function PasswordSettings({
         </Button>
       </div>
 
-      <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-4">
-        <h3 className="mb-3 text-sm font-semibold text-slate-100">System Information</h3>
+      <div className="rounded-sm border border-[#e5e5e5] bg-white p-4">
+        <h3 className="mb-3 text-sm font-semibold text-black">System Information</h3>
         <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
-            <div className="font-medium text-slate-400">Environment</div>
-            <div className="mt-1 text-slate-100">{process.env.NODE_ENV || "production"}</div>
+          <div className="rounded-sm border border-[#e5e5e5] bg-white p-3">
+            <div className="font-medium text-[#777169]">Environment</div>
+            <div className="mt-1 text-black">{process.env.NODE_ENV || "production"}</div>
           </div>
-          <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
-            <div className="font-medium text-slate-400">Next.js</div>
-            <div className="mt-1 text-slate-100">16.1.6</div>
+          <div className="rounded-sm border border-[#e5e5e5] bg-white p-3">
+            <div className="font-medium text-[#777169]">Next.js</div>
+            <div className="mt-1 text-black">16.1.6</div>
           </div>
-          <div className="rounded-sm border border-slate-700/70 bg-slate-900/30 p-3">
-            <div className="font-medium text-slate-400">React</div>
-            <div className="mt-1 text-slate-100">19.2.3</div>
+          <div className="rounded-sm border border-[#e5e5e5] bg-white p-3">
+            <div className="font-medium text-[#777169]">React</div>
+            <div className="mt-1 text-black">19.2.3</div>
           </div>
         </div>
 
-        <div className="mt-4 border-t border-slate-700/70 pt-4">
-          <h3 className="mb-3 text-sm font-medium text-slate-400">Version Details</h3>
+        <div className="mt-4 border-t border-[#e5e5e5] pt-4">
+          <h3 className="mb-3 text-sm font-medium text-[#777169]">Version Details</h3>
           <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between text-slate-300">
+            <div className="flex items-center justify-between text-[#4e4e4e]">
               <span>Dashboard Version:</span>
               <span className="font-mono">{dashboardUpdateInfo?.currentVersion || "dev"}</span>
             </div>
-            <div className="flex items-center justify-between text-slate-300">
+            <div className="flex items-center justify-between text-[#4e4e4e]">
               <span>CLIProxyAPI:</span>
               <span className="font-mono">
                 {cliProxyLoading ? "Loading..." : cliProxyVersion || "Unknown"}

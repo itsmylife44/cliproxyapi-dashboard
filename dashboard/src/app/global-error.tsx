@@ -11,9 +11,9 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-[#080b11] text-[#e5e7eb] antialiased">
+      <body className="min-h-screen bg-[#f5f5f5] text-black antialiased">
         <main id="main-content" className="flex min-h-screen items-center justify-center px-4">
-          <div className="w-full max-w-md space-y-6 rounded-lg border border-slate-700/70 bg-slate-900/40 p-8">
+          <div className="w-full max-w-md space-y-6 rounded-lg border border-[#e5e5e5] bg-white p-8">
             <div className="flex flex-col items-center space-y-4 text-center">
               <svg
                 width="48"
@@ -21,7 +21,7 @@ export default function GlobalError({
                 viewBox="0 0 48 48"
                 fill="none"
                 aria-hidden="true"
-                className="text-rose-400/70"
+                className="text-rose-500"
               >
                 <path
                   d="M24 6L44 40H4L24 6Z"
@@ -34,13 +34,13 @@ export default function GlobalError({
               </svg>
 
               <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Fatal Error</p>
-                <h1 className="text-xl font-semibold tracking-tight text-slate-100">Something went wrong</h1>
-                <p className="text-sm text-slate-400">
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#777169]">Fatal Error</p>
+                <h1 className="text-xl font-semibold tracking-tight text-black">Something went wrong</h1>
+                <p className="text-sm text-[#777169]">
                   A critical error occurred. Please try again or return to the dashboard.
                 </p>
                 {error.digest && (
-                  <p className="mt-2 font-mono text-[11px] text-slate-600">
+                  <p className="mt-2 font-mono text-[11px] text-[#777169]">
                     ID: {error.digest}
                   </p>
                 )}
@@ -51,13 +51,13 @@ export default function GlobalError({
               <button
                 type="button"
                 onClick={reset}
-                className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 text-white shadow-[0_8px_20px_rgba(37,99,235,0.2)] bg-blue-600 border-blue-700 hover:bg-blue-700"
+                className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 glass-button-primary"
               >
                 Try Again
               </button>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 text-slate-100 bg-slate-800/70 border-slate-600/80 hover:bg-slate-700/80"
+                className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 text-black bg-[#f5f5f5]/70 border-[#e5e5e5]/80 hover:bg-[#e5e5e5]/80"
               >
                 Go to Dashboard
               </Link>

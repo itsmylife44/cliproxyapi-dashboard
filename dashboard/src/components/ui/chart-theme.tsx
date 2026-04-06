@@ -2,7 +2,7 @@
 
 /**
  * Shared chart theme configuration for Recharts.
- * Matches the glassmorphic dark design of the dashboard.
+ * Matches the ElevenLabs light design of the dashboard.
  */
 
 export const CHART_COLORS = {
@@ -24,14 +24,14 @@ export const CHART_COLORS = {
   orange: "#f97316",
   orangeLight: "#fb923c",
   text: {
-    primary: "#e2e8f0",
-    muted: "#94a3b8",
-    dimmed: "#64748b",
+    primary: "#000000",
+    muted: "#4e4e4e",
+    dimmed: "#777169",
   },
-  grid: "rgba(148, 163, 184, 0.1)",
-  border: "rgba(148, 163, 184, 0.2)",
-  surface: "rgba(15, 23, 42, 0.68)",
-  surfaceHover: "rgba(30, 41, 59, 0.78)",
+  grid: "rgba(0, 0, 0, 0.06)",
+  border: "rgba(0, 0, 0, 0.1)",
+  surface: "#ffffff",
+  surfaceHover: "#f5f5f5",
 } as const;
 
 export const SERIES_PALETTE = [
@@ -53,10 +53,9 @@ export const AXIS_TICK_STYLE = {
 
 export const TOOLTIP_STYLE = {
   contentStyle: {
-    backgroundColor: "rgba(15, 23, 42, 0.95)",
-    border: "1px solid rgba(148, 163, 184, 0.2)",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e5e5",
     borderRadius: "6px",
-    backdropFilter: "blur(8px)",
     padding: "8px 12px",
   },
   labelStyle: {
@@ -70,7 +69,7 @@ export const TOOLTIP_STYLE = {
     fontSize: "11px",
     padding: "1px 0",
   },
-  cursor: { fill: "rgba(148, 163, 184, 0.06)" },
+  cursor: { fill: "rgba(0, 0, 0, 0.03)" },
 } as const;
 
 export function formatCompact(value: number): string {
@@ -96,16 +95,16 @@ export function ChartContainer({
   className?: string;
 }) {
   return (
-    <div className={`w-full min-w-0 rounded-md border border-slate-700/70 bg-slate-900/25 p-4 ${className}`}>
+    <div className={`w-full min-w-0 rounded-md border border-[#e5e5e5] bg-white p-4 ${className}`}>
       {(title || subtitle) && (
         <div className="mb-3">
           {title && (
-            <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#777169]">
               {title}
             </h3>
           )}
           {subtitle && (
-            <p className="mt-0.5 text-[10px] text-slate-500">{subtitle}</p>
+            <p className="mt-0.5 text-[10px] text-[#777169]">{subtitle}</p>
           )}
         </div>
       )}
@@ -116,8 +115,8 @@ export function ChartContainer({
 
 export function ChartEmpty({ message = "No data available" }: { message?: string }) {
   return (
-    <div className="flex h-48 items-center justify-center rounded-md border border-slate-700/60 bg-slate-900/15">
-      <p className="text-xs text-slate-500">{message}</p>
+    <div className="flex h-48 items-center justify-center rounded-md border border-[#e5e5e5] bg-[#f5f5f5]">
+      <p className="text-xs text-[#777169]">{message}</p>
     </div>
   );
 }

@@ -58,32 +58,32 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
   const initial = username ? username.charAt(0).toUpperCase() : "?";
 
   return (
-    <header className="w-full bg-slate-900/40 border-b border-slate-700/70 backdrop-blur-sm py-2.5 px-4 lg:px-6 rounded-lg mb-4 flex items-center justify-between">
+    <header className="w-full bg-white border-b border-[#e5e5e5] py-2.5 px-4 lg:px-6 rounded-2xl mb-4 shadow-[rgba(0,0,0,0.06)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_1px_2px] flex items-center justify-between">
       {/* Left Side: Status + Latency */}
       <div className="flex items-center gap-3 text-sm">
         <div className="flex items-center gap-2">
           {isLoading ? (
             <>
               <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-slate-400">Checking\u2026</span>
+              <span className="text-[#777169]">Checking\u2026</span>
             </>
           ) : status?.running ? (
             <>
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse-dot" />
-              <span className="text-emerald-400 font-medium">All systems operational</span>
+              <span className="text-emerald-600 font-medium">All systems operational</span>
             </>
           ) : (
             <>
               <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-              <span className="text-red-400 font-medium">System offline</span>
+              <span className="text-red-600 font-medium">System offline</span>
             </>
           )}
         </div>
 
         {status?.running && status.uptime != null && (
           <>
-            <div className="w-px h-4 bg-slate-700" />
-            <span className="text-slate-400 text-xs">
+            <div className="w-px h-4 bg-[#e5e5e5]" />
+            <span className="text-[#777169] text-xs">
               Uptime: {formatUptime(status.uptime)}
             </span>
           </>
@@ -91,7 +91,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
 
         {status?.running && (
           <>
-            <div className="hidden sm:block w-px h-4 bg-slate-700" />
+            <div className="hidden sm:block w-px h-4 bg-[#e5e5e5]" />
             <div className="hidden sm:block">
               <LatencyIndicator />
             </div>
@@ -115,16 +115,16 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
           className="flex items-center gap-3 group transition-[color,box-shadow]"
         >
           <div className="hidden sm:flex flex-col items-end">
-            <span className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors">
+            <span className="text-sm font-medium text-black group-hover:text-black transition-colors">
               {username}
             </span>
             {isAdmin && (
-              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#4e4e4e]">
                 Admin
               </span>
             )}
           </div>
-          <div className="w-9 h-9 rounded-full bg-slate-800/60 border border-slate-600/50 flex items-center justify-center text-sm font-medium text-slate-200 group-hover:border-blue-400/50 group-hover:shadow-[0_0_10px_rgba(96,165,250,0.2)] transition-[color,border-color,box-shadow]">
+          <div className="w-9 h-9 rounded-full bg-[#f5f5f5] border border-[#e5e5e5] flex items-center justify-center text-sm font-medium text-black group-hover:border-[rgba(0,0,0,0.15)] group-hover:shadow-[rgba(78,50,23,0.04)_0px_6px_16px] transition-[color,border-color,box-shadow]">
             {initial}
           </div>
         </button>

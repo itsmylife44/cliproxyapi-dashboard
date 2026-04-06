@@ -32,17 +32,17 @@ function formatUptime(seconds: number): string {
 
 export function ServiceStatus({ status, restarting, onConfirmRestart }: ServiceStatusProps) {
   return (
-    <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
-      <h2 className="mb-3 text-sm font-semibold text-slate-100">Service Status</h2>
+    <section className="rounded-md border border-[#e5e5e5] bg-white p-4">
+      <h2 className="mb-3 text-sm font-semibold text-black">Service Status</h2>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-white/90">CLIProxyAPI</span>
+            <span className="text-sm font-medium text-black">CLIProxyAPI</span>
             {status?.running ? (
-              <span className="rounded-sm border border-emerald-400/40 bg-emerald-500/20 px-2 py-1 text-xs font-medium text-emerald-200">
+              <span className="rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
                 RUNNING
               </span>
             ) : (
-              <span className="rounded-sm border border-rose-400/40 bg-rose-500/20 px-2 py-1 text-xs font-medium text-rose-200">
+              <span className="rounded-sm border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700">
                 STOPPED
               </span>
             )}
@@ -50,8 +50,8 @@ export function ServiceStatus({ status, restarting, onConfirmRestart }: ServiceS
 
           {status?.uptime !== null && status?.uptime !== undefined && (
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-white/90">Uptime</span>
-              <span className="text-sm text-white/70">{formatUptime(status.uptime)}</span>
+              <span className="text-sm font-medium text-black">Uptime</span>
+              <span className="text-sm text-[#4e4e4e]">{formatUptime(status.uptime)}</span>
             </div>
           )}
 

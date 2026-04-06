@@ -17,11 +17,11 @@ export function BrowserSection({
   onBrowserProviderChange,
 }: BrowserSectionProps) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden transition-colors hover:border-white/15">
+    <div className="rounded-xl border border-[#e5e5e5] bg-[#fafafa] overflow-hidden transition-colors hover:border-[#e5e5e5]">
       <button
         type="button"
         onClick={onToggleExpand}
-        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-white/60 hover:text-white/90 hover:bg-white/[0.04] transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-[#777169] hover:text-black hover:bg-[#f5f5f5] transition-colors"
       >
         <svg
           width="10"
@@ -41,11 +41,11 @@ export function BrowserSection({
       </button>
       {isExpanded && (
         <div className="px-3 pb-3 space-y-1">
-          <span className="text-xs text-white/50">Provider</span>
+          <span className="text-xs text-[#777169]">Provider</span>
           <select
             value={overrides.browser_automation_engine?.provider ?? "playwright"}
             onChange={(e) => onBrowserProviderChange(e.target.value)}
-            className="w-full px-2.5 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/40"
+            className="w-full px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black focus:outline-none focus:border-black/20"
           >
             {BROWSER_PROVIDERS.map((provider) => (
               <option key={provider} value={provider}>

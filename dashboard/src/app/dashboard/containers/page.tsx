@@ -196,37 +196,37 @@ export default function ContainersPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-100">Containers</h1>
+      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
+        <h1 className="text-xl font-semibold tracking-tight text-black">Containers</h1>
       </section>
 
       {loading ? (
-        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6 text-center text-sm text-slate-400">Loading containers...</div>
+        <div className="rounded-lg border border-[#e5e5e5] bg-white p-6 text-center text-sm text-[#777169]">Loading containers...</div>
       ) : (
         <>
           {fetchError && (
-            <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">{fetchError}</div>
+            <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{fetchError}</div>
           )}
 
           {containers.length === 0 && !fetchError ? (
-            <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-8">
+            <div className="rounded-lg border border-[#e5e5e5] bg-white p-8">
               <div className="flex flex-col items-center justify-center gap-4 text-center">
-                <div className="flex size-14 items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/30">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400" aria-hidden="true">
+                <div className="flex size-14 items-center justify-center rounded-full border border-[#e5e5e5] bg-white">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#777169]" aria-hidden="true">
                     <rect x="2" y="6" width="20" height="12" rx="2" />
                     <path d="M6 12h.01M10 12h.01M14 12h.01" />
                   </svg>
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-slate-100">No containers found</h3>
-                  <p className="text-xs text-slate-400">No Docker containers are currently running or available</p>
+                  <h3 className="text-sm font-semibold text-black">No containers found</h3>
+                  <p className="text-xs text-[#777169]">No Docker containers are currently running or available</p>
                 </div>
               </div>
             </div>
           ) : (
           <div className="overflow-x-auto">
-            <div className="min-w-[600px] divide-y divide-slate-700/60 overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/40">
-              <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1.2fr)_80px_100px_100px_minmax(140px,auto)] border-b border-slate-700/70 bg-slate-900/95 backdrop-blur-sm px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            <div className="min-w-[600px] divide-y divide-[#e5e5e5] overflow-hidden rounded-lg border border-[#e5e5e5] bg-white">
+              <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1.2fr)_80px_100px_100px_minmax(140px,auto)] border-b border-[#e5e5e5] bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
                 <span>Container</span>
                 <span>State</span>
                 <span>Uptime</span>
@@ -240,14 +240,14 @@ export default function ContainersPage() {
                 <div key={container.name} className="px-3 py-3">
                   <div className="grid grid-cols-[minmax(0,1.2fr)_80px_100px_100px_minmax(140px,auto)] items-center gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-100">{container.displayName}</p>
-                      <p className="mt-0.5 truncate text-[11px] text-slate-500">{container.status}</p>
+                      <p className="truncate text-sm font-medium text-black">{container.displayName}</p>
+                      <p className="mt-0.5 truncate text-[11px] text-[#777169]">{container.status}</p>
                     </div>
-                    <span className={cn("text-xs font-medium", container.state === "running" ? "text-emerald-300" : container.state === "exited" || container.state === "dead" ? "text-rose-300" : "text-amber-300")}>
+                    <span className={cn("text-xs font-medium", container.state === "running" ? "text-emerald-700" : container.state === "exited" || container.state === "dead" ? "text-rose-600" : "text-amber-700")}>
                       {container.state}
                     </span>
-                    <span className="text-xs text-slate-300">{container.uptime !== null ? formatUptime(container.uptime) : "-"}</span>
-                    <span className="text-xs text-slate-300">
+                    <span className="text-xs text-[#4e4e4e]">{container.uptime !== null ? formatUptime(container.uptime) : "-"}</span>
+                    <span className="text-xs text-[#4e4e4e]">
                       {container.cpu ?? "-"}
                       {container.memory !== null && container.memoryPercent !== null ? ` · ${container.memoryPercent}` : ""}
                     </span>
@@ -280,9 +280,9 @@ export default function ContainersPage() {
           )}
 
           {selectedContainer && (
-            <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+            <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-100">Logs: {selectedContainerInfo?.displayName || selectedContainer}</h2>
+                <h2 className="text-sm font-semibold text-black">Logs: {selectedContainerInfo?.displayName || selectedContainer}</h2>
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
@@ -301,14 +301,14 @@ export default function ContainersPage() {
                   </Button>
                 </div>
               </div>
-                <div className="h-96 overflow-auto rounded-sm border border-slate-700/70 bg-black/40 p-3 font-mono text-[10px] sm:p-4 sm:text-xs">
+                <div className="h-96 overflow-auto rounded-sm border border-[#e5e5e5] bg-[#1a1a1a] p-3 font-mono text-[10px] sm:p-4 sm:text-xs">
                   {logsLoading ? (
-                    <div className="text-slate-500">Loading logs...</div>
+                    <div className="text-gray-400">Loading logs...</div>
                   ) : logLines.length === 0 ? (
-                    <div className="text-slate-500">No logs available</div>
+                    <div className="text-gray-400">No logs available</div>
                   ) : (
                     logLines.map((entry) => (
-                      <div key={entry.id} className="mb-1 break-all text-slate-200">
+                      <div key={entry.id} className="mb-1 break-all text-gray-200">
                         {entry.text}
                       </div>
                     ))

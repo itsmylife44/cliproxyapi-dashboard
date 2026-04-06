@@ -151,48 +151,48 @@ export default function ProvidersPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-100">
+      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
+        <h1 className="text-xl font-semibold tracking-tight text-black">
           AI Provider Configuration
         </h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-[#777169]">
           Manage API keys, OAuth accounts, and custom provider endpoints in one place.
         </p>
       </section>
 
       <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">API Keys</p>
-          <p className="mt-0.5 text-xs font-semibold text-slate-100">
+        <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#777169]">API Keys</p>
+          <p className="mt-0.5 text-xs font-semibold text-black">
             {totalApiKeys} configured{currentUser ? ` · ${ownApiKeyCount} yours` : ""}
           </p>
         </div>
-        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Active Providers</p>
-          <p className="mt-0.5 text-xs font-semibold text-slate-100">{activeApiProviders}/{API_KEY_PROVIDERS.length}</p>
+        <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#777169]">Active Providers</p>
+          <p className="mt-0.5 text-xs font-semibold text-black">{activeApiProviders}/{API_KEY_PROVIDERS.length}</p>
         </div>
-        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">OAuth Accounts</p>
-          <p className="mt-0.5 text-xs font-semibold text-slate-100">{oauthAccountCount} connected</p>
+        <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#777169]">OAuth Accounts</p>
+          <p className="mt-0.5 text-xs font-semibold text-black">{oauthAccountCount} connected</p>
         </div>
-        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Custom Providers</p>
-          <p className="mt-0.5 text-xs font-semibold text-slate-100">{customProviderCount} configured</p>
+        <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#777169]">Custom Providers</p>
+          <p className="mt-0.5 text-xs font-semibold text-black">{customProviderCount} configured</p>
         </div>
       </section>
 
       {loading ? (
-        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6">
+        <div className="rounded-lg border border-[#e5e5e5] bg-white p-6">
           <div className="flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
-              <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-blue-500"></div>
-              <p className="text-white/80">Loading providers...</p>
+              <div className="size-8 animate-spin rounded-full border-4 border-[#ddd] border-t-blue-500"></div>
+              <p className="text-[#4e4e4e]">Loading providers...</p>
             </div>
           </div>
         </div>
       ) : (
         <>
-          <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6 space-y-6">
+          <section className="rounded-lg border border-[#e5e5e5] bg-white p-6 space-y-6">
             <ApiKeySection
               showToast={showToast}
               currentUser={currentUser}
@@ -201,7 +201,7 @@ export default function ProvidersPage() {
               refreshProviders={refreshProviders}
             />
 
-            <div className="border-t border-slate-700/70 pt-6">
+            <div className="border-t border-[#e5e5e5] pt-6">
               <OAuthSection
                 showToast={showToast}
                 currentUser={currentUser}
@@ -211,7 +211,7 @@ export default function ProvidersPage() {
               />
             </div>
 
-            <div className="border-t border-slate-700/70 pt-6">
+            <div className="border-t border-[#e5e5e5] pt-6">
               <CustomProviderSection
                 showToast={showToast}
                 onProviderCountChange={setCustomProviderCount}
@@ -222,20 +222,20 @@ export default function ProvidersPage() {
           </section>
 
           {currentUser?.isAdmin && (
-            <section id="provider-admin" className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+            <section id="provider-admin" className="space-y-3 rounded-lg border border-[#e5e5e5] bg-white p-4">
               <div>
-                <h2 className="text-sm font-semibold text-slate-100">Admin Settings</h2>
-                <p className="text-xs text-slate-400">Provider limits and policies</p>
+                <h2 className="text-sm font-semibold text-black">Admin Settings</h2>
+                <p className="text-xs text-[#777169]">Provider limits and policies</p>
               </div>
 
-              <div className="rounded-md border border-slate-700/60 bg-slate-900/30 p-4">
-                <h3 className="text-sm font-semibold text-slate-100">Key Contribution Limits</h3>
-                <p className="mt-1 text-sm text-slate-400">
+              <div className="rounded-md border border-[#e5e5e5] bg-white p-4">
+                <h3 className="text-sm font-semibold text-black">Key Contribution Limits</h3>
+                <p className="mt-1 text-sm text-[#777169]">
                   Control how many provider keys each user can contribute
                 </p>
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
-                    <label htmlFor="max-keys" className="mb-2 block text-sm font-semibold text-slate-300">
+                    <label htmlFor="max-keys" className="mb-2 block text-sm font-semibold text-[#4e4e4e]">
                       Max Keys Per User
                     </label>
                     <Input
@@ -249,7 +249,7 @@ export default function ProvidersPage() {
                         }
                       }}
                     />
-                    <p className="mt-1.5 text-xs text-slate-500">
+                    <p className="mt-1.5 text-xs text-[#777169]">
                       Maximum number of provider keys a single user can contribute (current: {maxKeysPerUser})
                     </p>
                   </div>

@@ -52,9 +52,9 @@ export function LiveLogs({
   };
 
   return (
-    <section className="rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+    <section className="rounded-md border border-[#e5e5e5] bg-white p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-100">Live Logs</h2>
+        <h2 className="text-sm font-semibold text-black">Live Logs</h2>
         {loggingState === "enabled" && (
           <Button
             variant="ghost"
@@ -67,7 +67,7 @@ export function LiveLogs({
       </div>
         {loggingState === "checking" && (
           <div className="flex items-center justify-center py-6">
-            <div className="flex items-center gap-3 text-slate-400">
+            <div className="flex items-center gap-3 text-[#777169]">
               <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -79,12 +79,12 @@ export function LiveLogs({
 
         {loggingState === "disabled" && (
           <div className="flex flex-col items-center justify-center py-6 gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-amber-400/30 bg-amber-500/15">
+            <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-amber-200 bg-amber-50">
               <span className="text-xl">&#128196;</span>
             </div>
             <div className="text-center space-y-2">
-              <p className="text-sm font-medium text-white/90">File logging is disabled</p>
-              <p className="text-xs text-white/60 max-w-sm">
+              <p className="text-sm font-medium text-black">File logging is disabled</p>
+              <p className="text-xs text-[#777169] max-w-sm">
                 Enable file logging in CLIProxyAPI to view live logs here.
               </p>
             </div>
@@ -101,12 +101,12 @@ export function LiveLogs({
 
         {loggingState === "error" && (
           <div className="flex flex-col items-center justify-center py-6 gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-rose-400/30 bg-rose-500/15">
+            <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-rose-200 bg-rose-50">
               <span className="text-xl">&#9888;</span>
             </div>
             <div className="text-center space-y-2">
-              <p className="text-sm font-medium text-white/90">Logs unavailable</p>
-              <p className="text-xs text-white/60 max-w-sm">
+              <p className="text-sm font-medium text-black">Logs unavailable</p>
+              <p className="text-xs text-[#777169] max-w-sm">
                 {loggingError}
               </p>
             </div>
@@ -125,10 +125,10 @@ export function LiveLogs({
             <div
               ref={logsContainerRef}
               onScroll={handleScroll}
-              className="h-96 overflow-auto rounded-sm border border-slate-700/70 bg-black/40 p-3 font-mono text-[10px] sm:p-4 sm:text-xs"
+              className="h-96 overflow-auto rounded-sm border border-[#e5e5e5] bg-[#1a1a1a] p-3 font-mono text-[10px] sm:p-4 sm:text-xs"
             >
               {logs.length === 0 ? (
-                <div className="text-slate-500">Waiting for logs...</div>
+                <div className="text-[#777169]">Waiting for logs...</div>
               ) : (
                 logs.map((log) => (
                   <div
@@ -136,13 +136,13 @@ export function LiveLogs({
                     className={cn(
                       "mb-1 break-all",
                       log.level === "error" && "text-red-400",
-                      log.level === "warn" && "text-yellow-400",
-                      log.level === "info" && "text-white/90",
-                      log.level === "debug" && "text-blue-400"
+                      log.level === "warn" && "text-yellow-300",
+                      log.level === "info" && "text-zinc-200",
+                      log.level === "debug" && "text-blue-300"
                     )}
                   >
                     {log.timestamp && (
-                      <span className="text-white/50">{log.timestamp} </span>
+                      <span className="text-[#777169]">{log.timestamp} </span>
                     )}
                     {log.level && (
                       <span className="font-semibold uppercase">
@@ -156,7 +156,7 @@ export function LiveLogs({
               <div ref={logsEndRef} />
             </div>
             {!autoScroll && (
-              <div className="mt-2 text-center text-xs text-slate-500">
+              <div className="mt-2 text-center text-xs text-[#777169]">
                 Scroll to bottom to enable auto-scroll
               </div>
             )}

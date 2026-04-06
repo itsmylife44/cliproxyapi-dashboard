@@ -300,16 +300,16 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   if (!hasAnyProviderConfigured) {
     return (
       <div className="space-y-4">
-        <div className="border-l-4 border-amber-400/60 bg-amber-500/10 backdrop-blur-xl p-4 text-sm rounded-r-xl">
-          <p className="text-white/90 font-medium mb-1">No providers configured</p>
-          <p className="text-white/60 text-xs">
+        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 text-sm rounded-r-xl">
+          <p className="text-black font-medium mb-1">No providers configured</p>
+          <p className="text-[#777169] text-xs">
             You need to configure at least one AI provider before generating an OpenCode config.
             Head to the{" "}
-            <Link href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
+            <Link href="/dashboard/providers" className="text-[#4e4e4e] font-medium hover:text-black underline underline-offset-2 decoration-[#ccc]">
               Providers
             </Link>{" "}
             page to add Gemini, Claude, Codex, or OpenAI Compatible keys, or set up{" "}
-            <Link href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
+            <Link href="/dashboard/providers" className="text-[#4e4e4e] font-medium hover:text-black underline underline-offset-2 decoration-[#ccc]">
               Providers
             </Link>.
           </p>
@@ -321,14 +321,14 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   if (apiKeys.length === 0) {
     return (
       <div className="space-y-3">
-        <div className="border-l-4 border-amber-400/60 backdrop-blur-xl bg-amber-500/10 p-4 rounded-r-xl">
-          <div className="text-sm font-medium text-white mb-1">API Key Required</div>
-          <p className="text-sm text-white/70">
+        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 rounded-r-xl">
+          <div className="text-sm font-medium text-black mb-1">API Key Required</div>
+          <p className="text-sm text-[#4e4e4e]">
             Create an API key to generate your configuration.
           </p>
           <Link
             href="/dashboard/api-keys"
-            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-500/20 border border-violet-400/30 text-violet-300 text-sm font-medium hover:bg-violet-500/30 transition-colors"
+            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] text-black text-sm font-medium hover:bg-[#eee] transition-colors"
           >
             Create API Key &rarr;
           </Link>
@@ -340,12 +340,12 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   if (!hasModels) {
     return (
       <div className="space-y-4">
-        <div className="border-l-4 border-amber-400/60 bg-amber-500/10 backdrop-blur-xl p-4 text-sm rounded-r-xl">
-          <p className="text-white/90 font-medium mb-1">No models available yet</p>
-          <p className="text-white/60 text-xs">
+        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 text-sm rounded-r-xl">
+          <p className="text-black font-medium mb-1">No models available yet</p>
+          <p className="text-[#777169] text-xs">
             Providers are configured, but no models were discovered yet. If you just added providers,
             wait a moment and refresh. If the issue persists, verify provider credentials on the{" "}
-            <Link href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
+            <Link href="/dashboard/providers" className="text-[#4e4e4e] font-medium hover:text-black underline underline-offset-2 decoration-[#ccc]">
               Providers
             </Link>{" "}
             page.
@@ -359,8 +359,8 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-center gap-3 py-8">
-          <div className="h-5 w-5 rounded-full border-2 border-white/20 border-t-purple-400 animate-spin" />
-          <span className="text-sm text-white/60">Loading configuration...</span>
+          <div className="h-5 w-5 rounded-full border-2 border-[#ddd] border-t-black animate-spin" />
+          <span className="text-sm text-[#777169]">Loading configuration...</span>
         </div>
       </div>
     );
@@ -369,54 +369,54 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   return (
     <div className="space-y-4">
       {saveError && (
-        <div className="border-l-4 border-red-400/60 bg-red-500/10 backdrop-blur-xl p-3 text-sm rounded-r-xl">
-          <p className="text-red-300 text-xs">{saveError}</p>
+        <div className="border-l-4 border-red-300 bg-red-50 p-3 text-sm rounded-r-xl">
+          <p className="text-red-600 text-xs">{saveError}</p>
         </div>
       )}
       {hasKeys ? (
         apiKeys.length > 1 ? (
           <div className="space-y-2">
-            <label htmlFor="api-key-select" className="text-xs font-medium text-white/50 uppercase tracking-wider">
+            <label htmlFor="api-key-select" className="text-xs font-medium text-[#777169] uppercase tracking-wider">
               Select API Key
             </label>
             <select
               id="api-key-select"
               value={selectedKeyIndex}
               onChange={(e) => setSelectedKeyIndex(Number(e.target.value))}
-              className="w-full backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-4 py-2.5 text-sm text-white/90 font-mono focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-colors"
+              className="w-full bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg px-4 py-2.5 text-sm text-black font-mono focus:border-black/20 focus:bg-white focus:outline-none transition-colors"
             >
               {apiKeys.map((apiKey, index) => (
-                <option key={apiKey.key} value={index} className="bg-[#1a1a2e] text-white">
+                <option key={apiKey.key} value={index} className="bg-white text-black">
                   {apiKey.name || "Unnamed Key"}
                 </option>
               ))}
             </select>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-xs text-white/50">
+          <div className="flex items-center gap-2 text-xs text-[#777169]">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             <span>
-              Using API key: <strong className="text-white/70">{apiKeys[0].name || "Unnamed Key"}</strong>
+              Using API key: <strong className="text-[#4e4e4e]">{apiKeys[0].name || "Unnamed Key"}</strong>
             </span>
           </div>
         )
       ) : hasActiveOAuth ? (
-        <div className="flex items-center gap-2 text-xs text-white/50">
+        <div className="flex items-center gap-2 text-xs text-[#777169]">
           <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
           <span>
-            OAuth providers connected — using placeholder key <code className="px-1.5 py-0.5 rounded bg-white/10 text-orange-300 font-mono">your-api-key-from-dashboard</code>
+            OAuth providers connected — using placeholder key <code className="px-1.5 py-0.5 rounded bg-[#f0f0f0] text-amber-700 font-mono">your-api-key-from-dashboard</code>
           </span>
         </div>
       ) : (
-        <div className="border-l-4 border-amber-400/60 bg-amber-500/10 backdrop-blur-xl p-4 text-sm rounded-r-xl">
-          <p className="text-white/90 font-medium mb-1">No API keys found</p>
-          <p className="text-white/60 text-xs">
+        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 text-sm rounded-r-xl">
+          <p className="text-black font-medium mb-1">No API keys found</p>
+          <p className="text-[#777169] text-xs">
             Create an API key on the{" "}
-            <Link href="/dashboard/api-keys" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
+            <Link href="/dashboard/api-keys" className="text-[#4e4e4e] font-medium hover:text-black underline underline-offset-2 decoration-[#ccc]">
               API Keys
             </Link>{" "}
             page or connect an OAuth provider on the{" "}
-            <Link href="/dashboard/providers" className="text-violet-400 font-medium hover:text-violet-300 underline underline-offset-2 decoration-violet-400/30">
+            <Link href="/dashboard/providers" className="text-[#4e4e4e] font-medium hover:text-black underline underline-offset-2 decoration-[#ccc]">
               Providers
             </Link>{" "}
             page. The config below uses a placeholder.
@@ -424,46 +424,46 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
         </div>
        )}
 
-        <div className="space-y-4 border-t border-white/10 pt-4">
+        <div className="space-y-4 border-t border-[#e5e5e5] pt-4">
           <div className="space-y-2">
-            <label htmlFor="default-model-select" className="text-xs font-medium text-white/50 uppercase tracking-wider">
+            <label htmlFor="default-model-select" className="text-xs font-medium text-[#777169] uppercase tracking-wider">
               Default Model <HelpTooltip content="Choose one of the available OpenCode models for the `model` field in opencode.json. If you already saved a custom value that is not in the discovered list, it will appear as a custom option." />
             </label>
             <select
               id="default-model-select"
               value={hasCustomDefaultModel ? defaultModel.trim() : (defaultModel.trim() || "")}
               onChange={(e) => setDefaultModel(e.target.value)}
-              className="w-full backdrop-blur-xl bg-white/8 border border-white/15 rounded-lg px-4 py-2.5 text-sm text-white/90 font-mono focus:border-purple-400/50 focus:bg-white/12 focus:outline-none transition-all"
+              className="w-full bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg px-4 py-2.5 text-sm text-black font-mono focus:border-black/20 focus:bg-white focus:outline-none transition-all"
             >
-              <option value="" className="bg-[#1a1a2e] text-white">
+              <option value="" className="bg-white text-black">
                 Auto fallback ({fallbackModel})
               </option>
               {hasCustomDefaultModel ? (
-                <option value={defaultModel.trim()} className="bg-[#1a1a2e] text-white">
+                <option value={defaultModel.trim()} className="bg-white text-black">
                   Custom saved value ({defaultModel.trim()})
                 </option>
               ) : null}
               {availableModelOptions.map((option) => (
-                <option key={option.value} value={option.value} className="bg-[#1a1a2e] text-white">
+                <option key={option.value} value={option.value} className="bg-white text-black">
                   {option.label} ({option.value})
                 </option>
               ))}
             </select>
-            <p className="text-xs text-white/45">
-              Choose a discovered model, or leave it on auto fallback to use <span className="font-mono text-white/60">{fallbackModel}</span>.
+            <p className="text-xs text-[#999]">
+              Choose a discovered model, or leave it on auto fallback to use <span className="font-mono text-[#777169]">{fallbackModel}</span>.
             </p>
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs font-medium text-white/50 uppercase tracking-wider">Oh My Open Agent Variant <HelpTooltip content="Normal: 9 specialized agents with categories for fine-grained control. Slim: 6 agents, lower token usage, built-in fallback chains. Both use your proxy models." /></p>
+            <p className="text-xs font-medium text-[#777169] uppercase tracking-wider">Oh My Open Agent Variant <HelpTooltip content="Normal: 9 specialized agents with categories for fine-grained control. Slim: 6 agents, lower token usage, built-in fallback chains. Both use your proxy models." /></p>
            <div className="flex gap-2">
              <button
                type="button"
                onClick={() => handleOmoVariantChange("normal")}
                className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
                  omoVariant === "normal"
-                   ? "border-fuchsia-400/50 bg-fuchsia-500/15 text-fuchsia-300"
-                   : "border-white/10 bg-white/5 text-white/50 hover:text-white/70 hover:border-white/20"
+                   ? "border-[#e5e5e5] bg-[#f5f5f5] text-black"
+                   : "border-[#e5e5e5] bg-[#f5f5f5] text-[#777169] hover:text-[#4e4e4e] hover:border-[#ddd]"
                }`}
              >
                 <div className="font-semibold">Oh My Open Agent</div>
@@ -474,8 +474,8 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
                onClick={() => handleOmoVariantChange("slim")}
                className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
                  omoVariant === "slim"
-                   ? "border-teal-400/50 bg-teal-500/15 text-teal-300"
-                   : "border-white/10 bg-white/5 text-white/50 hover:text-white/70 hover:border-white/20"
+                   ? "border-[#e5e5e5] bg-[#f5f5f5] text-black"
+                   : "border-[#e5e5e5] bg-[#f5f5f5] text-[#777169] hover:text-[#4e4e4e] hover:border-[#ddd]"
                }`}
              >
                 <div className="font-semibold">Oh My OpenCode Slim</div>

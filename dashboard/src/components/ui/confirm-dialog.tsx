@@ -83,7 +83,7 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="animate-modal-overlay fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/60"
+      className="animate-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/20"
       onClick={handleBackdropClick}
       onKeyDown={handleBackdropKeyDown}
       role="dialog"
@@ -94,7 +94,7 @@ export function ConfirmDialog({
     >
       <div
         ref={dialogRef}
-        className="animate-modal-card relative w-full max-w-md bg-slate-900 border border-slate-700/70 rounded-xl p-6 shadow-2xl"
+        className="animate-modal-card relative w-full max-w-md bg-white border-none rounded-2xl p-6 shadow-[rgba(0,0,0,0.06)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_4px_8px,rgba(78,50,23,0.04)_0px_6px_16px]"
         style={{ overscrollBehavior: "contain" }}
         onClick={handleContentClick}
         onKeyDown={handleContentKeyDown}
@@ -104,9 +104,9 @@ export function ConfirmDialog({
           <div
             className={cn(
               "w-12 h-12 rounded-full flex items-center justify-center",
-              variant === "danger" && "bg-red-500/20 text-red-400",
-              variant === "warning" && "bg-yellow-500/20 text-yellow-400",
-              variant === "info" && "bg-blue-500/20 text-blue-400"
+              variant === "danger" && "bg-red-50 text-red-500",
+              variant === "warning" && "bg-amber-50 text-amber-600",
+              variant === "info" && "bg-blue-50 text-blue-500"
             )}
           >
             {variant === "danger" && (
@@ -129,14 +129,14 @@ export function ConfirmDialog({
 
         <h2
           id={titleId}
-          className="text-lg font-semibold text-white text-center mb-3"
+          className="text-lg font-semibold text-black text-center mb-3"
         >
           {title}
         </h2>
 
         <div
           id={messageId}
-          className="text-sm text-white/80 text-center mb-6"
+          className="text-sm text-[#4e4e4e] text-center mb-6"
         >
           {message}
         </div>

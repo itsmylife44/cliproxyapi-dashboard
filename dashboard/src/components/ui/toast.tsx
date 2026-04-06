@@ -55,19 +55,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             className={cn(
-              "backdrop-blur-xl pl-5 pr-2 py-3 text-sm font-medium rounded-xl border shadow-2xl",
+              "pl-5 pr-2 py-3 text-sm font-medium rounded-xl",
               "animate-in slide-in-from-right-5 transition-[opacity,transform,border-color] duration-300",
               "flex items-center gap-3",
-              toast.type === "success" && "bg-green-500/30 border-green-400/40 text-white shadow-green-500/20",
-              toast.type === "error" && "bg-red-500/30 border-red-400/40 text-white shadow-red-500/20",
-              toast.type === "info" && "bg-blue-500/30 border-blue-400/40 text-white shadow-blue-500/20"
+              toast.type === "success" && "bg-white border-l-4 border-l-emerald-500 border border-[#e5e5e5] text-black shadow-[rgba(0,0,0,0.06)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_4px_4px]",
+              toast.type === "error" && "bg-white border-l-4 border-l-red-500 border border-[#e5e5e5] text-black shadow-[rgba(0,0,0,0.06)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_4px_4px]",
+              toast.type === "info" && "bg-white border-l-4 border-l-blue-500 border border-[#e5e5e5] text-black shadow-[rgba(0,0,0,0.06)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_4px_4px]"
             )}
           >
             <span className="flex-1">{toast.message}</span>
             <button
               type="button"
               onClick={() => removeToast(toast.id)}
-              className="shrink-0 rounded-md p-2 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+              className="shrink-0 rounded-md p-2 text-[#777169] hover:text-black hover:bg-[#f5f5f5] transition-colors"
               aria-label="Dismiss"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

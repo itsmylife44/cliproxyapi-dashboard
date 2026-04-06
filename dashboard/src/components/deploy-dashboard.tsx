@@ -142,12 +142,12 @@ export function DeployDashboard() {
 
   const getStatusColor = (s: string) => {
     switch (s) {
-      case "running": return "text-blue-400";
+      case "running": return "text-blue-600";
       case "success":
-      case "completed": return "text-green-400";
+      case "completed": return "text-green-600";
       case "error":
-      case "failed": return "text-red-400";
-      default: return "text-white/70";
+      case "failed": return "text-red-500";
+      default: return "text-[#4e4e4e]";
     }
   };
 
@@ -155,26 +155,26 @@ export function DeployDashboard() {
     return (
       <div className="space-y-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-100">Dashboard Deployment</h2>
-          <p className="text-xs text-slate-400">Deploy the latest dashboard changes from the repository</p>
+          <h2 className="text-sm font-semibold text-black">Dashboard Deployment</h2>
+          <p className="text-xs text-[#777169]">Deploy the latest dashboard changes from the repository</p>
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-sm border border-amber-500/40 bg-amber-500/10 p-3">
-            <div className="text-sm font-medium text-amber-200">Webhook Not Configured</div>
-            <p className="mt-1 text-xs text-slate-400">
+          <div className="rounded-sm border border-amber-200 bg-amber-50 p-3">
+            <div className="text-sm font-medium text-amber-700">Webhook Not Configured</div>
+            <p className="mt-1 text-xs text-[#777169]">
               The deployment webhook is not set up. To enable dashboard deployments from the UI,
               you need to configure the webhook server on your host machine.
             </p>
           </div>
 
-          <div className="space-y-3 text-sm text-slate-300">
-            <div className="font-medium text-slate-100">Setup Instructions:</div>
-            <ol className="list-decimal list-inside space-y-2 text-slate-400">
-              <li>Install webhook: <code className="rounded-sm bg-slate-800 px-1">apt install webhook</code></li>
-              <li>Copy webhook config from <code className="rounded-sm bg-slate-800 px-1">infrastructure/webhook.yaml</code></li>
-              <li>Set environment variables: <code className="rounded-sm bg-slate-800 px-1">WEBHOOK_HOST</code>, <code className="rounded-sm bg-slate-800 px-1">DEPLOY_SECRET</code></li>
-              <li>Start webhook service: <code className="rounded-sm bg-slate-800 px-1">webhook -hooks /path/to/webhook.yaml -port 9000</code></li>
+          <div className="space-y-3 text-sm text-[#4e4e4e]">
+            <div className="font-medium text-black">Setup Instructions:</div>
+            <ol className="list-decimal list-inside space-y-2 text-[#777169]">
+              <li>Install webhook: <code className="rounded-sm bg-[#f5f5f5] px-1">apt install webhook</code></li>
+              <li>Copy webhook config from <code className="rounded-sm bg-[#f5f5f5] px-1">infrastructure/webhook.yaml</code></li>
+              <li>Set environment variables: <code className="rounded-sm bg-[#f5f5f5] px-1">WEBHOOK_HOST</code>, <code className="rounded-sm bg-[#f5f5f5] px-1">DEPLOY_SECRET</code></li>
+              <li>Start webhook service: <code className="rounded-sm bg-[#f5f5f5] px-1">webhook -hooks /path/to/webhook.yaml -port 9000</code></li>
             </ol>
           </div>
         </div>
@@ -186,29 +186,29 @@ export function DeployDashboard() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-slate-100">Dashboard Deployment</h2>
-          <p className="text-xs text-slate-400">Deploy the latest dashboard changes from the repository</p>
+          <h2 className="text-sm font-semibold text-black">Dashboard Deployment</h2>
+          <p className="text-xs text-[#777169]">Deploy the latest dashboard changes from the repository</p>
         </div>
         <div className="flex items-center gap-2">
           {status.status === "running" && (
-            <span className="rounded-sm border border-blue-500/40 bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-300 animate-pulse">
+            <span className="rounded-sm border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600 animate-pulse">
               Deploying...
             </span>
           )}
           {(status.status === "success" || status.status === "completed") && (
-            <span className="rounded-sm border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
+            <span className="rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
               Success
             </span>
           )}
           {(status.status === "error" || status.status === "failed") && (
-            <span className="rounded-sm border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-300">
+            <span className="rounded-sm border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-600">
               Failed
             </span>
           )}
         </div>
       </div>
 
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-[#777169]">
         Quick Update uses Docker cache for faster builds. Full Rebuild rebuilds everything from scratch.
       </p>
 
@@ -236,7 +236,7 @@ export function DeployDashboard() {
       </div>
 
       {status.status !== "idle" && (
-        <div className="space-y-3 border-t border-slate-700/70 pt-3">
+        <div className="space-y-3 border-t border-[#e5e5e5] pt-3">
           <div className="flex items-center gap-2">
             <span className={`text-sm font-medium ${getStatusColor(status.status)}`}>
               {status.status === "running" && (
@@ -247,17 +247,17 @@ export function DeployDashboard() {
           </div>
 
           {status.message && (
-            <div className="text-xs text-slate-400">{status.message}</div>
+            <div className="text-xs text-[#777169]">{status.message}</div>
           )}
 
           {status.error && (
-            <div role="alert" className="rounded-sm border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">
+            <div role="alert" className="rounded-sm border border-rose-200 bg-rose-50 p-3 text-xs text-rose-600">
               {status.error}
             </div>
           )}
 
           {status.completedAt && (
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-[#777169]">
               Completed: {new Date(status.completedAt).toLocaleString()}
             </div>
           )}

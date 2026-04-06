@@ -76,24 +76,24 @@ export default function SetupWizardPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-100">
+            <h1 className="text-xl font-semibold tracking-tight text-black">
               Setup Wizard
             </h1>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-[#777169]">
               Complete these steps to get CLIProxyAPI up and running.
             </p>
           </div>
           {status && (
-            <div className="flex-shrink-0 rounded-md border border-slate-700/60 bg-slate-800/60 px-3 py-1.5 text-xs font-semibold tabular-nums text-slate-300">
+            <div className="flex-shrink-0 rounded-md border border-[#e5e5e5] bg-[#f5f5f5] px-3 py-1.5 text-xs font-semibold tabular-nums text-[#4e4e4e]">
               {completedCount}&nbsp;/&nbsp;{STEPS.length}
             </div>
           )}
         </div>
 
-        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-slate-800">
+        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-[#f5f5f5]">
           <div
             className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-[width] duration-700"
             style={{ width: `${(completedCount / STEPS.length) * 100}%` }}
@@ -102,7 +102,7 @@ export default function SetupWizardPage() {
       </section>
 
       {error && !loading && (
-        <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-300">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-600">
           {error}
         </div>
       )}
@@ -110,7 +110,7 @@ export default function SetupWizardPage() {
       <Card>
         {loading && !status ? (
           <div className="flex items-center justify-center py-10">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-600 border-t-blue-400" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#e5e5e5] border-t-blue-400" />
           </div>
         ) : (
           <div className="space-y-1">
@@ -125,9 +125,9 @@ export default function SetupWizardPage() {
                     className={[
                       "flex gap-4 rounded-lg p-4 transition-colors",
                       done
-                        ? "bg-emerald-500/5"
+                        ? "bg-emerald-50"
                         : active
-                          ? "bg-blue-500/5 ring-1 ring-blue-500/20"
+                          ? "bg-blue-50 ring-1 ring-blue-200"
                           : "opacity-60",
                     ].join(" ")}
                   >
@@ -137,7 +137,7 @@ export default function SetupWizardPage() {
                         <div
                           className={[
                             "mt-2 w-px flex-1",
-                            done ? "bg-emerald-500/30" : "bg-slate-700/60",
+                            done ? "bg-emerald-500/30" : "bg-[#f5f5f5]",
                           ].join(" ")}
                           style={{ minHeight: "1.5rem" }}
                         />
@@ -150,22 +150,22 @@ export default function SetupWizardPage() {
                           className={[
                             "text-sm font-semibold",
                             done
-                              ? "text-emerald-300"
+                              ? "text-emerald-700"
                               : active
-                                ? "text-slate-100"
-                                : "text-slate-400",
+                                ? "text-black"
+                                : "text-[#777169]",
                           ].join(" ")}
                         >
                           {step.title}
                         </h2>
                         {done && (
-                          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
+                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
                             {step.doneLabel}
                           </span>
                         )}
                       </div>
 
-                      <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                      <p className="mt-1 text-sm leading-relaxed text-[#777169]">
                         {stepDescriptions[index]}
                       </p>
 
@@ -197,7 +197,7 @@ export default function SetupWizardPage() {
                   </div>
 
                   {!isLast && (
-                    <div className="mx-4 border-b border-slate-700/40" />
+                    <div className="mx-4 border-b border-[#e5e5e5]/40" />
                   )}
                 </div>
               );
@@ -209,7 +209,7 @@ export default function SetupWizardPage() {
       {allDone && <SuccessBanner />}
 
       {!allDone && (
-        <p className="text-center text-xs text-slate-600">
+        <p className="text-center text-xs text-[#777169]">
           This page auto-refreshes every 5 seconds. Complete steps in any tab
           and they will appear here automatically.
         </p>

@@ -123,7 +123,7 @@ export function UpdateOverlay({
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center" role="alertdialog" aria-modal="true" aria-label={serverReady ? "Update complete" : `Updating ${label}`}>
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-modal-overlay" />
+      <div className="absolute inset-0 bg-black/80 animate-modal-overlay" />
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center gap-8 px-6 animate-modal-card">
@@ -156,7 +156,7 @@ export function UpdateOverlay({
             {serverReady ? (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-8 w-8 text-green-400"
+                className="h-8 w-8 text-green-500"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -199,17 +199,17 @@ export function UpdateOverlay({
           <h2 className="text-xl font-semibold text-white mb-1">
             {serverReady ? "Update Complete!" : `Updating ${label}`}
           </h2>
-          <p className="text-sm text-white/50 font-mono">{targetVersion}</p>
+          <p className="text-sm text-white/60 font-mono">{targetVersion}</p>
         </div>
 
         {/* Progress bar */}
         <div className="w-72">
-          <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+          <div className="h-1.5 w-full rounded-full bg-white/20 overflow-hidden">
             <div
               className={cn(
                 "h-full rounded-full transition-[width] duration-1000 ease-out",
                 serverReady
-                  ? "bg-green-400"
+                  ? "bg-green-500"
                   : isDashboard
                     ? "bg-gradient-to-r from-purple-500 to-purple-400"
                     : "bg-gradient-to-r from-blue-500 to-blue-400"
@@ -232,7 +232,7 @@ export function UpdateOverlay({
                   {isComplete ? (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 text-green-400"
+                      className="h-4 w-4 text-green-500"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -262,7 +262,7 @@ export function UpdateOverlay({
                 <span
                   className={cn(
                     "text-sm",
-                    isComplete && "text-white/60",
+                    isComplete && "text-white/50",
                     isActive && "text-white font-medium",
                     !isComplete && !isActive && "text-white/30"
                   )}
@@ -276,7 +276,7 @@ export function UpdateOverlay({
         </div>
 
         {/* Footer hint */}
-        <p className="text-xs text-white/30 text-center">
+        <p className="text-xs text-white/40 text-center">
           {serverReady ? "Reloading page..." : "Please don't close this page"}
         </p>
       </div>

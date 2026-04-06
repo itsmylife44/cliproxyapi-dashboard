@@ -52,7 +52,7 @@ export default function AgentConfigEditor({
 }: AgentConfigEditorProps) {
   return (
     <>
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-md border border-[#e5e5e5] bg-white p-4">
         <SectionHeader title="General Settings" />
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label="Upstream Proxy" description="Optional SOCKS5/HTTP/HTTPS proxy for outbound requests. Use 'direct' or 'none' to bypass. Leave empty for direct connection.">
@@ -88,7 +88,7 @@ export default function AgentConfigEditor({
         </div>
       </section>
 
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-md border border-[#e5e5e5] bg-white p-4">
         <SectionHeader title="Streaming" />
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label="Keepalive Seconds" description="SSE keepalive interval in seconds">
@@ -103,7 +103,7 @@ export default function AgentConfigEditor({
         </div>
       </section>
 
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-md border border-[#e5e5e5] bg-white p-4">
         <SectionHeader title="Retry & Resilience" />
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label="Request Retry Attempts" description="Maximum number of retry attempts for failed requests">
@@ -127,7 +127,7 @@ export default function AgentConfigEditor({
         </div>
       </section>
 
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-md border border-[#e5e5e5] bg-white p-4">
         <SectionHeader title="Logging" />
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label="Logging to File" description="Enable persistent file-based logging">
@@ -145,9 +145,9 @@ export default function AgentConfigEditor({
         </div>
       </section>
 
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-md border border-[#e5e5e5] bg-white p-4">
         <SectionHeader title="TLS / HTTPS" />
-        <div className="rounded-sm border border-slate-600/40 bg-slate-800/30 p-3 text-xs text-slate-400">
+        <div className="rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] p-3 text-xs text-[#777169]">
           TLS is typically handled by Caddy reverse proxy. Only configure this for direct TLS termination.
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -163,7 +163,7 @@ export default function AgentConfigEditor({
         </div>
       </section>
 
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-md border border-[#e5e5e5] bg-white p-4">
         <SectionHeader title="Kiro" />
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label="Preferred Endpoint" description="Preferred Kiro API endpoint URL">
@@ -172,9 +172,9 @@ export default function AgentConfigEditor({
         </div>
       </section>
 
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-md border border-[#e5e5e5] bg-white p-4">
         <SectionHeader title="Claude Header Defaults" />
-        <p className="text-xs text-slate-500">Custom headers sent with all Claude API requests</p>
+        <p className="text-xs text-[#777169]">Custom headers sent with all Claude API requests</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label="User-Agent" description="Custom User-Agent header">
             <Input type="text" name="claude-header-user-agent" value={config["claude-header-defaults"]?.["user-agent"] ?? ""} onChange={(value) => updateClaudeHeaderDefaults("user-agent", value)} className="font-mono" />
@@ -191,9 +191,9 @@ export default function AgentConfigEditor({
         </div>
       </section>
 
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-md border border-[#e5e5e5] bg-white p-4">
         <SectionHeader title="Amp Code" />
-        <p className="text-xs text-slate-500">Configuration for Amp Code upstream integration</p>
+        <p className="text-xs text-[#777169]">Configuration for Amp Code upstream integration</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label="Upstream URL" description="Upstream Amp Code URL">
             <Input type="text" name="ampcode-upstream-url" value={config.ampcode?.["upstream-url"] ?? ""} onChange={(value) => updateAmpcodeConfig("upstream-url", value)} className="font-mono" />
@@ -210,9 +210,9 @@ export default function AgentConfigEditor({
         </div>
       </section>
 
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-md border border-[#e5e5e5] bg-white p-4">
         <SectionHeader title="Profiling (pprof)" />
-        <div className="rounded-sm border border-slate-600/40 bg-slate-800/30 p-3 text-xs text-slate-400">
+        <div className="rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] p-3 text-xs text-[#777169]">
           Go runtime profiling. Only enable for debugging.
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -225,30 +225,30 @@ export default function AgentConfigEditor({
         </div>
       </section>
 
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-md border border-[#e5e5e5] bg-white p-4">
         <SectionHeader title="OAuth Model Aliases" />
-        <p className="text-xs text-slate-500">Override model names for OAuth providers. Each provider has a list of model name mappings.</p>
+        <p className="text-xs text-[#777169]">Override model names for OAuth providers. Each provider has a list of model name mappings.</p>
         <div className="space-y-3">
           {Object.keys(config["oauth-model-alias"] ?? {}).length === 0 && (
-            <p className="text-xs text-slate-500 italic">No OAuth model aliases configured.</p>
+            <p className="text-xs text-[#777169] italic">No OAuth model aliases configured.</p>
           )}
           {Object.entries(config["oauth-model-alias"] ?? {}).map(([provider, entries]) => (
-            <div key={provider} className="rounded-sm border border-slate-700/50 bg-slate-900/40">
+            <div key={provider} className="rounded-sm border border-[#e5e5e5] bg-white">
               <button
                 type="button"
                 onClick={() => toggleProviderExpanded(provider)}
-                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-200 hover:bg-slate-800/30 transition-colors"
+                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-black hover:bg-[#f5f5f5] transition-colors"
               >
                 <span>{provider}</span>
-                <span className="text-slate-400 text-xs">
+                <span className="text-[#777169] text-xs">
                   {entries.length} {entries.length === 1 ? "alias" : "aliases"}
                   <span className="ml-2">{expandedProviders[provider] ? "\u25B2" : "\u25BC"}</span>
                 </span>
               </button>
               {expandedProviders[provider] && (
-                <div className="border-t border-slate-700/50 p-4 space-y-3">
+                <div className="border-t border-[#e5e5e5] p-4 space-y-3">
                   {entries.length > 0 && (
-                    <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wide pb-1 border-b border-slate-700/30">
+                    <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 text-xs font-semibold text-[#777169] uppercase tracking-wide pb-1 border-b border-[#e5e5e5]/30">
                       <span>Name</span>
                       <span>Alias</span>
                       <span>Fork</span>
@@ -257,13 +257,13 @@ export default function AgentConfigEditor({
                   )}
                   {entries.map((entry, index) => (
                     <div key={entry._id ?? index} className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 items-center">
-                      <input type="text" value={entry.name} onChange={(e) => updateOAuthAliasEntry(provider, index, "name", e.target.value)} placeholder="model-name" className="rounded-sm border border-slate-700/70 bg-slate-900/50 px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30" />
-                      <input type="text" value={entry.alias} onChange={(e) => updateOAuthAliasEntry(provider, index, "alias", e.target.value)} placeholder="alias-name" className="rounded-sm border border-slate-700/70 bg-slate-900/50 px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30" />
+                      <input type="text" value={entry.name} onChange={(e) => updateOAuthAliasEntry(provider, index, "name", e.target.value)} placeholder="model-name" className="rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] px-2 py-1 text-xs text-black font-mono focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30" />
+                      <input type="text" value={entry.alias} onChange={(e) => updateOAuthAliasEntry(provider, index, "alias", e.target.value)} placeholder="alias-name" className="rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] px-2 py-1 text-xs text-black font-mono focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30" />
                       <input type="checkbox" checked={entry.fork ?? false} onChange={(e) => updateOAuthAliasEntry(provider, index, "fork", e.target.checked)} className="size-4 rounded accent-emerald-500" />
                       <button
                         type="button"
                         onClick={() => removeOAuthAliasEntry(provider, index)}
-                        className="flex size-6 items-center justify-center rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        className="flex size-6 items-center justify-center rounded text-[#777169] hover:text-rose-500 hover:bg-rose-50 transition-colors"
                         title="Remove entry"
                       >
                         <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
@@ -275,7 +275,7 @@ export default function AgentConfigEditor({
                   <button
                     type="button"
                     onClick={() => addOAuthAliasEntry(provider)}
-                    className="mt-1 flex items-center gap-1.5 rounded-sm border border-dashed border-slate-600/60 px-3 py-1.5 text-xs text-slate-400 hover:border-blue-400/50 hover:text-blue-400 transition-colors"
+                    className="mt-1 flex items-center gap-1.5 rounded-sm border border-dashed border-[#e5e5e5]/60 px-3 py-1.5 text-xs text-[#777169] hover:border-blue-400/50 hover:text-blue-600 transition-colors"
                   >
                     <svg viewBox="0 0 16 16" fill="currentColor" className="size-3">
                       <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z" />
@@ -289,9 +289,9 @@ export default function AgentConfigEditor({
         </div>
       </section>
 
-      <section className="space-y-3 rounded-md border border-slate-700/70 bg-slate-900/25 p-4">
+      <section className="space-y-3 rounded-md border border-[#e5e5e5] bg-white p-4">
         <SectionHeader title="Payload Manipulation" />
-        <p className="text-xs text-slate-500">Override or filter request payloads sent to upstream providers. Values are JSON.</p>
+        <p className="text-xs text-[#777169]">Override or filter request payloads sent to upstream providers. Values are JSON.</p>
         <div className="grid gap-4 sm:grid-cols-2">
           {(["default", "default-raw", "override", "override-raw", "filter"] as const).map((key) => (
             <ConfigField
@@ -327,7 +327,7 @@ export default function AgentConfigEditor({
                 }}
                 placeholder="null"
                 spellCheck={false}
-                className="h-28 w-full rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 font-mono text-xs text-slate-200 focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/30 transition-colors resize-y"
+                className="h-28 w-full rounded-sm border border-[#e5e5e5] bg-white p-3 font-mono text-xs text-black focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/30 transition-colors resize-y"
               />
             </ConfigField>
           ))}

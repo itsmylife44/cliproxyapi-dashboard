@@ -1,6 +1,6 @@
 {
-  "version": "0.1.67",
-  "tag": "dashboard-v0.1.67",
-  "releaseUrl": "https://github.com/itsmylife44/cliproxyapi-dashboard/releases/tag/dashboard-v0.1.67",
-  "releaseNotes": "## [0.1.67](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.66...dashboard-v0.1.67) (2026-04-04)\n\n\n### Bug Fixes\n\n* move dynamic imports with ssr:false into client wrapper components ([7d4b815](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/7d4b8151d4821ea43e59e5d3270406d38710fb3d))"
+  "version": "0.1.68",
+  "tag": "dashboard-v0.1.68",
+  "releaseUrl": "https://github.com/itsmylife44/cliproxyapi-dashboard/releases/tag/dashboard-v0.1.68",
+  "releaseNotes": "## [0.1.68](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.67...dashboard-v0.1.68) (2026-04-06)\n\n\n### Features\n\n* update to OhMyOpenAgent with presets, advanced options, and config management ([#164](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/164)) ([ae80424](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/ae80424751f311322c55434384c6ddbdca78bb2a))\n\n\n### Bug Fixes\n\n* **build:** make clean-checkout dashboard builds reproducible ([#167](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/167)) ([bd79d3b](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/bd79d3bc1a6980f263c6928f088e5b6e1a83c1f5))\n* **config:** preserve raw config.yaml fields when saving dashboard changes ([#165](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/165)) ([44b07c9](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/44b07c9d4de40559b10c4e70f8cc84dc2b89fca3))\n* **lint:** align eslint tooling and clear dashboard warnings ([#168](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/168)) ([0f582d9](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/0f582d9da005aba9825b3b9c35d551652d694b1c))\n* **oauth:** use manual launch flow when incognito mode is enabled ([#166](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/166)) ([2bc8566](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/2bc85664cec4ca96e50d2b6e01e2782c0838ca67))"
 }

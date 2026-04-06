@@ -266,8 +266,8 @@ export default async function QuickStartPage() {
   const completedSetupItems = setupItems.filter((item) => item.done).length;
   const shouldShowSetupChecklist = completedSetupItems < setupItems.length;
 
-  // Redirect to setup wizard if setup is incomplete
-  if (shouldShowSetupChecklist) {
+  // Redirect to setup wizard if setup is incomplete (unless skipped in dev)
+  if (shouldShowSetupChecklist && !process.env.SKIP_SETUP_WIZARD) {
     redirect("/dashboard/setup");
   }
   const statusCards = [

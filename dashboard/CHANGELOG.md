@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.69](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.68...dashboard-v0.1.69) (2026-04-06)
+
+
+### Features
+
+* **design:** migrate dashboard to modern light design system ([802af62](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/802af62cdb73462e55c39c8bfdb171c6f0f76805))
+
+
+### Bug Fixes
+
+* **branding:** switch normal OMO naming to Open Agent ([28f30f1](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/28f30f1b8b0c08bcd279e03d6679ec1cc7aa7efa))
+
 ## [0.1.68](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.67...dashboard-v0.1.68) (2026-04-06)
 
 

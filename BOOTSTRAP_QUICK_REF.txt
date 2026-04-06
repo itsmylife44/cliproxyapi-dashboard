@@ -1,0 +1,173 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║       CLIProxyAPI DASHBOARD — ENTRY POINTS & BOOTSTRAP QUICK REFERENCE       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌─ ENTRY POINTS (6 total) ─────────────────────────────────────────────────────┐
+│                                                                               │
+│  Route Files:                                                                 │
+│  ├─ /src/app/layout.tsx ................. Root HTML + Geist fonts            │
+│  ├─ /src/app/page.tsx .................. Redirect → /dashboard              │
+│  ├─ /src/app/dashboard/page.tsx ........ Main authenticated UI              │
+│  ├─ /src/app/login/page.tsx ............ JWT login form                      │
+│  ├─ /src/app/setup/page.tsx ............ Initial admin account setup        │
+│  └─ /src/app/api/health ................ Docker health probe                │
+│                                                                               │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+┌─ BOOTSTRAP SEQUENCE ─────────────────────────────────────────────────────────┐
+│                                                                               │
+│  1. Docker Container Start                                                   │
+│     ↓                                                                         │
+│  2. entrypoint.sh (shell script)                                             │
+│     • Connects to PostgreSQL                                                 │
+│     • Acquires advisory lock: pg_advisory_lock(424242)                       │
+│     • Creates 16 tables (IF NOT EXISTS)                                      │
+│     • Handles backward-compat migrations                                     │
+│     • Releases advisory lock                                                 │
+│     ↓                                                                         │
+│  3. Node.js server starts: node server.js                                    │
+│     ↓                                                                         │
+│  4. Next.js initializes instrumentation.ts                                   │
+│     • Checks NEXT_RUNTIME environment variable                               │
+│     • Imports instrumentation-node.ts if Node.js runtime                     │
+│     ↓                                                                         │
+│  5. instrumentation-node.ts (HMR-safe global guard)                          │
+│     • Schedules quota alert checker (+30s delay)                             │
+│     • Schedules provider resync (+15s delay)                                 │
+│     • Uses recursive setTimeout (DB-driven intervals)                        │
+│     ↓                                                                         │
+│  6. Server ready at http://localhost:3000                                    │
+│                                                                               │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+┌─ BUILD ENTRY POINTS ─────────────────────────────────────────────────────────┐
+│                                                                               │
+│  Development:                                                                │
+│  • npm run dev ........................ Starts dev server + HMR             │
+│    └─ predev: npm run prisma:generate (auto-run before)                     │
+│                                                                              │
+│  Production Build:                                                           │
+│  • npm run build ..................... Builds standalone Next.js app        │
+│    └─ prebuild: npm run prisma:generate (auto-run before)                   │
+│    └─ Output: .next/standalone directory                                    │
+│                                                                              │
+│  Production Run:                                                             │
+│  • npm run start ..................... Starts production server             │
+│    └─ Reads from .next/standalone                                           │
+│                                                                              │
+│  Docker Build (Dockerfile):                                                 │
+│  • Stage 1: deps — npm ci (install dependencies)                            │
+│  • Stage 2: builder — npm run build + prisma generate                       │
+│  • Stage 3: runner — final image with tini init + entrypoint.sh             │
+│                                                                              │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+┌─ SCRIPTS FOR BOOTSTRAPPING ──────────────────────────────────────────────────┐
+│                                                                               │
+│  /dashboard/dev-local.sh .............. Local Docker dev environment        │
+│    Steps:                                                                    │
+│    1. Check Docker daemon                                                    │
+│    2. Start PostgreSQL + API containers                                      │
+│    3. Wait for PostgreSQL readiness                                          │
+│    4. Wait for CLIProxyAPI readiness                                         │
+│    5. Run Prisma migrations                                                  │
+│    6. Generate Prisma client                                                 │
+│    7. Write .env.local (platform-specific DOCKER_HOST)                       │
+│    8. Start Next.js dev server                                               │
+│                                                                              │
+│  /setup-local.sh ...................... One-command production deployment   │
+│    Steps:                                                                    │
+│    1. Generate .env (JWT_SECRET, MANAGEMENT_API_KEY, POSTGRES_PASSWORD)    │
+│    2. Optional: Enable Perplexity Pro sidecar                                │
+│    3. Generate config.local.yaml for CLIProxyAPIPlus                        │
+│    4. Start Docker Compose stack (Caddy, Dashboard, API, DB, Proxy)         │
+│    5. Wait for all containers healthy                                       │
+│    6. Output: http://localhost:3000 (dashboard)                             │
+│                                                                              │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+┌─ NON-STANDARD PATTERNS IDENTIFIED ───────────────────────────────────────────┐
+│                                                                               │
+│  ✓ Instrumentation Hooks                                                     │
+│    └─ Next.js lifecycle hooks for background tasks                          │
+│                                                                              │
+│  ✓ Shell Pre-flight Check (entrypoint.sh)                                   │
+│    └─ PostgreSQL advisory locks prevent concurrent migrations               │
+│                                                                              │
+│  ✓ Platform-Aware Dev Bootstrap (dev-local.sh)                              │
+│    └─ Auto-detects Docker socket path per OS                                │
+│                                                                              │
+│  ✓ Dual Config Management                                                   │
+│    └─ Oh-My-OpenCode (9 agents) vs Oh-My-OpenCode-Slim (6 agents)          │
+│                                                                              │
+│  ✓ Config Sharing via Share Codes                                           │
+│    └─ config_templates + config_subscriptions tables                        │
+│                                                                              │
+│  ✓ Telegram Quota Alerts                                                    │
+│    └─ Background scheduler (5-min interval, 1-hour cooldown)                │
+│                                                                              │
+│  ✓ Provider Resync                                                          │
+│    └─ Runs +15s post-startup, auto-syncs custom provider configs            │
+│                                                                              │
+│  ✓ Usage Deduplication                                                      │
+│    └─ Unique index prevents duplicate records from concurrent sources       │
+│                                                                              │
+│  ✓ Collector State Machine                                                  │
+│    └─ Tracks collection status + timestamp in database                      │
+│                                                                              │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+┌─ DATABASE SCHEMA (18 tables) ────────────────────────────────────────────────┐
+│                                                                               │
+│  Core:                                                                       │
+│  • users — accounts + admin flag                                             │
+│  • audit_logs — compliance/security tracking                                 │
+│                                                                              │
+│  Auth/Sessions:                                                              │
+│  • sync_tokens — API sync token tracking                                     │
+│  • user_api_keys — per-user API keys (separate from sync tokens)             │
+│                                                                              │
+│  Configuration:                                                              │
+│  • model_preferences — per-user model exclusions                             │
+│  • agent_model_overrides — Oh-My-OpenCode model/skill configs                │
+│  • config_templates — shareable configs (with share codes)                   │
+│  • config_subscriptions — subscription tracking                              │
+│  • system_settings — global key-value settings                               │
+│                                                                              │
+│  Providers:                                                                  │
+│  • provider_key_ownerships — tracks who added API keys                       │
+│  • provider_oauth_ownerships — tracks who added OAuth accounts               │
+│  • custom_providers — user-defined OpenAI-compatible endpoints               │
+│  • provider_groups — organization + sorting for custom providers             │
+│  • custom_provider_models — model mappings                                   │
+│  • custom_provider_excluded_models — excluded model patterns                 │
+│                                                                              │
+│  Usage/Monitoring:                                                           │
+│  • usage_records — persistent usage analytics (with dedup index)             │
+│  • collector_state — usage collection status + timestamp                     │
+│  • perplexity_cookies — Perplexity Pro sidecar session data                  │
+│                                                                              │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+┌─ KEY TIMINGS & DELAYS ───────────────────────────────────────────────────────┐
+│                                                                               │
+│  +15s  ......... Custom provider resync starts                               │
+│  +30s  ......... Quota alert scheduler starts                                │
+│  ~40s  ......... Docker health check delay (HEALTHCHECK start-period)        │
+│  5min  ......... Quota alert check interval (DB-configurable)                │
+│  1h    ......... Telegram alert cooldown                                     │
+│                                                                              │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+┌─ CRITICAL FILES TO UNDERSTAND ───────────────────────────────────────────────┐
+│                                                                               │
+│  /dashboard/src/instrumentation.ts ......... Entry point for background    │
+│  /dashboard/src/instrumentation-node.ts ... Quota alerts + provider sync     │
+│  /dashboard/entrypoint.sh ................. DB bootstrap before server       │
+│  /dashboard/Dockerfile ................... 3-stage build with tini init     │
+│  /dashboard/next.config.ts ............... CSP headers (dev vs prod)         │
+│  /dashboard/dev-local.sh ................. Local dev environment bootstrap  │
+│  /setup-local.sh ......................... Production local deployment       │
+│                                                                              │
+└───────────────────────────────────────────────────────────────────────────────┘
+

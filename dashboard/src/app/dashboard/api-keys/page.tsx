@@ -170,11 +170,11 @@ export default function ApiKeysPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
+      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-100">API Keys</h1>
-            <p className="mt-1 text-xs text-slate-400">Manage dashboard access keys for clients and integrations. <HelpTooltip content="API keys authenticate external tools (like the opencode-cliproxyapi-sync plugin) to access your dashboard configuration programmatically" /></p>
+            <h1 className="text-xl font-semibold tracking-tight text-black">API Keys</h1>
+            <p className="mt-1 text-xs text-[#777169]">Manage dashboard access keys for clients and integrations. <HelpTooltip content="API keys authenticate external tools (like the opencode-cliproxyapi-sync plugin) to access your dashboard configuration programmatically" /></p>
           </div>
           <Button onClick={() => { setKeyNameInput(""); setIsCreateModalOpen(true); }} disabled={creating} className="px-2.5 py-1 text-xs">
             Create Key
@@ -183,12 +183,12 @@ export default function ApiKeysPage() {
       </section>
 
       {loading ? (
-        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-6 text-center text-sm text-slate-400">Loading...</div>
+        <div className="rounded-lg border border-[#e5e5e5] bg-white p-6 text-center text-sm text-[#777169]">Loading...</div>
       ) : apiKeys.length === 0 ? (
-        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-8">
+        <div className="rounded-lg border border-[#e5e5e5] bg-white p-8">
           <div className="flex flex-col items-center justify-center gap-4 text-center">
-            <div className="flex size-14 items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/30">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400" aria-hidden="true">
+            <div className="flex size-14 items-center justify-center rounded-full border border-[#e5e5e5] bg-white">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#777169]" aria-hidden="true">
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
                 <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
                 <circle cx="12" cy="11" r="2" />
@@ -196,8 +196,8 @@ export default function ApiKeysPage() {
               </svg>
             </div>
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-100">No API keys created yet</h3>
-              <p className="text-xs text-slate-400">Create your first API key to access the dashboard programmatically</p>
+              <h3 className="text-sm font-semibold text-black">No API keys created yet</h3>
+              <p className="text-xs text-[#777169]">Create your first API key to access the dashboard programmatically</p>
             </div>
             <Button onClick={() => { setKeyNameInput(""); setIsCreateModalOpen(true); }} disabled={creating} className="px-3 py-1.5 text-xs">
               Create API Key
@@ -206,21 +206,21 @@ export default function ApiKeysPage() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <section className="min-w-[600px] overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/40">
-            <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1fr)_180px_160px_110px] border-b border-slate-700/70 bg-slate-900/95 backdrop-blur-sm px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+          <section className="min-w-[600px] overflow-hidden rounded-lg border border-[#e5e5e5] bg-white">
+            <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1fr)_180px_160px_110px] border-b border-[#e5e5e5] bg-white/95 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
               <span>Name</span>
               <span>Created</span>
               <span>Last Used</span>
               <span>Actions</span>
             </div>
           {apiKeys.map((apiKey) => (
-            <div key={apiKey.id} className="grid grid-cols-[minmax(0,1fr)_180px_160px_110px] items-center border-b border-slate-700/60 px-3 py-2 last:border-b-0">
+            <div key={apiKey.id} className="grid grid-cols-[minmax(0,1fr)_180px_160px_110px] items-center border-b border-[#e5e5e5] px-3 py-2 last:border-b-0">
               <div className="min-w-0">
-                <p className="truncate text-xs font-medium text-slate-100">{apiKey.name}</p>
-                <p className="mt-0.5 truncate font-mono text-xs text-slate-400">{apiKey.keyPreview}</p>
+                <p className="truncate text-xs font-medium text-black">{apiKey.name}</p>
+                <p className="mt-0.5 truncate font-mono text-xs text-[#777169]">{apiKey.keyPreview}</p>
               </div>
-              <span className="text-xs text-slate-400">{new Date(apiKey.createdAt).toLocaleDateString()}</span>
-              <span className="text-xs text-slate-400">{apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleDateString() : "Never"}</span>
+              <span className="text-xs text-[#777169]">{new Date(apiKey.createdAt).toLocaleDateString()}</span>
+              <span className="text-xs text-[#777169]">{apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleDateString() : "Never"}</span>
               <div className="flex justify-end">
                 <Button variant="danger" onClick={() => confirmDelete(apiKey.id)} className="px-2.5 py-1 text-xs">
                   Delete
@@ -240,7 +240,7 @@ export default function ApiKeysPage() {
         <ModalContent>
           <div className="space-y-4">
             <div>
-              <label htmlFor="key-name-input" className="mb-2 block text-sm font-semibold text-slate-300">
+              <label htmlFor="key-name-input" className="mb-2 block text-sm font-semibold text-[#4e4e4e]">
                 Key Name
               </label>
               <Input
@@ -251,7 +251,7 @@ export default function ApiKeysPage() {
                 placeholder="e.g. Development, Production, CLI"
                 disabled={creating}
               />
-              <p className="mt-1.5 text-xs text-slate-500">Give your key a descriptive name for easy identification</p>
+              <p className="mt-1.5 text-xs text-[#777169]">Give your key a descriptive name for easy identification</p>
             </div>
           </div>
         </ModalContent>
@@ -271,10 +271,10 @@ export default function ApiKeysPage() {
         </ModalHeader>
         <ModalContent>
           <div className="space-y-4">
-            <div className="rounded-sm border border-slate-700/70 bg-slate-900/40 p-4 text-sm">
-              <div className="mb-2 font-medium text-slate-100">Copy this key now</div>
+            <div className="rounded-sm border border-[#e5e5e5] bg-white p-4 text-sm">
+              <div className="mb-2 font-medium text-black">Copy this key now</div>
               <div className="relative group">
-                <div className="break-all rounded-sm border border-slate-700/70 bg-slate-900/40 p-3 pr-12 font-mono text-xs text-slate-200">
+                <div className="break-all rounded-sm border border-[#e5e5e5] bg-white p-3 pr-12 font-mono text-xs text-black">
                   {newKeyValue}
                 </div>
                 <button
@@ -285,15 +285,15 @@ export default function ApiKeysPage() {
                       showToast("API key copied", "success");
                     }
                   }}
-                  className="absolute right-2.5 top-2.5 rounded-sm border border-slate-700/70 bg-slate-800/60 p-1.5 text-slate-400 transition-colors duration-200 hover:bg-slate-700/70 hover:text-slate-200"
+                  className="absolute right-2.5 top-2.5 rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] p-1.5 text-[#777169] transition-colors duration-200 hover:bg-[#f5f5f5] hover:text-black"
                   title="Copy API key"
                 >
                   {copiedKey === "modal" ? <CheckIcon /> : <CopyIcon />}
                 </button>
               </div>
             </div>
-            <div className="rounded-sm border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-              <span className="text-amber-200">This key will only be shown once. Store it securely.</span>
+            <div className="rounded-sm border border-amber-200 bg-amber-50 p-3 text-sm">
+              <span className="text-amber-700">This key will only be shown once. Store it securely.</span>
             </div>
           </div>
         </ModalContent>

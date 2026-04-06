@@ -61,26 +61,26 @@ export default function SetupPage() {
     <main id="main-content" className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-600 shadow-lg shadow-purple-600/30">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-black shadow-[rgba(0,0,0,0.08)_0px_0px_0px_0.5px]">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">
+          <h1 className="text-2xl font-semibold tracking-tight text-black">
             CLIProxyAPI
           </h1>
-          <p className="mt-1 text-sm text-slate-400">First-time setup</p>
+          <p className="mt-1 text-sm text-[#777169]">First-time setup</p>
         </div>
 
-         <div className="glass-card rounded-xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-          <div className="mb-4 rounded-xl bg-amber-500/15 border border-amber-400/25 p-3 text-sm text-amber-200">
+         <div className="glass-card rounded-2xl p-6">
+           <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700">
             Create your administrator account. Keep these credentials secure.
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="username" className="mb-2 block text-xs font-medium text-white/70 uppercase tracking-wider">
+              <label htmlFor="username" className="mb-2 block text-xs font-medium text-[#4e4e4e] uppercase tracking-wider">
                 Username
               </label>
               <Input
@@ -95,7 +95,7 @@ export default function SetupPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-2 block text-xs font-medium text-white/70 uppercase tracking-wider">
+              <label htmlFor="password" className="mb-2 block text-xs font-medium text-[#4e4e4e] uppercase tracking-wider">
                 Password
               </label>
               <Input
@@ -110,7 +110,7 @@ export default function SetupPage() {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="mb-2 block text-xs font-medium text-white/70 uppercase tracking-wider">
+              <label htmlFor="confirmPassword" className="mb-2 block text-xs font-medium text-[#4e4e4e] uppercase tracking-wider">
                 Confirm Password
               </label>
               <Input
@@ -124,7 +124,7 @@ export default function SetupPage() {
             </div>
 
             {error && (
-              <div role="alert" aria-live="polite" className="rounded-xl bg-red-500/20 border border-red-400/30 p-3 text-sm text-red-300">
+              <div role="alert" aria-live="polite" className="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-600">
                 {error}
               </div>
             )}
@@ -135,7 +135,7 @@ export default function SetupPage() {
           </form>
         </div>
 
-        <p className="mt-6 text-center text-xs text-slate-500">
+        <p className="mt-6 text-center text-xs text-[#777169]">
           CLIProxyAPI Management Dashboard
         </p>
       </div>

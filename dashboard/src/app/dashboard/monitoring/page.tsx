@@ -6,7 +6,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ServiceStatus } from "@/components/monitoring/service-status";
 const UsageStats = dynamic(
   () => import("@/components/monitoring/usage-stats").then(mod => ({ default: mod.UsageStats })),
-  { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-slate-800/50" /> }
+  { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[#f5f5f5]" /> }
 );
 import { LiveLogs } from "@/components/monitoring/live-logs";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
@@ -310,8 +310,8 @@ export default function MonitoringPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-4">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-100">Monitoring</h1>
+      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
+        <h1 className="text-xl font-semibold tracking-tight text-black">Monitoring</h1>
       </section>
 
       <ServiceStatus

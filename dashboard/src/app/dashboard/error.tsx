@@ -11,7 +11,7 @@ interface ErrorProps {
 export default function DashboardError({ error, reset }: ErrorProps) {
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
-      <div className="w-full max-w-md space-y-6 rounded-lg border border-slate-700/70 bg-slate-900/40 p-8">
+      <div className="w-full max-w-md space-y-6 rounded-lg border border-[#e5e5e5] bg-white p-8">
         <div className="flex flex-col items-center space-y-4 text-center">
           <svg
             width="48"
@@ -19,7 +19,7 @@ export default function DashboardError({ error, reset }: ErrorProps) {
             viewBox="0 0 48 48"
             fill="none"
             aria-hidden="true"
-            className="text-rose-400/70"
+            className="text-rose-500"
           >
             <path
               d="M24 6L44 40H4L24 6Z"
@@ -32,13 +32,13 @@ export default function DashboardError({ error, reset }: ErrorProps) {
           </svg>
 
           <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Error</p>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-100">Something went wrong</h1>
-            <p className="text-sm text-slate-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#777169]">Error</p>
+            <h1 className="text-xl font-semibold tracking-tight text-black">Something went wrong</h1>
+            <p className="text-sm text-[#777169]">
               An unexpected error occurred while loading this page.
             </p>
             {error.digest && (
-              <p className="mt-2 font-mono text-[11px] text-slate-600">
+              <p className="mt-2 font-mono text-[11px] text-[#777169]">
                 ID: {error.digest}
               </p>
             )}
@@ -49,7 +49,7 @@ export default function DashboardError({ error, reset }: ErrorProps) {
           <Button variant="primary" onClick={reset}>
             Try Again
           </Button>
-          <Link href="/dashboard" className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 glass-button-secondary text-slate-100">
+          <Link href="/dashboard" className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 glass-button-secondary text-black">
             Go to Dashboard
           </Link>
         </div>

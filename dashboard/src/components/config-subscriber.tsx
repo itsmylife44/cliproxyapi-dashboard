@@ -149,7 +149,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
         <CardHeader>
           <CardTitle>
             <span className="flex items-center gap-3">
-              <span className="w-6 h-6 rounded-lg bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-sm" aria-hidden="true">
+              <span className="w-6 h-6 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] flex items-center justify-center text-sm" aria-hidden="true">
                 &#9733;
               </span>
               Subscribe to Shared Config
@@ -158,7 +158,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <div className="w-6 h-6 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-[#ddd] border-t-black rounded-full animate-spin" />
           </div>
         </CardContent>
       </Card>
@@ -171,7 +171,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
         <CardHeader>
           <CardTitle>
             <span className="flex items-center gap-3">
-              <span className="w-6 h-6 rounded-lg bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-sm" aria-hidden="true">
+              <span className="w-6 h-6 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] flex items-center justify-center text-sm" aria-hidden="true">
                 &#9733;
               </span>
               Subscribe to Shared Config
@@ -180,15 +180,15 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <p className="text-sm text-white/70">
+            <p className="text-sm text-[#4e4e4e]">
               Subscribe to someone else&apos;s CLIProxyAPI configuration. Your model selection will be
               automatically controlled by the publisher until you unsubscribe.
             </p>
 
             {!hasApiKey && (
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-400/30">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
                 <span className="text-lg">⚠️</span>
-                <p className="text-sm text-amber-200/90">
+                <p className="text-sm text-amber-700/90">
                   You need at least one API key to subscribe. Please add an API key first.
                 </p>
               </div>
@@ -196,7 +196,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
 
             <div className="space-y-3">
               <div>
-                <label htmlFor="share-code-input" className="block text-sm font-medium text-white/80 mb-2">
+                <label htmlFor="share-code-input" className="block text-sm font-medium text-[#4e4e4e] mb-2">
                   Share Code
                 </label>
                 <Input
@@ -227,7 +227,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
       <CardHeader>
         <CardTitle>
           <span className="flex items-center gap-3">
-            <span className="w-6 h-6 rounded-lg bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-sm" aria-hidden="true">
+            <span className="w-6 h-6 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] flex items-center justify-center text-sm" aria-hidden="true">
               &#9733;
             </span>
             Active Subscription
@@ -236,28 +236,28 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2 rounded-sm border border-slate-700/70 bg-slate-900/30 px-3 py-2">
+          <div className="grid grid-cols-2 gap-2 rounded-sm border border-[#e5e5e5] bg-white px-3 py-2">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Publisher</div>
-              <div className="text-xs font-semibold text-slate-200">{status.publisherUsername}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Publisher</div>
+              <div className="text-xs font-semibold text-black">{status.publisherUsername}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Template</div>
-              <div className="text-xs font-semibold text-slate-200">{status.templateName}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Template</div>
+              <div className="text-xs font-semibold text-black">{status.templateName}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Status</div>
-              <div className={status.isActive ? "text-xs font-semibold text-emerald-300" : "text-xs font-semibold text-amber-300"}>{status.isActive ? "Active" : "Paused"}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Status</div>
+              <div className={status.isActive ? "text-xs font-semibold text-emerald-700" : "text-xs font-semibold text-amber-700"}>{status.isActive ? "Active" : "Paused"}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Last Synced</div>
-              <div className="text-xs font-semibold text-slate-200">{status.lastSyncedAt ? new Date(status.lastSyncedAt).toLocaleString() : "Never"}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Last Synced</div>
+              <div className="text-xs font-semibold text-black">{status.lastSyncedAt ? new Date(status.lastSyncedAt).toLocaleString() : "Never"}</div>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-teal-500/10 border border-teal-400/30">
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5]">
             <span className="text-lg">🔒</span>
-            <p className="text-sm text-teal-200/90">
+            <p className="text-sm text-[#4e4e4e]">
               While subscribed, model selection is controlled by <strong>{status.publisherUsername}</strong>. 
               Your previous preferences will be restored when you unsubscribe.
             </p>

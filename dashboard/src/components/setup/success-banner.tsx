@@ -34,7 +34,7 @@ export function SuccessBanner() {
         </div>
         <Link
           href="/dashboard"
-          className="flex-shrink-0 whitespace-nowrap px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md border bg-black text-white border-black hover:bg-gray-900"
+          className="flex-shrink-0 whitespace-nowrap px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md border glass-button-primary"
         >
           Go to Dashboard
         </Link>

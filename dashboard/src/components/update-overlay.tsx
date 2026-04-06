@@ -175,7 +175,7 @@ export function UpdateOverlay({
                 xmlns="http://www.w3.org/2000/svg"
                 className={cn(
                   "h-8 w-8",
-                  isDashboard ? "text-purple-400" : "text-blue-600"
+                  isDashboard ? "text-purple-400" : "text-blue-400"
                 )}
                 fill="none"
                 viewBox="0 0 24 24"

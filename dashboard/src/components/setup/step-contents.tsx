@@ -50,7 +50,7 @@ export function Step1Content({ done }: { done: boolean }) {
         href="/dashboard/providers"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-block text-xs px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md border bg-black text-white border-black hover:bg-gray-900"
+        className="inline-block text-xs px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md border glass-button-primary"
       >
         Open Providers
       </a>

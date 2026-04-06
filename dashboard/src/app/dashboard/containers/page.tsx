@@ -303,9 +303,9 @@ export default function ContainersPage() {
               </div>
                 <div className="h-96 overflow-auto rounded-sm border border-[#e5e5e5] bg-[#1a1a1a] p-3 font-mono text-[10px] sm:p-4 sm:text-xs">
                   {logsLoading ? (
-                    <div className="text-[#777169]">Loading logs...</div>
+                    <div className="text-gray-400">Loading logs...</div>
                   ) : logLines.length === 0 ? (
-                    <div className="text-[#777169]">No logs available</div>
+                    <div className="text-gray-400">No logs available</div>
                   ) : (
                     logLines.map((entry) => (
                       <div key={entry.id} className="mb-1 break-all text-gray-200">

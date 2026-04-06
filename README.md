@@ -21,6 +21,17 @@
 
 ---
 
+<p align="center">
+  <a href="https://discord.gg/RngVxcNvfg">
+    <img src="https://img.shields.io/badge/Join%20our%20Discord%20Community-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord">
+  </a>
+</p>
+<p align="center">
+  Get help, share configs, follow releases → <strong><a href="https://discord.gg/RngVxcNvfg">discord.gg/RngVxcNvfg</a></strong>
+</p>
+
+---
+
 ## What is this?
 
 [CLIProxyAPIPlus](https://github.com/router-for-me/CLIProxyAPIPlus) wraps OAuth-based CLI tools (Claude Code, Gemini CLI, Codex, GitHub Copilot, Kiro, Antigravity, Kimi, Qwen) into **OpenAI-compatible APIs**. This dashboard gives you a web UI to manage everything — providers, API keys, configs, logs, and updates — without touching YAML files.

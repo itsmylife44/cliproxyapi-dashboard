@@ -85,7 +85,6 @@ describe("getProxyUrl", () => {
   const originalMgmtUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL;
 
   afterEach(() => {
-    // Restore env vars manually (Bun 1.3.7 does not support vi.stubEnv)
     if (originalApiUrl === undefined) {
       delete process.env.API_URL;
     } else {

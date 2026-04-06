@@ -317,7 +317,7 @@ function resolveConfigModel(
 ): string {
   const manualModel = options?.defaultModel?.trim();
   if (manualModel) {
-    return manualModel;
+    return manualModel.includes("/") ? manualModel : `cliproxyapi/${manualModel}`;
   }
 
   const fallbackModelId = Object.keys(models)[0] ?? "gemini-2.5-flash";

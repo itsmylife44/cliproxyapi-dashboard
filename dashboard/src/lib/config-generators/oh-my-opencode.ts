@@ -213,16 +213,17 @@ export function buildOhMyOpenCodeConfig(
     let entry: ModelAssignment;
 
     if (overrideModel && availableModels.includes(overrideModel)) {
-      const resolution = resolveChain(chain, availableModels);
+      const overrideIndex = chain.indexOf(overrideModel);
+      const fallbackModels = overrideIndex >= 0
+        ? chain.slice(overrideIndex + 1).filter((m) => availableModels.includes(m))
+        : [];
       entry = {
         model: `cliproxyapi/${overrideModel}`,
-        fallback_models: resolution?.fallbackModels.map(
-          (m) => `cliproxyapi/${m}`,
-        ),
+        fallback_models: fallbackModels.length > 0
+          ? fallbackModels.map((m) => `cliproxyapi/${m}`)
+          : undefined,
       };
-      if (entry.fallback_models && entry.fallback_models.length === 0) {
-        delete entry.fallback_models;
-      }
+      if (!entry.fallback_models) delete entry.fallback_models;
     } else {
       const resolution = resolveChain(chain, availableModels);
       if (!resolution) continue;
@@ -247,12 +248,15 @@ export function buildOhMyOpenCodeConfig(
     if (agentOverride?.permission) entry.permission = agentOverride.permission;
     if (agentOverride?.thinking) entry.thinking = agentOverride.thinking;
     if (agentOverride?.ultrawork) {
-      entry.ultrawork = {
-        ...agentOverride.ultrawork,
-        ...(agentOverride.ultrawork.model && availableModels.includes(agentOverride.ultrawork.model)
-          ? { model: `cliproxyapi/${agentOverride.ultrawork.model}` }
-          : {}),
-      };
+      const ultrawork = { ...agentOverride.ultrawork };
+      if (ultrawork.model) {
+        if (availableModels.includes(ultrawork.model)) {
+          ultrawork.model = `cliproxyapi/${ultrawork.model}`;
+        } else {
+          delete ultrawork.model;
+        }
+      }
+      entry.ultrawork = ultrawork;
     }
     agents[agent] = entry;
   }
@@ -265,16 +269,17 @@ export function buildOhMyOpenCodeConfig(
     let entry: ModelAssignment;
 
     if (overrideModel && availableModels.includes(overrideModel)) {
-      const resolution = resolveChain(chain, availableModels);
+      const overrideIndex = chain.indexOf(overrideModel);
+      const fallbackModels = overrideIndex >= 0
+        ? chain.slice(overrideIndex + 1).filter((m) => availableModels.includes(m))
+        : [];
       entry = {
         model: `cliproxyapi/${overrideModel}`,
-        fallback_models: resolution?.fallbackModels.map(
-          (m) => `cliproxyapi/${m}`,
-        ),
+        fallback_models: fallbackModels.length > 0
+          ? fallbackModels.map((m) => `cliproxyapi/${m}`)
+          : undefined,
       };
-      if (entry.fallback_models && entry.fallback_models.length === 0) {
-        delete entry.fallback_models;
-      }
+      if (!entry.fallback_models) delete entry.fallback_models;
     } else {
       const resolution = resolveChain(chain, availableModels);
       if (!resolution) continue;
@@ -305,7 +310,7 @@ export function buildOhMyOpenCodeConfig(
 
   const config: Record<string, unknown> = {
     $schema:
-      "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
+      "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/main/assets/oh-my-opencode.schema.json",
   };
 
   if (Object.keys(agents).length > 0) {
@@ -372,18 +377,27 @@ export function applyPreset(
       ...existingOverrides?.categories,
       ...presetConfig.categories,
     },
-    background_task: {
-      ...existingOverrides?.background_task,
-      ...presetConfig.background_task,
-      providerConcurrency: {
+    background_task: (() => {
+      const base = {
+        ...existingOverrides?.background_task,
+        ...presetConfig.background_task,
+      };
+      const mergedProviderConcurrency = {
         ...existingOverrides?.background_task?.providerConcurrency,
         ...presetConfig.background_task?.providerConcurrency,
-      },
-      modelConcurrency: {
+      };
+      const mergedModelConcurrency = {
         ...existingOverrides?.background_task?.modelConcurrency,
         ...presetConfig.background_task?.modelConcurrency,
-      },
-    },
+      };
+      if (Object.keys(mergedProviderConcurrency).length > 0) {
+        base.providerConcurrency = mergedProviderConcurrency;
+      }
+      if (Object.keys(mergedModelConcurrency).length > 0) {
+        base.modelConcurrency = mergedModelConcurrency;
+      }
+      return base;
+    })(),
     sisyphus_agent: {
       ...existingOverrides?.sisyphus_agent,
       ...presetConfig.sisyphus_agent,

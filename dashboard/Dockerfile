@@ -23,7 +23,7 @@ ARG CLIPROXYAPI_MANAGEMENT_URL="http://127.0.0.1:8317/v0/management"
 ENV CLIPROXYAPI_MANAGEMENT_URL=${CLIPROXYAPI_MANAGEMENT_URL}
 
 RUN npx prisma generate
-RUN NODE_OPTIONS=--max-old-space-size=512 npm run build -- --webpack
+RUN NODE_OPTIONS=--max-old-space-size=512 npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app

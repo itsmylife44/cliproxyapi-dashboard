@@ -525,12 +525,14 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     const agentConfig = overrides?.agents?.[agent] ?? {};
     const overrideModel = agentConfig.model;
     if (overrideModel && availableModelIds.includes(overrideModel)) {
+      const overrideChainIdx = chain.indexOf(overrideModel);
+      const overrideTier = overrideChainIdx <= 1 ? 1 as const : overrideChainIdx <= 3 ? 2 as const : 3 as const;
       agentAssignments.push({
         name: agent,
         model: overrideModel,
         isOverride: true,
         config: agentConfig,
-        tier: 1,
+        tier: overrideTier,
         label: AGENT_ROLES[agent] ?? agent,
       });
     } else {
@@ -564,12 +566,14 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     const categoryConfig = overrides?.categories?.[category] ?? {};
     const overrideModel = categoryConfig.model;
     if (overrideModel && availableModelIds.includes(overrideModel)) {
+      const overrideChainIdx = chain.indexOf(overrideModel);
+      const overrideTier = overrideChainIdx <= 1 ? 1 as const : overrideChainIdx <= 3 ? 2 as const : 3 as const;
       categoryAssignments.push({
         name: category,
         model: overrideModel,
         isOverride: true,
         config: categoryConfig,
-        tier: 1,
+        tier: overrideTier,
         label: CATEGORY_ROLES[category] ?? category,
       });
     } else {

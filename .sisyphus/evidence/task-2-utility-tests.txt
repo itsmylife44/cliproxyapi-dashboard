@@ -1,0 +1,49 @@
+
+> dashboard@0.1.3 pretest
+> npm run prisma:generate
+
+
+> dashboard@0.1.3 prisma:generate
+> prisma generate
+
+
+✔ Generated Prisma Client (7.4.2) to .\src\generated\prisma in 123ms
+
+
+> dashboard@0.1.3 test
+> vitest run --reporter=verbose src/lib/__tests__/oh-my-opencode-config.test.ts -t getMissingPresetModels
+
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mC:/Users/xSpaM/Desktop/cliproxyapi-dashboard/dashboard[39m
+
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mpreserves ultrawork overrides when validating saved config
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mpreserves permission and thinking overrides when validating saved config
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mpreserves advanced option overrides when validating saved config
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mpreserves explicit false advanced options and drops empty ultrawork
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22memits ultrawork with cliproxyapi prefix and advanced options in generated config
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mresolves models from fallback chains
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mauto-generates fallback_models from chain when no override
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mreturns null when no models available
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mcomputes override fallback from override position, not chain start
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mcomputes category override fallback from override position
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22muses no fallbacks when override model is not in chain
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mdrops ultrawork.model when ultrawork model is not available
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mprefixes ultrawork.model when ultrawork model is available
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mapplyPreset does not create empty concurrency objects
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mapplyPreset merges concurrency from existing and preset config
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22muses schema URL from main branch
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22magent/category skipping when models unavailable[2m > [22mincludes agent even when no chain model is available
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22magent/category skipping when models unavailable[2m > [22mincludes all agents even when all override models have no chain match
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22magent/category skipping when models unavailable[2m > [22mincludes category even when no chain model is available
+ [2m[90m↓[39m[22m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22magent/category skipping when models unavailable[2m > [22muses chain-resolved model when override is unavailable but chain has match
+ [32m✓[39m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mgetMissingPresetModels[2m > [22mreturns empty array when all preset models available[32m 1[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mgetMissingPresetModels[2m > [22mreturns missing models for agents and categories[32m 1[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mgetMissingPresetModels[2m > [22mhandles preset with no agent overrides[32m 0[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mgetMissingPresetModels[2m > [22mhandles empty available models list[32m 0[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/oh-my-opencode-config.test.ts[2m > [22moh-my-opencode config[2m > [22mgetMissingPresetModels[2m > [22mignores agent entries without a model override[32m 0[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m5 passed[39m[22m[2m | [22m[33m20 skipped[39m[90m (25)[39m
+[2m   Start at [22m 23:46:54
+[2m   Duration [22m 198ms[2m (transform 55ms, setup 0ms, import 70ms, tests 4ms, environment 0ms)[22m
+

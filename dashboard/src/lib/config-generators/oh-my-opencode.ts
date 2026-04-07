@@ -73,6 +73,34 @@ export function resolveChain(
   return null;
 }
 
+export function getMissingPresetModels(
+  preset: OhMyOpenCodePreset,
+  availableModels: string[],
+): { agent: string; model: string }[] {
+  const available = new Set(availableModels);
+  const missing: { agent: string; model: string }[] = [];
+
+  // Check agent model overrides
+  if (preset.config.agents) {
+    for (const [agentName, agentConfig] of Object.entries(preset.config.agents)) {
+      if (agentConfig.model && !available.has(agentConfig.model)) {
+        missing.push({ agent: agentName, model: agentConfig.model });
+      }
+    }
+  }
+
+  // Check category model overrides
+  if (preset.config.categories) {
+    for (const [categoryName, categoryConfig] of Object.entries(preset.config.categories)) {
+      if (categoryConfig.model && !available.has(categoryConfig.model)) {
+        missing.push({ agent: categoryName, model: categoryConfig.model });
+      }
+    }
+  }
+
+  return missing;
+}
+
 export const AGENT_ROLE_LABELS: Record<string, string> = {
   sisyphus: "Orchestrator",
   hephaestus: "Deep autonomous worker",
@@ -226,14 +254,18 @@ export function buildOhMyOpenCodeConfig(
       if (!entry.fallback_models) delete entry.fallback_models;
     } else {
       const resolution = resolveChain(chain, availableModels);
-      if (!resolution) continue;
-      entry = {
-        model: `cliproxyapi/${resolution.model}`,
-        fallback_models: resolution.fallbackModels.length > 0
-          ? resolution.fallbackModels.map((m) => `cliproxyapi/${m}`)
-          : undefined,
-      };
-      if (!entry.fallback_models) delete entry.fallback_models;
+      if (!resolution) {
+        // No chain model available — still include agent with the first chain model as intended model
+        entry = { model: `cliproxyapi/${chain[0]}` };
+      } else {
+        entry = {
+          model: `cliproxyapi/${resolution.model}`,
+          fallback_models: resolution.fallbackModels.length > 0
+            ? resolution.fallbackModels.map((m) => `cliproxyapi/${m}`)
+            : undefined,
+        };
+        if (!entry.fallback_models) delete entry.fallback_models;
+      }
     }
 
     if (agentOverride?.variant) entry.variant = agentOverride.variant;
@@ -282,14 +314,18 @@ export function buildOhMyOpenCodeConfig(
       if (!entry.fallback_models) delete entry.fallback_models;
     } else {
       const resolution = resolveChain(chain, availableModels);
-      if (!resolution) continue;
-      entry = {
-        model: `cliproxyapi/${resolution.model}`,
-        fallback_models: resolution.fallbackModels.length > 0
-          ? resolution.fallbackModels.map((m) => `cliproxyapi/${m}`)
-          : undefined,
-      };
-      if (!entry.fallback_models) delete entry.fallback_models;
+      if (!resolution) {
+        // No chain model available — still include category with the first chain model as intended model
+        entry = { model: `cliproxyapi/${chain[0]}` };
+      } else {
+        entry = {
+          model: `cliproxyapi/${resolution.model}`,
+          fallback_models: resolution.fallbackModels.length > 0
+            ? resolution.fallbackModels.map((m) => `cliproxyapi/${m}`)
+            : undefined,
+        };
+        if (!entry.fallback_models) delete entry.fallback_models;
+      }
     }
 
     if (categoryOverride?.variant) entry.variant = categoryOverride.variant;

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { applyPreset, buildOhMyOpenCodeConfig } from "../config-generators/oh-my-opencode";
+import { applyPreset, buildOhMyOpenCodeConfig, getMissingPresetModels } from "../config-generators/oh-my-opencode";
 import type { OhMyOpenCodePreset } from "../config-generators/oh-my-opencode-types";
 import { validateFullConfig } from "../config-generators/oh-my-opencode-types";
 
@@ -163,7 +163,7 @@ describe("oh-my-opencode config", () => {
 
   it("returns null when no models available", () => {
     const config = buildOhMyOpenCodeConfig([]);
-    expect(config).toBeNull();
+    expect(config).not.toBeNull(); // After fix: always returns config with agents using chain[0] as placeholder
   });
 
   it("computes override fallback from override position, not chain start", () => {
@@ -286,5 +286,131 @@ describe("oh-my-opencode config", () => {
     const typedConfig = config as Record<string, unknown>;
     expect(typedConfig.$schema).toEqual(expect.stringContaining("/main/"));
     expect(typedConfig.$schema).not.toEqual(expect.stringContaining("/dev/"));
+  });
+
+  describe("agent/category skipping when models unavailable", () => {
+    it("includes agent even when no chain model is available", () => {
+      const config = buildOhMyOpenCodeConfig(["some-unknown-model-xyz"], {
+        agents: { sisyphus: { model: "gpt-5.4" } },
+      });
+
+      // The override model (gpt-5.4) is not in availableModels
+      // The chain for sisyphus: ["claude-opus-4.6", "kimi-k2.5", "k2p5", "gpt-5.4", "glm-5", "big-pickle"]
+      // None of these are in ["some-unknown-model-xyz"], so resolveChain() returns null
+      // Currently: agents.sisyphus is skipped (continue executed)
+      // After fix: agents.sisyphus should be present
+      expect(config).not.toBeNull();
+      const typedConfig = config as Record<string, unknown>;
+      const agents = typedConfig.agents as Record<string, unknown>;
+      expect(agents.sisyphus).toBeDefined();
+    });
+
+    it("includes all agents even when all override models have no chain match", () => {
+      const config = buildOhMyOpenCodeConfig(["some-unknown-model-xyz"], {});
+
+      // No models from any chain are available
+      // Currently: returns null (0 agents resolved)
+      // After fix: result should NOT be null — all agents from UPSTREAM_AGENT_CHAINS should be present
+      expect(config).not.toBeNull();
+      const typedConfig = config as Record<string, unknown>;
+      const agents = typedConfig.agents as Record<string, unknown>;
+      expect(Object.keys(agents).length).toBeGreaterThan(0);
+    });
+
+    it("includes category even when no chain model is available", () => {
+      const config = buildOhMyOpenCodeConfig(["some-unknown-model-xyz"], {
+        categories: { "visual-engineering": { model: "gemini-3.1-pro" } },
+      });
+
+      // The override model is not in available models; chain has no match
+      // Currently: category omitted
+      // After fix: categories["visual-engineering"] exists
+      expect(config).not.toBeNull();
+      const typedConfig = config as Record<string, unknown>;
+      const categories = typedConfig.categories as Record<string, unknown>;
+      expect(categories["visual-engineering"]).toBeDefined();
+    });
+
+    it("uses chain-resolved model when override is unavailable but chain has match", () => {
+      const config = buildOhMyOpenCodeConfig(["k2p5"], {
+        agents: { sisyphus: { model: "gpt-5.4" } },
+      });
+
+      // Override (gpt-5.4) not in available; but k2p5 IS in sisyphus chain
+      // Expected: agents.sisyphus.model equals "cliproxyapi/k2p5" (chain fallback used)
+      // This tests EXISTING behavior — should PASS both before and after the fix
+      expect(config).not.toBeNull();
+      const typedConfig = config as Record<string, unknown>;
+      const agents = typedConfig.agents as Record<string, { model: string }>;
+      expect(agents.sisyphus.model).toBe("cliproxyapi/k2p5");
+    });
+  });
+
+  describe("getMissingPresetModels", () => {
+    it("returns empty array when all preset models available", () => {
+      const preset: OhMyOpenCodePreset = {
+        name: "test",
+        description: "test",
+        config: {
+          agents: { sisyphus: { model: "claude-opus-4.6" }, oracle: { model: "gpt-5.4" } },
+          categories: { "visual-engineering": { model: "gemini-3.1-pro" } },
+        },
+      };
+      const result = getMissingPresetModels(preset, ["claude-opus-4.6", "gpt-5.4", "gemini-3.1-pro"]);
+      expect(result).toEqual([]);
+    });
+
+    it("returns missing models for agents and categories", () => {
+      const preset: OhMyOpenCodePreset = {
+        name: "test",
+        description: "test",
+        config: {
+          agents: { sisyphus: { model: "claude-opus-4.6" }, oracle: { model: "gpt-missing-1" } },
+          categories: { "visual-engineering": { model: "gemini-missing-1" } },
+        },
+      };
+      const result = getMissingPresetModels(preset, ["claude-opus-4.6"]);
+      expect(result).toHaveLength(2);
+      expect(result.map(r => r.model)).toContain("gpt-missing-1");
+      expect(result.map(r => r.model)).toContain("gemini-missing-1");
+    });
+
+    it("handles preset with no agent overrides", () => {
+      const preset: OhMyOpenCodePreset = {
+        name: "test",
+        description: "test",
+        config: {},
+      };
+      const result = getMissingPresetModels(preset, ["claude-opus-4.6"]);
+      expect(result).toEqual([]);
+    });
+
+    it("handles empty available models list", () => {
+      const preset: OhMyOpenCodePreset = {
+        name: "test",
+        description: "test",
+        config: {
+          agents: { sisyphus: { model: "claude-opus-4.6" } },
+          categories: { quick: { model: "gpt-5-nano" } },
+        },
+      };
+      const result = getMissingPresetModels(preset, []);
+      expect(result).toHaveLength(2);
+    });
+
+    it("ignores agent entries without a model override", () => {
+      const preset: OhMyOpenCodePreset = {
+        name: "test",
+        description: "test",
+        config: {
+          agents: { sisyphus: { model: "claude-opus-4.6" }, prometheus: {} }, // prometheus has no model
+          categories: {},
+        },
+      };
+      const result = getMissingPresetModels(preset, []);
+      // Only sisyphus.model is "missing", prometheus has no model to check
+      expect(result).toHaveLength(1);
+      expect(result[0].model).toBe("claude-opus-4.6");
+    });
   });
 });

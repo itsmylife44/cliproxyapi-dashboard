@@ -1,0 +1,29 @@
+Task 6: Add isUnresolved prop to tier-assignments components
+Date: 2026-04-07
+==============================================================
+
+## Typecheck: PASS
+$ npm run typecheck
+> tsc --noEmit
+(exit 0, no errors)
+
+## Build: PASS
+$ npm run build
+> next build (Turbopack)
+✓ Compiled successfully in 5.0s
+✓ Generating static pages (73/73)
+
+(Pre-existing Windows EINVAL copyfile warnings unrelated to changes)
+
+## Files Modified
+1. dashboard/src/components/oh-my-opencode/tier-assignments.tsx
+   - Added isUnresolved?: boolean to TierAssignmentItem interface
+   - Agent map: destructured isUnresolved, added amber ⚠️ warning icon + "Model unavailable" text
+   - Category map: same treatment
+
+2. dashboard/src/components/oh-my-opencode-slim/tier-assignments.tsx
+   - Added isUnresolved?: boolean to SlimTierAssignmentItem interface
+   - Agent map: destructured isUnresolved, added amber ⚠️ warning icon + "Model unavailable" text
+
+## LSP Diagnostics
+Both files: 0 errors

@@ -8,6 +8,7 @@ interface TierAssignmentItem<TConfig> {
   name: string;
   model: string;
   isOverride: boolean;
+  isUnresolved?: boolean;
   config: TConfig;
   tier: 1 | 2 | 3 | 4;
   label: string;
@@ -63,14 +64,21 @@ export function TierAssignments({
                   <p className="text-[11px] text-[#aaa]">{tierMeta.hint}</p>
                 </div>
                 <div className="space-y-1.5">
-                  {tierAssignments.map(({ name, model, isOverride, config, label }) => (
+                  {tierAssignments.map(({ name, model, isOverride, isUnresolved, config, label }) => (
                     <div
                       key={name}
                       className="flex flex-col gap-2 rounded-md border border-[#e5e5e5] bg-[#f5f5f5] p-2.5 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold text-black font-mono">{name}</p>
-                        <p className="truncate text-[11px] text-[#999]">{label}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="truncate text-xs font-semibold text-black font-mono">{name}</p>
+                          {isUnresolved && (
+                            <span className="text-amber-500 text-xs" title="Model not available — select a different model">⚠️</span>
+                          )}
+                        </div>
+                        <p className={`truncate text-[11px] ${isUnresolved ? "text-amber-500" : "text-[#999]"}`}>
+                          {isUnresolved ? "Model unavailable" : label}
+                        </p>
                       </div>
                       <ModelBadge
                         name={name}
@@ -125,14 +133,21 @@ export function TierAssignments({
                   <p className="text-[11px] text-[#aaa]">{tierMeta.hint}</p>
                 </div>
                 <div className="space-y-1.5">
-                  {tierAssignments.map(({ name, model, isOverride, config, label }) => (
+                  {tierAssignments.map(({ name, model, isOverride, isUnresolved, config, label }) => (
                     <div
                       key={name}
                       className="flex flex-col gap-2 rounded-md border border-[#e5e5e5] bg-[#f5f5f5] p-2.5 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold text-black font-mono">{name}</p>
-                        <p className="truncate text-[11px] text-[#999]">{label}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="truncate text-xs font-semibold text-black font-mono">{name}</p>
+                          {isUnresolved && (
+                            <span className="text-amber-500 text-xs" title="Model not available — select a different model">⚠️</span>
+                          )}
+                        </div>
+                        <p className={`truncate text-[11px] ${isUnresolved ? "text-amber-500" : "text-[#999]"}`}>
+                          {isUnresolved ? "Model unavailable" : label}
+                        </p>
                       </div>
                       <ModelBadge
                         name={name}

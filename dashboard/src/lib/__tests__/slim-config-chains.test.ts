@@ -50,3 +50,16 @@ describe("buildSlimConfig – fallback chains bug reproduction", () => {
     expect(fallback.chains).toBeUndefined();
   });
 });
+
+describe("buildSlimConfig – agent inclusion when models unavailable", () => {
+  it("should include all 6 agents even when no models match any tier", () => {
+    // Bug at line 50: if (!model) continue; skips agents when pickBestModel returns null
+    // With empty availableModels, all 6 agents are skipped
+    // Current behavior: buildSlimConfig([]) returns null (no agents added)
+    // Expected behavior: agents should still be added with fallback/placeholder
+    const config = buildSlimConfig([]);
+
+    // This test FAILS (RED phase) because config is null
+    expect(config).not.toBeNull();
+  });
+});

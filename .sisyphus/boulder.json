@@ -1,0 +1,40 @@
+{
+  "active_plan": "C:/Users/xSpaM/Desktop/cliproxyapi-dashboard/.sisyphus/plans/preset-model-validation-fix.md",
+  "started_at": "2026-04-07T21:43:00.000Z",
+  "session_ids": [
+    "ses_296224370ffepX3zhIBnvec7iB"
+  ],
+  "plan_name": "preset-model-validation-fix",
+  "session_origins": {
+    "ses_296224370ffepX3zhIBnvec7iB": "direct"
+  },
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "Write failing tests for normal-variant agent-skip fix (TDD RED)",
+      "session_id": "ses_29617b0eaffe642JjwFFbBi2us",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-04-07T21:47:18.818Z"
+    },
+    "todo:4": {
+      "task_key": "todo:4",
+      "task_label": "4",
+      "task_title": "Fix buildOhMyOpenCodeConfig — stop skipping agents with unavailable models (TDD GREEN)",
+      "session_id": "ses_29614adb0ffeYatPz4EkDJRmQL",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-04-07T21:50:58.569Z"
+    },
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "Integrate preset warning toast + unresolved agents in normal-variant UI",
+      "session_id": "ses_29608acd4ffe1OD876YVMJrolP",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-07T22:05:20.678Z"
+    }
+  }
+}

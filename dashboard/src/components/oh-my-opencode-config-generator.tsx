@@ -19,6 +19,7 @@ import {
   resolveChain,
   buildOhMyOpenCodeConfig,
   applyPreset,
+  getMissingPresetModels,
   type ConfigData,
   type OAuthAccount,
 } from "@/lib/config-generators/oh-my-opencode";
@@ -516,6 +517,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     name: string;
     model: string;
     isOverride: boolean;
+    isUnresolved?: boolean;
     config: AgentConfigEntry;
     tier: 1 | 2 | 3 | 4;
     label: string;
@@ -531,6 +533,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
         name: agent,
         model: overrideModel,
         isOverride: true,
+        isUnresolved: false,
         config: agentConfig,
         tier: overrideTier,
         label: AGENT_ROLES[agent] ?? agent,
@@ -544,8 +547,19 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
           name: agent,
           model: resolution.model,
           isOverride: false,
+          isUnresolved: false,
           config: agentConfig,
           tier,
+          label: AGENT_ROLES[agent] ?? agent,
+        });
+      } else {
+        agentAssignments.push({
+          name: agent,
+          model: overrideModel ?? chain[0],
+          isOverride: !!overrideModel,
+          isUnresolved: true,
+          config: agentConfig,
+          tier: 1 as const,
           label: AGENT_ROLES[agent] ?? agent,
         });
       }
@@ -557,6 +571,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     name: string;
     model: string;
     isOverride: boolean;
+    isUnresolved?: boolean;
     config: CategoryConfigEntry;
     tier: 1 | 2 | 3 | 4;
     label: string;
@@ -572,6 +587,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
         name: category,
         model: overrideModel,
         isOverride: true,
+        isUnresolved: false,
         config: categoryConfig,
         tier: overrideTier,
         label: CATEGORY_ROLES[category] ?? category,
@@ -585,8 +601,19 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
           name: category,
           model: resolution.model,
           isOverride: false,
+          isUnresolved: false,
           config: categoryConfig,
           tier,
+          label: CATEGORY_ROLES[category] ?? category,
+        });
+      } else {
+        categoryAssignments.push({
+          name: category,
+          model: overrideModel ?? chain[0],
+          isOverride: !!overrideModel,
+          isUnresolved: true,
+          config: categoryConfig,
+          tier: 1 as const,
           label: CATEGORY_ROLES[category] ?? category,
         });
       }
@@ -621,6 +648,11 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
                 const newOverrides = applyPreset(preset, overrides);
                 setOverrides(newOverrides);
                 saveOverrides(newOverrides);
+                const missing = getMissingPresetModels(preset, availableModelIds);
+                if (missing.length > 0) {
+                  const modelList = missing.map(m => m.model).join(", ");
+                  showToast(`Preset applied — some models unavailable: ${modelList}`, "info");
+                }
               }
             }}
             value=""

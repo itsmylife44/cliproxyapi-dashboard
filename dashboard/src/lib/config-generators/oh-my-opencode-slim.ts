@@ -47,8 +47,12 @@ export function buildSlimConfig(
       entry = { model: `cliproxyapi/${overrideModel}` };
     } else {
       const model = pickBestModel(availableModels, role.tier);
-      if (!model) continue;
-      entry = { model: `cliproxyapi/${model}` };
+      if (!model) {
+        // No model available for this tier — use placeholder to keep agent in config
+        entry = { model: `cliproxyapi/unresolved-tier-${role.tier}` };
+      } else {
+        entry = { model: `cliproxyapi/${model}` };
+      }
     }
 
     if (agentOverride?.variant) entry.variant = agentOverride.variant;

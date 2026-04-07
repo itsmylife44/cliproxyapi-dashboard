@@ -251,6 +251,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
     name: string;
     model: string;
     isOverride: boolean;
+    isUnresolved?: boolean;
     config: SlimAgentConfig;
     tier: 1 | 2 | 3 | 4;
     label: string;
@@ -264,6 +265,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
         name: agent,
         model: overrideModel,
         isOverride: true,
+        isUnresolved: false,
         config: agentConfig,
         tier: role.tier,
         label: role.label,
@@ -275,6 +277,17 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
           name: agent,
           model,
           isOverride: !!overrideModel,
+          isUnresolved: false,
+          config: agentConfig,
+          tier: role.tier,
+          label: role.label,
+        });
+      } else {
+        agentAssignments.push({
+          name: agent,
+          model: typeof overrideModel === "string" ? overrideModel : `unresolved-tier-${role.tier}`,
+          isOverride: !!overrideModel,
+          isUnresolved: true,
           config: agentConfig,
           tier: role.tier,
           label: role.label,

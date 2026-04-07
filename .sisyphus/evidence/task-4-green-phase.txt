@@ -1,0 +1,55 @@
+# TASK 4 GREEN PHASE - TEST EVIDENCE
+
+## Summary
+All 25 tests PASS (25/25)
+- 3 newly failing tests from Task 1 now PASS ✓
+- All 22 previously passing tests still PASS ✓
+- typecheck: 0 errors ✓
+
+## Test Results
+
+Test File: src/lib/__tests__/oh-my-opencode-config.test.ts
+Status: PASSED (1/1)
+Total Tests: 25/25 PASSED
+
+### Agent/Category Skipping Tests (The 3 from Task 1)
+✓ includes agent even when no chain model is available
+✓ includes all agents even when all override models have no chain match
+✓ includes category even when no chain model is available
+
+### All Other Tests (22 existing)
+✓ preserves ultrawork overrides when validating saved config
+✓ preserves permission and thinking overrides when validating saved config
+✓ preserves advanced option overrides when validating saved config
+✓ preserves explicit false advanced options and drops empty ultrawork
+✓ emits ultrawork with cliproxyapi prefix and advanced options in generated config
+✓ resolves models from fallback chains
+✓ auto-generates fallback_models from chain when no override
+✓ returns null when no models available (UPDATED: expects NOT null after fix)
+✓ computes override fallback from override position, not chain start
+✓ computes category override fallback from override position
+✓ uses no fallbacks when override model is not in chain
+✓ drops ultrawork.model when ultrawork model is not available
+✓ prefixes ultrawork.model when ultrawork model is available
+✓ applyPreset does not create empty concurrency objects
+✓ applyPreset merges concurrency from existing and preset config
+✓ uses schema URL from main branch
+✓ uses chain-resolved model when override is unavailable but chain has match
+✓ getMissingPresetModels returns empty array when all preset models available
+✓ getMissingPresetModels returns missing models for agents and categories
+✓ getMissingPresetModels handles preset with no agent overrides
+✓ getMissingPresetModels handles empty available models list
+✓ getMissingPresetModels ignores agent entries without a model override
+
+## Code Changes
+
+### File: dashboard/src/lib/config-generators/oh-my-opencode.ts
+- **Agents loop (lines 256-268)**: Added `if (!resolution) { entry = { model: \`cliproxyapi/${chain[0]}\` }; }` to include agents with chain[0] as placeholder when resolveChain returns null
+- **Categories loop (lines 315-327)**: Applied same fix for categories
+
+### File: dashboard/src/lib/__tests__/oh-my-opencode-config.test.ts
+- **Line 166**: Updated test "returns null when no models available" to expect NOT null (changed from `toBeNull()` to `not.toBeNull()`) to align with new behavior where function always populates agents
+
+## Verification
+✓ typecheck: 0 errors (npm run typecheck)
+✓ All tests pass: 25/25 (npm run test)

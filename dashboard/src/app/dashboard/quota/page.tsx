@@ -1,45 +1,29 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+
+import { Button } from "@/components/ui/button";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
+import {
+  isModelFirstAccount,
+  isModelFirstProviderQuotaUnverified,
+  normalizeFraction,
+  summarizeModelFirstProvider,
+  type ModelFirstProviderSummary,
+  type QuotaAccount,
+  type QuotaMonitorMode,
+  type QuotaResponse,
+} from "@/lib/model-first-monitoring";
+
 const QuotaChart = dynamic(
-  () => import("@/components/quota/quota-chart").then(mod => ({ default: mod.QuotaChart })),
+  () => import("@/components/quota/quota-chart").then((mod) => ({ default: mod.QuotaChart })),
   { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> }
 );
 import { QuotaDetails } from "@/components/quota/quota-details";
 import { QuotaAlerts } from "@/components/quota/quota-alerts";
-
-interface QuotaModel {
-  id: string;
-  displayName: string;
-  remainingFraction?: number | null;
-  resetTime: string | null;
-}
-
-interface QuotaGroup {
-  id: string;
-  label: string;
-  remainingFraction?: number | null;
-  resetTime: string | null;
-  models: QuotaModel[];
-}
-
-interface QuotaAccount {
-  auth_index: string;
-  provider: string;
-  email?: string | null;
-  supported: boolean;
-  error?: string;
-  groups?: QuotaGroup[];
-  raw?: unknown;
-}
-
-interface QuotaResponse {
-  accounts: QuotaAccount[];
-}
 
 const PROVIDERS = {
   ALL: "all",
@@ -52,30 +36,6 @@ const PROVIDERS = {
 
 type ProviderType = (typeof PROVIDERS)[keyof typeof PROVIDERS];
 
-function normalizeFraction(value: unknown): number | null {
-  if (typeof value !== "number" || Number.isNaN(value) || !Number.isFinite(value)) {
-    return null;
-  }
-  if (value < 0) return 0;
-  if (value > 1) return 1;
-  return value;
-}
-
-function isShortTermGroup(group: QuotaGroup): boolean {
-  const id = group.id.toLowerCase();
-  const label = group.label.toLowerCase();
-  return (
-    id.includes("five-hour") ||
-    id.includes("primary") ||
-    id.includes("request") ||
-    id.includes("token") ||
-    label.includes("5h") ||
-    label.includes("5m") ||
-    label.includes("request") ||
-    label.includes("token")
-  );
-}
-
 interface WindowCapacity {
   id: string;
   label: string;
@@ -86,44 +46,79 @@ interface WindowCapacity {
 
 interface ProviderSummary {
   provider: string;
+  monitorMode: QuotaMonitorMode;
   totalAccounts: number;
   healthyAccounts: number;
   errorAccounts: number;
   windowCapacities: WindowCapacity[];
+  modelFirstSummary?: ModelFirstProviderSummary;
+}
+
+function formatRelativeTime(isoDate: string | null | undefined): string {
+  if (!isoDate) return "Unknown";
+
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+
+  const diffMs = date.getTime() - Date.now();
+  if (diffMs <= 0) return "Resetting...";
+
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
 }
 
 function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
   const totalAccounts = accounts.length;
   const healthy = accounts.filter(
-    (a) => a.supported && !a.error && a.groups && a.groups.length > 0
+    (account) => account.supported && !account.error && account.groups && account.groups.length > 0
   );
   const errorAccounts = totalAccounts - healthy.length;
+  const modelFirst = healthy.length > 0 && healthy.every((account) => isModelFirstAccount(account));
+
+  if (modelFirst) {
+    return {
+      provider: accounts[0]?.provider ?? "unknown",
+      monitorMode: "model-first",
+      totalAccounts,
+      healthyAccounts: healthy.length,
+      errorAccounts,
+      windowCapacities: [],
+      modelFirstSummary: summarizeModelFirstProvider(accounts),
+    };
+  }
 
   const allWindowIds = new Set<string>();
-  for (const a of healthy) {
-    for (const g of a.groups ?? []) {
-      if (g.id !== "extra-usage") allWindowIds.add(g.id);
+  for (const account of healthy) {
+    for (const group of account.groups ?? []) {
+      if (group.id !== "extra-usage") allWindowIds.add(group.id);
     }
   }
 
   const windowCapacities: WindowCapacity[] = [];
 
   for (const windowId of allWindowIds) {
-    const relevantAccounts = healthy.filter((a) =>
-      a.groups?.some((g) => g.id === windowId)
+    const relevantAccounts = healthy.filter((account) =>
+      account.groups?.some((group) => group.id === windowId)
     );
     if (relevantAccounts.length === 0) continue;
 
-    const scores = relevantAccounts.map((a) => {
-      const group = a.groups?.find((g) => g.id === windowId);
-      return normalizeFraction(group?.remainingFraction);
-    }).filter((score): score is number => score !== null);
+    const scores = relevantAccounts
+      .map((account) => {
+        const group = account.groups?.find((candidate) => candidate.id === windowId);
+        return normalizeFraction(group?.remainingFraction);
+      })
+      .filter((score): score is number => score !== null);
 
     if (scores.length === 0) {
       continue;
     }
 
-    const exhaustedProduct = scores.reduce((prod, score) => prod * (1 - score), 1);
+    const exhaustedProduct = scores.reduce((product, score) => product * (1 - score), 1);
     const capacity = 1 - exhaustedProduct;
 
     let earliestReset: string | null = null;
@@ -131,18 +126,18 @@ function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
     let label = "";
     let isShortTerm = false;
 
-    for (const a of relevantAccounts) {
-      const g = a.groups?.find((g) => g.id === windowId);
-      if (g) {
+    for (const account of relevantAccounts) {
+      const group = account.groups?.find((candidate) => candidate.id === windowId);
+      if (group) {
         if (!label) {
-          label = g.label;
-          isShortTerm = isShortTermGroup(g);
+          label = group.label;
+          isShortTerm = isShortTermQuotaWindow(group, account.groups ?? []);
         }
-        if (g.resetTime) {
-          const t = new Date(g.resetTime).getTime();
-          if (t < minResetTime) {
-            minResetTime = t;
-            earliestReset = g.resetTime;
+        if (group.resetTime) {
+          const timestamp = new Date(group.resetTime).getTime();
+          if (timestamp < minResetTime) {
+            minResetTime = timestamp;
+            earliestReset = group.resetTime;
           }
         }
       }
@@ -157,13 +152,14 @@ function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
     });
   }
 
-  windowCapacities.sort((a, b) => {
-    if (a.isShortTerm !== b.isShortTerm) return a.isShortTerm ? 1 : -1;
-    return a.label.localeCompare(b.label);
+  windowCapacities.sort((left, right) => {
+    if (left.isShortTerm !== right.isShortTerm) return left.isShortTerm ? 1 : -1;
+    return left.label.localeCompare(right.label);
   });
 
   return {
     provider: accounts[0]?.provider ?? "unknown",
+    monitorMode: "window-based",
     totalAccounts,
     healthyAccounts: healthy.length,
     errorAccounts,
@@ -182,15 +178,29 @@ function calcOverallCapacity(summaries: ProviderSummary[]): { value: number; lab
       continue;
     }
 
-    const longTerm = summary.windowCapacities.filter((w) => !w.isShortTerm);
-    const shortTerm = summary.windowCapacities.filter((w) => w.isShortTerm);
+    if (summary.monitorMode === "model-first" && summary.modelFirstSummary) {
+      if (isModelFirstProviderQuotaUnverified(summary.modelFirstSummary)) {
+        continue;
+      }
+
+      const providerCapacity =
+        summary.modelFirstSummary.totalAccounts > 0
+          ? summary.modelFirstSummary.readyAccounts / summary.modelFirstSummary.totalAccounts
+          : 0;
+      weightedCapacity += providerCapacity * summary.healthyAccounts;
+      weightedAccounts += summary.healthyAccounts;
+      continue;
+    }
+
+    const longTerm = summary.windowCapacities.filter((window) => !window.isShortTerm);
+    const shortTerm = summary.windowCapacities.filter((window) => window.isShortTerm);
     const relevantWindows = longTerm.length > 0 ? longTerm : shortTerm;
 
     if (relevantWindows.length === 0) {
       continue;
     }
 
-    const providerCapacity = Math.min(...relevantWindows.map((w) => w.capacity));
+    const providerCapacity = Math.min(...relevantWindows.map((window) => window.capacity));
     weightedCapacity += providerCapacity * summary.healthyAccounts;
     weightedAccounts += summary.healthyAccounts;
   }
@@ -212,12 +222,13 @@ export default function QuotaPage() {
   const [selectedProvider, setSelectedProvider] = useState<ProviderType>(PROVIDERS.ALL);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
 
-  const fetchQuota = async (signal?: AbortSignal) => {
+  const fetchQuota = async (signal?: AbortSignal, bust = false) => {
     setLoading(true);
     try {
-      const res = await fetch(API_ENDPOINTS.QUOTA.BASE, { signal });
-      if (res.ok) {
-        const data = await res.json();
+      const url = bust ? `${API_ENDPOINTS.QUOTA.BASE}?bust=${Date.now()}` : API_ENDPOINTS.QUOTA.BASE;
+      const response = await fetch(url, { signal });
+      if (response.ok) {
+        const data = (await response.json()) as QuotaResponse;
         setQuotaData(data);
       }
     } catch {
@@ -237,13 +248,14 @@ export default function QuotaPage() {
     };
   }, []);
 
-  const filteredAccounts = quotaData?.accounts.filter((account) => {
-    if (selectedProvider === PROVIDERS.ALL) return true;
-    if (selectedProvider === PROVIDERS.COPILOT) {
-      return account.provider === "github" || account.provider === "github-copilot";
-    }
-    return account.provider === selectedProvider;
-  }) || [];
+  const filteredAccounts =
+    quotaData?.accounts.filter((account) => {
+      if (selectedProvider === PROVIDERS.ALL) return true;
+      if (selectedProvider === PROVIDERS.COPILOT) {
+        return account.provider === "github" || account.provider === "github-copilot";
+      }
+      return account.provider === selectedProvider;
+    }) ?? [];
 
   const activeAccounts = filteredAccounts.filter((account) => account.supported && !account.error).length;
 
@@ -256,13 +268,27 @@ export default function QuotaPage() {
 
   const providerSummaries = Array.from(providerGroups.entries())
     .map(([, accounts]) => calcProviderSummary(accounts))
-    .sort((a, b) => b.healthyAccounts - a.healthyAccounts);
+    .sort((left, right) => right.healthyAccounts - left.healthyAccounts);
 
   const overallCapacity = calcOverallCapacity(providerSummaries);
+  const isModelFirstOnlyView =
+    filteredAccounts.length > 0 && filteredAccounts.every((account) => isModelFirstAccount(account));
+  const modelFirstSummary = isModelFirstOnlyView ? summarizeModelFirstProvider(filteredAccounts) : null;
+  const modelFirstQuotaUnverified = isModelFirstProviderQuotaUnverified(modelFirstSummary);
+  const modelFirstWarnings = providerSummaries
+    .filter((summary) => summary.monitorMode === "model-first" && summary.modelFirstSummary)
+    .map((summary) => ({
+      provider: summary.provider,
+      summary: summary.modelFirstSummary!,
+    }))
+    .filter(({ summary }) => isModelFirstProviderQuotaUnverified(summary));
 
-  const lowCapacityCount = providerSummaries.filter(
-    (s) => s.windowCapacities.some((w) => w.capacity < 0.2) && s.totalAccounts > 0
-  ).length;
+  const lowCapacityCount = providerSummaries.filter((summary) => {
+    if (summary.monitorMode === "model-first") {
+      return (summary.modelFirstSummary?.minRemainingFraction ?? 1) < 0.2 && summary.totalAccounts > 0;
+    }
+    return summary.windowCapacities.some((window) => window.capacity < 0.2) && summary.totalAccounts > 0;
+  }).length;
 
   const providerFilters = [
     { key: PROVIDERS.ALL, label: "All" },
@@ -274,8 +300,12 @@ export default function QuotaPage() {
   ] as const;
 
   const toggleCard = (accountId: string) => {
-    setExpandedCards((prev) => ({ ...prev, [accountId]: !prev[accountId] }));
+    setExpandedCards((previous) => ({ ...previous, [accountId]: !previous[accountId] }));
   };
+
+  const freshSnapshotCount = modelFirstSummary
+    ? Math.max(0, modelFirstSummary.totalAccounts - modelFirstSummary.staleAccounts)
+    : 0;
 
   return (
     <div className="space-y-4">
@@ -283,7 +313,11 @@ export default function QuotaPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Quota</h1>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">Monitor OAuth account quotas and usage windows.</p>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              {isModelFirstOnlyView
+                ? "Model-first monitoring for Antigravity quota snapshots, grouped by model family."
+                : "Monitor OAuth account quotas and usage windows."}
+            </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="flex flex-wrap gap-1">
@@ -295,7 +329,9 @@ export default function QuotaPage() {
                     setSelectedProvider(filter.key);
                     if (filter.key !== PROVIDERS.ALL) {
                       setTimeout(() => {
-                        document.getElementById("quota-accounts")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                        document
+                          .getElementById("quota-accounts")
+                          ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
                       }, 50);
                     }
                   }}
@@ -305,7 +341,7 @@ export default function QuotaPage() {
                 </Button>
               ))}
             </div>
-            <Button onClick={fetchQuota} disabled={loading} className="px-2.5 py-1 text-xs">
+            <Button onClick={() => fetchQuota(undefined, true)} disabled={loading} className="px-2.5 py-1 text-xs">
               {loading ? "Loading..." : "Refresh"}
             </Button>
           </div>
@@ -318,32 +354,101 @@ export default function QuotaPage() {
         </div>
       ) : (
         <>
-          <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {modelFirstWarnings.length > 0 && (
+            <section className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+              {modelFirstWarnings.map(({ provider, summary }) => (
+                <p key={provider}>
+                  {provider.charAt(0).toUpperCase() + provider.slice(1)} snapshot API currently returns full quota for
+                  all {summary.totalAccounts} active accounts. Snapshot freshness is tracked, but current remaining quota
+                  is not fully verifiable from provider data alone.
+                </p>
+              ))}
+            </section>
+          )}
+
+          <section className={`grid grid-cols-2 gap-2 ${isModelFirstOnlyView ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
             <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Active Accounts</p>
               <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{activeAccounts}</p>
             </div>
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Overall Capacity <HelpTooltip content="Weighted average of remaining quota across all active provider accounts" /></p>
-              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{Math.round(overallCapacity.value * 100)}%</p>
-            </div>
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Low Capacity <HelpTooltip content="Number of accounts with remaining quota below 20%" /></p>
-              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{lowCapacityCount}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Providers</p>
-              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{providerSummaries.length}</p>
-            </div>
+            {isModelFirstOnlyView && modelFirstSummary ? (
+              <>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {modelFirstQuotaUnverified ? "Fresh Snapshots" : "Ready Accounts"}{" "}
+                    <HelpTooltip
+                      content={
+                        modelFirstQuotaUnverified
+                          ? "Fresh Antigravity snapshots are available, but the provider currently reports full quota on every grouped family."
+                          : "Accounts with a fresh grouped snapshot and at least one ready model family."
+                      }
+                    />
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                    {modelFirstQuotaUnverified ? freshSnapshotCount : modelFirstSummary.readyAccounts}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    Stale Snapshots{" "}
+                    <HelpTooltip content="Accounts whose latest grouped model snapshot is older than the freshness threshold." />
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{modelFirstSummary.staleAccounts}</p>
+                </div>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    Closest Reset{" "}
+                    <HelpTooltip content="Earliest grouped model reset time visible in the latest Antigravity snapshot." />
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                    {formatRelativeTime(modelFirstSummary.nextWindowResetAt)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    Model Families{" "}
+                    <HelpTooltip content="Grouped quota families inferred from Antigravity model IDs." />
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{modelFirstSummary.groups.length}</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    Overall Capacity{" "}
+                    <HelpTooltip content="Weighted average of remaining quota across all active provider accounts." />
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{Math.round(overallCapacity.value * 100)}%</p>
+                </div>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    Low Capacity{" "}
+                    <HelpTooltip content="Number of providers or grouped snapshots with remaining quota below 20%." />
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{lowCapacityCount}</p>
+                </div>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Providers</p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{providerSummaries.length}</p>
+                </div>
+              </>
+            )}
           </section>
 
-          <QuotaChart overallCapacity={overallCapacity} providerSummaries={providerSummaries} />
+          <QuotaChart
+            overallCapacity={overallCapacity}
+            providerSummaries={providerSummaries}
+            modelFirstSummary={modelFirstSummary}
+            modelFirstOnlyView={isModelFirstOnlyView}
+          />
 
           <QuotaDetails
             filteredAccounts={filteredAccounts}
             expandedCards={expandedCards}
             onToggleCard={toggleCard}
             loading={loading}
+            modelFirstOnlyView={isModelFirstOnlyView}
           />
         </>
       )}

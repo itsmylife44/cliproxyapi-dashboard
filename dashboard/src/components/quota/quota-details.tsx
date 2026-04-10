@@ -1,40 +1,16 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-
-interface QuotaModel {
-  id: string;
-  displayName: string;
-  remainingFraction?: number | null;
-  resetTime: string | null;
-}
-
-interface QuotaGroup {
-  id: string;
-  label: string;
-  remainingFraction?: number | null;
-  resetTime: string | null;
-  models: QuotaModel[];
-}
-
-interface QuotaAccount {
-  auth_index: string;
-  provider: string;
-  email?: string | null;
-  supported: boolean;
-  error?: string;
-  groups?: QuotaGroup[];
-  raw?: unknown;
-}
-
-function normalizeFraction(value: unknown): number | null {
-  if (typeof value !== "number" || Number.isNaN(value) || !Number.isFinite(value)) {
-    return null;
-  }
-  if (value < 0) return 0;
-  if (value > 1) return 1;
-  return value;
-}
+import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
+import {
+  enrichModelFirstGroup,
+  isModelFirstAccount,
+  isModelFirstAccountQuotaUnverified,
+  normalizeFraction,
+  summarizeModelFirstAccount,
+  type QuotaAccount,
+  type QuotaGroup,
+} from "@/lib/model-first-monitoring";
 
 function maskEmail(email: unknown): string {
   if (typeof email !== "string") return "unknown";
@@ -52,46 +28,22 @@ function maskEmail(email: unknown): string {
   return `${maskedLocal}@${domain}`;
 }
 
-function formatRelativeTime(isoDate: string | null): string {
+function formatRelativeTime(isoDate: string | null | undefined): string {
   if (!isoDate) return "Unknown";
 
-  try {
-    const resetDate = new Date(isoDate);
-    if (Number.isNaN(resetDate.getTime())) return "Unknown";
-    const now = new Date();
-    const diffMs = resetDate.getTime() - now.getTime();
+  const resetDate = new Date(isoDate);
+  if (Number.isNaN(resetDate.getTime())) return "Unknown";
+  const diffMs = resetDate.getTime() - Date.now();
 
-    if (diffMs <= 0) return "Resetting...";
+  if (diffMs <= 0) return "Resetting...";
 
-    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
-    if (days > 0) {
-      return `Resets in ${days}d ${hours}h`;
-    }
-    if (hours > 0) {
-      return `Resets in ${hours}h ${minutes}m`;
-    }
-    return `Resets in ${minutes}m`;
-  } catch {
-    return "Unknown";
-  }
-}
-
-function isShortTermGroup(group: QuotaGroup): boolean {
-  const id = group.id.toLowerCase();
-  const label = group.label.toLowerCase();
-  return (
-    id.includes("five-hour") ||
-    id.includes("primary") ||
-    id.includes("request") ||
-    id.includes("token") ||
-    label.includes("5h") ||
-    label.includes("5m") ||
-    label.includes("request") ||
-    label.includes("token")
-  );
+  if (days > 0) return `Resets in ${days}d ${hours}h`;
+  if (hours > 0) return `Resets in ${hours}h ${minutes}m`;
+  return `Resets in ${minutes}m`;
 }
 
 function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: number; label: string; isShortTerm: boolean }> {
@@ -103,7 +55,7 @@ function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: 
     result[group.id] = {
       score,
       label: group.label,
-      isShortTerm: isShortTermGroup(group),
+      isShortTerm: isShortTermQuotaWindow(group, groups),
     };
   }
   return result;
@@ -120,102 +72,271 @@ interface QuotaDetailsProps {
   expandedCards: Record<string, boolean>;
   onToggleCard: (accountId: string) => void;
   loading: boolean;
+  modelFirstOnlyView: boolean;
 }
 
-export function QuotaDetails({ filteredAccounts, expandedCards, onToggleCard, loading }: QuotaDetailsProps) {
+export function QuotaDetails({
+  filteredAccounts,
+  expandedCards,
+  onToggleCard,
+  loading,
+  modelFirstOnlyView,
+}: QuotaDetailsProps) {
+  const sections = (() => {
+    if (filteredAccounts.length === 0) {
+      return [];
+    }
+
+    const hasModelFirstAccounts = filteredAccounts.some((account) => isModelFirstAccount(account));
+    const hasWindowAccounts = filteredAccounts.some((account) => !isModelFirstAccount(account));
+
+    if (!hasModelFirstAccounts || !hasWindowAccounts) {
+      return [
+        {
+          key: "all",
+          title: null as string | null,
+          accounts: filteredAccounts,
+          modelFirstView: modelFirstOnlyView || hasModelFirstAccounts,
+        },
+      ];
+    }
+
+    const buckets = new Map<string, { key: string; title: string; accounts: QuotaAccount[]; modelFirstView: boolean }>();
+    for (const account of filteredAccounts) {
+      const sectionModelFirstView = isModelFirstAccount(account);
+      const providerTitle =
+        account.provider === "github-copilot"
+          ? "Copilot"
+          : account.provider.charAt(0).toUpperCase() + account.provider.slice(1);
+      const key = `${sectionModelFirstView ? "model-first" : "window-based"}:${account.provider}`;
+      const bucket = buckets.get(key) ?? {
+        key,
+        title: providerTitle,
+        accounts: [],
+        modelFirstView: sectionModelFirstView,
+      };
+      bucket.accounts.push(account);
+      buckets.set(key, bucket);
+    }
+
+    return Array.from(buckets.values()).sort((left, right) => {
+      if (left.modelFirstView !== right.modelFirstView) {
+        return left.modelFirstView ? -1 : 1;
+      }
+      return left.title.localeCompare(right.title);
+    });
+  })();
+
   return (
     <section id="quota-accounts" className="scroll-mt-24 space-y-2">
       <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#777169]">Accounts</h2>
-      <div className="overflow-x-auto rounded-md border border-[#e5e5e5] bg-white">
-        <div className="min-w-[650px]">
-        <div className="grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px] border-b border-[#e5e5e5] bg-white/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
-          <span></span>
-          <span>Account</span>
-          <span>Provider</span>
-          <span>Status</span>
-          <span>Long-Term</span>
-          <span>Short-Term</span>
-        </div>
-
-        {filteredAccounts.map((account) => {
-          const isRowExpanded = expandedCards[account.auth_index];
-          const scores = account.groups ? Object.values(calcAccountWindowScores(account.groups)) : [];
-          const longScores = scores.filter((s) => !s.isShortTerm);
-          const shortScores = scores.filter((s) => s.isShortTerm);
-          const longMin = longScores.length > 0 ? Math.min(...longScores.map((s) => s.score)) : null;
-          const shortMin = shortScores.length > 0 ? Math.min(...shortScores.map((s) => s.score)) : null;
-          const statusLabel = account.supported ? (account.error ? "Error" : "Active") : "Unsupported";
-
-          return (
-            <div key={account.auth_index} className="border-b border-[#e5e5e5] last:border-b-0">
-              <button
-                type="button"
-                onClick={() => onToggleCard(account.auth_index)}
-                className="grid w-full grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px] items-center px-3 py-2 text-left transition-colors hover:bg-[#f5f5f5]"
-              >
-                <span className={cn("text-xs text-[#777169] transition-transform", isRowExpanded && "rotate-180")}>⌄</span>
-                <span className="truncate text-xs text-black">{maskEmail(account.email)}</span>
-                <span className="truncate text-xs capitalize text-[#4e4e4e]">{account.provider}</span>
-                <span className={cn("text-xs", account.error ? "text-rose-600" : account.supported ? "text-emerald-700" : "text-amber-700")}>{statusLabel}</span>
-                <span className="block pr-3">
-                  {longMin !== null ? (
-                    <>
-                      <span className="text-xs text-[#4e4e4e]">{Math.round(longMin * 100)}%</span>
-                      <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[#f5f5f5]">
-                        <span className={cn("block h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-[#777169]">-</span>
+      <div className="space-y-3">
+        {sections.map((section) => (
+          <div key={section.key} className="space-y-1">
+            {section.title && sections.length > 1 && (
+              <h3 className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#777169]">{section.title}</h3>
+            )}
+            <div className="overflow-x-auto rounded-md border border-[#e5e5e5] bg-white">
+              <div className="min-w-[650px]">
+                <div
+                  className={cn(
+                    "border-b border-[#e5e5e5] bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]",
+                    section.modelFirstView
+                      ? "grid grid-cols-[24px_minmax(0,1fr)_110px_110px_120px_120px]"
+                      : "grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px]"
                   )}
-                </span>
-                <span className="block pr-3">
-                  {shortMin !== null ? (
-                    <>
-                      <span className="text-xs text-[#4e4e4e]">{Math.round(shortMin * 100)}%</span>
-                      <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[#f5f5f5]">
-                        <span className={cn("block h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-[#777169]">-</span>
-                  )}
-                </span>
-               </button>
+                >
+                  <span></span>
+                  <span>Account</span>
+                  <span>Provider</span>
+                  <span>Status</span>
+                  <span>{section.modelFirstView ? "Ready" : "Long-Term"}</span>
+                  <span>{section.modelFirstView ? "Recovery" : "Short-Term"}</span>
+                </div>
 
-                {isRowExpanded && (
-                  <div className="border-t border-[#e5e5e5] bg-white px-4 py-3">
-                    {account.error && (
-                      <p className="mb-2 break-all text-xs text-rose-600">{account.error}</p>
-                    )}
-                    {!account.supported && !account.error && (
-                      <p className="mb-2 text-xs text-amber-700">Quota monitoring not available for this provider.</p>
-                    )}
+                {section.accounts.map((account) => {
+                  const isRowExpanded = expandedCards[account.auth_index];
+                  const scores = account.groups ? Object.values(calcAccountWindowScores(account.groups)) : [];
+                  const longScores = scores.filter((score) => !score.isShortTerm);
+                  const shortScores = scores.filter((score) => score.isShortTerm);
+                  const longMin = longScores.length > 0 ? Math.min(...longScores.map((score) => score.score)) : null;
+                  const shortMin = shortScores.length > 0 ? Math.min(...shortScores.map((score) => score.score)) : null;
+                  const statusLabel = account.supported ? (account.error ? "Error" : "Active") : "Unsupported";
+                  const accountSummary = isModelFirstAccount(account) ? summarizeModelFirstAccount(account) : null;
+                  const accountQuotaUnverified =
+                    isModelFirstAccount(account) && accountSummary
+                      ? isModelFirstAccountQuotaUnverified(account, accountSummary)
+                      : false;
+                  const modelFirstStatus = account.error
+                    ? "Error"
+                    : !account.supported
+                      ? "Unsupported"
+                      : accountSummary?.staleSnapshot
+                        ? "Stale"
+                        : accountQuotaUnverified
+                          ? "Snapshot"
+                          : "Ready";
 
-                    {account.groups && account.groups.length > 0 && (
-                      <div className="overflow-x-auto rounded-sm border border-[#e5e5e5]">
-                        <div className="min-w-[400px]">
-                        {account.groups.map((group) => {
-                          const fraction = normalizeFraction(group.remainingFraction);
-                          const pct = fraction === null ? null : Math.round(fraction * 100);
-                          return (
-                            <div key={group.id} className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-[#e5e5e5] bg-white px-3 py-2 last:border-b-0">
-                              <span className="truncate text-xs text-black">{group.label}</span>
-                              <span className="text-xs text-[#4e4e4e]">{pct === null ? "-" : `${pct}%`}</span>
-                              <span className="truncate text-xs text-[#777169]">{formatRelativeTime(group.resetTime)}</span>
+                  return (
+                    <div key={account.auth_index} className="border-b border-[#e5e5e5] last:border-b-0">
+                      <button
+                        type="button"
+                        onClick={() => onToggleCard(account.auth_index)}
+                        className={cn(
+                          "w-full items-center px-3 py-2 text-left transition-colors hover:bg-[#f5f5f5]",
+                          section.modelFirstView
+                            ? "grid grid-cols-[24px_minmax(0,1fr)_110px_110px_120px_120px]"
+                            : "grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px]"
+                        )}
+                      >
+                        <span className={cn("text-xs text-[#777169] transition-transform", isRowExpanded && "rotate-180")}>v</span>
+                        <span className="truncate text-xs text-black">{maskEmail(account.email)}</span>
+                        <span className="truncate text-xs capitalize text-[#4e4e4e]">{account.provider}</span>
+                        <span
+                          className={cn(
+                            "text-xs",
+                            section.modelFirstView
+                              ? account.error
+                                ? "text-rose-600"
+                                : accountSummary?.staleSnapshot || accountQuotaUnverified
+                                  ? "text-amber-700"
+                                  : account.supported
+                                    ? "text-emerald-700"
+                                    : "text-amber-700"
+                              : account.error
+                                ? "text-rose-600"
+                                : account.supported
+                                  ? "text-emerald-700"
+                                  : "text-amber-700"
+                          )}
+                        >
+                          {section.modelFirstView ? modelFirstStatus : statusLabel}
+                        </span>
+                        {section.modelFirstView ? (
+                          <>
+                            <span className="text-xs text-[#4e4e4e]">
+                              {accountSummary
+                                ? accountQuotaUnverified
+                                  ? "snapshot full"
+                                  : `${accountSummary.readyGroups}/${accountSummary.totalGroups}`
+                                : "-"}
+                            </span>
+                            <span className="text-xs text-[#777169]">
+                              {accountSummary ? formatRelativeTime(accountSummary.nextRecoveryAt ?? accountSummary.nextWindowResetAt) : "-"}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="block pr-3">
+                              {longMin !== null ? (
+                                <>
+                                  <span className="text-xs text-[#4e4e4e]">{Math.round(longMin * 100)}%</span>
+                                  <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[#f5f5f5]">
+                                    <span className={cn("block h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-xs text-[#777169]">-</span>
+                              )}
+                            </span>
+                            <span className="block pr-3">
+                              {shortMin !== null ? (
+                                <>
+                                  <span className="text-xs text-[#4e4e4e]">{Math.round(shortMin * 100)}%</span>
+                                  <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[#f5f5f5]">
+                                    <span className={cn("block h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-xs text-[#777169]">-</span>
+                              )}
+                            </span>
+                          </>
+                        )}
+                      </button>
+
+                      {isRowExpanded && (
+                        <div className="border-t border-[#e5e5e5] bg-white px-4 py-3">
+                          {account.error && <p className="mb-2 break-all text-xs text-rose-600">{account.error}</p>}
+                          {!account.supported && !account.error && (
+                            <p className="mb-2 text-xs text-amber-700">Quota monitoring not available for this provider.</p>
+                          )}
+                          {section.modelFirstView && accountSummary && (
+                            <div className="mb-2 flex flex-wrap gap-3 text-[11px] text-[#777169]">
+                              <span>Snapshot: {accountSummary.staleSnapshot ? "stale" : "fresh"}</span>
+                              <span>Confidence: {accountQuotaUnverified ? "snapshot only" : "grouped ready"}</span>
+                              <span>Ready groups: {accountSummary.readyGroups}</span>
                             </div>
-                          );
-                        })}
+                          )}
+
+                          {account.groups && account.groups.length > 0 && (
+                            <div className="overflow-x-auto rounded-sm border border-[#e5e5e5]">
+                              {section.modelFirstView ? (
+                                <div className="min-w-[900px]">
+                                  <div className="grid grid-cols-[minmax(0,1fr)_90px_110px_140px_140px_140px_160px] border-b border-[#e5e5e5] bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
+                                    <span>Group</span>
+                                    <span>Ready</span>
+                                    <span>Min / P50</span>
+                                    <span>Next Reset</span>
+                                    <span>Full Reset</span>
+                                    <span>Recovery</span>
+                                    <span>Bottleneck</span>
+                                  </div>
+                                  {account.groups.map((group) => {
+                                    const enrichedGroup = group.monitorMode === "model-first" ? group : enrichModelFirstGroup(group);
+                                    const minPct = normalizeFraction(enrichedGroup.minRemainingFraction ?? enrichedGroup.remainingFraction);
+                                    const p50Pct = normalizeFraction(enrichedGroup.p50RemainingFraction);
+                                    return (
+                                      <div
+                                        key={group.id}
+                                        className="grid grid-cols-[minmax(0,1fr)_90px_110px_140px_140px_140px_160px] items-center border-b border-[#e5e5e5] bg-white px-3 py-2 last:border-b-0"
+                                      >
+                                        <span className="truncate text-xs text-black">{enrichedGroup.label}</span>
+                                        <span className="text-xs text-[#4e4e4e]">
+                                          {`${enrichedGroup.effectiveReadyModelCount ?? enrichedGroup.readyModelCount ?? 0}/${enrichedGroup.totalModelCount ?? enrichedGroup.models.length}`}
+                                        </span>
+                                        <span className="text-xs text-[#4e4e4e]">
+                                          {minPct === null ? "-" : `${Math.round(minPct * 100)}%`}
+                                          {p50Pct === null ? "" : ` / ${Math.round(p50Pct * 100)}%`}
+                                        </span>
+                                        <span className="text-xs text-[#777169]">{formatRelativeTime(enrichedGroup.nextWindowResetAt ?? enrichedGroup.resetTime)}</span>
+                                        <span className="text-xs text-[#777169]">{formatRelativeTime(enrichedGroup.fullWindowResetAt ?? enrichedGroup.resetTime)}</span>
+                                        <span className="text-xs text-[#777169]">{formatRelativeTime(enrichedGroup.nextRecoveryAt)}</span>
+                                        <span className="truncate text-xs text-[#777169]">{enrichedGroup.bottleneckModel ?? "-"}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="min-w-[400px]">
+                                  {account.groups.map((group) => {
+                                    const fraction = normalizeFraction(group.remainingFraction);
+                                    const pct = fraction === null ? null : Math.round(fraction * 100);
+                                    return (
+                                      <div
+                                        key={group.id}
+                                        className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-[#e5e5e5] bg-white px-3 py-2 last:border-b-0"
+                                      >
+                                        <span className="truncate text-xs text-black">{group.label}</span>
+                                        <span className="text-xs text-[#4e4e4e]">{pct === null ? "-" : `${pct}%`}</span>
+                                        <span className="truncate text-xs text-[#777169]">{formatRelativeTime(group.resetTime)}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-             </div>
-           );
-          })}
-        </div>
-        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {filteredAccounts.length === 0 && !loading && (
         <div className="rounded-md border border-[#e5e5e5] bg-white p-6 text-center text-sm text-[#777169]">

@@ -196,9 +196,9 @@ export default function LogsPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
+      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-semibold tracking-tight text-black">Logs</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Logs</h1>
         <div className="flex flex-wrap items-center gap-2">
           <Button onClick={handleRefresh} disabled={loading} className="px-2.5 py-1 text-xs">
             Refresh
@@ -221,18 +221,18 @@ export default function LogsPage() {
         variant="danger"
       />
 
-      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-black">Recent Logs</h2>
+      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Recent Logs</h2>
           {loading ? (
-            <div className="p-4 text-center text-[#777169]">Loading logs...</div>
+            <div className="p-4 text-center text-[var(--text-muted)]">Loading logs...</div>
           ) : logs.length === 0 ? (
-              <div className="rounded-sm border border-[#e5e5e5] bg-white p-4 text-sm text-[#777169]">
+              <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-sm text-[var(--text-muted)]">
                 No logs available. File logging may be disabled in the CLIProxyAPI configuration.
-                Check <code className="rounded bg-[#f5f5f5] px-1">logging-to-file</code> in config.
+                Check <code className="rounded bg-[var(--surface-muted)] px-1">logging-to-file</code> in config.
               </div>
           ) : (
             <div
-              className="max-h-[clamp(300px,60vh,700px)] overflow-y-auto rounded-sm border border-[#e5e5e5] bg-[#1a1a1a] p-4 font-mono text-xs text-gray-200"
+              className="max-h-[clamp(300px,60vh,700px)] overflow-y-auto rounded-sm border border-[var(--surface-border)] bg-[#1a1a1a] p-4 font-mono text-xs text-gray-200"
             >
               <div className="space-y-1">
                 {pagedLogs.map((line, index) => {
@@ -256,7 +256,7 @@ export default function LogsPage() {
               >
                 ← Previous
               </Button>
-              <span className="text-xs text-[#777169]">
+              <span className="text-xs text-[var(--text-muted)]">
                 Page {currentPage} of {totalPages}
               </span>
               <Button
@@ -271,7 +271,7 @@ export default function LogsPage() {
           )}
       </section>
 
-      <div className="rounded-lg border border-[#e5e5e5] bg-white p-4 text-xs text-[#777169]">
+      <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-xs text-[var(--text-muted)]">
         <strong>TIP:</strong> Logs are fetched from the CLIProxyAPI service. Recent entries are shown here.
         For complete logs, check the Docker container logs.
       </div>

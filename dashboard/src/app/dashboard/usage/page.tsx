@@ -9,6 +9,10 @@ const UsageCharts = dynamic(
   () => import("@/components/usage/usage-charts").then(mod => ({ default: mod.UsageCharts })),
   { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[#f5f5f5]" /> }
 );
+const CostEstimation = dynamic(
+  () => import("@/components/usage/cost-estimation").then(mod => ({ default: mod.CostEstimation })),
+  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-lg bg-[#f5f5f5]" /> }
+);
 import { UsageRequestEvents } from "@/components/usage/usage-request-events";
 import { UsageTable } from "@/components/usage/usage-table";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
@@ -344,6 +348,11 @@ export default function UsagePage() {
               </div>
             </div>
           ) : null}
+
+          <CostEstimation
+            modelBreakdown={usageData.modelBreakdown}
+            keys={usageData.keys}
+          />
 
           <UsageCharts
             dailyBreakdown={usageData.dailyBreakdown}

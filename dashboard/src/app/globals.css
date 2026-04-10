@@ -19,7 +19,7 @@
 
 * { box-sizing: border-box; }
 
-:root {
+html[data-theme="light"] {
   --surface-base: #ffffff;
   --surface-muted: #f5f5f5;
   --surface-warm: rgba(245, 242, 239, 0.8);
@@ -41,11 +41,33 @@
   --shadow-edge: rgba(0, 0, 0, 0.08) 0px 0px 0px 0.5px;
 }
 
+html[data-theme="dark"] {
+  --surface-base: #1a1a1a;
+  --surface-muted: #242424;
+  --surface-warm: rgba(30, 28, 26, 0.8);
+  --surface-hover: #2a2a2a;
+  --surface-border: #333333;
+  --surface-border-subtle: rgba(255, 255, 255, 0.06);
+  --surface-border-strong: rgba(255, 255, 255, 0.12);
+  --text-primary: #e5e5e5;
+  --text-secondary: #a3a3a3;
+  --text-muted: #8a8a8a;
+  --accent: #e5e5e5;
+  --accent-strong: #f0f0f0;
+  --shadow-inset: rgba(0, 0, 0, 0.3) 0px 0px 0px 0.5px inset;
+  --shadow-outline: rgba(0, 0, 0, 0.3) 0px 0px 0px 1px;
+  --shadow-soft: rgba(0, 0, 0, 0.2) 0px 4px 4px;
+  --shadow-card: rgba(0, 0, 0, 0.4) 0px 0px 0px 1px, rgba(0, 0, 0, 0.2) 0px 1px 2px, rgba(0, 0, 0, 0.15) 0px 2px 4px;
+  --shadow-elevated: rgba(0, 0, 0, 0.6) 0px 0px 1px, rgba(0, 0, 0, 0.3) 0px 4px 4px;
+  --shadow-warm: rgba(0, 0, 0, 0.2) 0px 6px 16px;
+  --shadow-edge: rgba(0, 0, 0, 0.4) 0px 0px 0px 0.5px;
+}
+
 body {
   margin: 0; padding: 0;
   font-family: "Inter", var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f5f5f5;
-  color: #000000;
+  background: var(--surface-muted);
+  color: var(--text-primary);
   letter-spacing: 0.16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -54,21 +76,21 @@ body {
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; border-radius: 8px; }
-::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.1); border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.18); }
+::-webkit-scrollbar-thumb { background: var(--surface-border-strong); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-::selection { background: rgba(0, 0, 0, 0.08); color: #000000; }
+::selection { background: var(--surface-border-strong); color: var(--text-primary); }
 
 *:focus-visible { outline: 2px solid rgb(147 197 253 / 0.5); outline-offset: 2px; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible { border-radius: 8px; }
 
-input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"], input[type="week"] { color-scheme: light; }
+input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"], input[type="week"] { color-scheme: light dark; }
 
 .glass-card { background: var(--surface-base); border: none; box-shadow: var(--shadow-card); backdrop-filter: none; }
 .glass-input { background: var(--surface-base); border: none; box-shadow: var(--shadow-inset), var(--shadow-outline); color: var(--text-primary); }
 .glass-input:focus { box-shadow: var(--shadow-inset), rgb(147 197 253 / 0.5) 0px 0px 0px 2px; }
-.glass-button-primary { background: #000000; border: none; color: #ffffff; box-shadow: var(--shadow-edge); }
-.glass-button-primary:hover { background: #1a1a1a; }
+.glass-button-primary { background: var(--accent); border: none; color: var(--surface-base); box-shadow: var(--shadow-edge); }
+.glass-button-primary:hover { background: var(--accent-strong); }
 .glass-button-secondary { background: var(--surface-base); border: none; color: var(--text-primary); box-shadow: var(--shadow-elevated); }
 .glass-button-secondary:hover { background: var(--surface-muted); }
 .glass-button-ghost { background: transparent; border: none; color: var(--text-secondary); box-shadow: var(--shadow-outline); }
@@ -96,7 +118,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 .animate-panel-overlay { animation: panel-overlay-in 0.2s ease-out forwards; }
 
 .avatar-glow { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
-.avatar-glow:hover { border-color: rgba(0, 0, 0, 0.15); box-shadow: var(--shadow-warm); }
+.avatar-glow:hover { border-color: var(--surface-border-strong); box-shadow: var(--shadow-warm); }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-in, .animate-modal-overlay, .animate-modal-card, .animate-pulse-dot, .animate-panel-slide, .animate-panel-overlay { animation: none !important; }

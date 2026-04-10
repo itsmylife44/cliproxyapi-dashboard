@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { ChartContainer, CHART_COLORS, SERIES_PALETTE, AXIS_TICK_STYLE, TOOLTIP_STYLE, formatCompact } from "@/components/ui/chart-theme";
+import { ChartContainer, SERIES_PALETTE, AXIS_TICK_STYLE, TOOLTIP_STYLE, formatCompact } from "@/components/ui/chart-theme";
 import {
   resolveModelPrice,
   calculateCost,
@@ -12,12 +12,6 @@ import {
 } from "@/lib/model-pricing";
 
 /* ── Types ────────────────────────────────────────────────── */
-
-interface ModelBreakdown {
-  model: string;
-  requests: number;
-  tokens: number;
-}
 
 interface KeyUsage {
   keyName: string;
@@ -34,7 +28,6 @@ interface KeyUsage {
 }
 
 interface CostEstimationProps {
-  modelBreakdown?: ModelBreakdown[];
   keys: Record<string, KeyUsage>;
 }
 
@@ -49,6 +42,8 @@ interface ModelCostEntry {
   totalTokens: number;
   requests: number;
   estimatedCost: number;
+  inputPer1M: number;
+  outputPer1M: number;
   priced: boolean;
 }
 
@@ -88,6 +83,8 @@ function buildCostBreakdown(keys: Record<string, KeyUsage>, customPricing: Recor
         totalTokens: data.totalTokens,
         requests: data.requests,
         estimatedCost,
+        inputPer1M: price?.inputPer1M ?? 0,
+        outputPer1M: price?.outputPer1M ?? 0,
         priced: price !== null,
       };
     })
@@ -185,8 +182,8 @@ export function CostEstimation({ keys }: CostEstimationProps) {
                   }}
                 />
                 <Bar dataKey="cost" radius={[0, 4, 4, 0]} maxBarSize={20}>
-                  {topModelChart.map((_, index) => (
-                    <Cell key={index} fill={SERIES_PALETTE[index % SERIES_PALETTE.length]} />
+                  {topModelChart.map((entry) => (
+                    <Cell key={entry.fullName} fill={SERIES_PALETTE[topModelChart.indexOf(entry) % SERIES_PALETTE.length]} />
                   ))}
                 </Bar>
               </BarChart>
@@ -249,10 +246,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
                   <td className="px-3 py-2 text-right tabular-nums text-[#4e4e4e]">{formatCompact(entry.inputTokens)}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-[#4e4e4e]">{formatCompact(entry.outputTokens)}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-[#777169]">
-                    {(() => {
-                      const price = resolveModelPrice(entry.model, customPricing);
-                      return price ? `${price.inputPer1M}/${price.outputPer1M}` : "—";
-                    })()}
+                    {entry.priced ? `${entry.inputPer1M}/${entry.outputPer1M}` : "—"}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums font-semibold text-emerald-700">{formatUSD(entry.estimatedCost)}</td>
                 </tr>

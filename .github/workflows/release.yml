@@ -60,6 +60,51 @@ jobs:
             echo "ℹ️ No release created — Release Please PR opened/updated. Merge the PR, then run this workflow again."
           fi
 
+  # Append contributor mentions to the release notes.
+  tag-contributors:
+    runs-on: ubuntu-latest
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    steps:
+      - name: Add contributors to release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          PREV_TAG=$(gh api "repos/${{ github.repository }}/releases" \
+            --jq "[.[] | select(.tag_name != \"${TAG_NAME}\")] | first | .tag_name" 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous release found, skipping contributor tagging"
+            exit 0
+          fi
+
+          # Get unique commit authors between tags (exclude bots)
+          CONTRIBUTORS=$(gh api "repos/${{ github.repository }}/compare/${PREV_TAG}...${TAG_NAME}" \
+            --jq '[.commits[].author.login // empty] | unique | map(select(. != "github-actions[bot]" and . != "dependabot[bot]" and . != "renovate[bot]")) | map("@" + .) | join(", ")' 2>/dev/null || echo "")
+
+          if [ -z "$CONTRIBUTORS" ]; then
+            echo "No external contributors found"
+            exit 0
+          fi
+
+          echo "Contributors: ${CONTRIBUTORS}"
+
+          # Get current release body and append contributors
+          CURRENT_BODY=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG_NAME}" --jq '.body')
+          NEW_BODY="${CURRENT_BODY}
+
+## Contributors
+
+Thank you to the following contributors: ${CONTRIBUTORS}"
+
+          # Update the release
+          gh api "repos/${{ github.repository }}/releases/tags/${TAG_NAME}" \
+            -X PATCH \
+            -f body="${NEW_BODY}"
+
+          echo "Added contributors to release: ${CONTRIBUTORS}"
+
   # Build each platform natively in parallel — no QEMU emulation needed.
   # amd64 on self-hosted (Hetzner), arm64 on GitHub's native ARM runner.
   build:
@@ -74,7 +119,7 @@ jobs:
             runner: ubuntu-24.04-arm
             suffix: arm64
     runs-on: ${{ matrix.runner }}
-    needs: release-please
+    needs: [release-please, tag-contributors]
     if: >-
       always() &&
       (needs.release-please.outputs.release_created == 'true' ||

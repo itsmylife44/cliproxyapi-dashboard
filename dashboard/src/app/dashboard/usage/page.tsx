@@ -350,7 +350,6 @@ export default function UsagePage() {
           ) : null}
 
           <CostEstimation
-            modelBreakdown={usageData.modelBreakdown}
             keys={usageData.keys}
           />
 

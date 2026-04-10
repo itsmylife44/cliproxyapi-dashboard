@@ -159,7 +159,13 @@ const LOCALSTORAGE_KEY = "cliproxy-custom-pricing";
  */
 export function resolveModelPrice(model: string, customPricing?: Record<string, ModelPrice>): ModelPrice | null {
   const lowerModel = model.toLowerCase();
-  const merged = { ...DEFAULT_MODEL_PRICING, ...customPricing };
+  const normalizedCustom: Record<string, ModelPrice> = {};
+  if (customPricing) {
+    for (const [k, v] of Object.entries(customPricing)) {
+      normalizedCustom[k.toLowerCase()] = v;
+    }
+  }
+  const merged = { ...DEFAULT_MODEL_PRICING, ...normalizedCustom };
 
   // Exact match
   if (merged[lowerModel]) return merged[lowerModel];
@@ -200,7 +206,10 @@ export function loadCustomPricing(): Record<string, ModelPrice> {
   if (typeof window === "undefined") return {};
   try {
     const stored = localStorage.getItem(LOCALSTORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
+    if (!stored) return {};
+    const parsed: unknown = JSON.parse(stored);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+    return parsed as Record<string, ModelPrice>;
   } catch {
     return {};
   }
@@ -218,8 +227,11 @@ export function saveCustomPricing(pricing: Record<string, ModelPrice>): void {
  * Format a USD amount for display.
  */
 export function formatUSD(amount: number): string {
-  if (amount >= 100) return `$${amount.toFixed(0)}`;
-  if (amount >= 1) return `$${amount.toFixed(2)}`;
-  if (amount >= 0.01) return `$${amount.toFixed(3)}`;
-  return `$${amount.toFixed(4)}`;
+  if (!Number.isFinite(amount)) return "$0.00";
+  const abs = Math.abs(amount);
+  const sign = amount < 0 ? "-" : "";
+  if (abs >= 100) return `${sign}$${abs.toFixed(0)}`;
+  if (abs >= 1) return `${sign}$${abs.toFixed(2)}`;
+  if (abs >= 0.01) return `${sign}$${abs.toFixed(3)}`;
+  return `${sign}$${abs.toFixed(4)}`;
 }

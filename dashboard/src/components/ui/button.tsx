@@ -8,6 +8,7 @@ interface ButtonProps {
   variant?: "primary" | "secondary" | "danger" | "ghost";
   disabled?: boolean;
   className?: string;
+  "data-testid"?: string;
 }
 
 export function Button({
@@ -17,19 +18,21 @@ export function Button({
   variant = "primary",
   disabled = false,
   className,
+  "data-testid": dataTestId,
 }: ButtonProps) {
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
+      data-testid={dataTestId}
       className={cn(
         "px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 rounded-full",
         "border disabled:opacity-50 disabled:cursor-not-allowed",
         variant === "primary" && "glass-button-primary text-white",
-        variant === "secondary" && "glass-button-secondary text-[#000000]",
+        variant === "secondary" && "glass-button-secondary text-[var(--text-primary)]",
         variant === "danger" && "bg-red-500 text-white border-none hover:bg-red-600",
-        variant === "ghost" && "glass-button-ghost text-[#4e4e4e] hover:text-black",
+        variant === "ghost" && "glass-button-ghost text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
         className
       )}
     >

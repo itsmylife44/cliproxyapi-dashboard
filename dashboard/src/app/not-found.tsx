@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { PublicThemeToggle } from "@/components/public-theme-toggle";
 
 export default function NotFound() {
   return (
     <main id="main-content" className="flex min-h-screen items-center justify-center px-4">
+      <PublicThemeToggle />
       <div className="w-full max-w-md space-y-6 rounded-lg border border-[#e5e5e5] bg-white p-8">
         <div className="flex flex-col items-center space-y-4 text-center">
           <svg

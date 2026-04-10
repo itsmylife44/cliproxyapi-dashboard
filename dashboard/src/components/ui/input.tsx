@@ -44,10 +44,10 @@ export function Input({
       spellCheck={spellCheck}
       className={cn(
           "w-full px-3 py-2 text-sm rounded-md",
-          "glass-input text-black",
+          "glass-input text-[var(--text-primary)]",
           "focus:outline-none",
           "disabled:opacity-50 disabled:cursor-not-allowed",
-          "placeholder:text-[#777169] transition-colors duration-200",
+          "placeholder:text-[var(--text-muted)] transition-colors duration-200",
           className
         )}
     />

@@ -2,8 +2,11 @@
 
 /**
  * Shared chart theme configuration for Recharts.
- * Matches the ElevenLabs light design of the dashboard.
+ * Supports both light and dark themes via `useChartTheme()` hook.
+ * Use `useChartTheme()` in components instead of static AXIS_TICK_STYLE/TOOLTIP_STYLE.
  */
+
+import { useEffect, useState } from "react";
 
 export const CHART_COLORS = {
   primary: "#3b82f6",
@@ -45,12 +48,88 @@ export const SERIES_PALETTE = [
   CHART_COLORS.primaryDark,
 ] as const;
 
+const LIGHT_CHART = {
+  text: { primary: "#000000", muted: "#4e4e4e", dimmed: "#777169" },
+  grid: "rgba(0, 0, 0, 0.06)",
+  border: "rgba(0, 0, 0, 0.1)",
+  surface: "#ffffff",
+  surfaceHover: "#f5f5f5",
+  cursor: "rgba(0, 0, 0, 0.03)",
+} as const;
+
+const DARK_CHART = {
+  text: { primary: "#e5e5e5", muted: "#a3a3a3", dimmed: "#8a8a8a" },
+  grid: "rgba(255, 255, 255, 0.08)",
+  border: "rgba(255, 255, 255, 0.12)",
+  surface: "#1a1a1a",
+  surfaceHover: "#242424",
+  cursor: "rgba(255, 255, 255, 0.04)",
+} as const;
+
+export function useChartTheme() {
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const check = () => {
+      setIsDark(document.documentElement.dataset.theme === "dark");
+    };
+    check();
+
+    const observer = new MutationObserver(check);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  const tokens = isDark ? DARK_CHART : LIGHT_CHART;
+
+  return {
+    isDark,
+    tokens,
+    axisTickStyle: {
+      fill: tokens.text.dimmed,
+      fontSize: 10,
+      fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
+    } as const,
+    tooltipStyle: {
+      contentStyle: {
+        backgroundColor: tokens.surface,
+        border: `1px solid ${isDark ? "#333333" : "#e5e5e5"}`,
+        borderRadius: "6px",
+        padding: "8px 12px",
+      },
+      labelStyle: {
+        color: tokens.text.primary,
+        fontSize: "11px",
+        fontWeight: 600,
+        marginBottom: "4px",
+      },
+      itemStyle: {
+        color: tokens.text.muted,
+        fontSize: "11px",
+        padding: "1px 0",
+      },
+      cursor: { fill: tokens.cursor },
+    } as const,
+  };
+}
+
+/**
+ * @deprecated Use `useChartTheme().axisTickStyle` for theme-aware styling.
+ * Kept for backward compatibility (light-mode defaults).
+ */
 export const AXIS_TICK_STYLE = {
-  fill: CHART_COLORS.text.dimmed,
+  fill: LIGHT_CHART.text.dimmed,
   fontSize: 10,
   fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
 } as const;
 
+/**
+ * @deprecated Use `useChartTheme().tooltipStyle` for theme-aware styling.
+ * Kept for backward compatibility (light-mode defaults).
+ */
 export const TOOLTIP_STYLE = {
   contentStyle: {
     backgroundColor: "#ffffff",
@@ -59,13 +138,13 @@ export const TOOLTIP_STYLE = {
     padding: "8px 12px",
   },
   labelStyle: {
-    color: CHART_COLORS.text.primary,
+    color: LIGHT_CHART.text.primary,
     fontSize: "11px",
     fontWeight: 600,
     marginBottom: "4px",
   },
   itemStyle: {
-    color: CHART_COLORS.text.muted,
+    color: LIGHT_CHART.text.muted,
     fontSize: "11px",
     padding: "1px 0",
   },
@@ -95,16 +174,16 @@ export function ChartContainer({
   className?: string;
 }) {
   return (
-    <div className={`w-full min-w-0 rounded-md border border-[#e5e5e5] bg-white p-4 ${className}`}>
+    <div className={`w-full min-w-0 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 ${className}`}>
       {(title || subtitle) && (
         <div className="mb-3">
           {title && (
-            <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#777169]">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
               {title}
             </h3>
           )}
           {subtitle && (
-            <p className="mt-0.5 text-[10px] text-[#777169]">{subtitle}</p>
+            <p className="mt-0.5 text-[10px] text-[var(--text-muted)]">{subtitle}</p>
           )}
         </div>
       )}
@@ -115,8 +194,8 @@ export function ChartContainer({
 
 export function ChartEmpty({ message = "No data available" }: { message?: string }) {
   return (
-    <div className="flex h-48 items-center justify-center rounded-md border border-[#e5e5e5] bg-[#f5f5f5]">
-      <p className="text-xs text-[#777169]">{message}</p>
+    <div className="flex h-48 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]">
+      <p className="text-xs text-[var(--text-muted)]">{message}</p>
     </div>
   );
 }

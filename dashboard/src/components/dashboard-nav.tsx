@@ -200,16 +200,16 @@ export function DashboardNav() {
               className="rounded-md"
             />
             <div className={cn(isCollapsed && "lg:hidden")}> 
-              <h1 className="text-base font-semibold tracking-tight text-black">
+              <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
                 CLIProxy
               </h1>
-              <p className="mt-0.5 text-xs text-[#777169]">Management</p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">Management</p>
             </div>
             </div>
             <button
               type="button"
               onClick={toggleCollapsed}
-              className="hidden rounded-md border border-[#e5e5e5] bg-[#f5f5f5] p-1.5 text-[#4e4e4e] transition-colors hover:bg-[#f5f5f5] hover:text-black lg:inline-flex"
+              className="hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] p-1.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] lg:inline-flex"
               aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               aria-expanded={!isCollapsed}
             >
@@ -229,7 +229,7 @@ export function DashboardNav() {
 
             return (
               <li key={section.key} className="space-y-1.5">
-                <p className={cn("px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#777169]", isCollapsed && "lg:hidden")}>
+                <p className={cn("px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]", isCollapsed && "lg:hidden")}>
                   {section.label}
                 </p>
                 <ul className="space-y-1">
@@ -246,8 +246,8 @@ export function DashboardNav() {
                             "flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200",
                             isCollapsed && "lg:justify-center lg:px-0",
                             isActive
-                              ? "glass-nav-item-active text-black"
-                              : "glass-nav-item text-[#4e4e4e] hover:text-black"
+                              ? "glass-nav-item-active text-[var(--text-primary)]"
+                              : "glass-nav-item text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                           )}
                           title={isCollapsed ? item.label : undefined}
                         >

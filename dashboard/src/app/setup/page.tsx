@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { PublicThemeToggle } from "@/components/public-theme-toggle";
 
 export default function SetupPage() {
   const [username, setUsername] = useState("");
@@ -59,6 +60,7 @@ export default function SetupPage() {
 
   return (
     <main id="main-content" className="flex min-h-screen items-center justify-center px-4">
+      <PublicThemeToggle />
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-black shadow-[rgba(0,0,0,0.08)_0px_0px_0px_0.5px]">

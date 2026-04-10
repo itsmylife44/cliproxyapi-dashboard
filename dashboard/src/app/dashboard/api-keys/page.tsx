@@ -176,7 +176,7 @@ export default function ApiKeysPage() {
             <h1 className="text-xl font-semibold tracking-tight text-black">API Keys</h1>
             <p className="mt-1 text-xs text-[#777169]">Manage dashboard access keys for clients and integrations. <HelpTooltip content="API keys authenticate external tools (like the opencode-cliproxyapi-sync plugin) to access your dashboard configuration programmatically" /></p>
           </div>
-          <Button onClick={() => { setKeyNameInput(""); setIsCreateModalOpen(true); }} disabled={creating} className="px-2.5 py-1 text-xs">
+          <Button onClick={() => { setKeyNameInput(""); setIsCreateModalOpen(true); }} disabled={creating} className="px-2.5 py-1 text-xs" data-testid="api-key-create-trigger">
             Create Key
           </Button>
         </div>
@@ -222,7 +222,7 @@ export default function ApiKeysPage() {
               <span className="text-xs text-[#777169]">{new Date(apiKey.createdAt).toLocaleDateString()}</span>
               <span className="text-xs text-[#777169]">{apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleDateString() : "Never"}</span>
               <div className="flex justify-end">
-                <Button variant="danger" onClick={() => confirmDelete(apiKey.id)} className="px-2.5 py-1 text-xs">
+                <Button variant="danger" onClick={() => confirmDelete(apiKey.id)} className="px-2.5 py-1 text-xs" data-testid={`api-key-delete-trigger-${apiKey.id}`}>
                   Delete
                 </Button>
               </div>

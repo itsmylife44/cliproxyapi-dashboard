@@ -6,12 +6,12 @@ export function MobileTopBar() {
   const { isOpen, toggle } = useMobileSidebar();
 
   return (
-    <div className="fixed left-0 right-0 top-0 z-30 border-b border-[#e5e5e5] glass-nav lg:hidden">
+    <div className="fixed left-0 right-0 top-0 z-30 border-b border-[var(--surface-border)] glass-nav lg:hidden">
       <div className="flex items-center justify-between px-3 py-2.5">
         <button
           type="button"
           onClick={toggle}
-          className="rounded-md p-2 text-black transition-colors duration-200 hover:bg-[#f5f5f5]"
+          className="rounded-md p-2 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--surface-hover)]"
           aria-label="Toggle menu"
           aria-expanded={isOpen}
         >
@@ -39,7 +39,7 @@ export function MobileTopBar() {
             height={24}
             className="rounded-sm"
           />
-          <h1 className="text-base font-semibold tracking-tight text-black">
+          <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
             CLIProxy
           </h1>
         </div>

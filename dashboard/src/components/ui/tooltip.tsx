@@ -23,7 +23,7 @@ export function Tooltip({
         role="tooltip"
         className={cn(
           "pointer-events-none absolute z-50 w-52",
-          "bg-white text-[#4e4e4e] text-[10px] leading-[14px] rounded-md px-2.5 py-1.5 shadow-[rgba(0,0,0,0.06)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_4px_8px]",
+          "bg-[var(--surface-base)] text-[var(--text-secondary)] text-[10px] leading-[14px] rounded-md px-2.5 py-1.5 shadow-[var(--shadow-elevated)]",
           "transition-opacity duration-150 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
           "whitespace-normal break-words",
           side === "top" && "bottom-full left-1/2 -translate-x-1/2 mb-1.5",
@@ -39,13 +39,13 @@ export function Tooltip({
             "pointer-events-none absolute",
             "border-4 border-transparent",
             side === "top" &&
-              "top-full left-1/2 -translate-x-1/2 border-t-white",
+              "top-full left-1/2 -translate-x-1/2 border-t-[var(--surface-base)]",
             side === "bottom" &&
-              "bottom-full left-1/2 -translate-x-1/2 border-b-white",
+              "bottom-full left-1/2 -translate-x-1/2 border-b-[var(--surface-base)]",
             side === "left" &&
-              "left-full top-1/2 -translate-y-1/2 border-l-white",
+              "left-full top-1/2 -translate-y-1/2 border-l-[var(--surface-base)]",
             side === "right" &&
-              "right-full top-1/2 -translate-y-1/2 border-r-white"
+              "right-full top-1/2 -translate-y-1/2 border-r-[var(--surface-base)]"
           )}
         />
       </span>
@@ -62,7 +62,7 @@ export function HelpTooltip({ content }: HelpTooltipProps) {
     <Tooltip content={content} side="bottom">
       <button
         type="button"
-        className="inline-flex items-center justify-center size-5 rounded-full bg-[#f5f5f5] text-[#777169] text-[9px] cursor-help hover:bg-[#e5e5e5] hover:text-[#4e4e4e] transition-colors duration-150 select-none ml-1 align-middle"
+        className="inline-flex items-center justify-center size-5 rounded-full bg-[var(--surface-muted)] text-[var(--text-muted)] text-[9px] cursor-help hover:bg-[var(--surface-hover)] hover:text-[var(--text-secondary)] transition-colors duration-150 select-none ml-1 align-middle"
         aria-label={content}
       >
         ?

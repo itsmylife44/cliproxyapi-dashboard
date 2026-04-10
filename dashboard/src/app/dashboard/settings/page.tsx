@@ -329,13 +329,13 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-[#e5e5e5]/70 bg-white p-4">
-        <h1 className="text-xl font-semibold tracking-tight text-black">Settings</h1>
-        <p className="mt-1 text-sm text-[#777169]">Manage account, security, config sync, and system operations.</p>
+      <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4">
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Settings</h1>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">Manage account, security, config sync, and system operations.</p>
       </section>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        <section className="rounded-lg border border-[#e5e5e5]/70 bg-white p-6 flex flex-col gap-6 lg:flex-1 lg:min-w-0">
+        <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6 flex flex-col gap-6 lg:flex-1 lg:min-w-0">
           <TelegramSettings
             syncTokens={syncTokens}
             syncTokensLoading={syncTokensLoading}
@@ -352,7 +352,7 @@ export default function SettingsPage() {
           />
         </section>
 
-        <section className="rounded-lg border border-[#e5e5e5]/70 bg-white p-6 flex flex-col gap-6 lg:flex-1 lg:min-w-0 lg:self-start lg:sticky lg:top-4">
+        <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6 flex flex-col gap-6 lg:flex-1 lg:min-w-0 lg:self-start lg:sticky lg:top-4">
           <PasswordSettings
             cliProxyVersion={cliProxyVersion}
             cliProxyLoading={cliProxyLoading}
@@ -363,7 +363,7 @@ export default function SettingsPage() {
         </section>
       </div>
 
-      <section className="rounded-lg border border-[#e5e5e5]/70 bg-white p-6 flex flex-col gap-6">
+      <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6 flex flex-col gap-6">
         <ProviderSettings
           proxyUpdateInfo={proxyUpdateInfo}
           proxyUpdateLoading={proxyUpdateLoading}
@@ -377,7 +377,7 @@ export default function SettingsPage() {
           onRefreshDashboardUpdate={fetchDashboardUpdateInfo}
         />
 
-        <div className="border-t border-[#e5e5e5]/70 pt-6">
+        <div className="border-t border-[var(--surface-border)]/70 pt-6">
           <DeployDashboard />
         </div>
       </section>

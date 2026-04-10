@@ -529,14 +529,14 @@ export default function ConfigPage() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <section className="rounded-lg border border-[#e5e5e5]/70 bg-white p-4">
-          <h1 className="text-xl font-semibold tracking-tight text-black">Configuration</h1>
+        <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4">
+          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Configuration</h1>
         </section>
-        <div className="rounded-lg border border-[#e5e5e5]/70 bg-white p-6">
+        <div className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6">
           <div className="flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
               <div className="size-8 animate-spin rounded-full border-4 border-[#ddd] border-t-blue-500"></div>
-              <p className="text-[#777169]">Loading configuration...</p>
+              <p className="text-[var(--text-muted)]">Loading configuration...</p>
             </div>
           </div>
         </div>
@@ -571,12 +571,12 @@ export default function ConfigPage() {
 
     return (
       <div className="space-y-4">
-        <section className="rounded-lg border border-[#e5e5e5]/70 bg-white p-4">
-          <h1 className="text-xl font-semibold tracking-tight text-black">Configuration</h1>
+        <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4">
+          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Configuration</h1>
         </section>
-        <div className="rounded-lg border border-[#e5e5e5]/70 bg-white p-6 text-center space-y-4">
-          <p className="text-[#4e4e4e]">Failed to load configuration</p>
-          <p className="text-xs text-[#777169]">
+        <div className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6 text-center space-y-4">
+          <p className="text-[var(--text-secondary)]">Failed to load configuration</p>
+          <p className="text-xs text-[var(--text-muted)]">
             This can happen if an invalid proxy URL was configured, preventing CLIProxyAPI from responding.
           </p>
           <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
@@ -599,11 +599,11 @@ export default function ConfigPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-[#e5e5e5]/70 bg-white p-4">
+      <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-black">Configuration</h1>
-            <p className="mt-1 text-sm text-[#777169]">
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Configuration</h1>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
               Configure system settings, streaming, retry behavior, and logging.
             </p>
           </div>
@@ -653,7 +653,7 @@ export default function ConfigPage() {
 
       <ConfigPreview rawJson={rawJson} />
 
-      <div className="rounded-sm border border-[#e5e5e5]/70 bg-white p-4 text-xs text-[#777169]">
+      <div className="rounded-sm border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4 text-xs text-[var(--text-muted)]">
         <strong>TIP:</strong> Changes are saved immediately to the management API. The service may need to be
         restarted for some configuration changes to take effect.
       </div>

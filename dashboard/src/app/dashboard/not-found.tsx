@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function DashboardNotFound() {
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
-      <div className="w-full max-w-md space-y-6 rounded-lg border border-[#e5e5e5] bg-white p-8">
+      <div className="w-full max-w-md space-y-6 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-8">
         <div className="flex flex-col items-center space-y-4 text-center">
           <svg
             width="48"
@@ -11,7 +11,7 @@ export default function DashboardNotFound() {
             viewBox="0 0 48 48"
             fill="none"
             aria-hidden="true"
-            className="text-[#777169]"
+            className="text-[var(--text-muted)]"
           >
             <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="1.5" />
             <circle cx="24" cy="24" r="6" stroke="currentColor" strokeWidth="1.5" />
@@ -22,9 +22,9 @@ export default function DashboardNotFound() {
           </svg>
 
           <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#777169]">404</p>
-            <h1 className="text-xl font-semibold tracking-tight text-black">Page not found</h1>
-            <p className="text-sm text-[#777169]">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">404</p>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Page not found</h1>
+            <p className="text-sm text-[var(--text-muted)]">
               This section does not exist or you may not have access to it.
             </p>
           </div>

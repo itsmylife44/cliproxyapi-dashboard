@@ -196,12 +196,12 @@ export default function ContainersPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
-        <h1 className="text-xl font-semibold tracking-tight text-black">Containers</h1>
+      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Containers</h1>
       </section>
 
       {loading ? (
-        <div className="rounded-lg border border-[#e5e5e5] bg-white p-6 text-center text-sm text-[#777169]">Loading containers...</div>
+        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">Loading containers...</div>
       ) : (
         <>
           {fetchError && (
@@ -209,24 +209,24 @@ export default function ContainersPage() {
           )}
 
           {containers.length === 0 && !fetchError ? (
-            <div className="rounded-lg border border-[#e5e5e5] bg-white p-8">
+            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-8">
               <div className="flex flex-col items-center justify-center gap-4 text-center">
-                <div className="flex size-14 items-center justify-center rounded-full border border-[#e5e5e5] bg-white">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#777169]" aria-hidden="true">
+                <div className="flex size-14 items-center justify-center rounded-full border border-[var(--surface-border)] bg-[var(--surface-base)]">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--text-muted)]" aria-hidden="true">
                     <rect x="2" y="6" width="20" height="12" rx="2" />
                     <path d="M6 12h.01M10 12h.01M14 12h.01" />
                   </svg>
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-black">No containers found</h3>
-                  <p className="text-xs text-[#777169]">No Docker containers are currently running or available</p>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">No containers found</h3>
+                  <p className="text-xs text-[var(--text-muted)]">No Docker containers are currently running or available</p>
                 </div>
               </div>
             </div>
           ) : (
           <div className="overflow-x-auto">
-            <div className="min-w-[600px] divide-y divide-[#e5e5e5] overflow-hidden rounded-lg border border-[#e5e5e5] bg-white">
-              <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1.2fr)_80px_100px_100px_minmax(140px,auto)] border-b border-[#e5e5e5] bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
+            <div className="min-w-[600px] divide-y divide-[var(--surface-border)] overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
+              <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1.2fr)_80px_100px_100px_minmax(140px,auto)] border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                 <span>Container</span>
                 <span>State</span>
                 <span>Uptime</span>
@@ -240,14 +240,14 @@ export default function ContainersPage() {
                 <div key={container.name} className="px-3 py-3">
                   <div className="grid grid-cols-[minmax(0,1.2fr)_80px_100px_100px_minmax(140px,auto)] items-center gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-black">{container.displayName}</p>
-                      <p className="mt-0.5 truncate text-[11px] text-[#777169]">{container.status}</p>
+                      <p className="truncate text-sm font-medium text-[var(--text-primary)]">{container.displayName}</p>
+                      <p className="mt-0.5 truncate text-[11px] text-[var(--text-muted)]">{container.status}</p>
                     </div>
                     <span className={cn("text-xs font-medium", container.state === "running" ? "text-emerald-700" : container.state === "exited" || container.state === "dead" ? "text-rose-600" : "text-amber-700")}>
                       {container.state}
                     </span>
-                    <span className="text-xs text-[#4e4e4e]">{container.uptime !== null ? formatUptime(container.uptime) : "-"}</span>
-                    <span className="text-xs text-[#4e4e4e]">
+                    <span className="text-xs text-[var(--text-secondary)]">{container.uptime !== null ? formatUptime(container.uptime) : "-"}</span>
+                    <span className="text-xs text-[var(--text-secondary)]">
                       {container.cpu ?? "-"}
                       {container.memory !== null && container.memoryPercent !== null ? ` · ${container.memoryPercent}` : ""}
                     </span>
@@ -280,9 +280,9 @@ export default function ContainersPage() {
           )}
 
           {selectedContainer && (
-            <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
+            <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-black">Logs: {selectedContainerInfo?.displayName || selectedContainer}</h2>
+                <h2 className="text-sm font-semibold text-[var(--text-primary)]">Logs: {selectedContainerInfo?.displayName || selectedContainer}</h2>
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
@@ -301,7 +301,7 @@ export default function ContainersPage() {
                   </Button>
                 </div>
               </div>
-                <div className="h-96 overflow-auto rounded-sm border border-[#e5e5e5] bg-[#1a1a1a] p-3 font-mono text-[10px] sm:p-4 sm:text-xs">
+                <div className="h-96 overflow-auto rounded-sm border border-[var(--surface-border)] bg-[#1a1a1a] p-3 font-mono text-[10px] sm:p-4 sm:text-xs">
                   {logsLoading ? (
                     <div className="text-gray-400">Loading logs...</div>
                   ) : logLines.length === 0 ? (

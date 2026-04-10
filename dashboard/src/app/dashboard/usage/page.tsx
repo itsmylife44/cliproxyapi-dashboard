@@ -7,11 +7,11 @@ import { useToast } from "@/components/ui/toast";
 import { TimeFilter } from "@/components/usage/time-filter";
 const UsageCharts = dynamic(
   () => import("@/components/usage/usage-charts").then(mod => ({ default: mod.UsageCharts })),
-  { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[#f5f5f5]" /> }
+  { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> }
 );
 const CostEstimation = dynamic(
   () => import("@/components/usage/cost-estimation").then(mod => ({ default: mod.CostEstimation })),
-  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-lg bg-[#f5f5f5]" /> }
+  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> }
 );
 import { UsageRequestEvents } from "@/components/usage/usage-request-events";
 import { UsageTable } from "@/components/usage/usage-table";
@@ -261,13 +261,13 @@ export default function UsagePage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
+      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-black">Usage Statistics</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Usage Statistics</h1>
             <div className="mt-1 flex items-center gap-2">
               <div className={`h-2 w-2 rounded-full ${collectorStatusColor}`}></div>
-              <p className="text-xs text-[#777169]">Last synced: {collectorTimeAgo}</p>
+              <p className="text-xs text-[var(--text-muted)]">Last synced: {collectorTimeAgo}</p>
             </div>
           </div>
           <Button onClick={handleRefresh} disabled={loading}>
@@ -287,7 +287,7 @@ export default function UsagePage() {
       />
 
       {loading ? (
-        <div className="rounded-lg border border-[#e5e5e5] bg-white p-6 text-center text-sm text-[#777169]">
+        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
           Loading statistics...
         </div>
       ) : !usageData ? (
@@ -297,46 +297,46 @@ export default function UsagePage() {
       ) : (
         <>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-            <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Total Requests</p>
-              <p className="mt-0.5 text-xs font-semibold text-black">{usageData.totals.totalRequests.toLocaleString()}</p>
+            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total Requests</p>
+              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.totalRequests.toLocaleString()}</p>
             </div>
-            <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Successful</p>
+            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Successful</p>
               <p className="mt-0.5 text-xs font-semibold text-emerald-700">{usageData.totals.successCount.toLocaleString()}</p>
             </div>
-            <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Failed</p>
+            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Failed</p>
               <p className="mt-0.5 text-xs font-semibold text-rose-600">{usageData.totals.failureCount.toLocaleString()}</p>
             </div>
-            <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Total Tokens</p>
-              <p className="mt-0.5 text-xs font-semibold text-black">{usageData.totals.totalTokens.toLocaleString()}</p>
+            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total Tokens</p>
+              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.totalTokens.toLocaleString()}</p>
             </div>
           </div>
 
           {hasInputOutputBreakdown && (
             <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-              <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Input Tokens</p>
-                <p className="mt-0.5 text-xs font-semibold text-black">{usageData.totals.inputTokens.toLocaleString()}</p>
+              <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Input Tokens</p>
+                <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.inputTokens.toLocaleString()}</p>
               </div>
-              <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Output Tokens</p>
-                <p className="mt-0.5 text-xs font-semibold text-black">{usageData.totals.outputTokens.toLocaleString()}</p>
+              <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Output Tokens</p>
+                <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.outputTokens.toLocaleString()}</p>
               </div>
-              <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Total Tokens</p>
-                <p className="mt-0.5 text-xs font-semibold text-black">{usageData.totals.totalTokens.toLocaleString()}</p>
+              <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total Tokens</p>
+                <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.totalTokens.toLocaleString()}</p>
               </div>
             </div>
           )}
 
           {hasLatencyBreakdown && usageData?.latencySummary ? (
             <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-              <div className="rounded-lg border border-[#e5e5e5] bg-[#f5f5f5] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#999]">Avg Latency</p>
-                <p className="mt-0.5 text-xs font-semibold text-black">{formatLatencyValue(usageData.latencySummary.averageMs)}</p>
+              <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)] px-2.5 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Avg Latency</p>
+                <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{formatLatencyValue(usageData.latencySummary.averageMs)}</p>
               </div>
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-700/70">P95 Latency</p>

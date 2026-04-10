@@ -7,7 +7,7 @@ import { HelpTooltip } from "@/components/ui/tooltip";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 const QuotaChart = dynamic(
   () => import("@/components/quota/quota-chart").then(mod => ({ default: mod.QuotaChart })),
-  { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[#f5f5f5]" /> }
+  { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> }
 );
 import { QuotaDetails } from "@/components/quota/quota-details";
 import { QuotaAlerts } from "@/components/quota/quota-alerts";
@@ -279,11 +279,11 @@ export default function QuotaPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
+      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-black">Quota</h1>
-            <p className="mt-1 text-sm text-[#777169]">Monitor OAuth account quotas and usage windows.</p>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Quota</h1>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">Monitor OAuth account quotas and usage windows.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="flex flex-wrap gap-1">
@@ -313,27 +313,27 @@ export default function QuotaPage() {
       </section>
 
       {loading && !quotaData ? (
-        <div className="rounded-lg border border-[#e5e5e5] bg-white p-6 text-center text-sm text-[#777169]">
+        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
           Loading quota data...
         </div>
       ) : (
         <>
           <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Active Accounts</p>
-              <p className="mt-0.5 text-xs font-semibold text-black">{activeAccounts}</p>
+            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Active Accounts</p>
+              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{activeAccounts}</p>
             </div>
-            <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Overall Capacity <HelpTooltip content="Weighted average of remaining quota across all active provider accounts" /></p>
-              <p className="mt-0.5 text-xs font-semibold text-black">{Math.round(overallCapacity.value * 100)}%</p>
+            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Overall Capacity <HelpTooltip content="Weighted average of remaining quota across all active provider accounts" /></p>
+              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{Math.round(overallCapacity.value * 100)}%</p>
             </div>
-            <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Low Capacity <HelpTooltip content="Number of accounts with remaining quota below 20%" /></p>
-              <p className="mt-0.5 text-xs font-semibold text-black">{lowCapacityCount}</p>
+            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Low Capacity <HelpTooltip content="Number of accounts with remaining quota below 20%" /></p>
+              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{lowCapacityCount}</p>
             </div>
-            <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Providers</p>
-              <p className="mt-0.5 text-xs font-semibold text-black">{providerSummaries.length}</p>
+            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Providers</p>
+              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{providerSummaries.length}</p>
             </div>
           </section>
 

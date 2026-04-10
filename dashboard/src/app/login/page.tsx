@@ -63,21 +63,21 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <span className="sr-only">Loading login page…</span>
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 h-12 w-12 rounded-xl bg-[#f5f5f5] animate-pulse" />
-            <div className="mx-auto h-7 w-40 rounded bg-[#f5f5f5] animate-pulse" />
-            <div className="mx-auto mt-2 h-4 w-52 rounded bg-[#f5f5f5] animate-pulse" />
+            <div className="mx-auto mb-3 h-12 w-12 rounded-xl bg-[var(--surface-muted)] animate-pulse" />
+            <div className="mx-auto h-7 w-40 rounded bg-[var(--surface-muted)] animate-pulse" />
+            <div className="mx-auto mt-2 h-4 w-52 rounded bg-[var(--surface-muted)] animate-pulse" />
           </div>
           <div className="glass-card rounded-2xl p-4 sm:p-6">
             <div className="space-y-4">
               <div>
-                <div className="mb-2 h-3 w-20 rounded bg-[#f5f5f5] animate-pulse" />
-                <div className="h-10 rounded-lg bg-[#f5f5f5] animate-pulse" />
+                <div className="mb-2 h-3 w-20 rounded bg-[var(--surface-muted)] animate-pulse" />
+                <div className="h-10 rounded-lg bg-[var(--surface-muted)] animate-pulse" />
               </div>
               <div>
-                <div className="mb-2 h-3 w-20 rounded bg-[#f5f5f5] animate-pulse" />
-                <div className="h-10 rounded-lg bg-[#f5f5f5] animate-pulse" />
+                <div className="mb-2 h-3 w-20 rounded bg-[var(--surface-muted)] animate-pulse" />
+                <div className="h-10 rounded-lg bg-[var(--surface-muted)] animate-pulse" />
               </div>
-              <div className="h-10 rounded-lg bg-[#f5f5f5] animate-pulse" />
+              <div className="h-10 rounded-lg bg-[var(--surface-muted)] animate-pulse" />
             </div>
           </div>
         </div>
@@ -95,16 +95,16 @@ export default function LoginPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-black">
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
             CLIProxyAPI
           </h1>
-          <p className="mt-1 text-sm text-[#777169]">Sign in to your dashboard</p>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">Sign in to your dashboard</p>
         </div>
 
          <div className="glass-card rounded-2xl p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="username" className="mb-2 block text-xs font-medium text-[#4e4e4e] uppercase tracking-wider">
+              <label htmlFor="username" className="mb-2 block text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
                 Username
               </label>
               <Input
@@ -118,7 +118,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-2 block text-xs font-medium text-[#4e4e4e] uppercase tracking-wider">
+              <label htmlFor="password" className="mb-2 block text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
                 Password
               </label>
               <Input
@@ -143,7 +143,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="mt-6 text-center text-xs text-[#777169]">
+        <p className="mt-6 text-center text-xs text-[var(--text-muted)]">
           CLIProxyAPI Management Dashboard
         </p>
       </div>

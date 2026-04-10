@@ -11,7 +11,7 @@ interface ErrorProps {
 export default function DashboardError({ error, reset }: ErrorProps) {
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
-      <div className="w-full max-w-md space-y-6 rounded-lg border border-[#e5e5e5] bg-white p-8">
+      <div className="w-full max-w-md space-y-6 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-8">
         <div className="flex flex-col items-center space-y-4 text-center">
           <svg
             width="48"
@@ -32,13 +32,13 @@ export default function DashboardError({ error, reset }: ErrorProps) {
           </svg>
 
           <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#777169]">Error</p>
-            <h1 className="text-xl font-semibold tracking-tight text-black">Something went wrong</h1>
-            <p className="text-sm text-[#777169]">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">Error</p>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Something went wrong</h1>
+            <p className="text-sm text-[var(--text-muted)]">
               An unexpected error occurred while loading this page.
             </p>
             {error.digest && (
-              <p className="mt-2 font-mono text-[11px] text-[#777169]">
+              <p className="mt-2 font-mono text-[11px] text-[var(--text-muted)]">
                 ID: {error.digest}
               </p>
             )}
@@ -49,7 +49,7 @@ export default function DashboardError({ error, reset }: ErrorProps) {
           <Button variant="primary" onClick={reset}>
             Try Again
           </Button>
-          <Link href="/dashboard" className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 glass-button-secondary text-black">
+          <Link href="/dashboard" className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 glass-button-secondary text-[var(--text-primary)]">
             Go to Dashboard
           </Link>
         </div>

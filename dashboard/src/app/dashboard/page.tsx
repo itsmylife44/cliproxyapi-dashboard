@@ -281,53 +281,53 @@ export default async function QuickStartPage() {
     {
       label: "Providers",
       value: `${providerCount} configured`,
-      tone: "text-black",
+      tone: "text-[var(--text-primary)]",
       icon: "◆",
       iconTone: "text-blue-600",
     },
     {
       label: "API Keys",
       value: `${apiKeys.length} active`,
-      tone: "text-black",
+      tone: "text-[var(--text-primary)]",
       icon: "♟",
       iconTone: "text-amber-700",
     },
     {
       label: "Proxy URL",
       value: getProxyUrl(),
-      tone: "text-black",
+      tone: "text-[var(--text-primary)]",
       icon: "◈",
-      iconTone: "text-[#4e4e4e]",
+      iconTone: "text-[var(--text-secondary)]",
       truncate: true,
     },
   ] as const;
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
+      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-black">Quick Start</h1>
-            <p className="mt-1 text-sm text-[#777169]">
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Quick Start</h1>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
               Configure providers, generate client config, and validate access from one place.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
               href="/dashboard/providers"
-              className="rounded-md border border-[#e5e5e5]/80 bg-[#f5f5f5]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-black transition-colors hover:bg-[#e5e5e5]/80"
+              className="rounded-md border border-[var(--surface-border)]/80 bg-[var(--surface-muted)]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]/80"
             >
               Providers
             </Link>
             <Link
               href="/dashboard/api-keys"
-              className="rounded-md border border-[#e5e5e5]/80 bg-[#f5f5f5]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-black transition-colors hover:bg-[#e5e5e5]/80"
+              className="rounded-md border border-[var(--surface-border)]/80 bg-[var(--surface-muted)]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]/80"
             >
               API Keys
             </Link>
             <Link
               href="/dashboard/settings"
-              className="rounded-md border border-[#e5e5e5]/80 bg-[#f5f5f5]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-black transition-colors hover:bg-[#e5e5e5]/80"
+              className="rounded-md border border-[var(--surface-border)]/80 bg-[var(--surface-muted)]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]/80"
             >
               Settings
             </Link>
@@ -338,9 +338,9 @@ export default async function QuickStartPage() {
       <section id="overview" className="scroll-mt-24">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
           {statusCards.map((card) => (
-            <div key={card.label} className="glass-card rounded-md border border-[#e5e5e5] px-2.5 py-2 transition-colors hover:border-[#e5e5e5]">
+            <div key={card.label} className="glass-card rounded-md border border-[var(--surface-border)] px-2.5 py-2 transition-colors hover:border-[var(--surface-border)]">
               <div className="flex items-center justify-between">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777169]">{card.label}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{card.label}</div>
                 <span className={`text-xs ${card.iconTone}`} aria-hidden="true">{card.icon}</span>
               </div>
               <div className={`mt-0.5 text-xs font-semibold ${card.tone} ${"truncate" in card && card.truncate ? "truncate" : ""}`} title={String(card.value)}>
@@ -370,15 +370,15 @@ export default async function QuickStartPage() {
       />
 
       <section id="sharing" className="scroll-mt-24">
-        <details className="group rounded-lg border border-[#e5e5e5] bg-white">
+        <details className="group rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-black">Publisher / Subscriber</p>
-              <p className="text-xs text-[#777169]">Share your config template or subscribe to another user.</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Publisher / Subscriber</p>
+              <p className="text-xs text-[var(--text-muted)]">Share your config template or subscribe to another user.</p>
             </div>
-            <svg className="h-4 w-4 text-[#777169] transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+            <svg className="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
           </summary>
-          <div className="grid gap-3 border-t border-[#e5e5e5] px-4 py-3 2xl:grid-cols-2">
+          <div className="grid gap-3 border-t border-[var(--surface-border)] px-4 py-3 2xl:grid-cols-2">
             {!isSubscriber && <ConfigPublisher />}
             {!isPublisher && <ConfigSubscriber hasApiKey={hasApiKey} />}
           </div>
@@ -386,25 +386,25 @@ export default async function QuickStartPage() {
       </section>
 
       <section id="integrations" className="scroll-mt-24">
-        <details className="group rounded-lg border border-[#e5e5e5] bg-white">
+        <details className="group rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-black">Integrations</p>
-              <p className="text-xs text-[#777169]">Reference setup snippets for external clients.</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Integrations</p>
+              <p className="text-xs text-[var(--text-muted)]">Reference setup snippets for external clients.</p>
             </div>
-            <svg className="h-4 w-4 text-[#777169] transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+            <svg className="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
           </summary>
-          <div className="border-t border-[#e5e5e5] px-4 py-3">
-            <div className="rounded-md border border-[#e5e5e5] bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-black">
+          <div className="border-t border-[var(--surface-border)] px-4 py-3">
+            <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
+              <h3 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
                 <span className="flex items-center gap-3">
                   <span className="flex h-6 w-6 items-center justify-center rounded-md border border-blue-200 bg-blue-50 text-sm text-blue-600" aria-hidden="true">&#9654;</span>
                   Using with Claude Code
                 </span>
               </h3>
-              <p className="mb-4 text-sm text-[#4e4e4e]">
+              <p className="mb-4 text-sm text-[var(--text-secondary)]">
                 As an alternative, you can use CLIProxyAPI with Claude Code by setting environment variables before launching it.
-                Replace <code className="break-all rounded bg-[#f5f5f5] px-1.5 py-0.5 font-mono text-xs text-blue-600">your-api-key</code> with
+                Replace <code className="break-all rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-blue-600">your-api-key</code> with
                 your key from the{" "}
                 <Link href="/dashboard/api-keys" className="font-medium text-blue-600 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-800">
                   API Keys

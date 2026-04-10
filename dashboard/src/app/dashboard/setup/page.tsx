@@ -76,24 +76,24 @@ export default function SetupWizardPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <section className="rounded-lg border border-[#e5e5e5] bg-white p-4">
+      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-black">
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
               Setup Wizard
             </h1>
-            <p className="mt-1 text-sm text-[#777169]">
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
               Complete these steps to get CLIProxyAPI up and running.
             </p>
           </div>
           {status && (
-            <div className="flex-shrink-0 rounded-md border border-[#e5e5e5] bg-[#f5f5f5] px-3 py-1.5 text-xs font-semibold tabular-nums text-[#4e4e4e]">
+            <div className="flex-shrink-0 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-semibold tabular-nums text-[var(--text-secondary)]">
               {completedCount}&nbsp;/&nbsp;{STEPS.length}
             </div>
           )}
         </div>
 
-        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-[#f5f5f5]">
+        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
           <div
             className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-[width] duration-700"
             style={{ width: `${(completedCount / STEPS.length) * 100}%` }}
@@ -110,7 +110,7 @@ export default function SetupWizardPage() {
       <Card>
         {loading && !status ? (
           <div className="flex items-center justify-center py-10">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#e5e5e5] border-t-blue-400" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--surface-border)] border-t-blue-400" />
           </div>
         ) : (
           <div className="space-y-1">
@@ -137,7 +137,7 @@ export default function SetupWizardPage() {
                         <div
                           className={[
                             "mt-2 w-px flex-1",
-                            done ? "bg-emerald-500/30" : "bg-[#f5f5f5]",
+                            done ? "bg-emerald-500/30" : "bg-[var(--surface-muted)]",
                           ].join(" ")}
                           style={{ minHeight: "1.5rem" }}
                         />
@@ -152,8 +152,8 @@ export default function SetupWizardPage() {
                             done
                               ? "text-emerald-700"
                               : active
-                                ? "text-black"
-                                : "text-[#777169]",
+                                ? "text-[var(--text-primary)]"
+                                : "text-[var(--text-muted)]",
                           ].join(" ")}
                         >
                           {step.title}
@@ -165,7 +165,7 @@ export default function SetupWizardPage() {
                         )}
                       </div>
 
-                      <p className="mt-1 text-sm leading-relaxed text-[#777169]">
+                      <p className="mt-1 text-sm leading-relaxed text-[var(--text-muted)]">
                         {stepDescriptions[index]}
                       </p>
 
@@ -197,7 +197,7 @@ export default function SetupWizardPage() {
                   </div>
 
                   {!isLast && (
-                    <div className="mx-4 border-b border-[#e5e5e5]/40" />
+                    <div className="mx-4 border-b border-[var(--surface-border)]/40" />
                   )}
                 </div>
               );
@@ -209,7 +209,7 @@ export default function SetupWizardPage() {
       {allDone && <SuccessBanner />}
 
       {!allDone && (
-        <p className="text-center text-xs text-[#777169]">
+        <p className="text-center text-xs text-[var(--text-muted)]">
           This page auto-refreshes every 5 seconds. Complete steps in any tab
           and they will appear here automatically.
         </p>

@@ -118,3 +118,6 @@ infrastructure/.env
 
 # OpenCode (local dev state)
 /.opencode/
+
+# Sisyphus agent working directory (plans, notepads, evidence — never commit)
+/.sisyphus/

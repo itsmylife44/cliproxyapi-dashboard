@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { getThemeBootstrapScript } from "@/lib/theme-script";
 
 export default function GlobalError({
   error,
@@ -10,8 +11,11 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-[#f5f5f5] text-black antialiased">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script>{getThemeBootstrapScript()}</script>
+      </head>
+      <body className="min-h-screen antialiased">
         <main id="main-content" className="flex min-h-screen items-center justify-center px-4">
           <div className="w-full max-w-md space-y-6 rounded-lg border border-[#e5e5e5] bg-white p-8">
             <div className="flex flex-col items-center space-y-4 text-center">

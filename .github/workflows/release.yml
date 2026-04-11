@@ -71,9 +71,9 @@ jobs:
           TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
         run: |
           PREV_TAG=$(gh api "repos/${{ github.repository }}/releases" \
-            --jq "[.[] | select(.tag_name != \"${TAG_NAME}\")] | first | .tag_name" 2>/dev/null || echo "")
+            --jq "[.[] | select(.tag_name != \"${TAG_NAME}\")] | first | .tag_name" 2>&1) || PREV_TAG=""
 
-          if [ -z "$PREV_TAG" ]; then
+          if [ -z "$PREV_TAG" ] || echo "$PREV_TAG" | grep -q "Not Found"; then
             echo "No previous release found, skipping"
             exit 0
           fi

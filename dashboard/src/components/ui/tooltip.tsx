@@ -17,14 +17,14 @@ export function Tooltip({
   className,
 }: TooltipProps) {
   return (
-    <span className="relative inline-flex group">
+    <span className="relative inline-flex group/tip">
       {children}
       <span
         role="tooltip"
         className={cn(
           "pointer-events-none absolute z-50 w-52",
           "bg-[var(--surface-base)] text-[var(--text-secondary)] text-[10px] leading-[14px] rounded-md px-2.5 py-1.5 shadow-[var(--shadow-elevated)]",
-          "transition-opacity duration-150 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+          "transition-opacity duration-150 opacity-0 group-hover/tip:opacity-100 group-focus-within/tip:opacity-100",
           "whitespace-normal break-words",
           side === "top" && "bottom-full left-1/2 -translate-x-1/2 mb-1.5",
           side === "bottom" && "top-full left-1/2 -translate-x-1/2 mt-1.5",

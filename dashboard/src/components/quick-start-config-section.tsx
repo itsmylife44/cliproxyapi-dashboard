@@ -154,13 +154,13 @@ export function QuickStartConfigSection({
       {omoVariant === "normal" && (
         <>
           <section id="assignments" className="scroll-mt-24">
-            <details className="group rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]" open={false}>
+            <details className="group/details rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]" open={false}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                 <span className="flex items-center gap-3 text-sm font-semibold text-[var(--text-primary)]">
                   <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] text-sm text-[var(--text-secondary)]" aria-hidden="true">&#9654;</span>
                   Advanced Config: Oh-My-Open-Agent Assignments
                 </span>
-                <span className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-muted)] transition-transform duration-200 group-open:rotate-180">&#8964;</span>
+                <span className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-muted)] transition-transform duration-200 group-open/details:rotate-180">&#8964;</span>
               </summary>
               <div className="border-t border-[var(--surface-border)] px-4 py-3">
                 <OhMyOpenCodeConfigGenerator
@@ -181,13 +181,13 @@ export function QuickStartConfigSection({
       {omoVariant === "slim" && (
         <>
           <section id="assignments-slim" className="scroll-mt-24">
-            <details className="group rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]" open={false}>
+            <details className="group/details rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]" open={false}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                 <span className="flex items-center gap-3 text-sm font-semibold text-[var(--text-primary)]">
                   <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] text-sm text-[var(--text-secondary)]" aria-hidden="true">&#9654;</span>
                   Advanced Config: Oh-My-OpenCode Slim Assignments
                 </span>
-                <span className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-muted)] transition-transform duration-200 group-open:rotate-180">&#8964;</span>
+                <span className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-muted)] transition-transform duration-200 group-open/details:rotate-180">&#8964;</span>
               </summary>
               <div className="border-t border-[var(--surface-border)] px-4 py-3">
                 <OhMyOpenCodeSlimConfigGenerator

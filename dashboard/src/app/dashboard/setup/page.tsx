@@ -30,8 +30,12 @@ export default function SetupWizardPage() {
     try {
       const res = await fetch(API_ENDPOINTS.SETUP.STATUS);
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        setError(data.error ?? "Failed to load setup status");
+        let message = "Failed to load setup status";
+        try {
+          const data = (await res.json()) as { error?: string };
+          if (data.error) message = data.error;
+        } catch { /* non-JSON error response */ }
+        setError(message);
         return;
       }
       const data = (await res.json()) as SetupStatus;
@@ -44,14 +48,6 @@ export default function SetupWizardPage() {
     }
   }, []);
 
-  useEffect(() => {
-    void fetchStatus();
-    const interval = setInterval(() => {
-      void fetchStatus();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [fetchStatus]);
-
   const step1Done = status ? status.providers > 0 : false;
   const step2Done = status ? status.apiKeys > 0 : false;
   const step3Done = status ? status.models > 0 : false;
@@ -59,8 +55,16 @@ export default function SetupWizardPage() {
   const stepDone = [step1Done, step2Done, step3Done];
   const completedCount = stepDone.filter(Boolean).length;
   const allDone = completedCount === 3;
-
   const firstIncomplete = stepDone.findIndex((d) => !d);
+
+  useEffect(() => {
+    void fetchStatus();
+    if (allDone) return;
+    const interval = setInterval(() => {
+      void fetchStatus();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [fetchStatus, allDone]);
 
   const STEPS = [
     { id: 1, title: "Connect a Provider", doneLabel: "Provider connected" },
@@ -102,7 +106,7 @@ export default function SetupWizardPage() {
       </section>
 
       {error && !loading && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-600">
+        <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-600">
           {error}
         </div>
       )}
@@ -125,9 +129,9 @@ export default function SetupWizardPage() {
                     className={[
                       "flex gap-4 rounded-lg p-4 transition-colors",
                       done
-                        ? "bg-emerald-50"
+                        ? "bg-emerald-500/10"
                         : active
-                          ? "bg-blue-50 ring-1 ring-blue-200"
+                          ? "bg-blue-500/10 ring-1 ring-blue-200"
                           : "opacity-60",
                     ].join(" ")}
                   >
@@ -159,7 +163,7 @@ export default function SetupWizardPage() {
                           {step.title}
                         </h2>
                         {done && (
-                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
+                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
                             {step.doneLabel}
                           </span>
                         )}
@@ -176,7 +180,7 @@ export default function SetupWizardPage() {
                       {index === 1 && (
                         <Step2Content
                           done={done}
-                          locked={!step1Done}
+                          locked={!step1Done && !step2Done}
                           onCreated={setJustCreatedKey}
                         />
                       )}
@@ -184,7 +188,7 @@ export default function SetupWizardPage() {
                       {index === 2 && (
                         <Step3Content
                           done={done}
-                          locked={!step2Done}
+                          locked={!step2Done && !step3Done}
                           modelCount={status?.models ?? 0}
                           statusLoaded={status !== null}
                         />

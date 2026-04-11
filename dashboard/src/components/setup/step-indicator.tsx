@@ -33,20 +33,20 @@ interface StepIndicatorProps {
 export function StepIndicator({ step, done, active }: StepIndicatorProps) {
   if (done) {
     return (
-      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/40">
+      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/40">
         <CheckIcon />
       </div>
     );
   }
   if (active) {
     return (
-      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-200 shadow-sm">
+      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 ring-1 ring-blue-200 shadow-sm">
         <StepNumber n={step} />
       </div>
     );
   }
   return (
-    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--text-muted)] ring-1 ring-slate-700/60">
+    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--text-muted)] ring-1 ring-[var(--surface-border)]">
       <StepNumber n={step} />
     </div>
   );

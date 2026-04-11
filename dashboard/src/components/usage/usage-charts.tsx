@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
-import { ChartContainer, CHART_COLORS, SERIES_PALETTE, AXIS_TICK_STYLE, TOOLTIP_STYLE, formatCompact, formatDateShort } from "@/components/ui/chart-theme";
+import { ChartContainer, CHART_COLORS, SERIES_PALETTE, useChartTheme, formatCompact, formatDateShort } from "@/components/ui/chart-theme";
 
 interface DailyBreakdown {
   date: string;
@@ -75,24 +75,25 @@ function formatLatencyValue(value: number): string {
 }
 
 export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, latencySummary, totals }: UsageChartsProps) {
-  const uid = useId();
-  const gradInputId = `${uid}-gradInput`;
-  const gradOutputId = `${uid}-gradOutput`;
-  const gradLatencyId = `${uid}-gradLatency`;
+   const uid = useId();
+   const { axisTickStyle, tooltipStyle } = useChartTheme();
+   const gradInputId = `${uid}-gradInput`;
+   const gradOutputId = `${uid}-gradOutput`;
+   const gradLatencyId = `${uid}-gradLatency`;
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       {dailyBreakdown && dailyBreakdown.length > 0 ? (
         <ChartContainer title="Daily Requests">
           <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
-            <LineChart data={dailyBreakdown} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
-              <XAxis dataKey="date" tickFormatter={formatDateShort} tick={AXIS_TICK_STYLE} tickLine={false} axisLine={false} />
-              <YAxis tickFormatter={formatCompact} tick={AXIS_TICK_STYLE} tickLine={false} axisLine={false} />
-              <Tooltip
-                {...TOOLTIP_STYLE}
-                labelFormatter={(label) => formatDateShort(label)}
-                formatter={(value) => [formatCompact(Number(value)), "Requests"]}
-              />
+             <LineChart data={dailyBreakdown} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+               <XAxis dataKey="date" tickFormatter={formatDateShort} tick={axisTickStyle} tickLine={false} axisLine={false} />
+               <YAxis tickFormatter={formatCompact} tick={axisTickStyle} tickLine={false} axisLine={false} />
+               <Tooltip
+                 {...tooltipStyle}
+                 labelFormatter={(label) => formatDateShort(label)}
+                 formatter={(value) => [formatCompact(Number(value)), "Requests"]}
+               />
               <Line type="monotone" dataKey="requests" stroke={CHART_COLORS.primary} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
@@ -113,14 +114,14 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                   <stop offset="100%" stopColor={CHART_COLORS.success} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
-              <XAxis dataKey="date" tickFormatter={formatDateShort} tick={AXIS_TICK_STYLE} tickLine={false} axisLine={false} />
-              <YAxis tickFormatter={formatCompact} tick={AXIS_TICK_STYLE} tickLine={false} axisLine={false} />
-              <Tooltip
-                {...TOOLTIP_STYLE}
-                labelFormatter={(label) => formatDateShort(label)}
-                formatter={(value) => [formatCompact(Number(value)), ""]}
-              />
+               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+               <XAxis dataKey="date" tickFormatter={formatDateShort} tick={axisTickStyle} tickLine={false} axisLine={false} />
+               <YAxis tickFormatter={formatCompact} tick={axisTickStyle} tickLine={false} axisLine={false} />
+               <Tooltip
+                 {...tooltipStyle}
+                 labelFormatter={(label) => formatDateShort(label)}
+                 formatter={(value) => [formatCompact(Number(value)), ""]}
+               />
               <Legend wrapperStyle={{ fontSize: 10, color: CHART_COLORS.text.muted }} />
               <Area type="monotone" dataKey="inputTokens" name="Input" stackId="1" stroke={CHART_COLORS.primary} fill={`url(#${gradInputId})`} strokeWidth={1.5} />
               <Area type="monotone" dataKey="outputTokens" name="Output" stackId="1" stroke={CHART_COLORS.success} fill={`url(#${gradOutputId})`} strokeWidth={1.5} />
@@ -146,30 +147,30 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                   <stop offset="100%" stopColor={CHART_COLORS.warning} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
-              <XAxis
-                dataKey="timestamp"
-                tickFormatter={formatLatencyTick}
-                tick={AXIS_TICK_STYLE}
-                tickLine={false}
-                axisLine={false}
-                minTickGap={20}
-              />
-              <YAxis
-                tickFormatter={(value) => `${formatCompact(Number(value))}ms`}
-                tick={AXIS_TICK_STYLE}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip
-                {...TOOLTIP_STYLE}
-                labelFormatter={(label, payload) => {
-                  const point = payload?.[0]?.payload as LatencyPoint | undefined;
-                  const status = point == null ? "Unknown" : point.failed ? "Failed" : "Success";
-                  return `${formatLatencyLabel(label)} • ${point?.model ?? "Unknown model"} • ${status}`;
-                }}
-                formatter={(value) => [formatLatencyValue(Number(value)), "Latency"]}
-              />
+               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+               <XAxis
+                 dataKey="timestamp"
+                 tickFormatter={formatLatencyTick}
+                 tick={axisTickStyle}
+                 tickLine={false}
+                 axisLine={false}
+                 minTickGap={20}
+               />
+               <YAxis
+                 tickFormatter={(value) => `${formatCompact(Number(value))}ms`}
+                 tick={axisTickStyle}
+                 tickLine={false}
+                 axisLine={false}
+               />
+               <Tooltip
+                 {...tooltipStyle}
+                 labelFormatter={(label, payload) => {
+                   const point = payload?.[0]?.payload as LatencyPoint | undefined;
+                   const status = point == null ? "Unknown" : point.failed ? "Failed" : "Success";
+                   return `${formatLatencyLabel(label)} • ${point?.model ?? "Unknown model"} • ${status}`;
+                 }}
+                 formatter={(value) => [formatLatencyValue(Number(value)), "Latency"]}
+               />
               {latencySummary && latencySummary.p95Ms > 0 ? (
                 <ReferenceLine y={latencySummary.p95Ms} stroke={CHART_COLORS.rose} strokeDasharray="4 4" ifOverflow="extendDomain" />
               ) : null}
@@ -212,9 +213,9 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                   ))}
                 </Pie>
                 <Tooltip
-                  {...TOOLTIP_STYLE}
-                  formatter={(value) => [formatCompact(Number(value)), "Requests"]}
-                />
+                   {...tooltipStyle}
+                   formatter={(value) => [formatCompact(Number(value)), "Requests"]}
+                 />
                 <Legend
                   wrapperStyle={{ fontSize: 10, color: CHART_COLORS.text.muted }}
                   formatter={(value) => value.length > 20 ? value.slice(0, 18) + "\u2026" : value}

@@ -76,10 +76,10 @@ export function AgentSkillsSection({ agentName, config, onSkillsChange }: AgentS
             title={`${skill.description}${excluded ? " (excluded)" : ""}`}
             className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors ${
               enabled
-                ? "border-[#e5e5e5] bg-[#f5f5f5] text-black"
+                ? "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-primary)]"
                 : excluded
                   ? "border-red-200 bg-red-50 text-red-600/70 line-through"
-                  : "border-[#e5e5e5] bg-[#f5f5f5] text-[#999] hover:text-[#777169] hover:border-[#ddd]"
+                  : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-muted)] hover:text-[var(--text-muted)] hover:border-[var(--surface-border)]"
             }`}
           >
             <span className={`inline-block w-1.5 h-1.5 rounded-full ${enabled ? "bg-emerald-500" : excluded ? "bg-red-400" : "bg-[#ddd]"}`} />

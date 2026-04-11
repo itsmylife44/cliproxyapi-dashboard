@@ -198,10 +198,10 @@ export function QuotaAlerts() {
   const hasSavedConfig = settings.botToken.length > 0 && settings.chatId.length > 0;
 
   return (
-    <section className="space-y-3 rounded-lg border border-[#e5e5e5] bg-white p-4">
+    <section className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
       <div>
-        <h2 className="text-sm font-semibold tracking-tight text-black">Telegram Alerts</h2>
-        <p className="mt-0.5 text-xs text-[#777169]">Get notified when quota drops below a threshold.</p>
+        <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">Telegram Alerts</h2>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">Get notified when quota drops below a threshold.</p>
       </div>
 
       <div className="space-y-3">
@@ -215,7 +215,7 @@ export function QuotaAlerts() {
               "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors",
               settings.enabled
                 ? "bg-blue-500 border-blue-500"
-                : "bg-[#f5f5f5] border-[#e5e5e5]"
+                : "bg-[var(--surface-muted)] border-[var(--surface-border)]"
             )}
           >
             <span
@@ -225,11 +225,11 @@ export function QuotaAlerts() {
               )}
             />
           </button>
-          <span className="text-xs text-[#4e4e4e]">Enable alerts</span>
+            <span className="text-xs text-[var(--text-secondary)]">Enable alerts</span>
         </label>
 
         <div className="space-y-1">
-          <label htmlFor="tg-bot-token" className="text-xs font-medium text-[#777169]">Bot Token</label>
+          <label htmlFor="tg-bot-token" className="text-xs font-medium text-[var(--text-muted)]">Bot Token</label>
           <div className="flex gap-2">
             <Input
               type={showToken ? "text" : "password"}
@@ -247,22 +247,22 @@ export function QuotaAlerts() {
               {showToken ? "Hide" : "Show"}
             </Button>
           </div>
-          <p className="text-[10px] text-[#777169]">Create a bot via @BotFather on Telegram</p>
+          <p className="text-[10px] text-[var(--text-muted)]">Create a bot via @BotFather on Telegram</p>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="tg-chat-id" className="text-xs font-medium text-[#777169]">Chat ID</label>
+          <label htmlFor="tg-chat-id" className="text-xs font-medium text-[var(--text-muted)]">Chat ID</label>
           <Input
             name="tg-chat-id"
             value={settings.chatId}
             onChange={(v) => setSettings((s) => ({ ...s, chatId: v }))}
             placeholder="-1001234567890"
           />
-          <p className="text-[10px] text-[#777169]">Your Telegram user/group ID. Use @userinfobot to find it</p>
+          <p className="text-[10px] text-[var(--text-muted)]">Your Telegram user/group ID. Use @userinfobot to find it</p>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="tg-threshold" className="text-xs font-medium text-[#777169]">Threshold %</label>
+          <label htmlFor="tg-threshold" className="text-xs font-medium text-[var(--text-muted)]">Threshold %</label>
           <Input
             type="number"
             name="tg-threshold"
@@ -277,11 +277,11 @@ export function QuotaAlerts() {
             }}
             placeholder="20"
           />
-          <p className="text-[10px] text-[#777169]">Alert when any account drops below this capacity</p>
+          <p className="text-[10px] text-[var(--text-muted)]">Alert when any account drops below this capacity</p>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="tg-check-interval" className="text-xs font-medium text-[#777169]">Check Interval (minutes)</label>
+          <label htmlFor="tg-check-interval" className="text-xs font-medium text-[var(--text-muted)]">Check Interval (minutes)</label>
           <Input
             type="number"
             name="tg-check-interval"
@@ -296,11 +296,11 @@ export function QuotaAlerts() {
             }}
             placeholder="5"
           />
-          <p className="text-[10px] text-[#777169]">How often to check quota levels (1-1440 min, default: 5)</p>
+          <p className="text-[10px] text-[var(--text-muted)]">How often to check quota levels (1-1440 min, default: 5)</p>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="tg-cooldown" className="text-xs font-medium text-[#777169]">Cooldown (minutes)</label>
+          <label htmlFor="tg-cooldown" className="text-xs font-medium text-[var(--text-muted)]">Cooldown (minutes)</label>
           <Input
             type="number"
             name="tg-cooldown"
@@ -315,11 +315,11 @@ export function QuotaAlerts() {
             }}
             placeholder="60"
           />
-          <p className="text-[10px] text-[#777169]">Minimum time between notifications (1-1440 min, default: 60)</p>
+          <p className="text-[10px] text-[var(--text-muted)]">Minimum time between notifications (1-1440 min, default: 60)</p>
         </div>
 
         <div className="space-y-1.5">
-          <p className="text-xs font-medium text-[#777169]">Monitored Providers</p>
+          <p className="text-xs font-medium text-[var(--text-muted)]">Monitored Providers</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1.5">
             {ALERT_PROVIDERS.map((provider) => {
               const isChecked = settings.providers.includes(provider.key);
@@ -336,14 +336,14 @@ export function QuotaAlerts() {
                           : [...s.providers, provider.key],
                       }));
                     }}
-                    className="size-3.5 rounded border-[#e5e5e5] bg-[#f5f5f5] text-blue-500 focus:ring-blue-500/30 focus:ring-offset-0"
+                    className="size-3.5 rounded border-[var(--surface-border)] bg-[var(--surface-muted)] text-blue-500 focus:ring-blue-500/30 focus:ring-offset-0"
                   />
-                  <span className="text-xs text-[#4e4e4e]">{provider.label}</span>
+                  <span className="text-xs text-[var(--text-secondary)]">{provider.label}</span>
                 </label>
               );
             })}
           </div>
-          <p className="text-[10px] text-[#777169]">Only selected providers will trigger alerts</p>
+          <p className="text-[10px] text-[var(--text-muted)]">Only selected providers will trigger alerts</p>
         </div>
 
         <div className="flex flex-wrap gap-2 pt-1">
@@ -369,8 +369,8 @@ export function QuotaAlerts() {
         </div>
 
         {checkResult && checkResult.accounts && checkResult.accounts.length > 0 && (
-          <div className="mt-2 space-y-1 rounded-md border border-[#e5e5e5] bg-white p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
+          <div className="mt-2 space-y-1 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
               Check Result — {checkResult.breachedCount ?? 0} account(s) breached
             </p>
             <div className="space-y-0.5">
@@ -379,7 +379,7 @@ export function QuotaAlerts() {
                   key={`${a.provider}-${a.account}-${a.window}`}
                   className="flex items-center justify-between text-xs"
                 >
-                  <span className="text-[#4e4e4e]">
+                  <span className="text-[var(--text-secondary)]">
                     {a.provider} / {a.account} / {a.window}
                   </span>
                   <span

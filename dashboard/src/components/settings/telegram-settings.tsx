@@ -49,15 +49,15 @@ export function TelegramSettings({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-sm font-semibold text-black">Config Sync</h2>
-        <p className="text-xs text-[#777169]">Sync tokens for OpenCode configuration</p>
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Config Sync</h2>
+        <p className="text-xs text-[var(--text-muted)]">Sync tokens for OpenCode configuration</p>
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-black">Sync Tokens</h3>
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Sync Tokens</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-[#777169]">
+            <p className="text-sm text-[var(--text-muted)]">
               Generate tokens to sync OpenCode configurations
             </p>
             <Button onClick={onGenerateToken} disabled={generatingToken}>
@@ -72,14 +72,14 @@ export function TelegramSettings({
                 <button
                   type="button"
                   onClick={onClearGeneratedToken}
-                  className="text-[#777169] hover:text-black"
+                  className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                   aria-label="Dismiss token notification"
                 >
                   ✕
                 </button>
               </div>
               <div className="space-y-2">
-                <div className="break-all rounded-sm border border-[#e5e5e5] bg-white p-3 font-mono text-xs text-black">
+                  <div className="break-all rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 font-mono text-xs text-[var(--text-primary)]">
                   {generatedToken}
                 </div>
                 <Button variant="secondary" onClick={() => onCopyToken(generatedToken)}>
@@ -95,33 +95,33 @@ export function TelegramSettings({
           )}
 
           {syncTokensLoading ? (
-            <div className="p-4 text-center text-[#777169]">Loading tokens...</div>
+            <div className="p-4 text-center text-[var(--text-muted)]">Loading tokens...</div>
           ) : syncTokens.length === 0 ? (
-            <div className="rounded-sm border border-[#e5e5e5] bg-white p-4 text-sm text-[#777169]">
+            <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-sm text-[var(--text-muted)]">
               No sync tokens configured. Generate one to get started.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-sm border border-[#e5e5e5] bg-white">
+            <div className="overflow-hidden rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)]">
               {syncTokens.map((token) => (
                 <div
                   key={token.id}
-                  className="space-y-3 border-b border-[#e5e5e5] px-3 py-3 last:border-b-0"
+                  className="space-y-3 border-b border-[var(--surface-border)] px-3 py-3 last:border-b-0"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <div className="text-sm font-medium text-black">{token.name}</div>
+                        <div className="text-sm font-medium text-[var(--text-primary)]">{token.name}</div>
                         {token.isRevoked && (
                           <span className="rounded-sm border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-600">
                             Revoked
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-[#777169]">
+                      <div className="text-xs text-[var(--text-muted)]">
                         Created: {new Date(token.createdAt).toLocaleDateString()}
                       </div>
                       {token.lastUsedAt && (
-                        <div className="text-xs text-[#777169]">
+                        <div className="text-xs text-[var(--text-muted)]">
                           Last used: {new Date(token.lastUsedAt).toLocaleDateString()}
                         </div>
                       )}
@@ -136,15 +136,15 @@ export function TelegramSettings({
                     )}
                   </div>
                   {!token.isRevoked && (
-                    <div className="flex flex-col gap-2 border-t border-[#e5e5e5] pt-2 sm:flex-row sm:items-center sm:gap-3 sm:pt-1">
-                      <label htmlFor={`sync-api-key-${token.id}`} className="whitespace-nowrap text-xs font-medium text-[#777169]">
+                    <div className="flex flex-col gap-2 border-t border-[var(--surface-border)] pt-2 sm:flex-row sm:items-center sm:gap-3 sm:pt-1">
+                      <label htmlFor={`sync-api-key-${token.id}`} className="whitespace-nowrap text-xs font-medium text-[var(--text-muted)]">
                         Sync API Key
                       </label>
                       <select
                         id={`sync-api-key-${token.id}`}
                         value={token.syncApiKeyId || ""}
                         onChange={(e) => onUpdateTokenApiKey(token.id, e.target.value)}
-                        className="flex-1 rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] px-3 py-1.5 font-mono text-xs text-black transition-colors focus:border-blue-400/50 focus:outline-none"
+                        className="flex-1 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-1.5 font-mono text-xs text-[var(--text-primary)] transition-colors focus:border-blue-400/50 focus:outline-none"
                       >
                         {availableApiKeys.length > 0 ? (
                           <>
@@ -171,11 +171,11 @@ export function TelegramSettings({
           )}
         </div>
 
-        <div className="border-t border-[#e5e5e5] pt-4">
+        <div className="border-t border-[var(--surface-border)] pt-4">
           <button
             type="button"
             onClick={onToggleInstructions}
-            className="flex items-center gap-2 text-sm font-medium text-black hover:text-black"
+            className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)] hover:text-[var(--text-primary)]"
           >
             <span>{showInstructions ? "▼" : "▶"}</span>
             Setup Instructions

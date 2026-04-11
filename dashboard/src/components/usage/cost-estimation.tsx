@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { ChartContainer, SERIES_PALETTE, AXIS_TICK_STYLE, TOOLTIP_STYLE, formatCompact } from "@/components/ui/chart-theme";
+import { ChartContainer, SERIES_PALETTE, useChartTheme, formatCompact } from "@/components/ui/chart-theme";
 import {
   resolveModelPrice,
   calculateCost,
@@ -114,12 +114,13 @@ function truncateModelName(name: string, maxLen = 28): string {
 /* ── Component ────────────────────────────────────────────── */
 
 export function CostEstimation({ keys }: CostEstimationProps) {
-  const customPricing = useMemo(() => loadCustomPricing(), []);
-  const costBreakdown = useMemo(() => buildCostBreakdown(keys, customPricing), [keys, customPricing]);
-  const providerBreakdown = useMemo(() => aggregateByProvider(costBreakdown), [costBreakdown]);
-  const totalEstimatedCost = useMemo(() => costBreakdown.reduce((sum, e) => sum + e.estimatedCost, 0), [costBreakdown]);
-  const unpricedModels = useMemo(() => costBreakdown.filter(e => !e.priced), [costBreakdown]);
-  const pricedModels = useMemo(() => costBreakdown.filter(e => e.priced), [costBreakdown]);
+   const { axisTickStyle, tooltipStyle } = useChartTheme();
+   const customPricing = useMemo(() => loadCustomPricing(), []);
+   const costBreakdown = useMemo(() => buildCostBreakdown(keys, customPricing), [keys, customPricing]);
+   const providerBreakdown = useMemo(() => aggregateByProvider(costBreakdown), [costBreakdown]);
+   const totalEstimatedCost = useMemo(() => costBreakdown.reduce((sum, e) => sum + e.estimatedCost, 0), [costBreakdown]);
+   const unpricedModels = useMemo(() => costBreakdown.filter(e => !e.priced), [costBreakdown]);
+   const pricedModels = useMemo(() => costBreakdown.filter(e => e.priced), [costBreakdown]);
 
   // Top models for bar chart (max 8)
   const topModelChart = useMemo(() =>
@@ -158,29 +159,29 @@ export function CostEstimation({ keys }: CostEstimationProps) {
           <ChartContainer title="Cost by Model" subtitle="Top models by estimated cost (USD)">
             <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
               <BarChart data={topModelChart} margin={{ top: 4, right: 8, left: -8, bottom: 0 }} layout="vertical">
-                <XAxis
-                  type="number"
-                  tickFormatter={(v) => formatUSD(v)}
-                  tick={AXIS_TICK_STYLE}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={110}
-                  tick={{ ...AXIS_TICK_STYLE, fontSize: 9 }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip
-                  {...TOOLTIP_STYLE}
-                  formatter={(value) => [formatUSD(Number(value)), "Est. Cost"]}
-                  labelFormatter={(_label, payload) => {
-                    const item = payload?.[0]?.payload as { fullName: string; provider: string } | undefined;
-                    return `${item?.fullName ?? _label} (${item?.provider ?? "Unknown"})`;
-                  }}
-                />
+               <XAxis
+                   type="number"
+                   tickFormatter={(v) => formatUSD(v)}
+                   tick={axisTickStyle}
+                   tickLine={false}
+                   axisLine={false}
+                 />
+                 <YAxis
+                   type="category"
+                   dataKey="name"
+                   width={110}
+                   tick={{ ...axisTickStyle, fontSize: 9 }}
+                   tickLine={false}
+                   axisLine={false}
+                 />
+                 <Tooltip
+                   {...tooltipStyle}
+                   formatter={(value) => [formatUSD(Number(value)), "Est. Cost"]}
+                   labelFormatter={(_label, payload) => {
+                     const item = payload?.[0]?.payload as { fullName: string; provider: string } | undefined;
+                     return `${item?.fullName ?? _label} (${item?.provider ?? "Unknown"})`;
+                   }}
+                 />
                 <Bar dataKey="cost" radius={[0, 4, 4, 0]} maxBarSize={20}>
                   {topModelChart.map((entry) => (
                     <Cell key={entry.fullName} fill={SERIES_PALETTE[topModelChart.indexOf(entry) % SERIES_PALETTE.length]} />

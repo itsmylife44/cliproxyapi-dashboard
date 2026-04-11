@@ -480,11 +480,11 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     return (
       <div className="space-y-3">
         <div className="border-l-4 border-amber-300 bg-amber-50 p-4 rounded-r-xl">
-          <div className="text-sm font-medium text-black mb-1">API Key Required</div>
-          <p className="text-sm text-[#4e4e4e]">Create an API key to generate your configuration.</p>
+          <div className="text-sm font-medium text-[var(--text-primary)] mb-1">API Key Required</div>
+          <p className="text-sm text-[var(--text-secondary)]">Create an API key to generate your configuration.</p>
           <Link
             href="/dashboard/api-keys"
-            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] text-black text-sm font-medium hover:bg-[#eee] transition-colors"
+            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] text-[var(--text-primary)] text-sm font-medium hover:bg-[var(--surface-hover)] transition-colors"
           >
             Create API Key →
           </Link>
@@ -498,11 +498,11 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
       <div className="space-y-4">
         <div className="border-l-4 border-amber-300 bg-amber-50 p-4 text-sm rounded-r-xl">
           <p className="text-black font-medium mb-1">No providers configured</p>
-          <p className="text-[#777169] text-xs">
+          <p className="text-[var(--text-muted)] text-xs">
             You need to configure at least one AI provider before generating an Oh My Open Agent config. Head to the{" "}
             <Link
               href="/dashboard/providers"
-              className="text-[#4e4e4e] font-medium hover:text-black underline underline-offset-2 decoration-[#ccc]"
+              className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[var(--surface-border)]"
             >
               Providers
             </Link>{" "}
@@ -630,15 +630,15 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <p className="text-sm text-[#4e4e4e]">
+        <p className="text-sm text-[var(--text-secondary)]">
           Assignments are grouped by tier so core agents stay separated from fast and creative workflows. Click any
           model to override it. Changes save automatically and sync via Config Sync.
           {saving && <span className="ml-2 text-amber-700/70 text-xs">Saving...</span>}
         </p>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-[#777169]">Preset:</span>
+          <span className="text-sm text-[var(--text-muted)]">Preset:</span>
           <select
-            className="px-3 py-1.5 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] text-sm text-black focus:outline-none focus:border-black/20/50"
+            className="px-3 py-1.5 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]/20"
             disabled={presetsLoading || presets.length === 0}
             onChange={(e) => {
               const presetName = e.target.value;
@@ -710,7 +710,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-xs font-medium text-[#777169] hover:text-black transition-colors"
+        className="flex items-center gap-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
       >
         <svg
           width="12"

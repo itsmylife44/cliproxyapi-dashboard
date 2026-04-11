@@ -30,7 +30,7 @@ export function CopyBlock({ code }: CopyBlockProps) {
 
   return (
     <div className="relative group overflow-hidden">
-      <pre className="bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg p-3 pr-14 font-mono text-xs sm:text-sm text-black overflow-x-auto whitespace-pre-wrap break-all">
+      <pre className="bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg p-3 pr-14 font-mono text-xs sm:text-sm text-[var(--text-primary)] overflow-x-auto whitespace-pre-wrap break-all">
         {code}
       </pre>
       <span className="sr-only" aria-live="polite">
@@ -40,7 +40,7 @@ export function CopyBlock({ code }: CopyBlockProps) {
         type="button"
         onClick={handleCopy}
         aria-label={copied ? "Copied to clipboard" : "Copy to clipboard"}
-        className="absolute top-3 right-3 px-3 py-1.5 text-xs font-medium rounded-lg border transition-[color,background-color,border-color,transform] duration-200 bg-white border-[#e5e5e5] text-[#4e4e4e] hover:bg-[#f5f5f5] hover:text-black active:scale-95"
+        className="absolute top-3 right-3 px-3 py-1.5 text-xs font-medium rounded-lg border transition-[color,background-color,border-color,transform] duration-200 bg-[var(--surface-base)] border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] active:scale-95"
       >
         {copied ? (
           <span className="flex items-center gap-1.5">

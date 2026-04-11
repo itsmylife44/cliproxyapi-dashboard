@@ -23,8 +23,8 @@ const LSP_PRESETS = [
 
 const PRESET_BUTTON_STYLES: Record<string, string> = {
   emerald: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300",
-  cyan: "bg-[#f5f5f5] border-[#e5e5e5] text-[#4e4e4e] hover:bg-[#eee] hover:border-[#ccc]",
-  teal: "bg-[#f5f5f5] border-[#e5e5e5] text-[#4e4e4e] hover:bg-[#eee] hover:border-[#ccc]",
+  cyan: "bg-[var(--surface-muted)] border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:border-[var(--surface-border)]",
+  teal: "bg-[var(--surface-muted)] border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:border-[var(--surface-border)]",
   blue: "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 hover:border-blue-300",
 };
 
@@ -62,7 +62,7 @@ export function LspServersSection({
             </svg>
             LSP Servers
           </h3>
-          <p className="text-xs text-[#777169] mt-1">Configure Language Server Protocol for code intelligence</p>
+          <p className="text-xs text-[var(--text-muted)] mt-1">Configure Language Server Protocol for code intelligence</p>
           <code className="text-[10px] text-emerald-700/70 font-mono block mt-1.5 bg-emerald-100/60 border border-emerald-200/60 px-2 py-1 rounded">
             {`"lsp": { "typescript": { "command": ["typescript-language-server", "--stdio"] } }`}
           </code>
@@ -95,14 +95,14 @@ export function LspServersSection({
           placeholder="language"
           value={lspLanguage}
           onChange={(e) => onLspLanguageChange(e.target.value)}
-          className="px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black placeholder:text-[#aaa] focus:outline-none focus:border-black/20"
+          className="px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/20"
         />
         <input
           type="text"
           placeholder="command"
           value={lspCommand}
           onChange={(e) => onLspCommandChange(e.target.value)}
-          className="px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black placeholder:text-[#aaa] focus:outline-none focus:border-black/20"
+          className="px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/20"
         />
         <input
           type="text"
@@ -115,7 +115,7 @@ export function LspServersSection({
               onLspAdd();
             }
           }}
-          className="px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black placeholder:text-[#aaa] focus:outline-none focus:border-black/20"
+          className="px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/20"
         />
         <button
           type="button"
@@ -136,18 +136,18 @@ export function LspServersSection({
               <div className="flex items-center gap-2 text-xs font-mono">
                 <span className="text-emerald-700">{language}</span>
                 <span className="text-[#aaa]">&rarr;</span>
-                <span className="text-[#777169]">{entry.command.join(" ")}</span>
+                <span className="text-[var(--text-muted)]">{entry.command.join(" ")}</span>
                 {entry.extensions && entry.extensions.length > 0 && (
                   <>
                     <span className="text-[#aaa]">|</span>
-                    <span className="text-[#777169]">{entry.extensions.join(", ")}</span>
+                    <span className="text-[var(--text-muted)]">{entry.extensions.join(", ")}</span>
                   </>
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => onLspRemove(language)}
-                className="text-[#999] hover:text-red-600 transition-colors"
+                className="text-[var(--text-muted)] hover:text-red-600 transition-colors"
               >
                 &times;
               </button>

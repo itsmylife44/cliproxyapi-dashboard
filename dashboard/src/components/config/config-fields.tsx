@@ -21,7 +21,7 @@ export function Toggle({
         border-2 border-transparent transition-colors duration-200 ease-in-out
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-transparent
         disabled:cursor-not-allowed disabled:opacity-50
-        ${enabled ? 'bg-emerald-500' : 'bg-[#e5e5e5]'}
+        ${enabled ? 'bg-emerald-500' : 'bg-[var(--surface-border)]'}
       `}
     >
       <span
@@ -52,8 +52,8 @@ export function Select({
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
       className="
-        w-full rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] px-3 py-2 text-sm
-        text-black
+        w-full rounded-sm border border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm
+        text-[var(--text-primary)]
         focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30
         disabled:opacity-50 disabled:cursor-not-allowed
         transition-colors duration-200
@@ -71,7 +71,7 @@ export function Select({
 export function SectionHeader({ title }: { title: string }) {
   return (
     <div className="mb-3">
-      <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-[#777169]">{title}</h3>
+      <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{title}</h3>
     </div>
   );
 }
@@ -87,8 +87,8 @@ export function ConfigField({
 }) {
   return (
     <div className="space-y-2">
-      <div className="block text-sm font-semibold text-black">{label}</div>
-      {description && <p className="text-xs text-[#777169]">{description}</p>}
+      <div className="block text-sm font-semibold text-[var(--text-primary)]">{label}</div>
+      {description && <p className="text-xs text-[var(--text-muted)]">{description}</p>}
       <div>{children}</div>
     </div>
   );

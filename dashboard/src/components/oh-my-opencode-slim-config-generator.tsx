@@ -212,11 +212,11 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
     return (
       <div className="space-y-3">
         <div className="border-l-4 border-amber-300 bg-amber-50 p-4 rounded-r-xl">
-          <div className="text-sm font-medium text-black mb-1">API Key Required</div>
-          <p className="text-sm text-[#4e4e4e]">Create an API key to generate your slim configuration.</p>
+          <div className="text-sm font-medium text-[var(--text-primary)] mb-1">API Key Required</div>
+          <p className="text-sm text-[var(--text-secondary)]">Create an API key to generate your slim configuration.</p>
           <Link
             href="/dashboard/api-keys"
-            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] text-black text-sm font-medium hover:bg-[#eee] transition-colors"
+            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] text-[var(--text-primary)] text-sm font-medium hover:bg-[var(--surface-hover)] transition-colors"
           >
             Create API Key →
           </Link>
@@ -230,11 +230,11 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
       <div className="space-y-4">
         <div className="border-l-4 border-amber-300 bg-amber-50 p-4 text-sm rounded-r-xl">
           <p className="text-black font-medium mb-1">No providers configured</p>
-          <p className="text-[#777169] text-xs">
+          <p className="text-[var(--text-muted)] text-xs">
             Configure at least one AI provider before generating a slim config. Head to{" "}
             <Link
               href="/dashboard/providers"
-              className="text-[#4e4e4e] font-medium hover:text-black underline underline-offset-2 decoration-[#ccc]"
+              className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[var(--surface-border)]"
             >
               Providers
             </Link>
@@ -305,7 +305,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-[#4e4e4e]">
+      <p className="text-sm text-[var(--text-secondary)]">
         Slim uses 6 specialized agents (orchestrator, oracle, designer, explorer, librarian, fixer) with a dedicated fallback system.
         Changes save automatically.
         {saving && <span className="ml-2 text-amber-700/70 text-xs">Saving...</span>}
@@ -333,7 +333,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-xs font-medium text-[#777169] hover:text-black transition-colors"
+        className="flex items-center gap-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
       >
         <svg
           width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"

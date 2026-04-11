@@ -131,16 +131,16 @@ export function ModelBadge({
           ref={btnRef}
           type="button"
           onClick={handleOpen}
-          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-l-lg text-xs font-mono cursor-pointer transition-colors hover:bg-[#f0f0f0] ${
+          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-l-lg text-xs font-mono cursor-pointer transition-colors hover:bg-[var(--surface-hover)] ${
             isOverride
-              ? "bg-[#f5f5f5] border border-[#e5e5e5] text-[#4e4e4e]"
-              : "bg-[#f5f5f5] border border-[#e5e5e5] text-[#4e4e4e]"
+              ? "bg-[var(--surface-muted)] border border-[var(--surface-border)] text-[var(--text-secondary)]"
+              : "bg-[var(--surface-muted)] border border-[var(--surface-border)] text-[var(--text-secondary)]"
           }`}
         >
           {showName && (
             <>
-              <span className="text-black">{name}</span>
-              <span className="text-[#aaa]">&rarr;</span>
+              <span className="text-[var(--text-primary)]">{name}</span>
+              <span className="text-[var(--text-muted)]">&rarr;</span>
             </>
           )}
           <span>{model}</span>
@@ -156,7 +156,7 @@ export function ModelBadge({
             className={`px-1.5 py-1 border border-l-0 rounded-r-lg text-[10px] transition-colors cursor-pointer ${
               showExtra || hasExtraValues
                 ? "bg-amber-50 border-amber-200 text-amber-700/80 hover:bg-amber-50"
-                : "bg-[#f5f5f5] border-[#e5e5e5] text-[#aaa] hover:text-[#777169] hover:bg-[#f0f0f0]"
+                : "bg-[var(--surface-muted)] border-[var(--surface-border)] text-[var(--text-muted)] hover:text-[var(--text-muted)] hover:bg-[var(--surface-hover)]"
             }`}
             title="Configure variant, temperature, and more"
           >
@@ -196,7 +196,7 @@ export function ModelBadge({
               max={2}
               value={extraFields?.temperature ?? ""}
               onChange={(e) => onFieldChange("temperature", e.target.value ? Number(e.target.value) : undefined)}
-              className="w-14 px-1.5 py-0.5 text-[10px] bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#4e4e4e] placeholder:text-[#bbb] focus:outline-none focus:border-black/15"
+              className="w-14 px-1.5 py-0.5 text-[10px] bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded text-[var(--text-secondary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/15"
             />
             <input
               type="text"
@@ -206,16 +206,16 @@ export function ModelBadge({
                 const key = extraFields?.thirdFieldKey;
                 if (key) onFieldChange(key, e.target.value || undefined);
               }}
-              className="flex-1 min-w-0 w-24 px-1.5 py-0.5 text-[10px] bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#4e4e4e] placeholder:text-[#bbb] focus:outline-none focus:border-black/15"
+              className="flex-1 min-w-0 w-24 px-1.5 py-0.5 text-[10px] bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded text-[var(--text-secondary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/15"
             />
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#aaa]">Fallbacks</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Fallbacks</p>
             <div className="flex flex-wrap gap-1">
               {(extraFields?.fallback_models ?? []).map((fm) => (
                 <span
                   key={fm}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#777169]"
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded text-[var(--text-muted)]"
                 >
                   {fm}
                   <button
@@ -224,7 +224,7 @@ export function ModelBadge({
                       const updated = (extraFields?.fallback_models ?? []).filter((m) => m !== fm);
                       onFieldChange("fallback_models", updated.length > 0 ? updated : undefined);
                     }}
-                    className="text-[#aaa] hover:text-red-600/80 transition-colors cursor-pointer leading-none"
+                    className="text-[var(--text-muted)] hover:text-red-600/80 transition-colors cursor-pointer leading-none"
                     aria-label={`Remove fallback ${fm}`}
                   >
                     ×
@@ -242,7 +242,7 @@ export function ModelBadge({
                       if (!e.target.value) return;
                       onFieldChange("fallback_models", [...current, e.target.value]);
                     }}
-                    className="px-1.5 py-0.5 text-[10px] font-mono bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#777169] focus:outline-none focus:border-black/15 cursor-pointer"
+                    className="px-1.5 py-0.5 text-[10px] font-mono bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/15 cursor-pointer"
                   >
                     <option value="" className="bg-white">+ add fallback</option>
                     {choices.map((m) => (
@@ -254,14 +254,14 @@ export function ModelBadge({
             </div>
           </div>
           {extraFields?.supportsUltrawork && (
-            <div className="space-y-1 pt-1 border-t border-[#e5e5e5]">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#aaa]">Ultrawork</p>
+                <div className="space-y-1 pt-1 border-t border-[var(--surface-border)]">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Ultrawork</p>
                 {hasUltraworkValues && (
                   <button
                     type="button"
                     onClick={() => onFieldChange("ultrawork", undefined)}
-                    className="text-[10px] text-[#aaa] hover:text-red-600/80 transition-colors cursor-pointer"
+                    className="text-[10px] text-[var(--text-muted)] hover:text-red-600/80 transition-colors cursor-pointer"
                   >
                     clear
                   </button>
@@ -277,7 +277,7 @@ export function ModelBadge({
                       model: value,
                     });
                   }}
-                  className="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] font-mono bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#4e4e4e] focus:outline-none focus:border-black/15 cursor-pointer"
+                  className="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] font-mono bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)]/15 cursor-pointer"
                 >
                   <option value="" className="bg-white">select model...</option>
                   {availableModels.map((m) => (
@@ -295,7 +295,7 @@ export function ModelBadge({
                       variant: value,
                     });
                   }}
-                  className="w-16 px-1.5 py-0.5 text-[10px] bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#4e4e4e] placeholder:text-[#bbb] focus:outline-none focus:border-black/15"
+              className="w-16 px-1.5 py-0.5 text-[10px] bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded text-[var(--text-secondary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/15"
                 />
                 <input
                   type="number"
@@ -311,7 +311,7 @@ export function ModelBadge({
                       temperature: value,
                     });
                   }}
-                  className="w-14 px-1.5 py-0.5 text-[10px] bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#4e4e4e] placeholder:text-[#bbb] focus:outline-none focus:border-black/15"
+                  className="w-14 px-1.5 py-0.5 text-[10px] bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded text-[var(--text-secondary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/15"
                 />
               </div>
             </div>
@@ -321,18 +321,18 @@ export function ModelBadge({
 
       {open && (
         <div
-          className={`absolute z-[9999] w-72 max-h-64 overflow-hidden rounded-xl border border-[#e5e5e5] bg-white shadow-[rgba(0,0,0,0.06)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_4px_8px] ${
+          className={`absolute z-[9999] w-72 max-h-64 overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-base)] shadow-[rgba(0,0,0,0.06)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_4px_8px] ${
             openUp ? "bottom-full mb-1" : "top-full mt-1"
           } left-0`}
         >
-          <div className="p-2 border-b border-[#e5e5e5]">
+          <div className="p-2 border-b border-[var(--surface-border)]">
             <input
               ref={inputRef}
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search models..."
-              className="w-full px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black placeholder:text-[#aaa] focus:outline-none focus:border-black/20"
+              className="w-full px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/20"
             />
           </div>
           <div className="overflow-y-auto max-h-48">
@@ -343,15 +343,15 @@ export function ModelBadge({
                 setOpen(false);
                 setSearch("");
               }}
-              className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors hover:bg-[#f0f0f0] ${
-                !isOverride ? "text-[#4e4e4e] bg-[#f5f5f5]" : "text-[#777169]"
+              className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors hover:bg-[var(--surface-hover)] ${
+                !isOverride ? "text-[var(--text-secondary)] bg-[var(--surface-muted)]" : "text-[var(--text-muted)]"
               }`}
             >
               Auto (default)
             </button>
             {groupedFilteredModels.map((group) => (
               <div key={group.provider} className="border-t border-white/5 first:border-t-0">
-                <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#aaa]">
+                <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                   {group.provider}
                 </div>
                 {group.models.map((providerModel) => (
@@ -363,10 +363,10 @@ export function ModelBadge({
                       setOpen(false);
                       setSearch("");
                     }}
-                    className={`flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs font-mono transition-colors hover:bg-[#f0f0f0] ${
+                    className={`flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs font-mono transition-colors hover:bg-[var(--surface-hover)] ${
                       isOverride && model === providerModel
-                        ? "text-[#4e4e4e] bg-[#f5f5f5]"
-                        : "text-[#4e4e4e]"
+                        ? "text-[var(--text-secondary)] bg-[var(--surface-muted)]"
+                        : "text-[var(--text-secondary)]"
                     }`}
                   >
                     <span className="flex-1">{providerModel}</span>
@@ -375,7 +375,7 @@ export function ModelBadge({
               </div>
             ))}
             {groupedFilteredModels.length === 0 && (
-              <div className="px-3 py-2 text-xs text-[#aaa]">No models found</div>
+              <div className="px-3 py-2 text-xs text-[var(--text-muted)]">No models found</div>
             )}
           </div>
         </div>

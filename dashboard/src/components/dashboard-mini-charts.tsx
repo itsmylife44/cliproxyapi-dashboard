@@ -7,7 +7,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { CHART_COLORS, formatCompact, TOOLTIP_STYLE } from "@/components/ui/chart-theme";
+import { CHART_COLORS, formatCompact, useChartTheme } from "@/components/ui/chart-theme";
 
 interface DailyPoint {
   date: string;
@@ -117,14 +117,15 @@ function MiniSparkCard({
   color: string;
   gradientId: string;
 }) {
+  const { tooltipStyle } = useChartTheme();
   return (
-    <div className="rounded-md border border-[#e5e5e5] bg-white px-3 py-2">
+    <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
             {label}
           </p>
-          <p className="mt-0.5 text-sm font-semibold text-black">{value}</p>
+          <p className="mt-0.5 text-sm font-semibold text-[var(--text-primary)]">{value}</p>
         </div>
       </div>
       <div className="mt-1.5 h-10" role="img" aria-label={`${label}: ${value}`}>
@@ -137,17 +138,17 @@ function MiniSparkCard({
               </linearGradient>
             </defs>
             <Tooltip
-              contentStyle={TOOLTIP_STYLE.contentStyle}
-              labelStyle={TOOLTIP_STYLE.labelStyle}
-              itemStyle={TOOLTIP_STYLE.itemStyle}
-              formatter={(val) => [formatCompact(Number(val ?? 0)), label.split(" ")[0]]}
-              labelFormatter={(_l, payload) => {
-                const dateStr = payload?.[0]?.payload?.date;
-                if (!dateStr) return "";
-                const d = new Date(String(dateStr) + "T00:00:00");
-                return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-              }}
-            />
+               contentStyle={tooltipStyle.contentStyle}
+               labelStyle={tooltipStyle.labelStyle}
+               itemStyle={tooltipStyle.itemStyle}
+               formatter={(val) => [formatCompact(Number(val ?? 0)), label.split(" ")[0]]}
+               labelFormatter={(_l, payload) => {
+                 const dateStr = payload?.[0]?.payload?.date;
+                 if (!dateStr) return "";
+                 const d = new Date(String(dateStr) + "T00:00:00");
+                 return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+               }}
+             />
             <Area
               type="monotone"
               dataKey={dataKey}

@@ -29,7 +29,7 @@ export function ModelMappings({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <label htmlFor="models" className="text-sm font-semibold text-black">
+        <label htmlFor="models" className="text-sm font-semibold text-[var(--text-primary)]">
           Model Mappings <span className="text-red-500">*</span>
         </label>
         <Button variant="ghost" onClick={onAddModelMapping} className="px-3 py-1.5 text-xs" disabled={saving}>
@@ -66,7 +66,7 @@ export function ModelMappings({
         ))}
       </div>
       {error && <p className="mt-1.5 text-xs text-red-500">{error}</p>}
-      {!error && <p className="mt-1.5 text-xs text-[#777169]">Map upstream model names to aliases</p>}
+      {!error && <p className="mt-1.5 text-xs text-[var(--text-muted)]">Map upstream model names to aliases</p>}
     </div>
   );
 }

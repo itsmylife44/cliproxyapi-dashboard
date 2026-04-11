@@ -338,8 +338,8 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
       <div id="provider-custom" className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-black">Custom Providers</h2>
-            <p className="text-xs text-[#777169]">OpenAI-compatible endpoints and mappings</p>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Custom Providers</h2>
+            <p className="text-xs text-[var(--text-muted)]">OpenAI-compatible endpoints and mappings</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="secondary" onClick={() => setShowGroupModal(true)} className="px-2.5 py-1 text-xs">
@@ -354,22 +354,22 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
         {loading ? (
           <div className="flex items-center justify-center p-8">
             <div className="flex flex-col items-center gap-3">
-              <div className="size-8 animate-spin rounded-full border-4 border-[#ddd] border-t-blue-500"></div>
-              <p className="text-sm text-[#4e4e4e]">Loading custom providers...</p>
+              <div className="size-8 animate-spin rounded-full border-4 border-[var(--surface-border)] border-t-blue-500"></div>
+              <p className="text-sm text-[var(--text-secondary)]">Loading custom providers...</p>
             </div>
           </div>
         ) : groups.length === 0 && ungroupedProviders.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-            <div className="flex size-14 items-center justify-center rounded-full border border-[#e5e5e5] bg-white">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#777169]" aria-hidden="true">
+            <div className="flex size-14 items-center justify-center rounded-full border border-[var(--surface-border)] bg-[var(--surface-base)]">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--text-muted)]" aria-hidden="true">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
             </div>
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-black">No custom providers configured</h3>
-              <p className="text-xs text-[#777169]">Add an OpenAI-compatible provider to extend your AI capabilities</p>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">No custom providers configured</h3>
+              <p className="text-xs text-[var(--text-muted)]">Add an OpenAI-compatible provider to extend your AI capabilities</p>
             </div>
             <Button onClick={() => setShowCustomProviderModal(true)} className="px-3 py-1.5 text-xs">
               Add Custom Provider

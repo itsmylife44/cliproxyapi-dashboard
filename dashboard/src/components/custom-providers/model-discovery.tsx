@@ -35,7 +35,7 @@ export function ModelDiscovery({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-sm font-semibold text-black">Auto-Discover Models</span>
+        <span className="text-sm font-semibold text-[var(--text-primary)]">Auto-Discover Models</span>
         <Button
           variant="secondary"
           onClick={onFetchModels}
@@ -54,32 +54,32 @@ export function ModelDiscovery({
         </Button>
       </div>
       {showFetchedModels && fetchedModels.length > 0 && (
-        <div className="bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg p-3 mb-3">
+        <div className="bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg p-3 mb-3">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-black">Available Models ({fetchedModels.length})</span>
-              <span className="text-xs text-[#4e4e4e] bg-[#f0f0f0] px-2 py-0.5 rounded">
+              <span className="text-sm font-semibold text-[var(--text-primary)]">Available Models ({fetchedModels.length})</span>
+              <span className="text-xs text-[var(--text-secondary)] bg-[var(--surface-hover)] px-2 py-0.5 rounded">
                 {fetchedModels.filter(m => m.selected).length} selected
               </span>
             </div>
             <button
               type="button"
               onClick={onToggleAllFetchedModels}
-              className="text-xs text-[#4e4e4e] hover:text-black transition-colors"
+              className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
             >
               {fetchedModels.every(m => m.selected) ? "Deselect All" : "Select All"}
             </button>
           </div>
           <div className="max-h-48 overflow-y-auto space-y-1.5 mb-3">
             {fetchedModels.map((model) => (
-              <label key={model.id} className="flex items-center gap-2 cursor-pointer hover:bg-[#f5f5f5] rounded px-2 py-1.5 transition-colors">
+              <label key={model.id} className="flex items-center gap-2 cursor-pointer hover:bg-[var(--surface-hover)] rounded px-2 py-1.5 transition-colors">
                 <input
                   type="checkbox"
                   checked={model.selected}
                   onChange={() => onToggleFetchedModel(model.id)}
-                  className="w-4 h-4 rounded border-[#ddd] bg-[#f5f5f5] checked:bg-blue-500 focus:ring-2 focus:ring-blue-500/50"
+                  className="w-4 h-4 rounded border-[var(--surface-border)] bg-[var(--surface-muted)] checked:bg-blue-500 focus:ring-2 focus:ring-blue-500/50"
                 />
-                <span className="text-sm text-[#4e4e4e]">{model.id}</span>
+                <span className="text-sm text-[var(--text-secondary)]">{model.id}</span>
               </label>
             ))}
           </div>
@@ -92,7 +92,7 @@ export function ModelDiscovery({
           </Button>
         </div>
       )}
-      <p className="text-xs text-[#777169] mb-2">Or manually add model mappings below</p>
+      <p className="text-xs text-[var(--text-muted)] mb-2">Or manually add model mappings below</p>
     </div>
   );
 }

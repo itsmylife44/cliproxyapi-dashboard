@@ -116,40 +116,6 @@ export function useChartTheme() {
   };
 }
 
-/**
- * @deprecated Use `useChartTheme().axisTickStyle` for theme-aware styling.
- * Kept for backward compatibility (light-mode defaults).
- */
-export const AXIS_TICK_STYLE = {
-  fill: LIGHT_CHART.text.dimmed,
-  fontSize: 10,
-  fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
-} as const;
-
-/**
- * @deprecated Use `useChartTheme().tooltipStyle` for theme-aware styling.
- * Kept for backward compatibility (light-mode defaults).
- */
-export const TOOLTIP_STYLE = {
-  contentStyle: {
-    backgroundColor: "#ffffff",
-    border: "1px solid #e5e5e5",
-    borderRadius: "6px",
-    padding: "8px 12px",
-  },
-  labelStyle: {
-    color: LIGHT_CHART.text.primary,
-    fontSize: "11px",
-    fontWeight: 600,
-    marginBottom: "4px",
-  },
-  itemStyle: {
-    color: LIGHT_CHART.text.muted,
-    fontSize: "11px",
-    padding: "1px 0",
-  },
-  cursor: { fill: "rgba(0, 0, 0, 0.03)" },
-} as const;
 
 export function formatCompact(value: number): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;

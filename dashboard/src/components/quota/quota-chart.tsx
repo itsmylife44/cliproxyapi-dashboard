@@ -1,7 +1,7 @@
 "use client";
 
 import { RadialBarChart, RadialBar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
-import { ChartContainer, ChartEmpty, CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK_STYLE } from "@/components/ui/chart-theme";
+import { ChartContainer, ChartEmpty, CHART_COLORS, useChartTheme } from "@/components/ui/chart-theme";
 
 interface WindowCapacity {
   id: string;
@@ -25,7 +25,8 @@ interface QuotaChartProps {
 }
 
 export function QuotaChart({ overallCapacity, providerSummaries }: QuotaChartProps) {
-  return (
+   const { axisTickStyle, tooltipStyle } = useChartTheme();
+   return (
     <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
       <ChartContainer title="Overall Capacity" subtitle="Weighted across all providers">
         {providerSummaries.length === 0 ? (
@@ -92,31 +93,31 @@ export function QuotaChart({ overallCapacity, providerSummaries }: QuotaChartPro
                   barSize={8}
                   barGap={2}
                 >
-                  <XAxis
-                    type="number"
-                    domain={[0, 100]}
-                    tick={AXIS_TICK_STYLE}
-                    tickLine={false}
-                    axisLine={{ stroke: CHART_COLORS.border }}
-                    tickFormatter={(v) => `${v}%`}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="provider"
-                    tick={{ ...AXIS_TICK_STYLE, fontSize: 10 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={72}
-                  />
-                  <Tooltip
-                    {...TOOLTIP_STYLE}
-                    formatter={(value, name, props) => {
-                      if (value === null) return ["-", name];
-                      const label = name === "longTerm" ? "Long-Term" : "Short-Term";
-                      const extra = name === "longTerm" ? ` (${props.payload.healthy}/${props.payload.total} healthy${props.payload.issues > 0 ? `, ${props.payload.issues} issues` : ""})` : "";
-                      return [`${value}%${extra}`, label];
-                    }}
-                  />
+                   <XAxis
+                     type="number"
+                     domain={[0, 100]}
+                     tick={axisTickStyle}
+                     tickLine={false}
+                     axisLine={{ stroke: CHART_COLORS.border }}
+                     tickFormatter={(v) => `${v}%`}
+                   />
+                   <YAxis
+                     type="category"
+                     dataKey="provider"
+                     tick={{ ...axisTickStyle, fontSize: 10 }}
+                     tickLine={false}
+                     axisLine={false}
+                     width={72}
+                   />
+                   <Tooltip
+                     {...tooltipStyle}
+                     formatter={(value, name, props) => {
+                       if (value === null) return ["-", name];
+                       const label = name === "longTerm" ? "Long-Term" : "Short-Term";
+                       const extra = name === "longTerm" ? ` (${props.payload.healthy}/${props.payload.total} healthy${props.payload.issues > 0 ? `, ${props.payload.issues} issues` : ""})` : "";
+                       return [`${value}%${extra}`, label];
+                     }}
+                   />
                   <Legend
                     verticalAlign="top"
                     height={24}

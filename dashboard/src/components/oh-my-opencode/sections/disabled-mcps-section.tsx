@@ -20,11 +20,11 @@ export function DisabledMcpsSection({
   onMcpRemove,
 }: DisabledMcpsSectionProps) {
   return (
-    <div className="rounded-xl border border-[#e5e5e5] bg-[#fafafa] overflow-hidden transition-colors hover:border-[#e5e5e5]">
+    <div className="rounded-xl border border-[var(--surface-border)] bg-[#fafafa] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
         type="button"
         onClick={onToggleExpand}
-        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-[#777169] hover:text-black hover:bg-[#f5f5f5] transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-muted)] transition-colors"
       >
         <svg
           width="10"
@@ -41,7 +41,7 @@ export function DisabledMcpsSection({
           <polyline points="9 18 15 12 9 6" />
         </svg>
         <span className="flex-1 text-left">Disabled MCPs</span>
-        <span className="px-1.5 py-0.5 rounded-md bg-[#f5f5f5] text-[#777169] text-[10px] font-mono">
+        <span className="px-1.5 py-0.5 rounded-md bg-[var(--surface-muted)] text-[var(--text-muted)] text-[10px] font-mono">
           {disabledMcps.length}
         </span>
       </button>
@@ -59,12 +59,12 @@ export function DisabledMcpsSection({
                   onMcpAdd();
                 }
               }}
-              className="flex-1 px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black placeholder:text-[#aaa] focus:outline-none focus:border-black/20"
+              className="flex-1 px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/20"
             />
             <button
               type="button"
               onClick={onMcpAdd}
-              className="px-3 py-1.5 text-xs bg-[#f5f5f5] text-black rounded-lg hover:bg-[#eee]"
+              className="px-3 py-1.5 text-xs bg-[var(--surface-muted)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--surface-hover)]"
             >
               Add
             </button>

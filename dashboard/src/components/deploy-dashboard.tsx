@@ -147,7 +147,7 @@ export function DeployDashboard() {
       case "completed": return "text-green-600";
       case "error":
       case "failed": return "text-red-500";
-      default: return "text-[#4e4e4e]";
+      default: return "text-[var(--text-secondary)]";
     }
   };
 
@@ -155,26 +155,26 @@ export function DeployDashboard() {
     return (
       <div className="space-y-3">
         <div>
-          <h2 className="text-sm font-semibold text-black">Dashboard Deployment</h2>
-          <p className="text-xs text-[#777169]">Deploy the latest dashboard changes from the repository</p>
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Dashboard Deployment</h2>
+          <p className="text-xs text-[var(--text-muted)]">Deploy the latest dashboard changes from the repository</p>
         </div>
 
         <div className="space-y-4">
           <div className="rounded-sm border border-amber-200 bg-amber-50 p-3">
             <div className="text-sm font-medium text-amber-700">Webhook Not Configured</div>
-            <p className="mt-1 text-xs text-[#777169]">
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
               The deployment webhook is not set up. To enable dashboard deployments from the UI,
               you need to configure the webhook server on your host machine.
             </p>
           </div>
 
-          <div className="space-y-3 text-sm text-[#4e4e4e]">
-            <div className="font-medium text-black">Setup Instructions:</div>
-            <ol className="list-decimal list-inside space-y-2 text-[#777169]">
-              <li>Install webhook: <code className="rounded-sm bg-[#f5f5f5] px-1">apt install webhook</code></li>
-              <li>Copy webhook config from <code className="rounded-sm bg-[#f5f5f5] px-1">infrastructure/webhook.yaml</code></li>
-              <li>Set environment variables: <code className="rounded-sm bg-[#f5f5f5] px-1">WEBHOOK_HOST</code>, <code className="rounded-sm bg-[#f5f5f5] px-1">DEPLOY_SECRET</code></li>
-              <li>Start webhook service: <code className="rounded-sm bg-[#f5f5f5] px-1">webhook -hooks /path/to/webhook.yaml -port 9000</code></li>
+          <div className="space-y-3 text-sm text-[var(--text-secondary)]">
+            <div className="font-medium text-[var(--text-primary)]">Setup Instructions:</div>
+            <ol className="list-decimal list-inside space-y-2 text-[var(--text-muted)]">
+              <li>Install webhook: <code className="rounded-sm bg-[var(--surface-muted)] px-1">apt install webhook</code></li>
+              <li>Copy webhook config from <code className="rounded-sm bg-[var(--surface-muted)] px-1">infrastructure/webhook.yaml</code></li>
+              <li>Set environment variables: <code className="rounded-sm bg-[var(--surface-muted)] px-1">WEBHOOK_HOST</code>, <code className="rounded-sm bg-[var(--surface-muted)] px-1">DEPLOY_SECRET</code></li>
+              <li>Start webhook service: <code className="rounded-sm bg-[var(--surface-muted)] px-1">webhook -hooks /path/to/webhook.yaml -port 9000</code></li>
             </ol>
           </div>
         </div>
@@ -186,8 +186,8 @@ export function DeployDashboard() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-black">Dashboard Deployment</h2>
-          <p className="text-xs text-[#777169]">Deploy the latest dashboard changes from the repository</p>
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Dashboard Deployment</h2>
+          <p className="text-xs text-[var(--text-muted)]">Deploy the latest dashboard changes from the repository</p>
         </div>
         <div className="flex items-center gap-2">
           {status.status === "running" && (
@@ -208,7 +208,7 @@ export function DeployDashboard() {
         </div>
       </div>
 
-      <p className="text-xs text-[#777169]">
+        <p className="text-xs text-[var(--text-muted)]">
         Quick Update uses Docker cache for faster builds. Full Rebuild rebuilds everything from scratch.
       </p>
 
@@ -236,7 +236,7 @@ export function DeployDashboard() {
       </div>
 
       {status.status !== "idle" && (
-        <div className="space-y-3 border-t border-[#e5e5e5] pt-3">
+        <div className="space-y-3 border-t border-[var(--surface-border)] pt-3">
           <div className="flex items-center gap-2">
             <span className={`text-sm font-medium ${getStatusColor(status.status)}`}>
               {status.status === "running" && (
@@ -247,7 +247,7 @@ export function DeployDashboard() {
           </div>
 
           {status.message && (
-            <div className="text-xs text-[#777169]">{status.message}</div>
+            <div className="text-xs text-[var(--text-muted)]">{status.message}</div>
           )}
 
           {status.error && (
@@ -257,7 +257,7 @@ export function DeployDashboard() {
           )}
 
           {status.completedAt && (
-            <div className="text-xs text-[#777169]">
+            <div className="text-xs text-[var(--text-muted)]">
               Completed: {new Date(status.completedAt).toLocaleString()}
             </div>
           )}

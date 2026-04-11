@@ -163,7 +163,7 @@ export function ConfigPublisher() {
         <CardHeader>
           <CardTitle>
             <span className="flex items-center gap-3">
-              <span className="w-6 h-6 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] flex items-center justify-center text-sm" aria-hidden="true">
+              <span className="w-6 h-6 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] flex items-center justify-center text-sm" aria-hidden="true">
                 &#9733;
               </span>
               Share Your Config
@@ -172,7 +172,7 @@ export function ConfigPublisher() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <div className="w-6 h-6 border-2 border-[#ddd] border-t-black rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-[var(--surface-border)] border-t-[var(--text-primary)] rounded-full animate-spin" />
           </div>
         </CardContent>
       </Card>
@@ -185,7 +185,7 @@ export function ConfigPublisher() {
         <CardHeader>
           <CardTitle>
             <span className="flex items-center gap-3">
-              <span className="w-6 h-6 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] flex items-center justify-center text-sm" aria-hidden="true">
+              <span className="w-6 h-6 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] flex items-center justify-center text-sm" aria-hidden="true">
                 &#9733;
               </span>
               Share Your Config
@@ -194,13 +194,13 @@ export function ConfigPublisher() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <p className="text-sm text-[#4e4e4e]">
+            <p className="text-sm text-[var(--text-secondary)]">
               Share your CLIProxyAPI configuration with others. Generate a unique share code that
               others can use to automatically sync with your config settings.
             </p>
             <div className="space-y-3">
               <div>
-                <label htmlFor="template-name" className="block text-sm font-medium text-[#4e4e4e] mb-2">
+                <label htmlFor="template-name" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                   Template Name (Optional)
                 </label>
                 <Input
@@ -240,33 +240,33 @@ export function ConfigPublisher() {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-2 rounded-sm border border-[#e5e5e5] bg-white px-3 py-2">
+          <div className="grid grid-cols-3 gap-2 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Status</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Status</div>
               <div className={status.isActive ? "text-xs font-semibold text-emerald-700" : "text-xs font-semibold text-amber-700"}>{status.isActive ? "Active" : "Inactive"}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Subscribers</div>
-              <div className="text-xs font-semibold text-black">{status.subscriberCount}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Subscribers</div>
+              <div className="text-xs font-semibold text-[var(--text-primary)]">{status.subscriberCount}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Created</div>
-              <div className="text-xs font-semibold text-black">{new Date(status.createdAt).toLocaleDateString()}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Created</div>
+              <div className="text-xs font-semibold text-[var(--text-primary)]">{new Date(status.createdAt).toLocaleDateString()}</div>
             </div>
           </div>
 
           <div>
-            <div className="block text-sm font-medium text-[#4e4e4e] mb-2">
+            <div className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
               Share Code
             </div>
             <CopyBlock code={status.shareCode} />
-            <p className="mt-2 text-xs text-[#777169]">
+            <p className="mt-2 text-xs text-[var(--text-muted)]">
               Others can use this code to subscribe to your config updates
             </p>
           </div>
 
           <div>
-            <label htmlFor="edit-template-name" className="block text-sm font-medium text-[#4e4e4e] mb-2">
+            <label htmlFor="edit-template-name" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
               Template Name
             </label>
             {isEditing ? (
@@ -297,7 +297,7 @@ export function ConfigPublisher() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <div className="flex-1 rounded-sm border border-[#e5e5e5] bg-white px-3 py-2 text-xs text-black">
+                <div className="flex-1 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-xs text-[var(--text-primary)]">
                   {status.name}
                 </div>
                 <Button

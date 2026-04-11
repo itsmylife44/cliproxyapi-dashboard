@@ -81,14 +81,14 @@ export function OwnerBadge({ ownerUsername, isOwn }: OwnerBadgeProps) {
 
   if (ownerUsername) {
     return (
-      <span className="inline-flex items-center rounded-sm border border-[#e5e5e5]/70 bg-[#f5f5f5] px-2 py-0.5 text-[11px] font-medium text-[#4e4e4e]">
+      <span className="inline-flex items-center rounded-sm border border-[var(--surface-border)]/70 bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
         {ownerUsername}
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] px-2 py-0.5 text-[11px] font-medium text-[#777169]">
+    <span className="inline-flex items-center rounded-sm border border-[var(--surface-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)]">
       Team
     </span>
   );
@@ -209,15 +209,15 @@ export function ApiKeySection({
       <div id="provider-api-keys" className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-black">API Key Providers</h2>
-            <p className="text-xs text-[#777169]">Direct provider access keys</p>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">API Key Providers</h2>
+            <p className="text-xs text-[var(--text-muted)]">Direct provider access keys</p>
           </div>
-          <span className="text-xs font-medium text-[#777169]">{totalApiKeys} keys total</span>
+          <span className="text-xs font-medium text-[var(--text-muted)]">{totalApiKeys} keys total</span>
         </div>
 
         <div className="overflow-x-auto">
-          <div className="min-w-[600px] overflow-hidden rounded-md border border-[#e5e5e5] bg-white">
-            <div className="grid grid-cols-[minmax(0,1.6fr)_96px_120px_128px] items-center border-b border-[#e5e5e5] bg-white/60 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
+          <div className="min-w-[600px] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
+            <div className="grid grid-cols-[minmax(0,1.6fr)_96px_120px_128px] items-center border-b border-[var(--surface-border)] bg-[var(--surface-base)]/60 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
               <span>Provider</span>
               <span>Status</span>
               <span>Keys</span>
@@ -230,16 +230,16 @@ export function ApiKeySection({
               const isConfigured = configuredCount > 0;
 
               return (
-                <div key={provider.id} className="border-b border-[#e5e5e5] last:border-b-0">
+                <div key={provider.id} className="border-b border-[var(--surface-border)] last:border-b-0">
                   <div className="grid grid-cols-[minmax(0,1.6fr)_96px_120px_128px] items-center gap-3 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-black">{provider.name}</p>
-                      <p className="truncate text-xs text-[#777169]">{provider.description}</p>
+                      <p className="truncate text-sm font-medium text-[var(--text-primary)]">{provider.name}</p>
+                      <p className="truncate text-xs text-[var(--text-muted)]">{provider.description}</p>
                     </div>
-                    <span className={`text-xs font-medium ${isConfigured ? "text-emerald-700" : "text-[#777169]"}`}>
+                    <span className={`text-xs font-medium ${isConfigured ? "text-emerald-700" : "text-[var(--text-muted)]"}`}>
                       {isConfigured ? "Active" : "Inactive"}
                     </span>
-                    <span className="text-xs text-[#4e4e4e]">
+                    <span className="text-xs text-[var(--text-secondary)]">
                       {configuredCount} {configuredCount === 1 ? "key" : "keys"}
                     </span>
                     <div className="flex justify-end">
@@ -258,17 +258,17 @@ export function ApiKeySection({
                       {config.keys.map((keyInfo) => (
                         <div
                           key={keyInfo.keyHash}
-                          className="group flex items-center justify-between gap-3 border-t border-[#e5e5e5] px-1 py-1.5 first:border-t-0"
+                          className="group flex items-center justify-between gap-3 border-t border-[var(--surface-border)] px-1 py-1.5 first:border-t-0"
                         >
                           <div className="flex min-w-0 items-center gap-2">
-                            <span className="truncate font-mono text-xs text-[#4e4e4e]">{keyInfo.maskedKey}</span>
+                              <span className="truncate font-mono text-xs text-[var(--text-secondary)]">{keyInfo.maskedKey}</span>
                             {currentUser && (
                               <OwnerBadge ownerUsername={keyInfo.ownerUsername} isOwn={keyInfo.isOwn} />
                             )}
                           </div>
                           <div className="flex items-center gap-3">
                             {currentUser && (
-                              <span className="text-[11px] text-[#777169]">{userKeyCount}/{maxKeysPerUser}</span>
+                              <span className="text-[11px] text-[var(--text-muted)]">{userKeyCount}/{maxKeysPerUser}</span>
                             )}
                             {currentUser && (keyInfo.isOwn || currentUser.isAdmin) && (
                               <Button
@@ -300,7 +300,7 @@ export function ApiKeySection({
         <ModalContent>
           <div className="space-y-4">
             <div>
-              <label htmlFor="api-key" className="mb-2 block text-sm font-semibold text-black">
+              <label htmlFor="api-key" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
                 API Key <span className="text-red-600">*</span>
               </label>
               <Input
@@ -312,7 +312,7 @@ export function ApiKeySection({
                 required
                 disabled={saving}
               />
-              <p className="mt-1.5 text-xs text-[#777169]">Your API key will be stored securely and associated with your account</p>
+              <p className="mt-1.5 text-xs text-[var(--text-muted)]">Your API key will be stored securely and associated with your account</p>
             </div>
             {currentUser && (
               <div className="rounded-sm border-l-4 border-blue-300 bg-blue-50 p-3 text-sm">

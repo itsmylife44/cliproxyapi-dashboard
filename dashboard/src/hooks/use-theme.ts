@@ -16,7 +16,7 @@ export function useTheme() {
     const nextTheme: Theme = theme === "light" ? "dark" : "light";
     document.documentElement.dataset.theme = nextTheme;
     document.documentElement.style.colorScheme = nextTheme;
-    localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    try { localStorage.setItem(THEME_STORAGE_KEY, nextTheme); } catch { /* blocked storage */ }
     setTheme(nextTheme);
   }
 

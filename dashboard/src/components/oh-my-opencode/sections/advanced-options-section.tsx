@@ -29,11 +29,11 @@ export function AdvancedOptionsSection({
   const hashlineEditEnabled = overrides.hashline_edit ?? false;
 
   return (
-    <div className="rounded-xl border border-[#e5e5e5] bg-[#fafafa] overflow-hidden transition-all hover:border-[#e5e5e5]">
+    <div className="rounded-xl border border-[var(--surface-border)] bg-[#fafafa] overflow-hidden transition-all hover:border-[var(--surface-border)]">
       <button
         type="button"
         onClick={onToggleExpand}
-        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-[#777169] hover:text-black hover:bg-[#f5f5f5] transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-muted)] transition-colors"
       >
         <svg
           width="10"
@@ -53,14 +53,14 @@ export function AdvancedOptionsSection({
       </button>
       {isExpanded && (
         <div className="px-3 pb-3 space-y-1">
-          <div className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[#f5f5f5]">
-            <span className="text-xs text-[#4e4e4e] font-mono">Hashline Edit</span>
+            <div className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)]">
+            <span className="text-xs text-[var(--text-secondary)] font-mono">Hashline Edit</span>
             <button
               type="button"
               onClick={onHashlineEditToggle}
               className={`w-9 h-5 rounded-full transition-colors relative ${
-                hashlineEditEnabled ? "bg-emerald-500" : "bg-[#f0f0f0]"
-              }`}
+                  hashlineEditEnabled ? "bg-emerald-500" : "bg-[var(--surface-hover)]"
+                }`}
             >
               <span
                 className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform ${
@@ -73,13 +73,13 @@ export function AdvancedOptionsSection({
           {EXPERIMENTAL_FIELDS.map(({ field, label, defaultValue }) => {
             const isEnabled = overrides.experimental?.[field] ?? defaultValue;
             return (
-              <div key={field} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[#f5f5f5]">
-                <span className="text-xs text-[#4e4e4e] font-mono">{label}</span>
+              <div key={field} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)]">
+                <span className="text-xs text-[var(--text-secondary)] font-mono">{label}</span>
                 <button
                   type="button"
                   onClick={() => onExperimentalToggle(field)}
                   className={`w-9 h-5 rounded-full transition-colors relative ${
-                    isEnabled ? "bg-emerald-500" : "bg-[#f0f0f0]"
+                    isEnabled ? "bg-emerald-500" : "bg-[var(--surface-hover)]"
                   }`}
                 >
                   <span

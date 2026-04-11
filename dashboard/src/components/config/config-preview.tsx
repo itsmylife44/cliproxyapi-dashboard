@@ -35,10 +35,10 @@ export default function ConfigPreview({ rawJson }: ConfigPreviewProps) {
           <textarea
             value={rawJson}
             readOnly
-            className="h-96 w-full rounded-sm border border-[#e5e5e5] bg-white p-4 font-mono text-xs text-black focus:border-blue-400/50 focus:outline-none"
+            className="h-96 w-full rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 font-mono text-xs text-[var(--text-primary)] focus:border-blue-400/50 focus:outline-none"
             spellCheck={false}
           />
-          <p className="text-xs text-[#777169]">
+          <p className="text-xs text-[var(--text-muted)]">
             This is a read-only view of the full configuration. Use the structured forms above to make changes.
           </p>
         </div>

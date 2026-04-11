@@ -300,7 +300,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   if (!hasAnyProviderConfigured) {
     return (
       <div className="space-y-4">
-        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 text-sm rounded-r-xl">
+        <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 text-sm rounded-r-xl">
           <p className="text-[var(--text-primary)] font-medium mb-1">No providers configured</p>
           <p className="text-[var(--text-muted)] text-xs">
             You need to configure at least one AI provider before generating an OpenCode config.
@@ -321,7 +321,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   if (apiKeys.length === 0) {
     return (
       <div className="space-y-3">
-        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 rounded-r-xl">
+        <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 rounded-r-xl">
           <div className="text-sm font-medium text-[var(--text-primary)] mb-1">API Key Required</div>
           <p className="text-sm text-[var(--text-secondary)]">
             Create an API key to generate your configuration.
@@ -340,7 +340,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   if (!hasModels) {
     return (
       <div className="space-y-4">
-        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 text-sm rounded-r-xl">
+        <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 text-sm rounded-r-xl">
           <p className="text-[var(--text-primary)] font-medium mb-1">No models available yet</p>
           <p className="text-[var(--text-muted)] text-xs">
             Providers are configured, but no models were discovered yet. If you just added providers,
@@ -369,7 +369,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   return (
     <div className="space-y-4">
       {saveError && (
-        <div className="border-l-4 border-red-300 bg-red-50 p-3 text-sm rounded-r-xl">
+        <div className="border-l-4 border-red-300 bg-red-500/10 p-3 text-sm rounded-r-xl">
           <p className="text-red-600 text-xs">{saveError}</p>
         </div>
       )}
@@ -408,7 +408,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           </span>
         </div>
       ) : (
-        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 text-sm rounded-r-xl">
+        <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 text-sm rounded-r-xl">
           <p className="text-[var(--text-primary)] font-medium mb-1">No API keys found</p>
           <p className="text-[var(--text-muted)] text-xs">
             Create an API key on the{" "}

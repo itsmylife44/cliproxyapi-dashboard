@@ -52,7 +52,7 @@ function OAuthStatusBadge({
 
   if (status === "active" && !unavailable) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600" title="Token is valid and working">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600" title="Token is valid and working">
         <span className="size-1.5 rounded-full bg-emerald-400" />
         Active
       </span>
@@ -62,7 +62,7 @@ function OAuthStatusBadge({
   if (status === "error" || unavailable) {
     return (
       <span
-        className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600"
+        className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-600"
         title={message || "Account has an error"}
       >
         <span className="size-1.5 rounded-full bg-red-400" />

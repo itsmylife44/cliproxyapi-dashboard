@@ -23,7 +23,7 @@ function ChevronRight() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="shrink-0 text-[#e5e5e5]"
+      className="shrink-0 text-[var(--surface-border)]"
       aria-hidden="true"
     >
       <path d="m9 18 6-6-6-6" />

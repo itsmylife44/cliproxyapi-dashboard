@@ -56,7 +56,7 @@ export function ProviderSettings({
       <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
         CLIProxyAPI Updates
         {proxyUpdateInfo?.updateAvailable && (
-          <span className="rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+          <span className="rounded-sm border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
             Update Available
           </span>
         )}
@@ -127,7 +127,7 @@ export function ProviderSettings({
         <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
           Dashboard Updates
           {dashboardUpdateInfo?.updateAvailable && (
-            <span className="rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+            <span className="rounded-sm border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
               Update Available
             </span>
           )}

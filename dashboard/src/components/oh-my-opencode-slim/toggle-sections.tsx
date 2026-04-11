@@ -28,7 +28,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-[var(--surface-border)] bg-[#fafafa]">
+    <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)]">
       <button
         type="button"
         onClick={onToggle}

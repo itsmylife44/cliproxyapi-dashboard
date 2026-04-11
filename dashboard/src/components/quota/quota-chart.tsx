@@ -25,7 +25,7 @@ interface QuotaChartProps {
 }
 
 export function QuotaChart({ overallCapacity, providerSummaries }: QuotaChartProps) {
-   const { axisTickStyle, tooltipStyle } = useChartTheme();
+   const { axisTickStyle, tooltipStyle, tokens } = useChartTheme();
    return (
     <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
       <ChartContainer title="Overall Capacity" subtitle="Weighted across all providers">
@@ -58,7 +58,7 @@ export function QuotaChart({ overallCapacity, providerSummaries }: QuotaChartPro
               </ResponsiveContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-3xl font-bold" style={{ color: gaugeColor }}>{pct}%</span>
-                <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: CHART_COLORS.text.dimmed }}>Capacity</span>
+                <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: tokens.text.dimmed }}>Capacity</span>
               </div>
             </div>
           );
@@ -98,7 +98,7 @@ export function QuotaChart({ overallCapacity, providerSummaries }: QuotaChartPro
                      domain={[0, 100]}
                      tick={axisTickStyle}
                      tickLine={false}
-                     axisLine={{ stroke: CHART_COLORS.border }}
+                     axisLine={{ stroke: tokens.border }}
                      tickFormatter={(v) => `${v}%`}
                    />
                    <YAxis
@@ -122,7 +122,7 @@ export function QuotaChart({ overallCapacity, providerSummaries }: QuotaChartPro
                     verticalAlign="top"
                     height={24}
                     formatter={(value: string) => value === "longTerm" ? "Long-Term" : "Short-Term"}
-                    wrapperStyle={{ fontSize: 10, color: CHART_COLORS.text.dimmed }}
+                    wrapperStyle={{ fontSize: 10, color: tokens.text.dimmed }}
                   />
                   <Bar dataKey="longTerm" radius={[0, 3, 3, 0]} fill={CHART_COLORS.success} />
                   <Bar dataKey="shortTerm" radius={[0, 3, 3, 0]} fill={CHART_COLORS.cyan} />

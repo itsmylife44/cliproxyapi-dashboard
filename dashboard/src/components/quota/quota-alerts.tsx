@@ -214,7 +214,7 @@ export function QuotaAlerts() {
             className={cn(
               "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors",
               settings.enabled
-                ? "bg-blue-500 border-blue-500"
+                ? "bg-blue-500/100 border-blue-500"
                 : "bg-[var(--surface-muted)] border-[var(--surface-border)]"
             )}
           >

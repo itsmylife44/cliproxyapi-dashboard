@@ -134,7 +134,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
   if (createdKey) {
     return (
       <div className="mt-3 space-y-2">
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
           Copy your API key now -- it will not be shown again.
         </div>
         <div className="flex items-center gap-2 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]/60 px-3 py-2">

@@ -171,7 +171,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
       </div>
 
       <div className="space-y-3">
-        <div className="rounded-sm border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
+        <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-700">
           <strong className="text-amber-800">How to get your cookies:</strong>
           <ol className="mt-1.5 list-decimal space-y-1 pl-4">
             <li>Go to <span className="font-mono text-amber-800">perplexity.ai</span> and sign in to your Pro account</li>
@@ -204,7 +204,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
                     <span className={cn(
                       "inline-flex items-center rounded-sm px-2 py-0.5 text-[11px] font-medium",
                       cookie.isActive
-                        ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                        ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
                         : "border border-[var(--surface-border)]/70 bg-[var(--surface-muted)] text-[var(--text-muted)]"
                     )}>
                       {cookie.isActive ? "Active" : "Inactive"}

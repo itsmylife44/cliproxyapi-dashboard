@@ -26,7 +26,7 @@ interface UsageStatsProps {
 }
 
 export function UsageStats({ usage }: UsageStatsProps) {
-   const { axisTickStyle, tooltipStyle } = useChartTheme();
+   const { axisTickStyle, tooltipStyle, tokens } = useChartTheme();
    const modelStats = usage?.usage.apis
     ? Object.entries(usage.usage.apis).flatMap(([, data]) =>
         data.models
@@ -86,7 +86,7 @@ export function UsageStats({ usage }: UsageStatsProps) {
                     data={modelStats}
                     margin={{ top: 0, right: 8, left: 4, bottom: 0 }}
                   >
-                     <CartesianGrid horizontal={false} stroke={CHART_COLORS.grid} />
+                     <CartesianGrid horizontal={false} stroke={tokens.grid} />
                      <YAxis
                        type="category"
                        dataKey="model"
@@ -120,7 +120,7 @@ export function UsageStats({ usage }: UsageStatsProps) {
                     data={hourlyData}
                     margin={{ top: 0, right: 8, left: 4, bottom: 0 }}
                   >
-                     <CartesianGrid vertical={false} stroke={CHART_COLORS.grid} />
+                     <CartesianGrid vertical={false} stroke={tokens.grid} />
                      <XAxis
                        dataKey="hour"
                        tick={axisTickStyle}

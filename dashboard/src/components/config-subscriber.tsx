@@ -186,7 +186,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
             </p>
 
             {!hasApiKey && (
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
                 <span className="text-lg">⚠️</span>
                 <p className="text-sm text-amber-700/90">
                   You need at least one API key to subscribe. Please add an API key first.

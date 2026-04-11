@@ -38,11 +38,11 @@ export function ServiceStatus({ status, restarting, onConfirmRestart }: ServiceS
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-[var(--text-primary)]">CLIProxyAPI</span>
             {status?.running ? (
-              <span className="rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+              <span className="rounded-sm border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700">
                 RUNNING
               </span>
             ) : (
-              <span className="rounded-sm border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700">
+              <span className="rounded-sm border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-xs font-medium text-rose-700">
                 STOPPED
               </span>
             )}

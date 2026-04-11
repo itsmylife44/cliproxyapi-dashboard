@@ -76,7 +76,7 @@ export default function SetupPage() {
         </div>
 
          <div className="glass-card rounded-2xl p-6">
-           <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700">
+           <div className="mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-sm text-amber-700">
             Create your administrator account. Keep these credentials secure.
           </div>
 
@@ -126,7 +126,7 @@ export default function SetupPage() {
             </div>
 
             {error && (
-              <div role="alert" aria-live="polite" className="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-600">
+              <div role="alert" aria-live="polite" className="rounded-xl bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-600">
                 {error}
               </div>
             )}

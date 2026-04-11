@@ -172,7 +172,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
           {/* Session Info */}
           <div className="mb-6 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-2.5">
             <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-dot" />
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/100 animate-pulse-dot" />
               <span className="text-xs font-medium text-[var(--text-muted)]">Session active</span>
             </div>
             <p className="mt-1 text-xs text-[var(--text-muted)] pl-3.5">
@@ -266,13 +266,13 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
 
                 {/* Feedback */}
                 {error && (
-                  <div role="alert" aria-live="polite" className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-600">
+                  <div role="alert" aria-live="polite" className="rounded-md border border-red-500/30 bg-red-500/100/10 px-3 py-2 text-xs text-red-600">
                     {error}
                   </div>
                 )}
 
                 {success && (
-                  <div role="status" aria-live="polite" className="rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs text-green-700">
+                  <div role="status" aria-live="polite" className="rounded-md border border-green-500/30 bg-green-500/100/10 px-3 py-2 text-xs text-green-700">
                     Password changed successfully
                   </div>
                 )}

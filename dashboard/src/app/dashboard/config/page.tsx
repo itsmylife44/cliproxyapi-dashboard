@@ -610,7 +610,7 @@ export default function ConfigPage() {
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
           {hasUnsavedChanges && (
             <>
-              <span className="flex items-center gap-2 rounded-sm border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+              <span className="flex items-center gap-2 rounded-sm border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700">
                 <span className="size-1.5 rounded-full bg-amber-400"></span>
                 Unsaved changes
               </span>
@@ -626,7 +626,7 @@ export default function ConfigPage() {
         </div>
       </section>
 
-      <div className="rounded-sm border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+      <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-700">
         <strong>Warning:</strong>{" "}
         <span>
           Invalid configuration may prevent the service from starting. Review changes carefully before saving.

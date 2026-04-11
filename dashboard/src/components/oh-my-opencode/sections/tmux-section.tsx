@@ -21,7 +21,7 @@ export function TmuxSection({
   onTmuxNumberChange,
 }: TmuxSectionProps) {
   return (
-    <div className="rounded-xl border border-[var(--surface-border)] bg-[#fafafa] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
+    <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-muted)] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
         type="button"
         onClick={onToggleExpand}
@@ -43,7 +43,7 @@ export function TmuxSection({
         </svg>
         <span className="flex-1 text-left">Tmux</span>
         {overrides.tmux?.enabled && (
-          <span className="px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600/80 text-[10px] font-mono">
+          <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600/80 text-[10px] font-mono">
             enabled
           </span>
         )}
@@ -56,7 +56,7 @@ export function TmuxSection({
               type="button"
               onClick={onTmuxEnabledToggle}
               className={`w-9 h-5 rounded-full transition-colors relative ${
-                overrides.tmux?.enabled ? "bg-emerald-500" : "bg-[var(--surface-hover)]"
+                overrides.tmux?.enabled ? "bg-emerald-500/100" : "bg-[var(--surface-hover)]"
               }`}
             >
               <span

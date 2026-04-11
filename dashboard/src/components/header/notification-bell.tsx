@@ -32,9 +32,9 @@ function BellIcon({ hasNotifications }: { hasNotifications: boolean }) {
 }
 
 const TYPE_STYLES: Record<NotificationType, { dot: string; border: string; bg: string }> = {
-  critical: { dot: "bg-red-500", border: "border-red-500/30", bg: "bg-red-500/5" },
-  warning: { dot: "bg-amber-500", border: "border-amber-200", bg: "bg-amber-500/5" },
-  info: { dot: "bg-blue-500", border: "border-blue-200", bg: "bg-blue-500/5" },
+  critical: { dot: "bg-red-500/100", border: "border-red-500/30", bg: "bg-red-500/100/5" },
+  warning: { dot: "bg-amber-500/100", border: "border-amber-500/20", bg: "bg-amber-500/100/5" },
+  info: { dot: "bg-blue-500/100", border: "border-blue-500/20", bg: "bg-blue-500/100/5" },
 };
 
 function NotificationItem({ notification, onNavigate, onDismiss }: { notification: Notification; onNavigate: () => void; onDismiss: (id: string) => void }) {
@@ -178,7 +178,7 @@ export function NotificationBell({ notifications, criticalCount, totalCount, onD
 
   const handleClose = useCallback(() => setOpen(false), []);
 
-  const badgeColor = criticalCount > 0 ? "bg-red-500" : "bg-amber-500";
+  const badgeColor = criticalCount > 0 ? "bg-red-500/100" : "bg-amber-500/100";
 
   return (
     <>

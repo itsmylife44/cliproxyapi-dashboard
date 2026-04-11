@@ -26,12 +26,12 @@ interface LogStats {
 }
 
 const LEVEL_COLORS: Record<string, string> = {
-  error: "text-red-600 bg-red-50 border-red-200",
-  fatal: "text-red-600 bg-red-50 border-red-200",
-  warn: "text-yellow-700 bg-yellow-50 border-yellow-200",
-  info: "text-blue-600 bg-blue-50 border-blue-200",
-  debug: "text-gray-600 bg-gray-50 border-gray-200",
-  trace: "text-gray-600 bg-gray-50 border-gray-200",
+  error: "text-red-600 bg-red-500/100/10 border-red-500/20",
+  fatal: "text-red-600 bg-red-500/100/10 border-red-500/20",
+  warn: "text-yellow-700 bg-yellow-500/100/10 border-yellow-500/20",
+  info: "text-blue-600 bg-blue-500/100/10 border-blue-500/20",
+  debug: "text-[var(--text-muted)] bg-[var(--surface-muted)] border-[var(--surface-border)]",
+  trace: "text-[var(--text-muted)] bg-[var(--surface-muted)] border-[var(--surface-border)]",
 };
 
 const LEVEL_FILTERS = ["all", "error", "warn", "info", "debug"] as const;
@@ -266,7 +266,7 @@ export default function AdminLogsPage() {
       {stats && (
         <div className="flex flex-wrap gap-4 text-xs text-[var(--text-muted)]">
           <span className="flex items-center gap-1.5">
-            <span className={`size-2 rounded-full ${stats.persistent ? "bg-green-500" : "bg-yellow-500"}`} />
+            <span className={`size-2 rounded-full ${stats.persistent ? "bg-green-500/100" : "bg-yellow-500/100"}`} />
             Persistent storage {stats.persistent ? "enabled" : "disabled"}
           </span>
           <span>Memory: {stats.memoryCount} logs</span>

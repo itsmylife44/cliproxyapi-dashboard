@@ -211,7 +211,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
   if (apiKeys.length === 0) {
     return (
       <div className="space-y-3">
-        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 rounded-r-xl">
+        <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 rounded-r-xl">
           <div className="text-sm font-medium text-[var(--text-primary)] mb-1">API Key Required</div>
           <p className="text-sm text-[var(--text-secondary)]">Create an API key to generate your slim configuration.</p>
           <Link
@@ -228,7 +228,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
   if (!hasModels || !slimConfig) {
     return (
       <div className="space-y-4">
-        <div className="border-l-4 border-amber-300 bg-amber-50 p-4 text-sm rounded-r-xl">
+        <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 text-sm rounded-r-xl">
           <p className="text-[var(--text-primary)] font-medium mb-1">No providers configured</p>
           <p className="text-[var(--text-muted)] text-xs">
             Configure at least one AI provider before generating a slim config. Head to{" "}

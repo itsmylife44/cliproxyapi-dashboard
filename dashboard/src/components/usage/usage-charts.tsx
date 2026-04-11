@@ -76,7 +76,7 @@ function formatLatencyValue(value: number): string {
 
 export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, latencySummary, totals }: UsageChartsProps) {
    const uid = useId();
-   const { axisTickStyle, tooltipStyle } = useChartTheme();
+   const { axisTickStyle, tooltipStyle, tokens } = useChartTheme();
    const gradInputId = `${uid}-gradInput`;
    const gradOutputId = `${uid}-gradOutput`;
    const gradLatencyId = `${uid}-gradLatency`;
@@ -86,7 +86,7 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
         <ChartContainer title="Daily Requests">
           <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
              <LineChart data={dailyBreakdown} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+               <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} />
                <XAxis dataKey="date" tickFormatter={formatDateShort} tick={axisTickStyle} tickLine={false} axisLine={false} />
                <YAxis tickFormatter={formatCompact} tick={axisTickStyle} tickLine={false} axisLine={false} />
                <Tooltip
@@ -114,7 +114,7 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                   <stop offset="100%" stopColor={CHART_COLORS.success} stopOpacity={0} />
                 </linearGradient>
               </defs>
-               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+               <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} />
                <XAxis dataKey="date" tickFormatter={formatDateShort} tick={axisTickStyle} tickLine={false} axisLine={false} />
                <YAxis tickFormatter={formatCompact} tick={axisTickStyle} tickLine={false} axisLine={false} />
                <Tooltip
@@ -122,7 +122,7 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                  labelFormatter={(label) => formatDateShort(label)}
                  formatter={(value) => [formatCompact(Number(value)), ""]}
                />
-              <Legend wrapperStyle={{ fontSize: 10, color: CHART_COLORS.text.muted }} />
+              <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
               <Area type="monotone" dataKey="inputTokens" name="Input" stackId="1" stroke={CHART_COLORS.primary} fill={`url(#${gradInputId})`} strokeWidth={1.5} />
               <Area type="monotone" dataKey="outputTokens" name="Output" stackId="1" stroke={CHART_COLORS.success} fill={`url(#${gradOutputId})`} strokeWidth={1.5} />
             </AreaChart>
@@ -147,7 +147,7 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                   <stop offset="100%" stopColor={CHART_COLORS.warning} stopOpacity={0} />
                 </linearGradient>
               </defs>
-               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+               <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} />
                <XAxis
                  dataKey="timestamp"
                  tickFormatter={formatLatencyTick}
@@ -217,7 +217,7 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                    formatter={(value) => [formatCompact(Number(value)), "Requests"]}
                  />
                 <Legend
-                  wrapperStyle={{ fontSize: 10, color: CHART_COLORS.text.muted }}
+                  wrapperStyle={{ fontSize: 10, color: tokens.text.muted }}
                   formatter={(value) => value.length > 20 ? value.slice(0, 18) + "\u2026" : value}
                 />
               </PieChart>
@@ -241,24 +241,24 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                 <div className="flex h-full">
                   {successPct > 0 && (
                     <div
-                       className="h-full bg-emerald-500 transition-[width] duration-700"
+                       className="h-full bg-emerald-500/100 transition-[width] duration-700"
                       style={{ width: `${successPct}%` }}
                     />
                   )}
                   {failPct > 0 && (
                     <div
-                       className="h-full bg-rose-500 transition-[width] duration-700"
+                       className="h-full bg-rose-500/100 transition-[width] duration-700"
                       style={{ width: `${failPct}%` }}
                     />
                   )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-center">
+                <div className="rounded-md border border-emerald-500/20 bg-emerald-500/100/10 px-3 py-2 text-center">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Success Rate</p>
                   <p className="mt-0.5 text-lg font-bold text-emerald-600">{successPct.toFixed(1)}%</p>
                 </div>
-                <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-center">
+                <div className="rounded-md border border-rose-500/20 bg-rose-500/100/10 px-3 py-2 text-center">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Failure Rate</p>
                   <p className="mt-0.5 text-lg font-bold text-rose-600">{failPct.toFixed(1)}%</p>
                 </div>

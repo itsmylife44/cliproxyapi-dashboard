@@ -45,9 +45,9 @@ function formatTimestamp(timestamp: string): string {
 
 function getLatencyClasses(latencyMs: number): string {
   if (latencyMs <= 0) return "border-[var(--surface-border)] bg-[var(--surface-muted)]/70 text-[var(--text-muted)]";
-  if (latencyMs < 1000) return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  if (latencyMs < 5000) return "border-amber-200 bg-amber-50 text-amber-700";
-  return "border-rose-200 bg-rose-50 text-rose-600";
+  if (latencyMs < 1000) return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700";
+  if (latencyMs < 5000) return "border-amber-500/20 bg-amber-500/10 text-amber-700";
+  return "border-rose-500/20 bg-rose-500/10 text-rose-600";
 }
 
 function formatLatency(latencyMs: number): string {
@@ -114,7 +114,7 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
             {pagedEvents.map((event, index) => (
               <tr
                 key={`${event.timestamp}-${event.model}-${index}`}
-                className={`border-b border-[var(--surface-border)] last:border-b-0 ${event.failed ? "bg-rose-500/[0.03]" : "hover:bg-[var(--surface-muted)]"}`}
+                className={`border-b border-[var(--surface-border)] last:border-b-0 ${event.failed ? "bg-rose-500/100/[0.03]" : "hover:bg-[var(--surface-muted)]"}`}
               >
                 <td className="px-3 py-2">
                   <div className="flex flex-col">
@@ -131,8 +131,8 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
                   <span
                     className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${
                       event.failed
-                        ? "border-rose-200 bg-rose-50 text-rose-600"
-                        : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        ? "border-rose-500/20 bg-rose-500/10 text-rose-600"
+                        : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
                     }`}
                   >
                     {event.failed ? "Failed" : "Success"}

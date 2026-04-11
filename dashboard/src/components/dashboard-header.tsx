@@ -65,17 +65,17 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
         <div className="flex items-center gap-2">
           {isLoading ? (
             <>
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+              <div className="w-2.5 h-2.5 rounded-full bg-amber-500/100 animate-pulse" />
               <span className="text-[var(--text-muted)]">Checking…</span>
             </>
           ) : status?.running ? (
             <>
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse-dot" />
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/100 animate-pulse-dot" />
               <span className="text-emerald-600 font-medium">All systems operational</span>
             </>
           ) : (
             <>
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500/100" />
               <span className="text-red-600 font-medium">System offline</span>
             </>
           )}

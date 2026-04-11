@@ -32,7 +32,7 @@ export function ProviderRow({
           {!provider.hasEncryptedKey && (
             <span
               title="Re-save this provider to enable auto-resync after proxy restarts"
-              className="shrink-0 rounded-sm border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+              className="shrink-0 rounded-sm border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
             >
               re-save
             </span>

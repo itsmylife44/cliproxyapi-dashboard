@@ -155,7 +155,7 @@ export function ModelBadge({
             }}
             className={`px-1.5 py-1 border border-l-0 rounded-r-lg text-[10px] transition-colors cursor-pointer ${
               showExtra || hasExtraValues
-                ? "bg-amber-50 border-amber-200 text-amber-700/80 hover:bg-amber-50"
+                ? "bg-amber-500/10 border-amber-500/20 text-amber-700/80 hover:bg-amber-500/10"
                 : "bg-[var(--surface-muted)] border-[var(--surface-border)] text-[var(--text-muted)] hover:text-[var(--text-muted)] hover:bg-[var(--surface-hover)]"
             }`}
             title="Configure variant, temperature, and more"

@@ -39,7 +39,7 @@ export function OAuthImportForm({
       </ModalHeader>
       <ModalContent>
         <div className="space-y-4">
-          <div className="rounded-xl border-l-4 border-blue-300 bg-blue-50 p-4 text-sm">
+          <div className="rounded-xl border-l-4 border-blue-300 bg-blue-500/10 p-4 text-sm">
             <div className="font-medium text-[var(--text-primary)]">Import a local OAuth credential</div>
             <p className="mt-2 text-[var(--text-secondary)]">
               Upload a JSON credential file or paste the raw JSON content below.
@@ -54,7 +54,7 @@ export function OAuthImportForm({
               type="file"
               accept=".json,application/json"
               onChange={onFileSelect}
-              className="block w-full text-xs text-[var(--text-muted)] file:mr-3 file:rounded-md file:border-0 file:bg-[#e5e5e5] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[var(--text-primary)] hover:file:bg-[#e5e5e5] file:cursor-pointer file:transition-colors"
+              className="block w-full text-xs text-[var(--text-muted)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--surface-muted)] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[var(--text-primary)] hover:file:bg-[var(--surface-hover)] file:cursor-pointer file:transition-colors"
               disabled={status === "uploading"}
             />
           </div>
@@ -76,19 +76,19 @@ export function OAuthImportForm({
           </div>
 
           {status === "error" && errorMessage && (
-            <div className="rounded-xl border-l-4 border-red-300 bg-red-50 p-3 text-xs text-red-700">
+            <div className="rounded-xl border-l-4 border-red-300 bg-red-500/10 p-3 text-xs text-red-700">
               {errorMessage}
             </div>
           )}
 
           {status === "success" && (
-            <div className="rounded-xl border-l-4 border-green-300 bg-green-50 p-3 text-xs text-green-700">
+            <div className="rounded-xl border-l-4 border-green-300 bg-green-500/10 p-3 text-xs text-green-700">
               Credential imported successfully.
             </div>
           )}
 
           {jsonContent.trim() && status !== "error" && status !== "success" && (
-            <div className="rounded-xl border-l-4 border-green-300 bg-green-50 p-2 text-xs text-[var(--text-secondary)]">
+            <div className="rounded-xl border-l-4 border-green-300 bg-green-500/10 p-2 text-xs text-[var(--text-secondary)]">
               JSON content loaded ({jsonContent.length.toLocaleString()} characters). Ready to import.
             </div>
           )}

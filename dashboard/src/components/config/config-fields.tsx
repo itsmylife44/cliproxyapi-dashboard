@@ -27,7 +27,7 @@ export function Toggle({
       <span
         className={`
           pointer-events-none inline-block h-6 w-6 transform rounded-full
-          bg-white shadow-lg ring-0 transition duration-200 ease-in-out
+          bg-[var(--surface-base)] shadow-lg ring-0 transition duration-200 ease-in-out
           ${enabled ? 'translate-x-5' : 'translate-x-0'}
         `}
       />
@@ -60,7 +60,7 @@ export function Select({
       "
     >
       {options.map((option) => (
-        <option key={option.value} value={option.value} className="bg-[#0f172a] text-black">
+        <option key={option.value} value={option.value} className="bg-[#0f172a] text-[var(--text-primary)]">
           {option.label}
         </option>
       ))}

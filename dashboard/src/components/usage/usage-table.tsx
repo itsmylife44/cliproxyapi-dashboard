@@ -32,29 +32,29 @@ export function UsageTable({ keys, isAdmin }: UsageTableProps) {
 
   if (Object.keys(keys).length === 0) {
     return (
-      <section className="rounded-md border border-[#e5e5e5] bg-white p-6 text-center">
-        <p className="text-sm text-[#777169]">No usage data yet</p>
+      <section className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center">
+        <p className="text-sm text-[var(--text-muted)]">No usage data yet</p>
       </section>
     );
   }
 
   return (
     <section className="space-y-2">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#777169]">Usage by API Key</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Usage by API Key</h2>
       <div className="overflow-x-auto">
-        <div className="min-w-[600px] rounded-md border border-[#e5e5e5] bg-white">
+        <div className="min-w-[600px] rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
           <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 border-b border-[#e5e5e5] bg-white">
+          <thead className="sticky top-0 z-10 border-b border-[var(--surface-border)] bg-[var(--surface-base)]">
             <tr>
-              <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169] w-8"></th>
-              <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Key Name</th>
+              <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] w-8"></th>
+              <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Key Name</th>
               {isAdmin && (
-                <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Username</th>
+                <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Username</th>
               )}
-              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Total</th>
-              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Success</th>
-              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Failed</th>
-              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Tokens</th>
+              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total</th>
+              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Success</th>
+              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Failed</th>
+              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Tokens</th>
             </tr>
           </thead>
           <tbody>
@@ -65,7 +65,7 @@ export function UsageTable({ keys, isAdmin }: UsageTableProps) {
               return (
                 <React.Fragment key={authIndex}>
                   <tr
-                    className={`border-b border-[#e5e5e5] ${hasModels ? "cursor-pointer hover:bg-[#f5f5f5]" : ""}`}
+                    className={`border-b border-[var(--surface-border)] ${hasModels ? "cursor-pointer hover:bg-[var(--surface-muted)]" : ""}`}
                     tabIndex={hasModels ? 0 : undefined}
                     aria-expanded={hasModels ? isExpanded : undefined}
                     onClick={() => {
@@ -96,45 +96,45 @@ export function UsageTable({ keys, isAdmin }: UsageTableProps) {
                       }
                     }}
                   >
-                    <td className="p-2 text-[#777169]">
+                    <td className="p-2 text-[var(--text-muted)]">
                       {hasModels && (
                         <span className="text-xs">
                           {isExpanded ? "\u25BC" : "\u25B6"}
                         </span>
                       )}
                     </td>
-                    <td className="p-2 font-mono text-xs text-black">{keyUsage.keyName}</td>
+                    <td className="p-2 font-mono text-xs text-[var(--text-primary)]">{keyUsage.keyName}</td>
                     {isAdmin && (
-                      <td className="p-2 text-xs text-[#4e4e4e]">{keyUsage.username || "\u2014"}</td>
+                      <td className="p-2 text-xs text-[var(--text-secondary)]">{keyUsage.username || "\u2014"}</td>
                     )}
-                    <td className="p-2 text-right text-xs text-[#4e4e4e]">{keyUsage.totalRequests.toLocaleString()}</td>
-                    <td className="p-2 text-right text-xs text-[#4e4e4e]">{keyUsage.successCount.toLocaleString()}</td>
-                    <td className="p-2 text-right text-xs text-[#4e4e4e]">{keyUsage.failureCount.toLocaleString()}</td>
-                    <td className="p-2 text-right text-xs text-[#4e4e4e]">{keyUsage.totalTokens.toLocaleString()}</td>
+                    <td className="p-2 text-right text-xs text-[var(--text-secondary)]">{keyUsage.totalRequests.toLocaleString()}</td>
+                    <td className="p-2 text-right text-xs text-[var(--text-secondary)]">{keyUsage.successCount.toLocaleString()}</td>
+                    <td className="p-2 text-right text-xs text-[var(--text-secondary)]">{keyUsage.failureCount.toLocaleString()}</td>
+                    <td className="p-2 text-right text-xs text-[var(--text-secondary)]">{keyUsage.totalTokens.toLocaleString()}</td>
                   </tr>
 
                   {isExpanded && hasModels && (
                     <tr>
-                      <td colSpan={isAdmin ? 7 : 6} className="p-0 bg-white">
+                      <td colSpan={isAdmin ? 7 : 6} className="p-0 bg-[var(--surface-base)]">
                         <div className="p-3 pl-8">
                           <table className="w-full text-xs">
-                            <thead className="border-b border-[#e5e5e5]">
+                            <thead className="border-b border-[var(--surface-border)]">
                               <tr>
-                                <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Model</th>
-                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Requests</th>
-                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Input</th>
-                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Output</th>
-                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Total</th>
+                                <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Model</th>
+                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Requests</th>
+                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Input</th>
+                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Output</th>
+                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total</th>
                               </tr>
                             </thead>
                             <tbody>
                               {Object.entries(keyUsage.models).map(([modelName, modelData]) => (
-                                <tr key={modelName} className="border-b border-[#e5e5e5]/40 last:border-0">
-                                  <td className="p-2 text-left font-mono text-[11px] text-[#4e4e4e]">{modelName}</td>
-                                  <td className="p-2 text-right text-[#777169]">{modelData.totalRequests.toLocaleString()}</td>
-                                  <td className="p-2 text-right text-[#777169]">{modelData.inputTokens.toLocaleString()}</td>
-                                  <td className="p-2 text-right text-[#777169]">{modelData.outputTokens.toLocaleString()}</td>
-                                  <td className="p-2 text-right text-[#777169]">{modelData.totalTokens.toLocaleString()}</td>
+                                <tr key={modelName} className="border-b border-[var(--surface-border)]/40 last:border-0">
+                                  <td className="p-2 text-left font-mono text-[11px] text-[var(--text-secondary)]">{modelName}</td>
+                                  <td className="p-2 text-right text-[var(--text-muted)]">{modelData.totalRequests.toLocaleString()}</td>
+                                  <td className="p-2 text-right text-[var(--text-muted)]">{modelData.inputTokens.toLocaleString()}</td>
+                                  <td className="p-2 text-right text-[var(--text-muted)]">{modelData.outputTokens.toLocaleString()}</td>
+                                  <td className="p-2 text-right text-[var(--text-muted)]">{modelData.totalTokens.toLocaleString()}</td>
                                 </tr>
                               ))}
                             </tbody>

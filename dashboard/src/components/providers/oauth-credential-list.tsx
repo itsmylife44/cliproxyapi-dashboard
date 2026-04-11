@@ -75,7 +75,7 @@ function OAuthStatusBadge({
 
   if (status === "disabled") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-[#f5f5f5] px-2 py-0.5 text-[10px] font-medium text-[#777169]" title="Account is disabled">
+      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-muted)]" title="Account is disabled">
         <span className="size-1.5 rounded-full bg-[#999]" />
         Disabled
       </span>
@@ -100,37 +100,37 @@ export function OAuthCredentialList({
   return (
     <>
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#777169]">Connected Accounts</h3>
-        <p className="mt-1 text-xs text-[#777169]">Active OAuth provider connections</p>
+        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Connected Accounts</h3>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">Active OAuth provider connections</p>
       </div>
       {loading ? (
-        <div className="flex items-center justify-center rounded-md border border-[#e5e5e5] bg-white p-8">
+        <div className="flex items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-8">
           <div className="flex flex-col items-center gap-3">
-            <div className="size-8 animate-spin rounded-full border-4 border-[#ddd] border-t-blue-500"></div>
-            <p className="text-sm text-[#777169]">Loading accounts...</p>
+            <div className="size-8 animate-spin rounded-full border-4 border-[var(--surface-border)] border-t-blue-500"></div>
+            <p className="text-sm text-[var(--text-muted)]">Loading accounts...</p>
           </div>
         </div>
       ) : accounts.length === 0 ? (
-        <div className="rounded-sm border border-[#e5e5e5] bg-white p-3 text-xs text-[#777169]">
+        <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 text-xs text-[var(--text-muted)]">
           No OAuth accounts connected yet. Connect your first account below.
         </div>
       ) : (
-        <div className="divide-y divide-[#e5e5e5] rounded-md border border-[#e5e5e5] bg-white">
+        <div className="divide-y divide-[var(--surface-border)] rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
           {accounts.map((account) => (
             <div key={account.id} className="group p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold text-black">{account.provider}</span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">{account.provider}</span>
                     {currentUser && (
                       <OwnerBadge ownerUsername={account.ownerUsername} isOwn={account.isOwn} />
                     )}
                     <OAuthStatusBadge status={account.status} statusMessage={account.statusMessage} unavailable={account.unavailable} />
                   </div>
                   {account.accountEmail && (
-                    <p className="truncate text-xs text-[#4e4e4e]">{account.accountEmail}</p>
+                    <p className="truncate text-xs text-[var(--text-secondary)]">{account.accountEmail}</p>
                   )}
-                  <p className="truncate text-xs font-mono text-[#777169]">{account.accountName}</p>
+                  <p className="truncate text-xs font-mono text-[var(--text-muted)]">{account.accountName}</p>
                 </div>
                 {currentUser && (account.isOwn || currentUser.isAdmin) && (
                   <div className="flex shrink-0 items-center gap-2">

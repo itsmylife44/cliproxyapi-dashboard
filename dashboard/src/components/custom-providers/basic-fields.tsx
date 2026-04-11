@@ -45,7 +45,7 @@ export function BasicFields({
   return (
     <>
       <div>
-        <label htmlFor="name" className="mb-2 block text-sm font-semibold text-black">
+        <label htmlFor="name" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
           Name <span className="text-red-600">*</span>
         </label>
         <Input
@@ -61,7 +61,7 @@ export function BasicFields({
       </div>
 
       <div>
-        <label htmlFor="providerId" className="mb-2 block text-sm font-semibold text-black">
+        <label htmlFor="providerId" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
           Provider ID <span className="text-red-600">*</span>
         </label>
         <Input
@@ -75,11 +75,11 @@ export function BasicFields({
           className={isEdit ? "opacity-60 cursor-not-allowed" : ""}
         />
         {errors.providerId && <p className="mt-1.5 text-xs text-red-600">{errors.providerId}</p>}
-        {!errors.providerId && <p className="mt-1.5 text-xs text-[#777169]">Lowercase alphanumeric with hyphens. {isEdit ? "Cannot be changed." : "Auto-generated from name."}</p>}
+        {!errors.providerId && <p className="mt-1.5 text-xs text-[var(--text-muted)]">Lowercase alphanumeric with hyphens. {isEdit ? "Cannot be changed." : "Auto-generated from name."}</p>}
       </div>
 
       <div>
-        <label htmlFor="baseUrl" className="mb-2 block text-sm font-semibold text-black">
+        <label htmlFor="baseUrl" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
           Base URL <span className="text-red-600">*</span>
         </label>
         <Input
@@ -95,7 +95,7 @@ export function BasicFields({
       </div>
 
       <div>
-        <label htmlFor="apiKey" className="mb-2 block text-sm font-semibold text-black">
+        <label htmlFor="apiKey" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
           API Key {!isEdit && <span className="text-red-600">*</span>}
         </label>
         <Input
@@ -108,11 +108,11 @@ export function BasicFields({
           disabled={saving}
         />
         {errors.apiKey && <p className="mt-1.5 text-xs text-red-600">{errors.apiKey}</p>}
-        {!errors.apiKey && isEdit && <p className="mt-1.5 text-xs text-[#777169]">Leave empty to keep existing API key</p>}
+        {!errors.apiKey && isEdit && <p className="mt-1.5 text-xs text-[var(--text-muted)]">Leave empty to keep existing API key</p>}
       </div>
 
       <div>
-        <label htmlFor="prefix" className="mb-2 block text-sm font-semibold text-black">
+        <label htmlFor="prefix" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
           Prefix (Optional)
         </label>
         <Input
@@ -123,11 +123,11 @@ export function BasicFields({
           placeholder="custom/"
           disabled={saving}
         />
-        <p className="mt-1.5 text-xs text-[#777169]">Model name prefix for routing</p>
+        <p className="mt-1.5 text-xs text-[var(--text-muted)]">Model name prefix for routing</p>
       </div>
 
       <div>
-        <label htmlFor="proxyUrl" className="mb-2 block text-sm font-semibold text-black">
+        <label htmlFor="proxyUrl" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
           Proxy URL (Optional)
         </label>
         <Input

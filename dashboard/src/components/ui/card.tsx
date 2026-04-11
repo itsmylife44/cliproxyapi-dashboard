@@ -21,7 +21,7 @@ interface CardHeaderProps {
 
 export function CardHeader({ children, className }: CardHeaderProps) {
   return (
-    <div className={cn("mb-3 border-b border-[#e5e5e5] pb-2", className)}>
+    <div className={cn("mb-3 border-b border-[var(--surface-border)] pb-2", className)}>
       {children}
     </div>
   );
@@ -34,7 +34,7 @@ interface CardTitleProps {
 
 export function CardTitle({ children, className }: CardTitleProps) {
   return (
-    <h2 className={cn("text-sm font-medium tracking-wide text-black", className)}>
+    <h2 className={cn("text-sm font-medium tracking-wide text-[var(--text-primary)]", className)}>
       {children}
     </h2>
   );

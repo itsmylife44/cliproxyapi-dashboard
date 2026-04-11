@@ -210,7 +210,7 @@ export function ModelSelector({
             >
               <polyline points="9 18 15 12 9 6" />
             </svg>
-            <span className="text-sm font-semibold text-black">
+            <span className="text-sm font-semibold text-[var(--text-primary)]">
               Model Selection <HelpTooltip content="Deselect models to exclude them from your config. Excluded models won't appear in opencode.json or be assigned to agents." />
             </span>
             {isLocked && (
@@ -232,7 +232,7 @@ export function ModelSelector({
         ) : (
           <>
             {saveStatus === SAVE_STATUS.SAVING && (
-              <span className="text-xs text-[#777169]">Saving...</span>
+              <span className="text-xs text-[var(--text-muted)]">Saving...</span>
             )}
             {saveStatus === SAVE_STATUS.SAVED && (
               <span className="flex items-center gap-1 text-xs text-green-600">

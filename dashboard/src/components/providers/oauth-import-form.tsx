@@ -40,37 +40,37 @@ export function OAuthImportForm({
       <ModalContent>
         <div className="space-y-4">
           <div className="rounded-xl border-l-4 border-blue-300 bg-blue-50 p-4 text-sm">
-            <div className="font-medium text-black">Import a local OAuth credential</div>
-            <p className="mt-2 text-[#4e4e4e]">
+            <div className="font-medium text-[var(--text-primary)]">Import a local OAuth credential</div>
+            <p className="mt-2 text-[var(--text-secondary)]">
               Upload a JSON credential file or paste the raw JSON content below.
               The credential will be imported and connected to your account.
             </p>
           </div>
 
           <div>
-            <div className="mb-2 text-xs font-medium text-black">Upload JSON file</div>
+            <div className="mb-2 text-xs font-medium text-[var(--text-primary)]">Upload JSON file</div>
             <input
               ref={fileInputRef}
               type="file"
               accept=".json,application/json"
               onChange={onFileSelect}
-              className="block w-full text-xs text-[#777169] file:mr-3 file:rounded-md file:border-0 file:bg-[#e5e5e5] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-black hover:file:bg-[#e5e5e5] file:cursor-pointer file:transition-colors"
+              className="block w-full text-xs text-[var(--text-muted)] file:mr-3 file:rounded-md file:border-0 file:bg-[#e5e5e5] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[var(--text-primary)] hover:file:bg-[#e5e5e5] file:cursor-pointer file:transition-colors"
               disabled={status === "uploading"}
             />
           </div>
 
           <div className="relative">
             <div className="absolute inset-x-0 top-0 flex items-center justify-center">
-              <span className="bg-white px-2 text-[10px] font-medium uppercase tracking-wider text-[#777169]">or paste JSON</span>
+              <span className="bg-[var(--surface-base)] px-2 text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">or paste JSON</span>
             </div>
-            <div className="border-t border-[#e5e5e5] pt-4 mt-2">
+            <div className="border-t border-[var(--surface-border)] pt-4 mt-2">
               <textarea
                 value={jsonContent}
                 onChange={(e) => onJsonChange(e.target.value)}
                 placeholder='{&#10;  "access_token": "...",&#10;  "refresh_token": "...",&#10;  ...&#10;}'
                 rows={8}
                 disabled={status === "uploading"}
-                className="w-full rounded-md border border-[#e5e5e5] bg-[#f5f5f5] px-3 py-2 font-mono text-xs text-black placeholder:text-[#777169] focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/30 disabled:opacity-50 resize-y"
+                className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/30 disabled:opacity-50 resize-y"
               />
             </div>
           </div>
@@ -88,7 +88,7 @@ export function OAuthImportForm({
           )}
 
           {jsonContent.trim() && status !== "error" && status !== "success" && (
-            <div className="rounded-xl border-l-4 border-green-300 bg-green-50 p-2 text-xs text-[#4e4e4e]">
+            <div className="rounded-xl border-l-4 border-green-300 bg-green-50 p-2 text-xs text-[var(--text-secondary)]">
               JSON content loaded ({jsonContent.length.toLocaleString()} characters). Ready to import.
             </div>
           )}

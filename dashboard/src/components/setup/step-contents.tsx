@@ -32,7 +32,7 @@ function CopyIcon() {
 function SpinnerIcon() {
   return (
     <div
-      className="h-4 w-4 animate-spin rounded-full border-2 border-[#e5e5e5] border-t-blue-400"
+      className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--surface-border)] border-t-blue-400"
       aria-hidden="true"
     />
   );
@@ -42,7 +42,7 @@ export function Step1Content({ done }: { done: boolean }) {
   if (done) return null;
   return (
     <div className="mt-3 space-y-3">
-      <p className="text-sm text-[#777169]">
+      <p className="text-sm text-[var(--text-muted)]">
         Open the Providers page in a new tab to add your first provider. This
         wizard will automatically detect when a provider is connected.
       </p>
@@ -125,7 +125,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
 
   if (locked) {
     return (
-      <div className="mt-3 rounded-md border border-[#e5e5e5] bg-[#f5f5f5] px-3 py-2 text-xs text-[#777169]">
+      <div className="mt-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-muted)]">
         Complete Step 1 first to unlock this step.
       </div>
     );
@@ -137,21 +137,21 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
           Copy your API key now -- it will not be shown again.
         </div>
-        <div className="flex items-center gap-2 rounded-md border border-[#e5e5e5] bg-white/60 px-3 py-2">
-          <code className="flex-1 truncate font-mono text-xs text-black">
+        <div className="flex items-center gap-2 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]/60 px-3 py-2">
+          <code className="flex-1 truncate font-mono text-xs text-[var(--text-primary)]">
             {createdKey.key}
           </code>
           <button
             type="button"
             onClick={handleCopy}
-            className="flex flex-shrink-0 items-center gap-1 rounded border border-[#e5e5e5]/60 bg-[#f5f5f5]/70 px-2 py-1 text-[11px] font-medium text-[#4e4e4e] transition-colors hover:bg-[#e5e5e5]/80 hover:text-black"
+            className="flex flex-shrink-0 items-center gap-1 rounded border border-[var(--surface-border)]/60 bg-[var(--surface-muted)]/70 px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]/80 hover:text-[var(--text-primary)]"
           >
             <CopyIcon />
             {copied ? "Copied" : "Copy"}
           </button>
         </div>
-        <p className="text-xs text-[#777169]">
-          Key name: <span className="text-[#4e4e4e]">{createdKey.name}</span>
+        <p className="text-xs text-[var(--text-muted)]">
+          Key name: <span className="text-[var(--text-secondary)]">{createdKey.name}</span>
         </p>
       </div>
     );
@@ -178,7 +178,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
           {submitting ? "Creating..." : "Create API Key"}
         </Button>
       </div>
-      <p className="text-xs text-[#777169]">
+      <p className="text-xs text-[var(--text-muted)]">
         Give your key a memorable name, then click Create.
       </p>
     </div>
@@ -197,7 +197,7 @@ export function Step3Content({ done, locked, modelCount, statusLoaded }: Step3Co
 
   if (locked) {
     return (
-      <div className="mt-3 rounded-md border border-[#e5e5e5] bg-[#f5f5f5] px-3 py-2 text-xs text-[#777169]">
+      <div className="mt-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-muted)]">
         Complete the previous steps first to unlock this step.
       </div>
     );
@@ -205,7 +205,7 @@ export function Step3Content({ done, locked, modelCount, statusLoaded }: Step3Co
 
   if (!statusLoaded) {
     return (
-      <div className="mt-3 flex items-center gap-2 text-sm text-[#777169]">
+      <div className="mt-3 flex items-center gap-2 text-sm text-[var(--text-muted)]">
         <SpinnerIcon />
         Checking model catalog...
       </div>
@@ -214,7 +214,7 @@ export function Step3Content({ done, locked, modelCount, statusLoaded }: Step3Co
 
   if (modelCount === 0) {
     return (
-      <div className="mt-3 flex items-center gap-2 text-sm text-[#777169]">
+      <div className="mt-3 flex items-center gap-2 text-sm text-[var(--text-muted)]">
         <SpinnerIcon />
         Waiting for models to become available...
       </div>

@@ -186,7 +186,7 @@ export function ModelBadge({
               placeholder="variant"
               value={extraFields?.variant ?? ""}
               onChange={(e) => onFieldChange("variant", e.target.value || undefined)}
-              className="w-16 px-1.5 py-0.5 text-[10px] bg-[#f5f5f5] border border-[#e5e5e5] rounded text-[#4e4e4e] placeholder:text-[#bbb] focus:outline-none focus:border-black/15"
+              className="w-16 px-1.5 py-0.5 text-[10px] bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded text-[var(--text-secondary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-black/15"
             />
             <input
               type="number"
@@ -244,9 +244,9 @@ export function ModelBadge({
                     }}
                     className="px-1.5 py-0.5 text-[10px] font-mono bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/15 cursor-pointer"
                   >
-                    <option value="" className="bg-white">+ add fallback</option>
+                    <option value="" className="bg-[var(--surface-base)]">+ add fallback</option>
                     {choices.map((m) => (
-                      <option key={m} value={m} className="bg-white">{m}</option>
+                      <option key={m} value={m} className="bg-[var(--surface-base)]">{m}</option>
                     ))}
                   </select>
                 );
@@ -279,9 +279,9 @@ export function ModelBadge({
                   }}
                   className="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] font-mono bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)]/15 cursor-pointer"
                 >
-                  <option value="" className="bg-white">select model...</option>
+                  <option value="" className="bg-[var(--surface-base)]">select model...</option>
                   {availableModels.map((m) => (
-                    <option key={m} value={m} className="bg-white">{m}</option>
+                    <option key={m} value={m} className="bg-[var(--surface-base)]">{m}</option>
                   ))}
                 </select>
                 <input

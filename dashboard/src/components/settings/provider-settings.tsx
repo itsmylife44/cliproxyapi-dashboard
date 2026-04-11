@@ -63,7 +63,7 @@ export function ProviderSettings({
       </h3>
       <div className="space-y-4">
         {proxyUpdateLoading ? (
-          <div className="text-[#777169]">Checking for updates...</div>
+          <div className="text-[var(--text-muted)]">Checking for updates...</div>
         ) : proxyUpdateInfo ? (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -119,7 +119,7 @@ export function ProviderSettings({
             )}
           </>
         ) : (
-          <div className="text-[#777169]">Failed to check for updates</div>
+          <div className="text-[var(--text-muted)]">Failed to check for updates</div>
         )}
       </div>
 

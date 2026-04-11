@@ -21,19 +21,19 @@ export function UngroupedList({
   if (providers.length === 0) return null;
 
   return (
-    <div className="rounded-sm border border-[#e5e5e5] bg-white overflow-hidden">
-      <div className="flex items-center gap-2 border-b border-[#e5e5e5] bg-white/60 px-3 py-2">
-        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#777169]">
+    <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-[var(--surface-border)] bg-[var(--surface-base)]/60 px-3 py-2">
+        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
           Ungrouped
         </span>
-        <span className="text-xs text-[#777169] bg-[#f5f5f5] px-1.5 py-0.5 rounded-md">
+        <span className="text-xs text-[var(--text-muted)] bg-[var(--surface-muted)] px-1.5 py-0.5 rounded-md">
           {providers.length}
         </span>
       </div>
 
       <div className="overflow-x-auto">
         <div className="min-w-[600px]">
-          <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] border-b border-[#e5e5e5] bg-white px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
+          <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
             <span>Name</span>
             <span>Endpoint</span>
             <span>Models</span>

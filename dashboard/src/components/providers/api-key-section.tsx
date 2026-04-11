@@ -316,7 +316,7 @@ export function ApiKeySection({
             </div>
             {currentUser && (
               <div className="rounded-sm border-l-4 border-blue-300 bg-blue-50 p-3 text-sm">
-                <p className="text-black">
+                <p className="text-[var(--text-primary)]">
                   <strong>Usage:</strong> You have contributed {currentUser ? configs[PROVIDER_IDS.CLAUDE].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.GEMINI].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.CODEX].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.OPENAI].keys.filter((k) => k.isOwn).length : 0} / {maxKeysPerUser} keys total
                 </p>
               </div>

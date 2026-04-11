@@ -231,7 +231,7 @@ export function ConfigPublisher() {
       <CardHeader>
         <CardTitle>
           <span className="flex items-center gap-3">
-            <span className="w-6 h-6 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] flex items-center justify-center text-sm" aria-hidden="true">
+            <span className="w-6 h-6 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] flex items-center justify-center text-sm" aria-hidden="true">
               &#9733;
             </span>
             Published Config

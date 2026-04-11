@@ -497,7 +497,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     return (
       <div className="space-y-4">
         <div className="border-l-4 border-amber-300 bg-amber-50 p-4 text-sm rounded-r-xl">
-          <p className="text-black font-medium mb-1">No providers configured</p>
+          <p className="text-[var(--text-primary)] font-medium mb-1">No providers configured</p>
           <p className="text-[var(--text-muted)] text-xs">
             You need to configure at least one AI provider before generating an Oh My Open Agent config. Head to the{" "}
             <Link

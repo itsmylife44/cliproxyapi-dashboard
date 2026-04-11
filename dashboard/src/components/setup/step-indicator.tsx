@@ -46,7 +46,7 @@ export function StepIndicator({ step, done, active }: StepIndicatorProps) {
     );
   }
   return (
-    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#f5f5f5] text-[#777169] ring-1 ring-slate-700/60">
+    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--text-muted)] ring-1 ring-slate-700/60">
       <StepNumber n={step} />
     </div>
   );

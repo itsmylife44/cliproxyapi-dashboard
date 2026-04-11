@@ -21,11 +21,11 @@ export function TmuxSection({
   onTmuxNumberChange,
 }: TmuxSectionProps) {
   return (
-    <div className="rounded-xl border border-[#e5e5e5] bg-[#fafafa] overflow-hidden transition-colors hover:border-[#e5e5e5]">
+    <div className="rounded-xl border border-[var(--surface-border)] bg-[#fafafa] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
         type="button"
         onClick={onToggleExpand}
-        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-[#777169] hover:text-black hover:bg-[#f5f5f5] transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-muted)] transition-colors"
       >
         <svg
           width="10"
@@ -50,13 +50,13 @@ export function TmuxSection({
       </button>
       {isExpanded && (
         <div className="px-3 pb-3 space-y-2">
-          <div className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[#f5f5f5]">
-            <span className="text-xs text-[#4e4e4e] font-mono">Enabled</span>
+          <div className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)]">
+            <span className="text-xs text-[var(--text-secondary)] font-mono">Enabled</span>
             <button
               type="button"
               onClick={onTmuxEnabledToggle}
               className={`w-9 h-5 rounded-full transition-colors relative ${
-                overrides.tmux?.enabled ? "bg-emerald-500" : "bg-[#f0f0f0]"
+                overrides.tmux?.enabled ? "bg-emerald-500" : "bg-[var(--surface-hover)]"
               }`}
             >
               <span
@@ -69,11 +69,11 @@ export function TmuxSection({
           {overrides.tmux?.enabled && (
             <>
               <div className="space-y-1">
-                <span className="text-xs text-[#777169]">Layout</span>
+                <span className="text-xs text-[var(--text-muted)]">Layout</span>
                 <select
                   value={overrides.tmux.layout ?? "main-vertical"}
                   onChange={(e) => onTmuxLayoutChange(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black focus:outline-none focus:border-black/20"
+                  className="w-full px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]/20"
                 >
                   {TMUX_LAYOUTS.map((layout) => (
                     <option key={layout} value={layout}>
@@ -83,7 +83,7 @@ export function TmuxSection({
                 </select>
               </div>
               <div className="space-y-1">
-                <span className="text-xs text-[#777169]">Main Pane Size (20-80)</span>
+                <span className="text-xs text-[var(--text-muted)]">Main Pane Size (20-80)</span>
                 <input
                   type="number"
                   min={20}
@@ -95,11 +95,11 @@ export function TmuxSection({
                       onTmuxNumberChange("main_pane_size", parsed);
                     }
                   }}
-                  className="w-full px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black focus:outline-none focus:border-black/20"
+                  className="w-full px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]/20"
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-xs text-[#777169]">Main Pane Min Width</span>
+                <span className="text-xs text-[var(--text-muted)]">Main Pane Min Width</span>
                 <input
                   type="number"
                   min={0}
@@ -110,11 +110,11 @@ export function TmuxSection({
                       onTmuxNumberChange("main_pane_min_width", parsed);
                     }
                   }}
-                  className="w-full px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black focus:outline-none focus:border-black/20"
+                  className="w-full px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]/20"
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-xs text-[#777169]">Agent Pane Min Width</span>
+                <span className="text-xs text-[var(--text-muted)]">Agent Pane Min Width</span>
                 <input
                   type="number"
                   min={0}
@@ -125,7 +125,7 @@ export function TmuxSection({
                       onTmuxNumberChange("agent_pane_min_width", parsed);
                     }
                   }}
-                  className="w-full px-2.5 py-1.5 text-xs bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg text-black focus:outline-none focus:border-black/20"
+                  className="w-full px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]/20"
                 />
               </div>
             </>

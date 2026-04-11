@@ -143,13 +143,13 @@ export function CostEstimation({ keys }: CostEstimationProps) {
           <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700/70">Estimated Cost</p>
           <p className="mt-0.5 text-lg font-bold text-emerald-700">{formatUSD(totalEstimatedCost)}</p>
         </div>
-        <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Priced Models</p>
-          <p className="mt-0.5 text-xs font-semibold text-black">{pricedModels.length} / {costBreakdown.length}</p>
+        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Priced Models</p>
+          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{pricedModels.length} / {costBreakdown.length}</p>
         </div>
-        <div className="rounded-lg border border-[#e5e5e5] bg-white px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Providers</p>
-          <p className="mt-0.5 text-xs font-semibold text-black">{providerBreakdown.length}</p>
+        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Providers</p>
+          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{providerBreakdown.length}</p>
         </div>
       </div>
 
@@ -202,16 +202,16 @@ export function CostEstimation({ keys }: CostEstimationProps) {
                 return (
                   <div key={prov.provider} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-[#4e4e4e]">{prov.provider}</span>
-                      <span className="font-semibold text-black">{formatUSD(prov.estimatedCost)} <span className="font-normal text-[#777169]">({pct.toFixed(1)}%)</span></span>
+                      <span className="font-medium text-[var(--text-secondary)]">{prov.provider}</span>
+                      <span className="font-semibold text-[var(--text-primary)]">{formatUSD(prov.estimatedCost)} <span className="font-normal text-[var(--text-muted)]">({pct.toFixed(1)}%)</span></span>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-[#f5f5f5]">
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
                       <div
                         className="h-full rounded-full transition-[width] duration-700"
                         style={{ width: `${Math.max(pct, 1)}%`, backgroundColor: color }}
                       />
                     </div>
-                    <p className="text-[10px] text-[#777169]">{prov.models} model{prov.models !== 1 ? "s" : ""} · {formatCompact(prov.requests)} requests</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{prov.models} model{prov.models !== 1 ? "s" : ""} · {formatCompact(prov.requests)} requests</p>
                   </div>
                 );
               })}
@@ -221,32 +221,32 @@ export function CostEstimation({ keys }: CostEstimationProps) {
       </div>
 
       {/* ── Detailed Model Table ────────────────────────────── */}
-      <div className="rounded-md border border-[#e5e5e5] bg-white">
-        <div className="border-b border-[#e5e5e5] px-4 py-2.5">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#777169]">Model Cost Details</h3>
+      <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
+        <div className="border-b border-[var(--surface-border)] px-4 py-2.5">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Model Cost Details</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-[#e5e5e5] bg-[#fafafa]">
-                <th className="px-3 py-2 text-left font-semibold text-[#777169]">Model</th>
-                <th className="px-3 py-2 text-left font-semibold text-[#777169]">Provider</th>
-                <th className="px-3 py-2 text-right font-semibold text-[#777169]">Requests</th>
-                <th className="px-3 py-2 text-right font-semibold text-[#777169]">Input Tokens</th>
-                <th className="px-3 py-2 text-right font-semibold text-[#777169]">Output Tokens</th>
-                <th className="px-3 py-2 text-right font-semibold text-[#777169]">Rate ($/1M)</th>
-                <th className="px-3 py-2 text-right font-semibold text-[#777169]">Est. Cost</th>
+              <tr className="border-b border-[var(--surface-border)] bg-[#fafafa]">
+                <th className="px-3 py-2 text-left font-semibold text-[var(--text-muted)]">Model</th>
+                <th className="px-3 py-2 text-left font-semibold text-[var(--text-muted)]">Provider</th>
+                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">Requests</th>
+                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">Input Tokens</th>
+                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">Output Tokens</th>
+                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">Rate ($/1M)</th>
+                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">Est. Cost</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f0f0f0]">
               {pricedModels.map((entry) => (
                 <tr key={entry.model} className="hover:bg-[#fafafa] transition-colors">
-                  <td className="px-3 py-2 font-medium text-black max-w-[200px] truncate" title={entry.model}>{entry.model}</td>
-                  <td className="px-3 py-2 text-[#777169]">{entry.provider}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[#4e4e4e]">{entry.requests.toLocaleString()}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[#4e4e4e]">{formatCompact(entry.inputTokens)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[#4e4e4e]">{formatCompact(entry.outputTokens)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[#777169]">
+                  <td className="px-3 py-2 font-medium text-[var(--text-primary)] max-w-[200px] truncate" title={entry.model}>{entry.model}</td>
+                  <td className="px-3 py-2 text-[var(--text-muted)]">{entry.provider}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">{entry.requests.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">{formatCompact(entry.inputTokens)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">{formatCompact(entry.outputTokens)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[var(--text-muted)]">
                     {entry.priced ? `${entry.inputPer1M}/${entry.outputPer1M}` : "—"}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums font-semibold text-emerald-700">{formatUSD(entry.estimatedCost)}</td>
@@ -255,35 +255,35 @@ export function CostEstimation({ keys }: CostEstimationProps) {
               {unpricedModels.length > 0 && (
                 <>
                   <tr>
-                    <td colSpan={7} className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#999] bg-[#fafafa]">
+                    <td colSpan={7} className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] bg-[#fafafa]">
                       Unpriced Models ({unpricedModels.length})
                     </td>
                   </tr>
                   {unpricedModels.map((entry) => (
                     <tr key={entry.model} className="opacity-50">
-                      <td className="px-3 py-1.5 text-[#777169] max-w-[200px] truncate" title={entry.model}>{entry.model}</td>
-                      <td className="px-3 py-1.5 text-[#999]">—</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-[#999]">{entry.requests.toLocaleString()}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-[#999]">{formatCompact(entry.inputTokens)}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-[#999]">{formatCompact(entry.outputTokens)}</td>
-                      <td className="px-3 py-1.5 text-right text-[#999]">—</td>
-                      <td className="px-3 py-1.5 text-right text-[#999]">—</td>
+                      <td className="px-3 py-1.5 text-[var(--text-muted)] max-w-[200px] truncate" title={entry.model}>{entry.model}</td>
+                      <td className="px-3 py-1.5 text-[var(--text-muted)]">—</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]">{entry.requests.toLocaleString()}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]">{formatCompact(entry.inputTokens)}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]">{formatCompact(entry.outputTokens)}</td>
+                      <td className="px-3 py-1.5 text-right text-[var(--text-muted)]">—</td>
+                      <td className="px-3 py-1.5 text-right text-[var(--text-muted)]">—</td>
                     </tr>
                   ))}
                 </>
               )}
             </tbody>
             <tfoot>
-              <tr className="border-t border-[#e5e5e5] bg-[#fafafa]">
-                <td colSpan={6} className="px-3 py-2 font-semibold text-black">Total Estimated Cost</td>
+              <tr className="border-t border-[var(--surface-border)] bg-[#fafafa]">
+                <td colSpan={6} className="px-3 py-2 font-semibold text-[var(--text-primary)]">Total Estimated Cost</td>
                 <td className="px-3 py-2 text-right font-bold text-emerald-700 text-sm">{formatUSD(totalEstimatedCost)}</td>
               </tr>
             </tfoot>
           </table>
         </div>
-        <div className="border-t border-[#e5e5e5] px-4 py-2 text-[10px] text-[#999]">
+        <div className="border-t border-[var(--surface-border)] px-4 py-2 text-[10px] text-[var(--text-muted)]">
           💡 Costs are estimates based on official API pricing. OAuth/subscription usage may have different or zero actual cost.
-          Customize rates in your browser&apos;s localStorage under <code className="bg-[#f5f5f5] px-1 rounded text-[9px]">cliproxy-custom-pricing</code>.
+          Customize rates in your browser&apos;s localStorage under <code className="bg-[var(--surface-muted)] px-1 rounded text-[9px]">cliproxy-custom-pricing</code>.
         </div>
       </div>
     </div>

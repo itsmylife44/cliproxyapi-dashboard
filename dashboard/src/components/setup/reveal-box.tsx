@@ -56,14 +56,14 @@ export function RevealBox({ createdKey }: RevealBoxProps) {
         Copy your API key now -- it will not be shown again after you leave this
         page.
       </div>
-      <div className="flex items-center gap-2 rounded-md border border-[#e5e5e5] bg-white/60 px-3 py-2">
-        <code className="flex-1 truncate font-mono text-xs text-black">
+      <div className="flex items-center gap-2 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]/60 px-3 py-2">
+        <code className="flex-1 truncate font-mono text-xs text-[var(--text-primary)]">
           {createdKey.key}
         </code>
         <button
           type="button"
           onClick={handleCopy}
-          className="flex flex-shrink-0 items-center gap-1 rounded border border-[#e5e5e5]/60 bg-[#f5f5f5]/70 px-2 py-1 text-[11px] font-medium text-[#4e4e4e] transition-colors hover:bg-[#e5e5e5]/80 hover:text-black"
+          className="flex flex-shrink-0 items-center gap-1 rounded border border-[var(--surface-border)]/60 bg-[var(--surface-muted)]/70 px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]/80 hover:text-[var(--text-primary)]"
         >
           <CopyIcon />
           {copied ? "Copied" : "Copy"}

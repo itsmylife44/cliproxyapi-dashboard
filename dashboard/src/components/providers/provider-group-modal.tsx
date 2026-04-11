@@ -107,7 +107,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
         <ModalContent>
           <div className="space-y-6">
             <div>
-              <label htmlFor="groupName" className="mb-2 block text-sm font-semibold text-black">
+              <label htmlFor="groupName" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
                 Group Name <span className="text-red-600">*</span>
               </label>
               <Input
@@ -122,7 +122,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
             </div>
             
             <div>
-              <label className="mb-2 block text-sm font-semibold text-black">
+              <label className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
                 Color (Optional)
               </label>
               <div className="flex flex-wrap gap-2">
@@ -132,7 +132,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
                     type="button"
                     onClick={() => setSelectedColor(color)}
                     disabled={saving}
-                    className={`w-7 h-7 rounded-full border-2 transition-[border-color,transform] ${selectedColor === color ? "border-black scale-110" : "border-transparent hover:border-[#aaa]"} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className={`w-7 h-7 rounded-full border-2 transition-[border-color,transform] ${selectedColor === color ? "border-black scale-110" : "border-transparent hover:border-[var(--surface-border)]"} disabled:opacity-50 disabled:cursor-not-allowed`}
                     style={{ backgroundColor: color }}
                     aria-label={`Select color ${color}`}
                   />
@@ -143,7 +143,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
                   type="button"
                   onClick={() => setSelectedColor(null)} 
                   disabled={saving}
-                  className={`w-7 h-7 rounded-full border-2 border-dashed flex items-center justify-center text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${selectedColor === null ? "border-black text-black bg-[#f0f0f0]" : "border-[#ccc] text-[#777169] hover:border-[#aaa]"}`}
+                  className={`w-7 h-7 rounded-full border-2 border-dashed flex items-center justify-center text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${selectedColor === null ? "border-black text-[var(--text-primary)] bg-[var(--surface-hover)]" : "border-[var(--surface-border)] text-[var(--text-muted)] hover:border-[var(--surface-border)]"}`}
                   aria-label="No color"
                 >
                   ✕

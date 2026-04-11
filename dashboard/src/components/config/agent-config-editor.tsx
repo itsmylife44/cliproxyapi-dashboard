@@ -263,7 +263,7 @@ export default function AgentConfigEditor({
                       <button
                         type="button"
                         onClick={() => removeOAuthAliasEntry(provider, index)}
-                        className="flex size-6 items-center justify-center rounded text-[#777169] hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                        className="flex size-6 items-center justify-center rounded text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-50 transition-colors"
                         title="Remove entry"
                       >
                         <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">

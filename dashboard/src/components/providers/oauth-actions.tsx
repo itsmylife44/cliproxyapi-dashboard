@@ -24,20 +24,20 @@ export function OAuthActions({
   return (
     <>
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#777169]">Connect New Account</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Connect New Account</h3>
       </div>
-      <div className="overflow-hidden rounded-md border border-[#e5e5e5] bg-white">
+      <div className="overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
         {providers.map((provider, index) => (
           <div
             key={provider.id}
             className={cn(
               "flex items-center justify-between gap-3 px-3 py-2.5",
-              index !== providers.length - 1 && "border-b border-[#e5e5e5]"
+              index !== providers.length - 1 && "border-b border-[var(--surface-border)]"
             )}
           >
             <div className="space-y-1">
-              <div className="text-sm font-medium text-black">{provider.name}</div>
-              <p className="text-xs leading-relaxed text-[#777169]">{provider.description}</p>
+              <div className="text-sm font-medium text-[var(--text-primary)]">{provider.name}</div>
+              <p className="text-xs leading-relaxed text-[var(--text-muted)]">{provider.description}</p>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               <Button

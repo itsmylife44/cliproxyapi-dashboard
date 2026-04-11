@@ -23,7 +23,7 @@ export function ConfigPreview({
       <button
         type="button"
         onClick={onToggleExpanded}
-        className="flex items-center gap-2 text-xs font-medium text-[#777169] hover:text-black transition-colors"
+        className="flex items-center gap-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
       >
         <svg
           width="12"

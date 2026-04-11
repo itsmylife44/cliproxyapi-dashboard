@@ -17,7 +17,7 @@ export function PluginSection({
 }: PluginSectionProps) {
   return (
     <div className="space-y-2">
-      <label htmlFor="plugin-input" className="text-xs font-medium text-[#777169] uppercase tracking-wider">
+      <label htmlFor="plugin-input" className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
         Plugins
       </label>
       <div className="flex gap-2">
@@ -33,12 +33,12 @@ export function PluginSection({
             }
           }}
           placeholder="plugin-name@version"
-          className="flex-1 bg-[#f5f5f5] border border-[#e5e5e5] rounded-lg px-3 py-2 text-sm text-black font-mono placeholder:text-[#aaa] focus:border-black/20 focus:bg-white focus:outline-none transition-colors"
+          className="flex-1 bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] font-mono placeholder:text-[var(--text-muted)] focus:border-[var(--accent)]/20 focus:bg-[var(--surface-base)] focus:outline-none transition-colors"
         />
         <button
           type="button"
           onClick={onAddPlugin}
-          className="px-4 py-2 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] text-black text-sm font-medium hover:bg-[#eee] hover:border-[#ccc] transition-colors"
+          className="px-4 py-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] text-[var(--text-primary)] text-sm font-medium hover:bg-[var(--surface-hover)] hover:border-[var(--surface-border)] transition-colors"
         >
           Add
         </button>
@@ -47,7 +47,7 @@ export function PluginSection({
         {plugins.map((plugin) => (
           <span
             key={plugin}
-            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#f5f5f5] border border-[#e5e5e5] text-xs text-black font-mono"
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] text-xs text-[var(--text-primary)] font-mono"
           >
             {plugin}
             <button

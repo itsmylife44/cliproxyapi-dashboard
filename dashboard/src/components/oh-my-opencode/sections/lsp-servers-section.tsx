@@ -135,11 +135,11 @@ export function LspServersSection({
             >
               <div className="flex items-center gap-2 text-xs font-mono">
                 <span className="text-emerald-700">{language}</span>
-                <span className="text-[#aaa]">&rarr;</span>
+                <span className="text-[var(--text-muted)]">&rarr;</span>
                 <span className="text-[var(--text-muted)]">{entry.command.join(" ")}</span>
                 {entry.extensions && entry.extensions.length > 0 && (
                   <>
-                    <span className="text-[#aaa]">|</span>
+                    <span className="text-[var(--text-muted)]">|</span>
                     <span className="text-[var(--text-muted)]">{entry.extensions.join(", ")}</span>
                   </>
                 )}

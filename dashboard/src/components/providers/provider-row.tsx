@@ -25,10 +25,10 @@ export function ProviderRow({
   onMoveDown,
 }: ProviderRowProps) {
   return (
-    <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] items-center border-b border-[#e5e5e5] px-3 py-2 last:border-b-0">
+    <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] items-center border-b border-[var(--surface-border)] px-3 py-2 last:border-b-0">
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className="truncate text-sm font-medium text-black">{provider.name}</p>
+          <p className="truncate text-sm font-medium text-[var(--text-primary)]">{provider.name}</p>
           {!provider.hasEncryptedKey && (
             <span
               title="Re-save this provider to enable auto-resync after proxy restarts"
@@ -38,17 +38,17 @@ export function ProviderRow({
             </span>
           )}
         </div>
-        <p className="truncate text-xs text-[#777169]">{provider.providerId}</p>
+        <p className="truncate text-xs text-[var(--text-muted)]">{provider.providerId}</p>
       </div>
-      <p className="truncate text-xs text-[#4e4e4e] pr-2">{provider.baseUrl}</p>
-      <p className="text-xs text-[#4e4e4e]">{provider.models.length}</p>
+      <p className="truncate text-xs text-[var(--text-secondary)] pr-2">{provider.baseUrl}</p>
+      <p className="text-xs text-[var(--text-secondary)]">{provider.models.length}</p>
 
       <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={() => onMoveUp(provider.id, provider.groupId, index)}
           disabled={isFirst}
-          className="flex size-6 items-center justify-center rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] text-[#4e4e4e] hover:bg-[#e5e5e5] hover:text-black disabled:opacity-30 disabled:hover:bg-[#f5f5f5] disabled:hover:text-[#4e4e4e] transition-colors"
+          className="flex size-6 items-center justify-center rounded-sm border border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-30 disabled:hover:bg-[var(--surface-muted)] disabled:hover:text-[var(--text-secondary)] transition-colors"
           title="Move Up"
           aria-label={`Move ${provider.name} up`}
         >
@@ -58,7 +58,7 @@ export function ProviderRow({
           type="button"
           onClick={() => onMoveDown(provider.id, provider.groupId, index)}
           disabled={isLast}
-          className="flex size-6 items-center justify-center rounded-sm border border-[#e5e5e5] bg-[#f5f5f5] text-[#4e4e4e] hover:bg-[#e5e5e5] hover:text-black disabled:opacity-30 disabled:hover:bg-[#f5f5f5] disabled:hover:text-[#4e4e4e] transition-colors"
+          className="flex size-6 items-center justify-center rounded-sm border border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-30 disabled:hover:bg-[var(--surface-muted)] disabled:hover:text-[var(--text-secondary)] transition-colors"
           title="Move Down"
           aria-label={`Move ${provider.name} down`}
         >

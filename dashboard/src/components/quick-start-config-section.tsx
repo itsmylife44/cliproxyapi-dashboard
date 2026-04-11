@@ -90,18 +90,18 @@ export function QuickStartConfigSection({
         <CardHeader>
           <CardTitle>
             <span className="flex items-center gap-3">
-             <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[#e5e5e5] bg-[#f5f5f5] text-sm text-[#4e4e4e]" aria-hidden="true">&#9654;</span>
+             <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] text-sm text-[var(--text-secondary)]" aria-hidden="true">&#9654;</span>
                Using with OpenCode
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <p className="text-sm text-[#4e4e4e]">
+            <p className="text-sm text-[var(--text-secondary)]">
               {hasSyncActive ? (
-                <span>Config auto-syncs via <code className="rounded bg-[#f5f5f5] px-1.5 py-0.5 font-mono text-xs text-blue-600">opencode-cliproxyapi-sync@latest</code> plugin.</span>
+                <span>Config auto-syncs via <code className="rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-blue-600">opencode-cliproxyapi-sync@latest</code> plugin.</span>
               ) : (
-                <span>Place at <code className="break-all rounded bg-[#f5f5f5] px-1.5 py-0.5 font-mono text-xs text-amber-700">~/.config/opencode/opencode.json</code> or project root.</span>
+                <span>Place at <code className="break-all rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-amber-700">~/.config/opencode/opencode.json</code> or project root.</span>
               )}
             </p>
 
@@ -130,20 +130,20 @@ export function QuickStartConfigSection({
                onVariantChange={setOmoVariant}
               />
 
-            <div className="space-y-1.5 text-sm text-[#4e4e4e]">
+            <div className="space-y-1.5 text-sm text-[var(--text-secondary)]">
               <p className="flex items-start gap-2">
-                <span className="text-[#4e4e4e]">•</span>
+                <span className="text-[var(--text-secondary)]">•</span>
                 <span>Add providers via <Link href="/dashboard/providers" className="font-medium text-blue-600 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-800">Providers</Link></span>
               </p>
               <p className="flex items-start gap-2">
-                <span className="text-[#4e4e4e]">•</span>
-                <span>Set default model: <code className="break-all rounded bg-[#f5f5f5] px-1.5 py-0.5 font-mono text-xs text-amber-700">cliproxyapi/model-name</code></span>
+                <span className="text-[var(--text-secondary)]">•</span>
+                <span>Set default model: <code className="break-all rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-amber-700">cliproxyapi/model-name</code></span>
               </p>
             </div>
 
-            <div className="flex items-start gap-3 rounded-md border border-[#e5e5e5] bg-white p-3">
-              <p className="text-sm text-[#4e4e4e]">
-                Auto-sync: Get token in <Link href="/dashboard/settings" className="font-medium text-blue-600 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-800">Settings</Link>, install <code className="rounded bg-[#f5f5f5] px-1.5 py-0.5 font-mono text-xs text-blue-600">opencode-cliproxyapi-sync@latest</code>
+            <div className="flex items-start gap-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-3">
+              <p className="text-sm text-[var(--text-secondary)]">
+                Auto-sync: Get token in <Link href="/dashboard/settings" className="font-medium text-blue-600 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-800">Settings</Link>, install <code className="rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-blue-600">opencode-cliproxyapi-sync@latest</code>
               </p>
             </div>
            </div>
@@ -154,15 +154,15 @@ export function QuickStartConfigSection({
       {omoVariant === "normal" && (
         <>
           <section id="assignments" className="scroll-mt-24">
-            <details className="group rounded-lg border border-[#e5e5e5] bg-white" open={false}>
+            <details className="group rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]" open={false}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-                <span className="flex items-center gap-3 text-sm font-semibold text-black">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[#e5e5e5] bg-[#f5f5f5] text-sm text-[#4e4e4e]" aria-hidden="true">&#9654;</span>
+                <span className="flex items-center gap-3 text-sm font-semibold text-[var(--text-primary)]">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] text-sm text-[var(--text-secondary)]" aria-hidden="true">&#9654;</span>
                   Advanced Config: Oh-My-Open-Agent Assignments
                 </span>
-                <span className="text-xs font-medium uppercase tracking-[0.1em] text-[#777169] transition-transform duration-200 group-open:rotate-180">&#8964;</span>
+                <span className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-muted)] transition-transform duration-200 group-open:rotate-180">&#8964;</span>
               </summary>
-              <div className="border-t border-[#e5e5e5] px-4 py-3">
+              <div className="border-t border-[var(--surface-border)] px-4 py-3">
                 <OhMyOpenCodeConfigGenerator
                   apiKeys={apiKeys}
                   config={config as ConfigData | null}
@@ -181,15 +181,15 @@ export function QuickStartConfigSection({
       {omoVariant === "slim" && (
         <>
           <section id="assignments-slim" className="scroll-mt-24">
-            <details className="group rounded-lg border border-[#e5e5e5] bg-white" open={false}>
+            <details className="group rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]" open={false}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-                <span className="flex items-center gap-3 text-sm font-semibold text-black">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[#e5e5e5] bg-[#f5f5f5] text-sm text-[#4e4e4e]" aria-hidden="true">&#9654;</span>
+                <span className="flex items-center gap-3 text-sm font-semibold text-[var(--text-primary)]">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] text-sm text-[var(--text-secondary)]" aria-hidden="true">&#9654;</span>
                   Advanced Config: Oh-My-OpenCode Slim Assignments
                 </span>
-                <span className="text-xs font-medium uppercase tracking-[0.1em] text-[#777169] transition-transform duration-200 group-open:rotate-180">&#8964;</span>
+                <span className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-muted)] transition-transform duration-200 group-open:rotate-180">&#8964;</span>
               </summary>
-              <div className="border-t border-[#e5e5e5] px-4 py-3">
+              <div className="border-t border-[var(--surface-border)] px-4 py-3">
                 <OhMyOpenCodeSlimConfigGenerator
                   apiKeys={apiKeys}
                   config={config as ConfigData | null}

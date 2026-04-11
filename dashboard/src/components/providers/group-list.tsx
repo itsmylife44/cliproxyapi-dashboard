@@ -112,12 +112,12 @@ export function GroupList({
               <div className="overflow-x-auto">
                 <div className="min-w-[600px]">
                   {group.providers.length === 0 ? (
-                    <div className="px-3 py-6 text-center text-xs text-[#777169] italic">
+                    <div className="px-3 py-6 text-center text-xs text-[var(--text-muted)] italic">
                       No providers in this group
                     </div>
                   ) : (
                     <>
-                      <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] border-b border-[#e5e5e5] bg-white px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">
+                      <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                         <span>Name</span>
                         <span>Endpoint</span>
                         <span>Models</span>

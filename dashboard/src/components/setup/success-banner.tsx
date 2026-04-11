@@ -28,7 +28,7 @@ export function SuccessBanner() {
           <p className="text-base font-semibold text-emerald-700">
             All steps complete
           </p>
-          <p className="mt-0.5 text-sm text-[#777169]">
+          <p className="mt-0.5 text-sm text-[var(--text-muted)]">
             Your CLIProxyAPI instance is fully configured and ready to use.
           </p>
         </div>

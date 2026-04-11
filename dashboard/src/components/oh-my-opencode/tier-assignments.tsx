@@ -41,10 +41,10 @@ export function TierAssignments({
   return (
     <div className="grid gap-4 xl:grid-cols-2">
       {agentAssignments.length > 0 && (
-        <div className="space-y-3 rounded-lg border border-[#e5e5e5] bg-[#f5f5f5] p-3">
+        <div className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)] p-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wider text-[#777169]">Agent Assignments</p>
-            <p className="text-[11px] text-[#999]">
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">Agent Assignments</p>
+            <p className="text-[11px] text-[var(--text-muted)]">
               {agentOverrideCount}/{agentAssignments.length} custom
             </p>
           </div>
@@ -58,25 +58,25 @@ export function TierAssignments({
             return (
               <div key={`agent-tier-${tier}`} className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#999]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     {tierMeta.label}
                   </p>
-                  <p className="text-[11px] text-[#aaa]">{tierMeta.hint}</p>
+                  <p className="text-[11px] text-[var(--text-muted)]">{tierMeta.hint}</p>
                 </div>
                 <div className="space-y-1.5">
                   {tierAssignments.map(({ name, model, isOverride, isUnresolved, config, label }) => (
                     <div
                       key={name}
-                      className="flex flex-col gap-2 rounded-md border border-[#e5e5e5] bg-[#f5f5f5] p-2.5 sm:flex-row sm:items-center sm:justify-between"
+                      className="flex flex-col gap-2 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] p-2.5 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <p className="truncate text-xs font-semibold text-black font-mono">{name}</p>
+                          <p className="truncate text-xs font-semibold text-[var(--text-primary)] font-mono">{name}</p>
                           {isUnresolved && (
                             <span className="text-amber-500 text-xs" title="Model not available — select a different model">⚠️</span>
                           )}
                         </div>
-                        <p className={`truncate text-[11px] ${isUnresolved ? "text-amber-500" : "text-[#999]"}`}>
+                        <p className={`truncate text-[11px] ${isUnresolved ? "text-amber-500" : "text-[var(--text-muted)]"}`}>
                           {isUnresolved ? "Model unavailable" : label}
                         </p>
                       </div>
@@ -110,10 +110,10 @@ export function TierAssignments({
       )}
 
       {categoryAssignments.length > 0 && (
-        <div className="space-y-3 rounded-lg border border-[#e5e5e5] bg-[#f5f5f5] p-3">
+        <div className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)] p-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wider text-[#777169]">Category Assignments</p>
-            <p className="text-[11px] text-[#999]">
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">Category Assignments</p>
+            <p className="text-[11px] text-[var(--text-muted)]">
               {categoryOverrideCount}/{categoryAssignments.length} custom
             </p>
           </div>
@@ -127,25 +127,25 @@ export function TierAssignments({
             return (
               <div key={`category-tier-${tier}`} className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#999]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     {tierMeta.label}
                   </p>
-                  <p className="text-[11px] text-[#aaa]">{tierMeta.hint}</p>
+                  <p className="text-[11px] text-[var(--text-muted)]">{tierMeta.hint}</p>
                 </div>
                 <div className="space-y-1.5">
                   {tierAssignments.map(({ name, model, isOverride, isUnresolved, config, label }) => (
                     <div
                       key={name}
-                      className="flex flex-col gap-2 rounded-md border border-[#e5e5e5] bg-[#f5f5f5] p-2.5 sm:flex-row sm:items-center sm:justify-between"
+                      className="flex flex-col gap-2 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] p-2.5 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <p className="truncate text-xs font-semibold text-black font-mono">{name}</p>
+                          <p className="truncate text-xs font-semibold text-[var(--text-primary)] font-mono">{name}</p>
                           {isUnresolved && (
                             <span className="text-amber-500 text-xs" title="Model not available — select a different model">⚠️</span>
                           )}
                         </div>
-                        <p className={`truncate text-[11px] ${isUnresolved ? "text-amber-500" : "text-[#999]"}`}>
+                        <p className={`truncate text-[11px] ${isUnresolved ? "text-amber-500" : "text-[var(--text-muted)]"}`}>
                           {isUnresolved ? "Model unavailable" : label}
                         </p>
                       </div>

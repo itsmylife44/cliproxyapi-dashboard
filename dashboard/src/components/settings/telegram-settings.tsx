@@ -148,17 +148,17 @@ export function TelegramSettings({
                       >
                         {availableApiKeys.length > 0 ? (
                           <>
-                            <option value="" className="bg-[#0f172a] text-black">
+                            <option value="" className="bg-[#0f172a] text-[var(--text-primary)]">
                               Auto (first available)
                             </option>
                             {availableApiKeys.map((apiKey) => (
-                              <option key={apiKey.id} value={apiKey.id} className="bg-[#0f172a] text-black">
+                              <option key={apiKey.id} value={apiKey.id} className="bg-[#0f172a] text-[var(--text-primary)]">
                                 {apiKey.name}
                               </option>
                             ))}
                           </>
                         ) : (
-                          <option value="" className="bg-[#0f172a] text-black">
+                          <option value="" className="bg-[#0f172a] text-[var(--text-primary)]">
                             No API keys — create one first
                           </option>
                         )}
@@ -181,24 +181,24 @@ export function TelegramSettings({
             Setup Instructions
           </button>
           {showInstructions && (
-            <div className="mt-3 space-y-4 rounded-sm border border-[#e5e5e5] bg-white p-4 text-sm text-[#4e4e4e]">
+            <div className="mt-3 space-y-4 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-sm text-[var(--text-secondary)]">
               <div>
-                <div className="font-medium text-black">1. Add to opencode.jsonc plugin array:</div>
-                <div className="mt-2 rounded-sm border border-[#e5e5e5] bg-white p-2 font-mono text-xs">
+                <div className="font-medium text-[var(--text-primary)]">1. Add to opencode.jsonc plugin array:</div>
+                <div className="mt-2 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-2 font-mono text-xs">
                   {`"plugin": ["opencode-cliproxyapi-sync@latest", ...]`}
                 </div>
               </div>
 
               <div>
-                <div className="font-medium text-black mb-3">2. Create config file:</div>
+                <div className="font-medium text-[var(--text-primary)] mb-3">2. Create config file:</div>
 
                 <div className="space-y-4">
-                  <div className="rounded-sm border border-[#e5e5e5] bg-white p-3">
-                    <div className="mb-2 text-xs font-medium text-black">Standard:</div>
-                    <div className="mb-2 font-mono text-xs text-[#777169] break-all">
+                  <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3">
+                    <div className="mb-2 text-xs font-medium text-[var(--text-primary)]">Standard:</div>
+                    <div className="mb-2 font-mono text-xs text-[var(--text-muted)] break-all">
                       ~/.config/opencode-cliproxyapi-sync/config.json
                     </div>
-                    <div className="overflow-x-auto rounded-sm border border-[#e5e5e5] bg-white p-2 font-mono text-xs">
+                    <div className="overflow-x-auto rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-2 font-mono text-xs">
                       {`{
   "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
   "syncToken": "paste-token-here",
@@ -212,7 +212,7 @@ export function TelegramSettings({
                     <div className="mb-2 font-mono text-xs text-emerald-700 break-all">
                       ~/.config/opencode/profiles/&lt;profilename&gt;/opencode-cliproxyapi-sync/config.json
                     </div>
-                    <div className="overflow-x-auto rounded-sm border border-[#e5e5e5] bg-white p-2 font-mono text-xs">
+                    <div className="overflow-x-auto rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-2 font-mono text-xs">
                       {`{
   "dashboardUrl": "${typeof window !== "undefined" ? window.location.origin : "https://your-dashboard-url"}",
   "syncToken": "paste-token-here",
@@ -223,7 +223,7 @@ export function TelegramSettings({
                 </div>
               </div>
 
-              <div className="border-t border-[#e5e5e5] pt-2 text-xs text-[#777169]">
+              <div className="border-t border-[var(--surface-border)] pt-2 text-xs text-[var(--text-muted)]">
                 The plugin will be auto-installed from npm when opencode starts.
               </div>
             </div>

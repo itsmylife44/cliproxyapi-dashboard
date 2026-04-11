@@ -220,7 +220,7 @@ export function QuotaAlerts() {
           >
             <span
               className={cn(
-                "inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform",
+                "inline-block h-3.5 w-3.5 rounded-full bg-[var(--surface-base)] transition-transform",
                 settings.enabled ? "translate-x-4" : "translate-x-0.5"
               )}
             />

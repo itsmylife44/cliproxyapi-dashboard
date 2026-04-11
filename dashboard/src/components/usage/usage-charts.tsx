@@ -233,11 +233,11 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
         return (
           <ChartContainer title="Success / Failure Ratio">
             <div className="flex h-[220px] flex-col justify-center gap-4 px-2">
-              <div className="flex items-center justify-between text-xs text-[#777169]">
+              <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
                 <span className="font-semibold text-emerald-600">{totals.successCount.toLocaleString()} success</span>
                 <span className="font-semibold text-rose-600">{totals.failureCount.toLocaleString()} failed</span>
               </div>
-              <div className="h-4 w-full overflow-hidden rounded-full bg-[#f5f5f5]">
+              <div className="h-4 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
                 <div className="flex h-full">
                   {successPct > 0 && (
                     <div
@@ -255,11 +255,11 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
               </div>
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Success Rate</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Success Rate</p>
                   <p className="mt-0.5 text-lg font-bold text-emerald-600">{successPct.toFixed(1)}%</p>
                 </div>
                 <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#777169]">Failure Rate</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Failure Rate</p>
                   <p className="mt-0.5 text-lg font-bold text-rose-600">{failPct.toFixed(1)}%</p>
                 </div>
               </div>

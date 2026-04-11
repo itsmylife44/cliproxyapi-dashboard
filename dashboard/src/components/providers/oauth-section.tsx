@@ -795,10 +795,10 @@ export function OAuthSection({
       <div id="provider-oauth" className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-black">OAuth Accounts</h2>
-            <p className="text-xs text-[#777169]">Subscription-based provider connections</p>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">OAuth Accounts</h2>
+            <p className="text-xs text-[var(--text-muted)]">Subscription-based provider connections</p>
           </div>
-          <span className="text-xs font-medium text-[#777169]">{accounts.length} connected</span>
+          <span className="text-xs font-medium text-[var(--text-muted)]">{accounts.length} connected</span>
         </div>
 
         <div className="space-y-3">
@@ -813,8 +813,8 @@ export function OAuthSection({
             onClaim={claimOAuthAccount}
           />
 
-          <div className="rounded-sm border border-[#e5e5e5] bg-white p-3 text-xs text-[#777169]">
-            <strong className="text-black">Note:</strong>{" "}
+          <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 text-xs text-[var(--text-muted)]">
+            <strong className="text-[var(--text-primary)]">Note:</strong>{" "}
             {incognitoBrowserEnabled
               ? "Incognito mode is enabled. Browsers do not let the dashboard force-open a private window, so you will open the authorization URL manually."
               : "OAuth flows open in a popup window. Make sure pop-ups are allowed in your browser."}
@@ -836,7 +836,7 @@ export function OAuthSection({
         </ModalHeader>
         <ModalContent>
           {oauthModalStatus === MODAL_STATUS.LOADING && (
-            <div className="rounded-xl border-l-4 border-[#ccc] bg-[#f5f5f5] p-4 text-sm text-[#4e4e4e]">
+            <div className="rounded-xl border-l-4 border-[var(--surface-border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
               Fetching authorization link...
             </div>
           )}
@@ -845,21 +845,21 @@ export function OAuthSection({
             <div className={`rounded-xl border-l-4 p-4 text-sm ${
               incognitoBrowserEnabled
                 ? "border-amber-300 bg-amber-50 text-amber-900"
-                : "border-[#e5e5e5] bg-[#f5f5f5] text-[#4e4e4e]"
+                : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
             }`}>
-              <div className="font-medium text-black">
+              <div className="font-medium text-[var(--text-primary)]">
                 {incognitoBrowserEnabled ? "Open This URL In A Private Window" : "Authorization URL"}
               </div>
-              <p className="mt-2 text-[#4e4e4e]">
+              <p className="mt-2 text-[var(--text-secondary)]">
                 {incognitoBrowserEnabled
                   ? "Open this link manually in a new Firefox Private Window or browser incognito window, then continue the flow."
                   : "If the popup did not appear, open this link manually."}
               </p>
-              <div className="mt-3 rounded-lg bg-[#f5f5f5] p-3">
+              <div className="mt-3 rounded-lg bg-[var(--surface-muted)] p-3">
                 <input
                   readOnly
                   value={authLaunchUrl}
-                  className="w-full bg-transparent font-mono text-xs text-black outline-none"
+                  className="w-full bg-transparent font-mono text-xs text-[var(--text-primary)] outline-none"
                 />
               </div>
               <div className="mt-3 flex gap-2">
@@ -899,11 +899,11 @@ export function OAuthSection({
             oauthModalStatus === MODAL_STATUS.ERROR) &&
             selectedOAuthProviderRequiresCallback && (
             <div className="space-y-4">
-              <div className="rounded-xl border-l-4 border-[#ccc] bg-[#f0f0f0] p-4 text-sm">
-                <div className="font-medium text-black">
+              <div className="rounded-xl border-l-4 border-[var(--surface-border)] bg-[var(--surface-hover)] p-4 text-sm">
+                <div className="font-medium text-[var(--text-primary)]">
                   Step-by-step
                 </div>
-                <ol className="mt-3 list-decimal space-y-2 pl-4 text-black">
+                <ol className="mt-3 list-decimal space-y-2 pl-4 text-[var(--text-primary)]">
                   <li>{incognitoBrowserEnabled ? "Open the authorization URL above in a private/incognito window and sign in there." : "Log in and authorize in the popup window."}</li>
                   <li>
                     After authorizing, the page will fail to load (this is
@@ -918,7 +918,7 @@ export function OAuthSection({
               </div>
 
               <div>
-                <div className="mb-2 text-xs font-medium text-black">
+                <div className="mb-2 text-xs font-medium text-[var(--text-primary)]">
                   Paste callback URL
                 </div>
                 <Input
@@ -939,7 +939,7 @@ export function OAuthSection({
                       ? "border-green-300 bg-green-50 text-green-700"
                       : callbackValidation === CALLBACK_VALIDATION.INVALID
                         ? "border-red-300 bg-red-50 text-red-700"
-                        : "border-[#ccc] bg-[#f5f5f5] text-[#4e4e4e]"
+                        : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
                   }`}
                 >
                   {callbackMessage}
@@ -952,22 +952,22 @@ export function OAuthSection({
             oauthModalStatus === MODAL_STATUS.POLLING ||
             oauthModalStatus === MODAL_STATUS.ERROR) &&
             !selectedOAuthProviderRequiresCallback && (
-            <div className="rounded-xl border-l-4 border-[#ccc] bg-[#f0f0f0] p-4 text-sm">
-              <div className="font-medium text-black">
+            <div className="rounded-xl border-l-4 border-[var(--surface-border)] bg-[var(--surface-hover)] p-4 text-sm">
+              <div className="font-medium text-[var(--text-primary)]">
                 Device Authorization
               </div>
-              <ol className="mt-3 list-decimal space-y-2 pl-4 text-black">
+              <ol className="mt-3 list-decimal space-y-2 pl-4 text-[var(--text-primary)]">
                 <li>{incognitoBrowserEnabled ? "Open the authorization URL above in a private/incognito window." : "A browser window has opened with the authorization page."}</li>
                 <li>Log in and approve the access request.</li>
                 <li>Once approved, this dialog will update automatically.</li>
               </ol>
               {deviceCodeInfo && (
                 <div className="mt-4 space-y-3">
-                  <div className="rounded-lg bg-[#f5f5f5] p-3">
-                    <p className="text-xs font-medium text-[#777169]">Your authorization code:</p>
-                    <p className="mt-1 select-all font-mono text-lg font-bold tracking-wider text-black">{deviceCodeInfo.userCode}</p>
+                  <div className="rounded-lg bg-[var(--surface-muted)] p-3">
+                    <p className="text-xs font-medium text-[var(--text-muted)]">Your authorization code:</p>
+                    <p className="mt-1 select-all font-mono text-lg font-bold tracking-wider text-[var(--text-primary)]">{deviceCodeInfo.userCode}</p>
                   </div>
-                  <p className="text-xs text-[#777169]">
+                  <p className="text-xs text-[var(--text-muted)]">
                     Enter this code at{" "}
                     <a href={deviceCodeInfo.verificationUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
                       {deviceCodeInfo.verificationUrl}

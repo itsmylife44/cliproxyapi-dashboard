@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.1.70](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.69...dashboard-v0.1.70) (2026-04-11)
+
+
+### Features
+
+* add estimated cost tracking per model in Usage Analytics ([#175](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/175)) ([081fe04](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/081fe042f521878e9e6ba3e018466c9cf69db653))
+* **dev:** add SKIP_AUTH=1 bypass for UI-only testing ([72a4262](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/72a4262655d63ed1f6a546a5f15c235a4e911174))
+* **theme:** add browser verification harness and root theme bootstrap ([474a7fd](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/474a7fd7cd8aa721d3fb4dc67959a272eaa98386))
+* **theme:** add toggle, theme-aware primitives, and chart adapter ([68e5537](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/68e5537a61c8390382f50d09c7a66ac45d021014))
+* **theme:** convert all remaining shared components to CSS variable tokens ([7b54c07](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/7b54c07d39db033662f0cf1b70ee427a1c0c239a))
+* **theme:** convert all routes, loading skeletons, and system pages to dark mode ([4329209](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/4329209075f12db3306704c4cb22958c8fb3f72a))
+* **theme:** migrate chart consumers to useChartTheme hook, convert first batch of shared components ([c313611](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c3136115a78e9b64f55e795c939420463dfcf62d))
+
+
+### Bug Fixes
+
+* harden cost estimation component ([f505d15](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/f505d15f2f42113d92cad963a1568e2d27080855))
+* prevent agents from disappearing when preset models unavailable ([7b726aa](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/7b726aad51f7a89f1cd0ff0b4f97e656dad0b835))
+* remove oversized touch-target from HelpTooltip button ([e348d45](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/e348d4539a0d966ea1a3dff43168b48459b7e348))
+* **setup:** repair wizard polling, locked logic, and broken CSS value ([3e6e3d8](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/3e6e3d88a827c9feadd975e0b661617260eae53d))
+* **theme:** convert remaining hardcoded colors to opacity-based tokens ([85cfe8c](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/85cfe8c0868143f438b68683b17496faf4572ae2))
+* **theme:** resolve hydration mismatch with useSyncExternalStore ([b57fdeb](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/b57fdeb035b64ded22d54ae7f9e1e9677849b30a))
+
 ## [0.1.69](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.68...dashboard-v0.1.69) (2026-04-06)
 
 

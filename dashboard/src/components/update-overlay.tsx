@@ -148,7 +148,7 @@ export function UpdateOverlay({
           <div
             className={cn(
               "absolute h-16 w-16 rounded-full animate-pulse",
-              isDashboard ? "bg-purple-500/10" : "bg-blue-500/10"
+              isDashboard ? "bg-purple-500/10" : "bg-blue-500/100/10"
             )}
           />
           {/* Center icon */}
@@ -209,7 +209,7 @@ export function UpdateOverlay({
               className={cn(
                 "h-full rounded-full transition-[width] duration-1000 ease-out",
                 serverReady
-                  ? "bg-green-500"
+                  ? "bg-green-500/100"
                   : isDashboard
                     ? "bg-gradient-to-r from-purple-500 to-purple-400"
                     : "bg-gradient-to-r from-blue-500 to-blue-400"

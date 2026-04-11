@@ -104,9 +104,9 @@ export function ConfirmDialog({
           <div
             className={cn(
               "w-12 h-12 rounded-full flex items-center justify-center",
-              variant === "danger" && "bg-red-500/10 text-red-500",
-              variant === "warning" && "bg-amber-500/10 text-amber-600",
-              variant === "info" && "bg-blue-500/10 text-blue-500"
+              variant === "danger" && "bg-red-500/100/10 text-red-500",
+              variant === "warning" && "bg-amber-500/100/10 text-amber-600",
+              variant === "info" && "bg-blue-500/100/10 text-blue-500"
             )}
           >
             {variant === "danger" && (
@@ -151,9 +151,9 @@ export function ConfirmDialog({
             className={cn(
               "flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-[background-color,color,box-shadow] duration-200",
               "focus:outline-none focus-visible:ring-2",
-              variant === "danger" && "bg-red-500 hover:bg-red-600 text-white focus-visible:ring-red-500/50",
-              variant === "warning" && "bg-yellow-500 hover:bg-yellow-600 text-white focus-visible:ring-yellow-500/50",
-              variant === "info" && "bg-blue-500 hover:bg-blue-600 text-white focus-visible:ring-blue-500/50"
+              variant === "danger" && "bg-red-500/100 hover:bg-red-600 text-white focus-visible:ring-red-500/50",
+              variant === "warning" && "bg-yellow-500/100 hover:bg-yellow-600 text-white focus-visible:ring-yellow-500/50",
+              variant === "info" && "bg-blue-500/100 hover:bg-blue-600 text-white focus-visible:ring-blue-500/50"
             )}
           >
             {confirmLabel}

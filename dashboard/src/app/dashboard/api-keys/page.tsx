@@ -292,7 +292,7 @@ export default function ApiKeysPage() {
                 </button>
               </div>
             </div>
-            <div className="rounded-sm border border-amber-200 bg-amber-50 p-3 text-sm">
+            <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3 text-sm">
               <span className="text-amber-700">This key will only be shown once. Store it securely.</span>
             </div>
           </div>

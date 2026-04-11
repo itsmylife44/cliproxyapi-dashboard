@@ -20,7 +20,7 @@ export function DisabledMcpsSection({
   onMcpRemove,
 }: DisabledMcpsSectionProps) {
   return (
-    <div className="rounded-xl border border-[var(--surface-border)] bg-[#fafafa] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
+    <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-muted)] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
         type="button"
         onClick={onToggleExpand}
@@ -73,7 +73,7 @@ export function DisabledMcpsSection({
             {disabledMcps.map((mcp) => (
               <div
                 key={mcp}
-                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-red-50 border border-red-200 text-red-600"
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-red-500/10 border border-red-500/20 text-red-600"
               >
                 <span className="font-mono">{mcp}</span>
                 <button

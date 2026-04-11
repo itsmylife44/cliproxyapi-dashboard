@@ -844,7 +844,7 @@ export function OAuthSection({
           {authLaunchUrl && (oauthModalStatus === MODAL_STATUS.WAITING || oauthModalStatus === MODAL_STATUS.POLLING || oauthModalStatus === MODAL_STATUS.ERROR) && (
             <div className={`rounded-xl border-l-4 p-4 text-sm ${
               incognitoBrowserEnabled
-                ? "border-amber-300 bg-amber-50 text-amber-900"
+                ? "border-amber-300 bg-amber-500/10 text-amber-900"
                 : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
             }`}>
               <div className="font-medium text-[var(--text-primary)]">
@@ -936,9 +936,9 @@ export function OAuthSection({
                 <div
                   className={`mt-2 rounded-xl border-l-4 p-2 text-xs ${
                     callbackValidation === CALLBACK_VALIDATION.VALID
-                      ? "border-green-300 bg-green-50 text-green-700"
+                      ? "border-green-300 bg-green-500/10 text-green-700"
                       : callbackValidation === CALLBACK_VALIDATION.INVALID
-                        ? "border-red-300 bg-red-50 text-red-700"
+                        ? "border-red-300 bg-red-500/10 text-red-700"
                         : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
                   }`}
                 >
@@ -979,7 +979,7 @@ export function OAuthSection({
           )}
 
           {oauthModalStatus === MODAL_STATUS.POLLING && (
-            <div className="mt-4 rounded-xl border-l-4 border-blue-300 bg-blue-50 p-4 text-sm text-blue-700">
+            <div className="mt-4 rounded-xl border-l-4 border-blue-300 bg-blue-500/10 p-4 text-sm text-blue-700">
               {selectedOAuthProviderRequiresCallback
                 ? "Callback submitted. Waiting for CLIProxyAPI to finish token exchange..."
                 : "Waiting for CLIProxyAPI to finish OAuth authorization..."}
@@ -987,13 +987,13 @@ export function OAuthSection({
           )}
 
           {oauthModalStatus === MODAL_STATUS.SUCCESS && (
-            <div className="rounded-xl border-l-4 border-green-300 bg-green-50 p-4 text-sm text-green-700">
+            <div className="rounded-xl border-l-4 border-green-300 bg-green-500/10 p-4 text-sm text-green-700">
               OAuth account connected successfully.
             </div>
           )}
 
           {oauthModalStatus === MODAL_STATUS.ERROR && oauthErrorMessage && (
-            <div className="rounded-xl border-l-4 border-red-300 bg-red-50 p-4 text-sm text-red-700">
+            <div className="rounded-xl border-l-4 border-red-300 bg-red-500/10 p-4 text-sm text-red-700">
               {oauthErrorMessage}
             </div>
           )}

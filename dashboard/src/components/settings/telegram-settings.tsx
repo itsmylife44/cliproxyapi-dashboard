@@ -66,7 +66,7 @@ export function TelegramSettings({
           </div>
 
           {generatedToken && (
-            <div className="space-y-3 rounded-sm border border-emerald-200 bg-emerald-50 p-4">
+            <div className="space-y-3 rounded-sm border border-emerald-500/20 bg-emerald-500/10 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-emerald-700">New Token Generated</span>
                 <button
@@ -86,7 +86,7 @@ export function TelegramSettings({
                   Copy to Clipboard
                 </Button>
               </div>
-              <div className="rounded-sm border border-amber-200 bg-amber-50 p-3 text-sm">
+              <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3 text-sm">
                 <span className="text-amber-700">
                   This token will only be shown once. Copy it now.
                 </span>
@@ -112,7 +112,7 @@ export function TelegramSettings({
                       <div className="flex items-center gap-2">
                         <div className="text-sm font-medium text-[var(--text-primary)]">{token.name}</div>
                         {token.isRevoked && (
-                          <span className="rounded-sm border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-600">
+                          <span className="rounded-sm border border-rose-500/20 bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-600">
                             Revoked
                           </span>
                         )}
@@ -148,17 +148,17 @@ export function TelegramSettings({
                       >
                         {availableApiKeys.length > 0 ? (
                           <>
-                            <option value="" className="bg-[#0f172a] text-[var(--text-primary)]">
+                            <option value="" className="bg-[var(--surface-base)] text-[var(--text-primary)]">
                               Auto (first available)
                             </option>
                             {availableApiKeys.map((apiKey) => (
-                              <option key={apiKey.id} value={apiKey.id} className="bg-[#0f172a] text-[var(--text-primary)]">
+                              <option key={apiKey.id} value={apiKey.id} className="bg-[var(--surface-base)] text-[var(--text-primary)]">
                                 {apiKey.name}
                               </option>
                             ))}
                           </>
                         ) : (
-                          <option value="" className="bg-[#0f172a] text-[var(--text-primary)]">
+                          <option value="" className="bg-[var(--surface-base)] text-[var(--text-primary)]">
                             No API keys — create one first
                           </option>
                         )}
@@ -207,7 +207,7 @@ export function TelegramSettings({
                     </div>
                   </div>
 
-                  <div className="rounded-sm border border-emerald-200 bg-emerald-50 p-3">
+                  <div className="rounded-sm border border-emerald-500/20 bg-emerald-500/10 p-3">
                     <div className="mb-2 text-xs font-medium text-emerald-700">With OCX Profile:</div>
                     <div className="mb-2 font-mono text-xs text-emerald-700 break-all">
                       ~/.config/opencode/profiles/&lt;profilename&gt;/opencode-cliproxyapi-sync/config.json

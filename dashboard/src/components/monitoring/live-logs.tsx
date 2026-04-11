@@ -79,7 +79,7 @@ export function LiveLogs({
 
         {loggingState === "disabled" && (
           <div className="flex flex-col items-center justify-center py-6 gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-amber-200 bg-amber-50">
+            <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-amber-500/20 bg-amber-500/10">
               <span className="text-xl">&#128196;</span>
             </div>
             <div className="text-center space-y-2">
@@ -101,7 +101,7 @@ export function LiveLogs({
 
         {loggingState === "error" && (
           <div className="flex flex-col items-center justify-center py-6 gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-rose-200 bg-rose-50">
+            <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-rose-500/20 bg-rose-500/10">
               <span className="text-xl">&#9888;</span>
             </div>
             <div className="text-center space-y-2">

@@ -163,9 +163,9 @@ export default function AdminUsersPage() {
       {loading ? (
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">Loading...</div>
       ) : fetchError ? (
-        <div className="rounded-md border border-rose-200 bg-rose-50 p-4 text-center text-sm text-rose-700">
+        <div className="rounded-md border border-rose-500/20 bg-rose-500/100/10 p-4 text-center text-sm text-rose-700">
           Failed to load users.
-          <button type="button" onClick={() => void fetchUsers()} className="ml-2 font-medium text-rose-800 underline underline-offset-2 hover:text-black">
+          <button type="button" onClick={() => void fetchUsers()} className="ml-2 font-medium text-rose-800 underline underline-offset-2 hover:text-[var(--text-primary)]">
             Retry
           </button>
         </div>
@@ -189,7 +189,7 @@ export default function AdminUsersPage() {
                 <tr key={user.id} className="border-b border-[var(--surface-border)] last:border-b-0 hover:bg-[var(--surface-hover)] transition-colors">
                   <td className="px-3 py-2 text-xs font-medium text-[var(--text-primary)]">{user.username}</td>
                   <td className="px-3 py-2">
-                    <span className={`inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium ${user.isAdmin ? "border-blue-200 bg-blue-50 text-blue-700" : "border-[var(--surface-border)]/70 bg-[var(--surface-muted)] text-[var(--text-secondary)]"}`}>
+                    <span className={`inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium ${user.isAdmin ? "border-blue-500/20 bg-blue-500/10 text-blue-700" : "border-[var(--surface-border)]/70 bg-[var(--surface-muted)] text-[var(--text-secondary)]"}`}>
                       {user.isAdmin ? "Admin" : "User"}
                     </span>
                   </td>

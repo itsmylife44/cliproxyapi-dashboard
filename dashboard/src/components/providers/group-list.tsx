@@ -63,7 +63,7 @@ export function GroupList({
                 <button
                   type="button"
                   onClick={() => onToggleGroupActive(group.id, group.isActive)}
-                  className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-sm transition-colors ${group.isActive ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-[var(--surface-border)] text-[var(--text-muted)] hover:bg-[var(--surface-border)]'}`}
+                  className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-sm transition-colors ${group.isActive ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15' : 'bg-[var(--surface-border)] text-[var(--text-muted)] hover:bg-[var(--surface-border)]'}`}
                 >
                   {group.isActive ? "Active" : "Disabled"}
                 </button>

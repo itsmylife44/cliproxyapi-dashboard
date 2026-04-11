@@ -160,7 +160,7 @@ export function DeployDashboard() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-sm border border-amber-200 bg-amber-50 p-3">
+          <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3">
             <div className="text-sm font-medium text-amber-700">Webhook Not Configured</div>
             <p className="mt-1 text-xs text-[var(--text-muted)]">
               The deployment webhook is not set up. To enable dashboard deployments from the UI,
@@ -191,17 +191,17 @@ export function DeployDashboard() {
         </div>
         <div className="flex items-center gap-2">
           {status.status === "running" && (
-            <span className="rounded-sm border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600 animate-pulse">
+            <span className="rounded-sm border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600 animate-pulse">
               Deploying...
             </span>
           )}
           {(status.status === "success" || status.status === "completed") && (
-            <span className="rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+            <span className="rounded-sm border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
               Success
             </span>
           )}
           {(status.status === "error" || status.status === "failed") && (
-            <span className="rounded-sm border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-600">
+            <span className="rounded-sm border border-rose-500/20 bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-600">
               Failed
             </span>
           )}
@@ -251,7 +251,7 @@ export function DeployDashboard() {
           )}
 
           {status.error && (
-            <div role="alert" className="rounded-sm border border-rose-200 bg-rose-50 p-3 text-xs text-rose-600">
+            <div role="alert" className="rounded-sm border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600">
               {status.error}
             </div>
           )}

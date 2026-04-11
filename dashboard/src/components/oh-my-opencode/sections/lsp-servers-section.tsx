@@ -22,10 +22,10 @@ const LSP_PRESETS = [
 ] as const;
 
 const PRESET_BUTTON_STYLES: Record<string, string> = {
-  emerald: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300",
+  emerald: "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 hover:bg-emerald-500/10 hover:border-emerald-300",
   cyan: "bg-[var(--surface-muted)] border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:border-[var(--surface-border)]",
   teal: "bg-[var(--surface-muted)] border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:border-[var(--surface-border)]",
-  blue: "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 hover:border-blue-300",
+  blue: "bg-blue-500/10 border-blue-500/20 text-blue-600 hover:bg-blue-500/15 hover:border-blue-300",
 };
 
 export function LspServersSection({
@@ -42,7 +42,7 @@ export function LspServersSection({
   const lspEntries = Object.entries(overrides.lsp ?? {});
 
   return (
-    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 space-y-3">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <h3 className="text-sm font-semibold text-emerald-700 flex items-center gap-2">
@@ -63,11 +63,11 @@ export function LspServersSection({
             LSP Servers
           </h3>
           <p className="text-xs text-[var(--text-muted)] mt-1">Configure Language Server Protocol for code intelligence</p>
-          <code className="text-[10px] text-emerald-700/70 font-mono block mt-1.5 bg-emerald-100/60 border border-emerald-200/60 px-2 py-1 rounded">
+          <code className="text-[10px] text-emerald-700/70 font-mono block mt-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded">
             {`"lsp": { "typescript": { "command": ["typescript-language-server", "--stdio"] } }`}
           </code>
         </div>
-        <span className="px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-mono shrink-0">
+        <span className="px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-xs font-mono shrink-0">
           {Object.keys(overrides.lsp ?? {}).length} configured
         </span>
       </div>
@@ -120,7 +120,7 @@ export function LspServersSection({
         <button
           type="button"
           onClick={onLspAdd}
-          className="px-3 py-1.5 text-xs bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100"
+          className="px-3 py-1.5 text-xs bg-emerald-500/10 text-emerald-700 rounded-lg hover:bg-emerald-500/15"
         >
           Add
         </button>
@@ -131,7 +131,7 @@ export function LspServersSection({
           {lspEntries.map(([language, entry]) => (
             <div
               key={language}
-              className="flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200"
+              className="flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20"
             >
               <div className="flex items-center gap-2 text-xs font-mono">
                 <span className="text-emerald-700">{language}</span>

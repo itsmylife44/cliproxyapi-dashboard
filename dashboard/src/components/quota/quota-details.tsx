@@ -110,9 +110,9 @@ function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: 
 }
 
 function getCapacityBarClass(value: number): string {
-  if (value > 0.6) return "bg-emerald-500/80";
-  if (value > 0.2) return "bg-amber-500";
-  return "bg-rose-500/80";
+  if (value > 0.6) return "bg-emerald-500/100/80";
+  if (value > 0.2) return "bg-amber-500/100";
+  return "bg-rose-500/100/80";
 }
 
 interface QuotaDetailsProps {

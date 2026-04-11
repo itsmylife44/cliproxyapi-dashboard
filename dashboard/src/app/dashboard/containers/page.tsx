@@ -205,7 +205,7 @@ export default function ContainersPage() {
       ) : (
         <>
           {fetchError && (
-            <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{fetchError}</div>
+            <div className="rounded-md border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-700">{fetchError}</div>
           )}
 
           {containers.length === 0 && !fetchError ? (

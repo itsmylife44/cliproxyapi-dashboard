@@ -78,11 +78,11 @@ export function AgentSkillsSection({ agentName, config, onSkillsChange }: AgentS
               enabled
                 ? "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-primary)]"
                 : excluded
-                  ? "border-red-200 bg-red-50 text-red-600/70 line-through"
+                  ? "border-red-500/20 bg-red-500/10 text-red-600/70 line-through"
                   : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-muted)] hover:text-[var(--text-muted)] hover:border-[var(--surface-border)]"
             }`}
           >
-            <span className={`inline-block w-1.5 h-1.5 rounded-full ${enabled ? "bg-emerald-500" : excluded ? "bg-red-400" : "bg-[#ddd]"}`} />
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${enabled ? "bg-emerald-500/100" : excluded ? "bg-red-400" : "bg-[var(--surface-border)]"}`} />
             {skill.label}
           </button>
         );

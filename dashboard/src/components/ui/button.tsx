@@ -31,7 +31,7 @@ export function Button({
         "border disabled:opacity-50 disabled:cursor-not-allowed",
         variant === "primary" && "glass-button-primary text-white",
         variant === "secondary" && "glass-button-secondary text-[var(--text-primary)]",
-        variant === "danger" && "bg-red-500 text-white border-none hover:bg-red-600",
+        variant === "danger" && "bg-red-500/100 text-white border-none hover:bg-red-600",
         variant === "ghost" && "glass-button-ghost text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
         className
       )}

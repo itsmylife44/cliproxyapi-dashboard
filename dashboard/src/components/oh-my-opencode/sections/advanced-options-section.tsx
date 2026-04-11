@@ -29,7 +29,7 @@ export function AdvancedOptionsSection({
   const hashlineEditEnabled = overrides.hashline_edit ?? false;
 
   return (
-    <div className="rounded-xl border border-[var(--surface-border)] bg-[#fafafa] overflow-hidden transition-all hover:border-[var(--surface-border)]">
+    <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-muted)] overflow-hidden transition-all hover:border-[var(--surface-border)]">
       <button
         type="button"
         onClick={onToggleExpand}
@@ -59,7 +59,7 @@ export function AdvancedOptionsSection({
               type="button"
               onClick={onHashlineEditToggle}
               className={`w-9 h-5 rounded-full transition-colors relative ${
-                  hashlineEditEnabled ? "bg-emerald-500" : "bg-[var(--surface-hover)]"
+                  hashlineEditEnabled ? "bg-emerald-500/100" : "bg-[var(--surface-hover)]"
                 }`}
             >
               <span
@@ -79,7 +79,7 @@ export function AdvancedOptionsSection({
                   type="button"
                   onClick={() => onExperimentalToggle(field)}
                   className={`w-9 h-5 rounded-full transition-colors relative ${
-                    isEnabled ? "bg-emerald-500" : "bg-[var(--surface-hover)]"
+                    isEnabled ? "bg-emerald-500/100" : "bg-[var(--surface-hover)]"
                   }`}
                 >
                   <span

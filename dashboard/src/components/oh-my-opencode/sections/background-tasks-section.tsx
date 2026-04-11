@@ -38,7 +38,7 @@ export function BackgroundTasksSection({
   onModelConcurrencyRemove,
 }: BackgroundTasksSectionProps) {
   return (
-    <div className="rounded-xl border border-[var(--surface-border)] bg-[#fafafa] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
+    <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-muted)] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
         type="button"
         onClick={onToggleExpand}

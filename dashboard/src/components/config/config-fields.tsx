@@ -21,7 +21,7 @@ export function Toggle({
         border-2 border-transparent transition-colors duration-200 ease-in-out
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-transparent
         disabled:cursor-not-allowed disabled:opacity-50
-        ${enabled ? 'bg-emerald-500' : 'bg-[var(--surface-border)]'}
+        ${enabled ? 'bg-emerald-500/100' : 'bg-[var(--surface-border)]'}
       `}
     >
       <span
@@ -60,7 +60,7 @@ export function Select({
       "
     >
       {options.map((option) => (
-        <option key={option.value} value={option.value} className="bg-[#0f172a] text-[var(--text-primary)]">
+        <option key={option.value} value={option.value} className="bg-[var(--surface-base)] text-[var(--text-primary)]">
           {option.label}
         </option>
       ))}

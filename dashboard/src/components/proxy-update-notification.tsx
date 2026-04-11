@@ -116,7 +116,7 @@ export function ProxyUpdateNotification() {
               )}
 
               {updateError && (
-                <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+                <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3">
                   <p className="text-red-600 text-sm">{updateError}</p>
                 </div>
               )}

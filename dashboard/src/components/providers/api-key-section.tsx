@@ -73,7 +73,7 @@ export const API_KEY_PROVIDERS = PROVIDERS.filter(
 export function OwnerBadge({ ownerUsername, isOwn }: OwnerBadgeProps) {
   if (isOwn) {
     return (
-      <span className="inline-flex items-center rounded-sm border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+      <span className="inline-flex items-center rounded-sm border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-700">
         You
       </span>
     );
@@ -315,7 +315,7 @@ export function ApiKeySection({
               <p className="mt-1.5 text-xs text-[var(--text-muted)]">Your API key will be stored securely and associated with your account</p>
             </div>
             {currentUser && (
-              <div className="rounded-sm border-l-4 border-blue-300 bg-blue-50 p-3 text-sm">
+              <div className="rounded-sm border-l-4 border-blue-300 bg-blue-500/10 p-3 text-sm">
                 <p className="text-[var(--text-primary)]">
                   <strong>Usage:</strong> You have contributed {currentUser ? configs[PROVIDER_IDS.CLAUDE].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.GEMINI].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.CODEX].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.OPENAI].keys.filter((k) => k.isOwn).length : 0} / {maxKeysPerUser} keys total
                 </p>

@@ -223,7 +223,7 @@ function McpList({ mcps, onRemove, onToggleEnabled }: McpListProps) {
                 type="button"
                 onClick={() => onToggleEnabled(mcp.name)}
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
-                  isEnabled ? "bg-emerald-500" : "bg-[var(--surface-hover)]"
+                  isEnabled ? "bg-emerald-500/100" : "bg-[var(--surface-hover)]"
                 }`}
                 aria-label={`Toggle ${mcp.name}`}
               >

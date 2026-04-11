@@ -398,7 +398,7 @@ export default async function QuickStartPage() {
             <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
               <h3 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
                 <span className="flex items-center gap-3">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-blue-200 bg-blue-50 text-sm text-blue-600" aria-hidden="true">&#9654;</span>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-blue-500/20 bg-blue-500/10 text-sm text-blue-600" aria-hidden="true">&#9654;</span>
                   Using with Claude Code
                 </span>
               </h3>

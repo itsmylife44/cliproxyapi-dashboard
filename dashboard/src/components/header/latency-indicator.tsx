@@ -9,9 +9,9 @@ function getLatencyColor(ms: number): string {
 }
 
 function getLatencyDotColor(ms: number): string {
-  if (ms < 100) return "bg-emerald-500";
-  if (ms < 300) return "bg-amber-500";
-  return "bg-red-500";
+  if (ms < 100) return "bg-emerald-500/100";
+  if (ms < 300) return "bg-amber-500/100";
+  return "bg-red-500/100";
 }
 
 export function LatencyIndicator() {
@@ -22,7 +22,7 @@ export function LatencyIndicator() {
   if (latencyMs === -1) {
     return (
       <div className="flex items-center gap-1.5" title="Proxy unreachable">
-        <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
+        <div className="h-1.5 w-1.5 rounded-full bg-red-500/100" />
         <span className="text-xs text-red-600">--ms</span>
       </div>
     );

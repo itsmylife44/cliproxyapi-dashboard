@@ -27,7 +27,7 @@ export function SisyphusSection({
   onSisyphusToggle,
 }: SisyphusSectionProps) {
   return (
-    <div className="rounded-xl border border-[var(--surface-border)] bg-[#fafafa] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
+    <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-muted)] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
         type="button"
         onClick={onToggleExpand}
@@ -60,7 +60,7 @@ export function SisyphusSection({
                   type="button"
                   onClick={() => onSisyphusToggle(field)}
                   className={`w-9 h-5 rounded-full transition-colors relative ${
-                    isEnabled ? "bg-emerald-500" : "bg-[var(--surface-hover)]"
+                    isEnabled ? "bg-emerald-500/100" : "bg-[var(--surface-hover)]"
                   }`}
                 >
                   <span

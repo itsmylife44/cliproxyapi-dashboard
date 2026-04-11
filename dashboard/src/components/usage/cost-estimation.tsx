@@ -139,7 +139,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
     <div className="space-y-3">
       {/* ── Summary Cards ──────────────────────────────────── */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-        <div className="rounded-lg border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white px-2.5 py-2">
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700/70">Estimated Cost</p>
           <p className="mt-0.5 text-lg font-bold text-emerald-700">{formatUSD(totalEstimatedCost)}</p>
         </div>
@@ -228,7 +228,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-[var(--surface-border)] bg-[#fafafa]">
+              <tr className="border-b border-[var(--surface-border)] bg-[var(--surface-muted)]">
                 <th className="px-3 py-2 text-left font-semibold text-[var(--text-muted)]">Model</th>
                 <th className="px-3 py-2 text-left font-semibold text-[var(--text-muted)]">Provider</th>
                 <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">Requests</th>
@@ -240,7 +240,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
             </thead>
             <tbody className="divide-y divide-[#f0f0f0]">
               {pricedModels.map((entry) => (
-                <tr key={entry.model} className="hover:bg-[#fafafa] transition-colors">
+                <tr key={entry.model} className="hover:bg-[var(--surface-muted)] transition-colors">
                   <td className="px-3 py-2 font-medium text-[var(--text-primary)] max-w-[200px] truncate" title={entry.model}>{entry.model}</td>
                   <td className="px-3 py-2 text-[var(--text-muted)]">{entry.provider}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">{entry.requests.toLocaleString()}</td>
@@ -255,7 +255,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
               {unpricedModels.length > 0 && (
                 <>
                   <tr>
-                    <td colSpan={7} className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] bg-[#fafafa]">
+                    <td colSpan={7} className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] bg-[var(--surface-muted)]">
                       Unpriced Models ({unpricedModels.length})
                     </td>
                   </tr>
@@ -274,7 +274,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
               )}
             </tbody>
             <tfoot>
-              <tr className="border-t border-[var(--surface-border)] bg-[#fafafa]">
+              <tr className="border-t border-[var(--surface-border)] bg-[var(--surface-muted)]">
                 <td colSpan={6} className="px-3 py-2 font-semibold text-[var(--text-primary)]">Total Estimated Cost</td>
                 <td className="px-3 py-2 text-right font-bold text-emerald-700 text-sm">{formatUSD(totalEstimatedCost)}</td>
               </tr>

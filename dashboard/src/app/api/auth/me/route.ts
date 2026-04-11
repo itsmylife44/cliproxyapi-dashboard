@@ -5,6 +5,16 @@ import { Errors } from "@/lib/errors";
 
 export async function GET() {
   try {
+    // DEV BYPASS: skip auth when SKIP_AUTH=1
+    if (process.env.SKIP_AUTH === "1") {
+      return NextResponse.json({
+        id: "dev-user-id",
+        username: "dev",
+        isAdmin: true,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     const session = await verifySession();
 
     if (!session) {

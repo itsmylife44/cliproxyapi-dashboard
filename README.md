@@ -176,6 +176,17 @@ npm run dev
 
 Dashboard at `http://localhost:3000`.
 
+### UI-Only Mode (no database)
+
+To browse the dashboard UI without PostgreSQL or login:
+
+```bash
+cd dashboard
+SKIP_AUTH=1 npm run dev
+```
+
+Opens all routes as a fake admin user — useful for testing themes, layouts, and components.
+
 ## Documentation
 
 | Guide | Description |

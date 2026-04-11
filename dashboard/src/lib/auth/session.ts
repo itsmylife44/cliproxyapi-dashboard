@@ -25,6 +25,11 @@ function parseExpiry(expiresIn: string): number {
 const SESSION_COOKIE_NAME = "session";
 
 export const verifySession = cache(async (): Promise<SessionPayload | null> => {
+  // DEV BYPASS: skip auth when SKIP_AUTH=1
+  if (process.env.SKIP_AUTH === "1") {
+    return { userId: "dev-user-id", username: "dev", sessionVersion: 0 };
+  }
+
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 

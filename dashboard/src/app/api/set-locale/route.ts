@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
       httpOnly: false, // Allow client-side access for next-intl
       sameSite: "lax",
       path: "/",
+      secure: process.env.NODE_ENV === "production",
     });
 
     return NextResponse.json({ success: true });

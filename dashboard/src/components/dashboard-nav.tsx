@@ -231,7 +231,7 @@ export function DashboardNav() {
                     "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] truncate transition-opacity duration-200",
                     isCollapsed && "lg:opacity-0"
                   )}>
-                    {section.label}
+                    {t(section.labelKey)}
                   </p>
                   <ul className="space-y-0.5">
                     {items.map((item) => {
@@ -249,11 +249,11 @@ export function DashboardNav() {
                                 ? "glass-nav-item-active text-[var(--text-primary)]"
                                 : "glass-nav-item text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                             )}
-                            title={isCollapsed ? item.label : undefined}
+                            title={isCollapsed ? t(item.labelKey) : undefined}
                           >
                             <IconComponent className="h-4 w-4 shrink-0" />
                             <span className={cn("truncate transition-opacity duration-200", isCollapsed && "lg:opacity-0")}>
-                              {item.label}
+                              {t(item.labelKey)}
                             </span>
                           </Link>
                         </li>

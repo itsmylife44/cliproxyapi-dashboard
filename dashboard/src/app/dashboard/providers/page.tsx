@@ -1,21 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { extractApiError } from "@/lib/utils";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useAuth } from "@/hooks/use-auth";
 import {
   API_KEY_PROVIDERS,
   ApiKeySection,
   PROVIDERS,
   PROVIDER_IDS,
+  type KeyWithOwnership,
   type ProviderId,
   type ProviderState,
 } from "@/components/providers/api-key-section";
 import { CustomProviderSection } from "@/components/providers/custom-provider-section";
 import { OAuthSection } from "@/components/providers/oauth-section";
 import { PerplexityProSection } from "@/components/providers/perplexity-pro-section";
-import { useTranslations } from "next-intl";
 
 interface CurrentUser {
   id: string;
@@ -23,7 +27,7 @@ interface CurrentUser {
   isAdmin: boolean;
 }
 
-const loadProvidersData = async (): Promise<Record<ProviderId, ProviderState>> => {
+const loadProvidersData = async (signal?: AbortSignal): Promise<Record<ProviderId, ProviderState>> => {
   const newConfigs: Record<ProviderId, ProviderState> = {
     [PROVIDER_IDS.CLAUDE]: { keys: [] },
     [PROVIDER_IDS.GEMINI]: { keys: [] },
@@ -31,24 +35,30 @@ const loadProvidersData = async (): Promise<Record<ProviderId, ProviderState>> =
     [PROVIDER_IDS.OPENAI]: { keys: [] },
   };
 
-  for (const provider of PROVIDERS) {
-    try {
-      const res = await fetch(`/api/providers/keys?provider=${provider.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        const keys = data.data?.keys ?? data.keys;
-        if (Array.isArray(keys)) {
-          newConfigs[provider.id] = { keys };
-        }
-      }
-    } catch {}
+  const results = await Promise.allSettled(
+    PROVIDERS.map(async (provider) => {
+      const res = await fetch(`${API_ENDPOINTS.PROVIDERS.KEYS}?provider=${provider.id}`, { signal });
+      if (!res.ok) return { id: provider.id, keys: [] as KeyWithOwnership[] };
+      const data = await res.json();
+      const keys = data.data?.keys ?? data.keys;
+      return { id: provider.id, keys: Array.isArray(keys) ? keys : [] };
+    })
+  );
+
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      newConfigs[result.value.id as ProviderId] = { keys: result.value.keys };
+    }
   }
 
   return newConfigs;
 };
 
 export default function ProvidersPage() {
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const { user: authUser } = useAuth();
+  const currentUser: CurrentUser | null = authUser
+    ? { id: authUser.id, username: authUser.username, isAdmin: authUser.isAdmin }
+    : null;
   const [configs, setConfigs] = useState<Record<ProviderId, ProviderState>>(() => ({
     [PROVIDER_IDS.CLAUDE]: { keys: [] },
     [PROVIDER_IDS.GEMINI]: { keys: [] },
@@ -59,26 +69,14 @@ export default function ProvidersPage() {
   const [maxKeysPerUser, setMaxKeysPerUser] = useState<number>(10);
   const [oauthAccountCount, setOauthAccountCount] = useState(0);
   const [customProviderCount, setCustomProviderCount] = useState(0);
+  const [incognitoBrowserEnabled, setIncognitoBrowserEnabled] = useState(false);
   const { showToast } = useToast();
   const t = useTranslations("providers");
 
-  const loadCurrentUser = useCallback(async (): Promise<CurrentUser | null> => {
-    try {
-      const res = await fetch("/api/auth/me");
-      if (res.ok) {
-        const data = await res.json();
-        const user = { id: data.id, username: data.username, isAdmin: data.isAdmin };
-        setCurrentUser(user);
-        return user;
-      }
-    } catch {}
-    return null;
-  }, []);
-
-  const loadMaxKeysPerUser = useCallback(async (isAdminUser: boolean) => {
+  const loadMaxKeysPerUser = useCallback(async (isAdminUser: boolean, signal?: AbortSignal) => {
     if (!isAdminUser) return;
     try {
-      const res = await fetch("/api/admin/settings");
+      const res = await fetch(API_ENDPOINTS.ADMIN.SETTINGS, { signal });
       if (res.ok) {
         const data = await res.json();
         const setting = data.settings?.find((s: { key: string; value: string }) => s.key === "max_provider_keys_per_user");
@@ -89,27 +87,46 @@ export default function ProvidersPage() {
           }
         }
       }
-    } catch {}
+    } catch {
+      if (signal?.aborted) return;
+    }
+  }, []);
+
+  const loadIncognitoSetting = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const res = await fetch(API_ENDPOINTS.PROXY.OAUTH_SETTINGS, { signal });
+      if (res.ok) {
+        const data = await res.json();
+        setIncognitoBrowserEnabled(Boolean(data.incognitoBrowser));
+      }
+    } catch {
+      if (!signal?.aborted) {
+        setIncognitoBrowserEnabled(false);
+      }
+    }
   }, []);
 
   const refreshProviders = async () => {
     setLoading(true);
     const newConfigs = await loadProvidersData();
     setConfigs(newConfigs);
+    await loadIncognitoSetting();
     setLoading(false);
   };
 
   useEffect(() => {
-    let isMounted = true;
+    const controller = new AbortController();
     const load = async () => {
-      const user = await loadCurrentUser();
-      const newConfigs = await loadProvidersData();
-      if (!isMounted) return;
+      const newConfigs = await loadProvidersData(controller.signal);
+      if (controller.signal.aborted) return;
       setConfigs(newConfigs);
+
+      await loadIncognitoSetting(controller.signal);
+
       setLoading(false);
 
-      if (user?.isAdmin) {
-        await loadMaxKeysPerUser(true);
+      if (authUser?.isAdmin) {
+        await loadMaxKeysPerUser(true, controller.signal);
       }
     };
     const timeoutId = window.setTimeout(() => {
@@ -117,9 +134,9 @@ export default function ProvidersPage() {
     }, 0);
     return () => {
       window.clearTimeout(timeoutId);
-      isMounted = false;
+      controller.abort();
     };
-  }, [loadCurrentUser, loadMaxKeysPerUser]);
+  }, [authUser, loadMaxKeysPerUser, loadIncognitoSetting]);
 
   const providerStats = API_KEY_PROVIDERS.map((provider) => ({
     id: provider.id,
@@ -138,31 +155,31 @@ export default function ProvidersPage() {
     <div className="space-y-6">
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-          AI Provider Configuration
+          {t("pageTitle")}
         </h1>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
-          Manage API keys, OAuth accounts, and custom provider endpoints in one place.
+          {t("pageDescription")}
         </p>
       </section>
 
       <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">API Keys</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t("statsApiKeysLabel")}</p>
           <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
-            {totalApiKeys} configured{currentUser ? ` · ${ownApiKeyCount} yours` : ""}
+            {t("statsApiKeysValue", { count: totalApiKeys })}{currentUser ? ` ${t("statsApiKeysOwn", { own: ownApiKeyCount })}` : ""}
           </p>
         </div>
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Active Providers</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t("statsActiveProvidersLabel")}</p>
           <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{activeApiProviders}/{API_KEY_PROVIDERS.length}</p>
         </div>
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">OAuth Accounts</p>
-          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{oauthAccountCount} connected</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t("statsOAuthAccountsLabel")}</p>
+          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{t("statsOAuthValue", { count: oauthAccountCount })}</p>
         </div>
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Custom Providers</p>
-          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{customProviderCount} configured</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t("statsCustomProvidersLabel")}</p>
+          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{t("statsCustomValue", { count: customProviderCount })}</p>
         </div>
       </section>
 
@@ -171,7 +188,7 @@ export default function ProvidersPage() {
           <div className="flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
               <div className="size-8 animate-spin rounded-full border-4 border-[#ddd] border-t-blue-500"></div>
-              <p className="text-[var(--text-secondary)]">Loading providers...</p>
+              <p className="text-[var(--text-secondary)]">{t("loadingText")}</p>
             </div>
           </div>
         </div>
@@ -203,24 +220,25 @@ export default function ProvidersPage() {
               />
             </div>
 
-          <PerplexityProSection showToast={showToast} />
+            <PerplexityProSection showToast={showToast} />
+          </section>
 
           {currentUser?.isAdmin && (
             <section id="provider-admin" className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
               <div>
-                <h2 className="text-sm font-semibold text-[var(--text-primary)]">Admin Settings</h2>
-                <p className="text-xs text-[var(--text-muted)]">Provider limits and policies</p>
+                <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t("adminSettingsTitle")}</h2>
+                <p className="text-xs text-[var(--text-muted)]">{t("adminSettingsDescription")}</p>
               </div>
 
               <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Key Contribution Limits</h3>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t("keyLimitsTitle")}</h3>
                 <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  Control how many provider keys each user can contribute
+                  {t("keyLimitsDescription")}
                 </p>
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <label htmlFor="max-keys" className="mb-2 block text-sm font-semibold text-[var(--text-secondary)]">
-                      Max Keys Per User
+                      {t("maxKeysLabel")}
                     </label>
                     <Input
                       type="number"
@@ -234,7 +252,7 @@ export default function ProvidersPage() {
                       }}
                     />
                     <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                      Maximum number of provider keys a single user can contribute (current: {maxKeysPerUser})
+                      {t("maxKeysHint", { current: maxKeysPerUser })}
                     </p>
                   </div>
                   <Button
@@ -242,7 +260,7 @@ export default function ProvidersPage() {
                     className="mt-6"
                     onClick={async () => {
                       try {
-                        const res = await fetch("/api/admin/settings", {
+                        const res = await fetch(API_ENDPOINTS.ADMIN.SETTINGS, {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
@@ -254,7 +272,7 @@ export default function ProvidersPage() {
                           showToast(t("toastSettingSaved"), "success");
                         } else {
                           const data = await res.json();
-                          showToast(data.error || t("toastSettingSaveFailed"), "error");
+                          showToast(extractApiError(data, t("toastSettingSaveFailed")), "error");
                         }
                       } catch {
                         showToast(t("toastNetworkError"), "error");

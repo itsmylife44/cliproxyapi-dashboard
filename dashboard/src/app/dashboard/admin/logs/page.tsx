@@ -327,7 +327,7 @@ export default function AdminLogsPage() {
                       <td className="px-3 py-2">
                         <div className="flex flex-col">
                           <span className="text-xs text-[var(--text-primary)]">
-                            {formatRelativeTime(log.time)}
+                            {formatRelativeTime(log.time, t)}
                           </span>
                           <span className="text-[10px] text-[var(--text-muted)]">
                             {formatTimestamp(log.time)}

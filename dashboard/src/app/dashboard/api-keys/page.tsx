@@ -6,6 +6,7 @@ import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/com
 import { useToast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { HelpTooltip } from "@/components/ui/tooltip";
 import { useTranslations } from "next-intl";
 
 interface ApiKey {

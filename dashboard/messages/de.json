@@ -735,6 +735,8 @@
   "updateOverlay": {
     "updateAvailableTitle": "Update verfügbar",
     "updateInProgress": "Update läuft...",
+    "stepConnecting": "Verbindung zum Update-Server...",
+    "stepDownloading": "Update wird heruntergeladen...",
     "updateComplete": "Update abgeschlossen",
     "updateError": "Update fehlgeschlagen",
     "retryButton": "Erneut versuchen",

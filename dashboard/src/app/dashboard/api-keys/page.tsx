@@ -73,10 +73,10 @@ export default function ApiKeysPage() {
   const { copiedKey, copy } = useCopyToClipboard();
   const t = useTranslations("apiKeys");
 
-  const fetchApiKeys = useCallback(async () => {
+  const fetchApiKeys = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/user/api-keys");
+      const res = await fetch("/api/user/api-keys", { signal });
       if (!res.ok) {
         showToast(t("toastLoadFailed"), "error");
         setLoading(false);
@@ -88,18 +88,21 @@ export default function ApiKeysPage() {
       setApiKeys(keys);
       setLoading(false);
     } catch {
+      if (signal?.aborted) return;
       showToast(t("toastNetworkError"), "error");
       setLoading(false);
     }
   }, [showToast, t]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
-      void fetchApiKeys();
+      void fetchApiKeys(controller.signal);
     }, 0);
 
     return () => {
       window.clearTimeout(timeoutId);
+      controller.abort();
     };
   }, [fetchApiKeys]);
 

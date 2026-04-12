@@ -4,7 +4,9 @@ export const ANTIGRAVITY_QUOTA_ENDPOINTS = [
   "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels",
 ] as const;
 
-export const MODEL_FIRST_SNAPSHOT_STALE_MS = 180_000;
+export const MODEL_FIRST_SNAPSHOT_STALE_MS = 300_000;
+
+export const MODEL_FIRST_PROVIDERS = ["antigravity", "gemini-cli", "gemini"] as const;
 
 export type QuotaMonitorMode = "window-based" | "model-first";
 
@@ -109,7 +111,7 @@ export function normalizeFraction(value: unknown): number | null {
 export function isModelFirstProvider(provider: string | undefined | null): boolean {
   if (typeof provider !== "string") return false;
   const normalized = provider.trim().toLowerCase();
-  return normalized === "antigravity" || normalized === "gemini-cli" || normalized === "gemini";
+  return MODEL_FIRST_PROVIDERS.includes(normalized as typeof MODEL_FIRST_PROVIDERS[number]);
 }
 
 export function isModelFirstAccount(account: Pick<QuotaAccount, "provider" | "monitorMode">): boolean {

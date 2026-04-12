@@ -7,6 +7,7 @@ import { Errors } from "@/lib/errors";
 import {
   ANTIGRAVITY_QUOTA_ENDPOINTS,
   enrichModelFirstGroup,
+  isModelFirstProvider,
   type QuotaAccount,
   type QuotaGroup,
   type QuotaResponse,
@@ -1211,7 +1212,7 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      if (providerNorm === "antigravity" || providerNorm === "gemini-cli" || providerNorm === "gemini") {
+      if (isModelFirstProvider(providerNorm)) {
         const result = await fetchAntigravityQuota(authIndex);
         
         if ("error" in result) {

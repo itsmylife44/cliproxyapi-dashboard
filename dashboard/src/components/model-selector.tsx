@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useEffect, useRef } from "react";
 import {
   MODEL_PROVIDER_ORDER,
@@ -38,6 +39,8 @@ export function ModelSelector({
   onSelectionChange,
   isLocked = false,
 }: ModelSelectorProps) {
+  const t = useTranslations("modelSelector");
+  const tCommon = useTranslations("common");
   const [excludedModels, setExcludedModels] = useState<Set<string>>(
     () => new Set(initialExcludedModels)
   );
@@ -211,28 +214,28 @@ export function ModelSelector({
               <polyline points="9 18 15 12 9 6" />
             </svg>
             <span className="text-sm font-semibold text-[var(--text-primary)]">
-              Model Selection <HelpTooltip content="Deselect models to exclude them from your config. Excluded models won't appear in opencode.json or be assigned to agents." />
+              {t("title")} <HelpTooltip content={t("tooltip")} />
             </span>
             {isLocked && (
-              <span className="text-amber-600" title="Locked by subscription">
+              <span className="text-amber-600" title={t("lockedBySubscription")}>
                 🔒
               </span>
             )}
           </button>
 
           <span className="px-2 py-0.5 rounded-full bg-[var(--surface-hover)] text-xs text-[var(--text-muted)]">
-            {selectedCount} of {availableModels.length} selected
+            {t("selectedCount", { selected: selectedCount, total: availableModels.length })}
           </span>
         </div>
 
         {isLocked ? (
           <span className="text-xs text-amber-600/80">
-            Publisher-controlled
+            {t("publisherControlled")}
           </span>
         ) : (
           <>
             {saveStatus === SAVE_STATUS.SAVING && (
-              <span className="text-xs text-[var(--text-muted)]">Saving...</span>
+              <span className="text-xs text-[var(--text-muted)]">{t("saving")}</span>
             )}
             {saveStatus === SAVE_STATUS.SAVED && (
               <span className="flex items-center gap-1 text-xs text-green-600">
@@ -245,12 +248,12 @@ export function ModelSelector({
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  aria-label="Saved"
+                  aria-label={tCommon("savedAriaLabel")}
                 >
-                  <title>Saved</title>
+                  <title>{t("saved")}</title>
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                Saved
+                {t("saved")}
               </span>
             )}
           </>
@@ -263,7 +266,7 @@ export function ModelSelector({
             <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <span className="text-lg">🔒</span>
               <p className="text-sm text-amber-700">
-                Model selection is controlled by your publisher. Unsubscribe to regain control.
+                {t("lockedMessage")}
               </p>
             </div>
           )}
@@ -275,7 +278,7 @@ export function ModelSelector({
               className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isLocked}
             >
-              Select All
+              {t("selectAll")}
             </button>
             <span className="text-[var(--text-muted)]">|</span>
             <button
@@ -284,7 +287,7 @@ export function ModelSelector({
               className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isLocked}
             >
-              Deselect All
+              {t("deselectAll")}
             </button>
           </div>
 
@@ -321,7 +324,7 @@ export function ModelSelector({
                       </svg>
                       {group.provider}
                       <span className="px-2 py-0.5 rounded-full bg-[var(--surface-hover)] text-xs font-normal text-[var(--text-muted)]">
-                        {groupSelectedCount}/{groupTotalCount} selected
+                        {t("groupSelectedCount", { selected: groupSelectedCount, total: groupTotalCount })}
                       </span>
                     </button>
                     {isExpanded && (
@@ -332,7 +335,7 @@ export function ModelSelector({
                           className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={isLocked}
                         >
-                          Select all
+                          {t("selectAllGroup")}
                         </button>
                         <span className="text-[var(--text-muted)]">|</span>
                         <button
@@ -341,7 +344,7 @@ export function ModelSelector({
                           className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={isLocked}
                         >
-                          Deselect all
+                          {t("deselectAllGroup")}
                         </button>
                       </div>
                     )}

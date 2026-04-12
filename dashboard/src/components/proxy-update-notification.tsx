@@ -5,6 +5,7 @@ import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/com
 import { Button } from "@/components/ui/button";
 import { useProxyUpdateCheck } from "@/hooks/use-proxy-update-check";
 import { UpdateOverlay } from "@/components/update-overlay";
+import { useTranslations } from 'next-intl';
 
 export function ProxyUpdateNotification() {
   const {
@@ -17,6 +18,7 @@ export function ProxyUpdateNotification() {
     performUpdate,
   } = useProxyUpdateCheck();
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
+  const t = useTranslations('updateOverlay');
 
   const targetVersion = selectedVersion || updateInfo?.latestVersion || "latest";
 
@@ -60,7 +62,7 @@ export function ProxyUpdateNotification() {
                     />
                   </svg>
                 </span>
-                Proxy Update Available
+                {t('proxyTitle')}
               </span>
             </ModalTitle>
           </ModalHeader>
@@ -68,18 +70,18 @@ export function ProxyUpdateNotification() {
           <ModalContent>
             <div className="space-y-4">
               <p className="text-[var(--text-secondary)] text-sm leading-relaxed">
-                A new version of CLIProxyAPI (the proxy) is available. Would you like to update now?
+                {t('proxyUpdateMessage')}
               </p>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl bg-[var(--surface-muted)] border border-[var(--surface-border)] p-3">
-                  <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Current</p>
+                  <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">{t('currentVersion')}</p>
                   <p className="text-[var(--text-primary)] font-mono text-sm font-medium">
                     {displayCurrentVersion || "unknown"}
                   </p>
                 </div>
                 <div className="rounded-xl bg-[var(--surface-muted)] border border-[var(--surface-border)] p-3">
-                  <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Latest</p>
+                  <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">{t('latestVersion')}</p>
                   <p className="text-[var(--text-primary)] font-mono text-sm font-medium">
                     {updateInfo.latestVersion || "latest"}
                   </p>
@@ -92,7 +94,7 @@ export function ProxyUpdateNotification() {
                     htmlFor="proxy-version-select"
                     className="block text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-2"
                   >
-                    Or select a specific version
+                    {t('selectVersion')}
                   </label>
                   <select
                     id="proxy-version-select"
@@ -147,7 +149,7 @@ export function ProxyUpdateNotification() {
                       />
                     </svg>
                     <p className="text-[var(--text-secondary)] text-sm">
-                      Updating to {targetVersion}... This may take a moment.
+                      {t('updatingMessage', { targetVersion })}
                     </p>
                   </div>
                 </div>
@@ -157,10 +159,10 @@ export function ProxyUpdateNotification() {
 
           <ModalFooter>
             <Button variant="ghost" onClick={dismissUpdate} disabled={isUpdating}>
-              Later
+              {t('laterButton')}
             </Button>
             <Button variant="primary" onClick={handleUpdate} disabled={isUpdating}>
-              {isUpdating ? "Updating..." : `Update to ${targetVersion}`}
+              {isUpdating ? t('updatingButton') : t('updateToButton', { version: targetVersion })}
             </Button>
           </ModalFooter>
         </Modal>

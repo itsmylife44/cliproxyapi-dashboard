@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 interface UserPanelProps {
   isOpen: boolean;
@@ -25,6 +27,8 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const t = useTranslations("userPanel");
 
   useFocusTrap(isOpen, panelRef);
 
@@ -71,11 +75,11 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
     e.preventDefault();
 
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("errorPasswordsDoNotMatch"));
       return;
     }
     if (newPassword.length < 8) {
-      setError("Minimum 8 characters required");
+      setError(t("errorMinimumCharsRequired"));
       return;
     }
 
@@ -91,7 +95,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error?.message ?? data.error ?? "Failed to change password");
+        setError(data.error?.message ?? data.error ?? t("errorFailedToChangePassword"));
         return;
       }
 
@@ -101,7 +105,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
       setConfirmPassword("");
       setTimeout(() => setSuccess(false), 3000);
     } catch {
-      setError("Network error");
+      setError(t("errorNetworkError"));
     } finally {
       setLoading(false);
     }
@@ -129,7 +133,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label="User settings"
+        aria-label={t("dialogAriaLabel")}
         className="fixed inset-y-0 right-0 z-50 w-80 sm:w-96 bg-[var(--surface-base)] border-l border-[var(--surface-border)] animate-panel-slide overflow-y-auto"
         style={{ overscrollBehavior: "contain" }}
       >
@@ -148,11 +152,11 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
                   <h2 className="text-lg font-semibold text-[var(--text-primary)]">{username}</h2>
                   {isAdmin && (
                     <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-[var(--surface-muted)] text-[var(--text-secondary)] border border-[var(--surface-border)]">
-                      Admin
+                      {t("adminBadge")}
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 text-xs text-[var(--text-muted)]">Dashboard Account</p>
+                <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t("dashboardAccount")}</p>
               </div>
             </div>
 
@@ -161,7 +165,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
               type="button"
               onClick={onClose}
               className="rounded-md p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
-              aria-label="Close panel"
+              aria-label={t("closePanelAriaLabel")}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -173,7 +177,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
           <div className="mb-6 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-2.5">
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/100 animate-pulse-dot" />
-              <span className="text-xs font-medium text-[var(--text-muted)]">Session active</span>
+              <span className="text-xs font-medium text-[var(--text-muted)]">{t("sessionActive")}</span>
             </div>
             <p className="mt-1 text-xs text-[var(--text-muted)] pl-3.5">
               {new Date().toLocaleDateString("en-US", {
@@ -200,7 +204,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
                 <svg className="w-4 h-4 text-[var(--text-muted)]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                Change Password
+                {t("changePassword")}
               </div>
               <svg
                 className={cn("w-4 h-4 text-[var(--text-muted)] transition-transform duration-200", passwordOpen && "rotate-180")}
@@ -223,7 +227,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
               <form onSubmit={handlePasswordChange} className="space-y-3 px-3">
                 <div>
                   <label htmlFor="panel-current-password" className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                    Current Password
+                    {t("currentPassword")}
                   </label>
                   <Input
                     type="password"
@@ -237,7 +241,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
 
                 <div>
                   <label htmlFor="panel-new-password" className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                    New Password
+                    {t("newPassword")}
                   </label>
                   <Input
                     type="password"
@@ -246,13 +250,13 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
                     onChange={setNewPassword}
                     required
                     autoComplete="new-password"
-                    placeholder="Minimum 8 characters"
+                    placeholder={t("minimumCharsPlaceholder")}
                   />
                 </div>
 
                 <div>
                   <label htmlFor="panel-confirm-password" className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                    Confirm New Password
+                    {t("confirmNewPassword")}
                   </label>
                   <Input
                     type="password"
@@ -273,12 +277,12 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
 
                 {success && (
                   <div role="status" aria-live="polite" className="rounded-md border border-green-500/30 bg-green-500/100/10 px-3 py-2 text-xs text-green-700">
-                    Password changed successfully
+                    {t("successPasswordChanged")}
                   </div>
                 )}
 
                 <Button type="submit" disabled={loading} className="w-full">
-                  {loading ? "Changing\u2026" : "Update Password"}
+                  {loading ? t("changingEllipsis") : t("updatePassword")}
                 </Button>
               </form>
             </div>
@@ -297,8 +301,11 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
               <circle cx="12" cy="12" r="3" />
               <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.8 4.8l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.8-4.8l4.2-4.2" />
             </svg>
-            System Settings
+            {t("systemSettings")}
           </button>
+
+          {/* Language Switcher */}
+          <LanguageSwitcher />
 
           {/* Spacer */}
           <div className="flex-1" />
@@ -310,7 +317,7 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                Logout
+                {t("logout")}
               </span>
             </Button>
           </div>

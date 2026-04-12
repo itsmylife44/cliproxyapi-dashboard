@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { HelpTooltip } from "@/components/ui/tooltip";
@@ -54,11 +55,11 @@ interface ProviderSummary {
   modelFirstSummary?: ModelFirstProviderSummary;
 }
 
-function formatRelativeTime(isoDate: string | null | undefined): string {
-  if (!isoDate) return "Unknown";
+function formatRelativeTime(isoDate: string | null | undefined, unknownLabel = "Unknown"): string {
+  if (!isoDate) return unknownLabel;
 
   const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return "Unknown";
+  if (Number.isNaN(date.getTime())) return unknownLabel;
 
   const diffMs = date.getTime() - Date.now();
   if (diffMs <= 0) return "Resetting...";
@@ -167,8 +168,8 @@ function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
   };
 }
 
-function calcOverallCapacity(summaries: ProviderSummary[]): { value: number; label: string; provider: string } {
-  if (summaries.length === 0) return { value: 0, label: "No Data", provider: "" };
+function calcOverallCapacity(summaries: ProviderSummary[], noDataLabel: string, weightedLabel: string): { value: number; label: string; provider: string } {
+  if (summaries.length === 0) return { value: 0, label: noDataLabel, provider: "" };
 
   let weightedCapacity = 0;
   let weightedAccounts = 0;
@@ -206,17 +207,18 @@ function calcOverallCapacity(summaries: ProviderSummary[]): { value: number; lab
   }
 
   if (weightedAccounts === 0) {
-    return { value: 0, label: "No Data", provider: "" };
+    return { value: 0, label: noDataLabel, provider: "" };
   }
 
   return {
     value: weightedCapacity / weightedAccounts,
-    label: "Weighted capacity",
+    label: weightedLabel,
     provider: "all",
   };
 }
 
 export default function QuotaPage() {
+  const t = useTranslations("quota");
   const [quotaData, setQuotaData] = useState<QuotaResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState<ProviderType>(PROVIDERS.ALL);
@@ -270,7 +272,7 @@ export default function QuotaPage() {
     .map(([, accounts]) => calcProviderSummary(accounts))
     .sort((left, right) => right.healthyAccounts - left.healthyAccounts);
 
-  const overallCapacity = calcOverallCapacity(providerSummaries);
+  const overallCapacity = calcOverallCapacity(providerSummaries, t("noData"), t("weightedCapacity"));
   const isModelFirstOnlyView =
     filteredAccounts.length > 0 && filteredAccounts.every((account) => isModelFirstAccount(account));
   const modelFirstSummary = isModelFirstOnlyView ? summarizeModelFirstProvider(filteredAccounts) : null;
@@ -291,13 +293,13 @@ export default function QuotaPage() {
   }).length;
 
   const providerFilters = [
-    { key: PROVIDERS.ALL, label: "All" },
-    { key: PROVIDERS.ANTIGRAVITY, label: "Antigravity" },
-    { key: PROVIDERS.CLAUDE, label: "Claude" },
-    { key: PROVIDERS.CODEX, label: "Codex" },
-    { key: PROVIDERS.COPILOT, label: "Copilot" },
-    { key: PROVIDERS.KIMI, label: "Kimi" },
-  ] as const;
+    { key: PROVIDERS.ALL, label: t("filterAll") },
+    { key: PROVIDERS.ANTIGRAVITY, label: t("filterAntigravity") },
+    { key: PROVIDERS.CLAUDE, label: t("filterClaude") },
+    { key: PROVIDERS.CODEX, label: t("filterCodex") },
+    { key: PROVIDERS.COPILOT, label: t("filterCopilot") },
+    { key: PROVIDERS.KIMI, label: t("filterKimi") },
+  ];
 
   const toggleCard = (accountId: string) => {
     setExpandedCards((previous) => ({ ...previous, [accountId]: !previous[accountId] }));
@@ -312,11 +314,9 @@ export default function QuotaPage() {
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Quota</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t("pageTitle")}</h1>
             <p className="mt-1 text-sm text-[var(--text-muted)]">
-              {isModelFirstOnlyView
-                ? "Model-first monitoring for Antigravity quota snapshots, grouped by model family."
-                : "Monitor OAuth account quotas and usage windows."}
+              {isModelFirstOnlyView ? t("modelFirstDescription") : t("pageDescription")}
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -342,7 +342,7 @@ export default function QuotaPage() {
               ))}
             </div>
             <Button onClick={() => fetchQuota(undefined, true)} disabled={loading} className="px-2.5 py-1 text-xs">
-              {loading ? "Loading..." : "Refresh"}
+              {loading ? t("loadingText") : t("refreshButton")}
             </Button>
           </div>
         </div>
@@ -350,7 +350,7 @@ export default function QuotaPage() {
 
       {loading && !quotaData ? (
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
-          Loading quota data...
+          {t("loadingText")}
         </div>
       ) : (
         <>
@@ -358,9 +358,10 @@ export default function QuotaPage() {
             <section className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
               {modelFirstWarnings.map(({ provider, summary }) => (
                 <p key={provider}>
-                  {provider.charAt(0).toUpperCase() + provider.slice(1)} snapshot API currently returns full quota for
-                  all {summary.totalAccounts} active accounts. Snapshot freshness is tracked, but current remaining quota
-                  is not fully verifiable from provider data alone.
+                  {t("modelFirstWarning", {
+                    provider: provider.charAt(0).toUpperCase() + provider.slice(1),
+                    count: summary.totalAccounts,
+                  })}
                 </p>
               ))}
             </section>
@@ -368,20 +369,16 @@ export default function QuotaPage() {
 
           <section className={`grid grid-cols-2 gap-2 ${isModelFirstOnlyView ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
             <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Active Accounts</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("activeAccountsLabel")}</p>
               <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{activeAccounts}</p>
             </div>
             {isModelFirstOnlyView && modelFirstSummary ? (
               <>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {modelFirstQuotaUnverified ? "Fresh Snapshots" : "Ready Accounts"}{" "}
+                    {modelFirstQuotaUnverified ? t("freshSnapshotsLabel") : t("readyAccountsLabel")}{" "}
                     <HelpTooltip
-                      content={
-                        modelFirstQuotaUnverified
-                          ? "Fresh Antigravity snapshots are available, but the provider currently reports full quota on every grouped family."
-                          : "Accounts with a fresh grouped snapshot and at least one ready model family."
-                      }
+                      content={modelFirstQuotaUnverified ? t("freshSnapshotsTooltip") : t("readyAccountsTooltip")}
                     />
                   </p>
                   <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
@@ -390,24 +387,24 @@ export default function QuotaPage() {
                 </div>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Stale Snapshots{" "}
-                    <HelpTooltip content="Accounts whose latest grouped model snapshot is older than the freshness threshold." />
+                    {t("staleSnapshotsLabel")}{" "}
+                    <HelpTooltip content={t("staleSnapshotsTooltip")} />
                   </p>
                   <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{modelFirstSummary.staleAccounts}</p>
                 </div>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Closest Reset{" "}
-                    <HelpTooltip content="Earliest grouped model reset time visible in the latest Antigravity snapshot." />
+                    {t("closestResetLabel")}{" "}
+                    <HelpTooltip content={t("closestResetTooltip")} />
                   </p>
                   <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
-                    {formatRelativeTime(modelFirstSummary.nextWindowResetAt)}
+                    {formatRelativeTime(modelFirstSummary.nextWindowResetAt, t("unknown"))}
                   </p>
                 </div>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Model Families{" "}
-                    <HelpTooltip content="Grouped quota families inferred from Antigravity model IDs." />
+                    {t("modelFamiliesLabel")}{" "}
+                    <HelpTooltip content={t("modelFamiliesTooltip")} />
                   </p>
                   <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{modelFirstSummary.groups.length}</p>
                 </div>
@@ -416,20 +413,20 @@ export default function QuotaPage() {
               <>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Overall Capacity{" "}
-                    <HelpTooltip content="Weighted average of remaining quota across all active provider accounts." />
+                    {t("overallCapacityLabel")}{" "}
+                    <HelpTooltip content={t("overallCapacityTooltip")} />
                   </p>
                   <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{Math.round(overallCapacity.value * 100)}%</p>
                 </div>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Low Capacity{" "}
-                    <HelpTooltip content="Number of providers or grouped snapshots with remaining quota below 20%." />
+                    {t("lowCapacityLabel")}{" "}
+                    <HelpTooltip content={t("lowCapacityTooltip")} />
                   </p>
                   <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{lowCapacityCount}</p>
                 </div>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Providers</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("providersLabel")}</p>
                   <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{providerSummaries.length}</p>
                 </div>
               </>

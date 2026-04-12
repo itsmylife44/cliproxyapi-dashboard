@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { type ReactNode, useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { useTranslations } from "next-intl";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -22,10 +23,13 @@ export function ConfirmDialog({
   onConfirm,
   title,
   message,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   variant = "warning"
 }: ConfirmDialogProps) {
+  const t = useTranslations('common');
+  const resolvedConfirmLabel = confirmLabel ?? t('confirm');
+  const resolvedCancelLabel = cancelLabel ?? t('cancel');
   const dialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(isOpen, dialogRef as React.RefObject<HTMLElement | null>);
   const previousOverflowRef = useRef<string>("");
@@ -143,7 +147,7 @@ export function ConfirmDialog({
 
         <div className="flex gap-3">
           <Button variant="ghost" onClick={onClose} className="flex-1">
-            {cancelLabel}
+            {resolvedCancelLabel}
           </Button>
           <button
             type="button"
@@ -156,7 +160,7 @@ export function ConfirmDialog({
               variant === "info" && "bg-blue-500/100 hover:bg-blue-600 text-white focus-visible:ring-blue-500/50"
             )}
           >
-            {confirmLabel}
+            {resolvedConfirmLabel}
           </button>
         </div>
       </div>

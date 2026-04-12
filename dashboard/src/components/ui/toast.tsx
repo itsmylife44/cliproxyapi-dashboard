@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 interface Toast {
   id: string;
@@ -16,6 +17,7 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const t = useTranslations('common');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -68,7 +70,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               type="button"
               onClick={() => removeToast(toast.id)}
               className="shrink-0 rounded-md p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
-              aria-label="Dismiss"
+              aria-label={t('dismiss')}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <line x1="18" y1="6" x2="6" y2="18" />

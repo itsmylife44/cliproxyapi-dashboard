@@ -17,6 +17,7 @@ import { UsageRequestEvents } from "@/components/usage/usage-request-events";
 import { UsageTable } from "@/components/usage/usage-table";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
+import { useTranslations } from "next-intl";
 interface KeyUsage {
   keyName: string;
   username?: string;
@@ -129,16 +130,6 @@ function getDateRange(period: DateFilter, customFrom?: string, customTo?: string
   }
 }
 
-function getRelativeTime(isoString: string): string {
-  if (!isoString) return "Never";
-  const diff = Date.now() - new Date(isoString).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
 
 function getStatusColor(isoString: string): string {
   if (!isoString) return "bg-red-500/100";
@@ -154,6 +145,19 @@ function formatLatencyValue(value: number): string {
 }
 
 export default function UsagePage() {
+  const t = useTranslations("usage");
+  const tc = useTranslations("common");
+
+  function getRelativeTime(isoString: string): string {
+    if (!isoString) return t('never');
+    const diff = Date.now() - new Date(isoString).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return t("justNow");
+    if (minutes < 60) return t("minutesAgo", { count: minutes });
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return t("hoursAgo", { count: hours });
+    return t("daysAgo", { count: Math.floor(hours / 24) });
+  }
   const [usageData, setUsageData] = useState<UsageData | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -177,7 +181,7 @@ export default function UsagePage() {
         const res = await fetch(`/api/usage/history?from=${from}&to=${to}`, { signal: abortController.signal });
 
         if (!res.ok) {
-          showToast("Failed to load usage data", "error");
+          showToast(t("toastLoadFailed"), "error");
           setLoading(false);
           return;
         }
@@ -189,7 +193,7 @@ export default function UsagePage() {
         setLoading(false);
       } catch {
         if (abortController.signal.aborted) return;
-        showToast("Network error", "error");
+        showToast(t("toastNetworkError"), "error");
         setLoading(false);
       }
     }
@@ -239,7 +243,7 @@ export default function UsagePage() {
       const res = await fetch(`/api/usage/history?from=${from}&to=${to}`);
 
       if (!res.ok) {
-        showToast("Failed to load usage data", "error");
+        showToast(t("toastLoadFailed"), "error");
         setLoading(false);
         return;
       }
@@ -249,7 +253,7 @@ export default function UsagePage() {
       setIsAdmin(json.isAdmin);
       setLoading(false);
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
       setLoading(false);
     }
   };
@@ -257,21 +261,21 @@ export default function UsagePage() {
   const hasInputOutputBreakdown = usageData && (usageData.totals.inputTokens > 0 || usageData.totals.outputTokens > 0);
   const hasLatencyBreakdown = (usageData?.latencySummary?.sampleCount ?? 0) > 0;
   const collectorStatusColor = usageData ? getStatusColor(usageData.collectorStatus.lastCollectedAt) : "bg-gray-500";
-  const collectorTimeAgo = usageData ? getRelativeTime(usageData.collectorStatus.lastCollectedAt) : "Unknown";
+  const collectorTimeAgo = usageData ? getRelativeTime(usageData.collectorStatus.lastCollectedAt) : tc('unknown');
 
   return (
     <div className="space-y-4">
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Usage Statistics</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
             <div className="mt-1 flex items-center gap-2">
               <div className={`h-2 w-2 rounded-full ${collectorStatusColor}`}></div>
-              <p className="text-xs text-[var(--text-muted)]">Last synced: {collectorTimeAgo}</p>
+              <p className="text-xs text-[var(--text-muted)]">{t('lastSyncedLabel')} {collectorTimeAgo}</p>
             </div>
           </div>
           <Button onClick={handleRefresh} disabled={loading}>
-            Refresh
+            {t('refreshButton')}
           </Button>
         </div>
       </section>
@@ -288,29 +292,29 @@ export default function UsagePage() {
 
       {loading ? (
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
-          Loading statistics...
+          {t('loadingText')}
         </div>
       ) : !usageData ? (
         <div className="rounded-md border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-700">
-          Unable to load usage statistics
+          {t('errorLoadFailed')}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
             <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total Requests</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalRequests')}</p>
               <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.totalRequests.toLocaleString()}</p>
             </div>
             <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Successful</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('successful')}</p>
               <p className="mt-0.5 text-xs font-semibold text-emerald-700">{usageData.totals.successCount.toLocaleString()}</p>
             </div>
             <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Failed</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('failedLabel')}</p>
               <p className="mt-0.5 text-xs font-semibold text-rose-600">{usageData.totals.failureCount.toLocaleString()}</p>
             </div>
             <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total Tokens</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalTokens')}</p>
               <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.totalTokens.toLocaleString()}</p>
             </div>
           </div>
@@ -318,15 +322,15 @@ export default function UsagePage() {
           {hasInputOutputBreakdown && (
             <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
               <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Input Tokens</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('inputTokens')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.inputTokens.toLocaleString()}</p>
               </div>
               <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Output Tokens</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('outputTokens')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.outputTokens.toLocaleString()}</p>
               </div>
               <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total Tokens</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalTokens')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.totalTokens.toLocaleString()}</p>
               </div>
             </div>
@@ -335,7 +339,7 @@ export default function UsagePage() {
           {hasLatencyBreakdown && usageData?.latencySummary ? (
             <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
               <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Avg Latency</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('avgLatency')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{formatLatencyValue(usageData.latencySummary.averageMs)}</p>
               </div>
               <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-2">
@@ -343,7 +347,7 @@ export default function UsagePage() {
                 <p className="mt-0.5 text-xs font-semibold text-amber-800">{formatLatencyValue(usageData.latencySummary.p95Ms)}</p>
               </div>
               <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-600">Slowest Request</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-600">{t('slowestRequest')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-rose-800">{formatLatencyValue(usageData.latencySummary.maxMs)}</p>
               </div>
             </div>

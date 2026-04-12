@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { extractApiError } from "@/lib/utils";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useTranslations } from 'next-intl';
 
 interface DeployStatus {
   status: "idle" | "running" | "success" | "error" | "completed" | "failed";
@@ -37,6 +38,7 @@ export function DeployDashboard() {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const fetchStatusRef = useRef<(shouldStartPolling?: boolean) => Promise<void>>(async () => {});
   const { showToast } = useToast();
+  const t = useTranslations('deploy');
 
   const fetchStatus = useCallback(async (shouldStartPolling = false) => {
     try {
@@ -99,10 +101,10 @@ export function DeployDashboard() {
     if (!pendingDeploy) return;
 
     const { noCache } = pendingDeploy;
-    const mode = noCache ? "Full Rebuild" : "Quick Update";
+    const mode = noCache ? t('confirmFullRebuildTitle') : t('confirmQuickUpdateTitle');
 
     setDeploying(true);
-    setStatus({ status: "running", step: "init", message: "Starting deployment..." });
+    setStatus({ status: "running", step: "init", message: t('startingDeployment') });
 
     try {
       const res = await fetch(API_ENDPOINTS.ADMIN.DEPLOY, {
@@ -112,31 +114,31 @@ export function DeployDashboard() {
       });
 
       if (res.ok) {
-        showToast(`${mode} started`, "success");
+        showToast(t('toastStarted', { mode }), "success");
         startPolling();
       } else {
         const data = await res.json();
-        const errorMessage = extractApiError(data, "Failed to start deployment");
+        const errorMessage = extractApiError(data, t('toastStartFailed'));
         showToast(errorMessage, "error");
         setDeploying(false);
         setStatus({ status: "error", error: errorMessage });
       }
     } catch {
-      showToast("Network error", "error");
+      showToast(t('toastNetworkError'), "error");
       setDeploying(false);
-      setStatus({ status: "error", error: "Network error" });
+      setStatus({ status: "error", error: t('toastNetworkError') });
     }
   };
 
   const getStepLabel = (step?: string) => {
     switch (step) {
-      case "init": return "Initializing...";
-      case "git": return "Pulling latest code...";
-      case "build": return "Building Docker image...";
-      case "deploy": return "Deploying container...";
-      case "health": return "Health check...";
-      case "done": return "Complete!";
-      default: return step || "Unknown";
+      case "init": return t('stepInit');
+      case "git": return t('stepGit');
+      case "build": return t('stepBuild');
+      case "deploy": return t('stepDeploy');
+      case "health": return t('stepHealth');
+      case "done": return t('stepDone');
+      default: return step || t('stepUnknown');
     }
   };
 
@@ -155,26 +157,25 @@ export function DeployDashboard() {
     return (
       <div className="space-y-3">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Dashboard Deployment</h2>
-          <p className="text-xs text-[var(--text-muted)]">Deploy the latest dashboard changes from the repository</p>
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('title')}</h2>
+          <p className="text-xs text-[var(--text-muted)]">{t('description')}</p>
         </div>
 
         <div className="space-y-4">
           <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3">
-            <div className="text-sm font-medium text-amber-700">Webhook Not Configured</div>
+            <div className="text-sm font-medium text-amber-700">{t('webhookNotConfiguredTitle')}</div>
             <p className="mt-1 text-xs text-[var(--text-muted)]">
-              The deployment webhook is not set up. To enable dashboard deployments from the UI,
-              you need to configure the webhook server on your host machine.
+              {t('webhookNotConfiguredDescription')}
             </p>
           </div>
 
           <div className="space-y-3 text-sm text-[var(--text-secondary)]">
-            <div className="font-medium text-[var(--text-primary)]">Setup Instructions:</div>
+            <div className="font-medium text-[var(--text-primary)]">{t('setupInstructionsTitle')}</div>
             <ol className="list-decimal list-inside space-y-2 text-[var(--text-muted)]">
-              <li>Install webhook: <code className="rounded-sm bg-[var(--surface-muted)] px-1">apt install webhook</code></li>
-              <li>Copy webhook config from <code className="rounded-sm bg-[var(--surface-muted)] px-1">infrastructure/webhook.yaml</code></li>
-              <li>Set environment variables: <code className="rounded-sm bg-[var(--surface-muted)] px-1">WEBHOOK_HOST</code>, <code className="rounded-sm bg-[var(--surface-muted)] px-1">DEPLOY_SECRET</code></li>
-              <li>Start webhook service: <code className="rounded-sm bg-[var(--surface-muted)] px-1">webhook -hooks /path/to/webhook.yaml -port 9000</code></li>
+              <li>{t('step1Install')} <code className="rounded-sm bg-[var(--surface-muted)] px-1">apt install webhook</code></li>
+              <li>{t('step2CopyConfig')} <code className="rounded-sm bg-[var(--surface-muted)] px-1">infrastructure/webhook.yaml</code></li>
+              <li>{t('step3SetEnv')} <code className="rounded-sm bg-[var(--surface-muted)] px-1">WEBHOOK_HOST</code>, <code className="rounded-sm bg-[var(--surface-muted)] px-1">DEPLOY_SECRET</code></li>
+              <li>{t('step4Start')} <code className="rounded-sm bg-[var(--surface-muted)] px-1">webhook -hooks /path/to/webhook.yaml -port 9000</code></li>
             </ol>
           </div>
         </div>
@@ -186,30 +187,30 @@ export function DeployDashboard() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Dashboard Deployment</h2>
-          <p className="text-xs text-[var(--text-muted)]">Deploy the latest dashboard changes from the repository</p>
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('title')}</h2>
+          <p className="text-xs text-[var(--text-muted)]">{t('description')}</p>
         </div>
         <div className="flex items-center gap-2">
           {status.status === "running" && (
             <span className="rounded-sm border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600 animate-pulse">
-              Deploying...
+              {t('statusDeploying')}
             </span>
           )}
           {(status.status === "success" || status.status === "completed") && (
             <span className="rounded-sm border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
-              Success
+              {t('statusSuccess')}
             </span>
           )}
           {(status.status === "error" || status.status === "failed") && (
             <span className="rounded-sm border border-rose-500/20 bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-600">
-              Failed
+              {t('statusFailed')}
             </span>
           )}
         </div>
       </div>
 
         <p className="text-xs text-[var(--text-muted)]">
-        Quick Update uses Docker cache for faster builds. Full Rebuild rebuilds everything from scratch.
+        {t('cacheDescription')}
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -217,21 +218,21 @@ export function DeployDashboard() {
           onClick={() => handleDeploy(false)}
           disabled={deploying}
         >
-          {deploying ? "Deploying..." : "Quick Update"}
+          {deploying ? t('buttonDeploying') : t('buttonQuickUpdate')}
         </Button>
         <Button
           variant="secondary"
           onClick={() => handleDeploy(true)}
           disabled={deploying}
         >
-          Full Rebuild (no-cache)
+          {t('buttonFullRebuild')}
         </Button>
         <Button
           variant="ghost"
           onClick={fetchStatus}
           disabled={deploying}
         >
-          Refresh Status
+          {t('buttonRefreshStatus')}
         </Button>
       </div>
 
@@ -258,7 +259,7 @@ export function DeployDashboard() {
 
           {status.completedAt && (
             <div className="text-xs text-[var(--text-muted)]">
-              Completed: {new Date(status.completedAt).toLocaleString()}
+              {t('completedAt', { time: new Date(status.completedAt).toLocaleString() })}
             </div>
           )}
         </div>
@@ -271,10 +272,10 @@ export function DeployDashboard() {
           setPendingDeploy(null);
         }}
         onConfirm={executeDeploy}
-        title={pendingDeploy?.noCache ? "Full Rebuild" : "Quick Update"}
-        message={`Start ${pendingDeploy?.noCache ? "Full Rebuild" : "Quick Update"}? The dashboard will restart after deployment.`}
-        confirmLabel="Deploy"
-        cancelLabel="Cancel"
+        title={pendingDeploy?.noCache ? t('confirmFullRebuildTitle') : t('confirmQuickUpdateTitle')}
+        message={t('confirmMessage', { mode: pendingDeploy?.noCache ? t('confirmFullRebuildTitle') : t('confirmQuickUpdateTitle') })}
+        confirmLabel={t('confirmLabel')}
+        cancelLabel={t('cancelLabel')}
         variant="warning"
       />
     </div>

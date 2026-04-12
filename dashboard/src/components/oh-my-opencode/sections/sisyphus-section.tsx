@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { OhMyOpenCodeFullConfig, SisyphusAgentConfig } from "@/lib/config-generators/oh-my-opencode-types";
 
 interface SisyphusSectionProps {
@@ -11,13 +12,13 @@ interface SisyphusSectionProps {
 
 const SISYPHUS_FIELDS: ReadonlyArray<{
   field: keyof SisyphusAgentConfig;
-  label: string;
+  labelKey: string;
   defaultValue: boolean;
 }> = [
-  { field: "disabled", label: "Disabled", defaultValue: false },
-  { field: "default_builder_enabled", label: "Default Builder Enabled", defaultValue: false },
-  { field: "planner_enabled", label: "Planner Enabled", defaultValue: true },
-  { field: "replace_plan", label: "Replace Plan", defaultValue: true },
+  { field: "disabled", labelKey: "sisyphusDisabled", defaultValue: false },
+  { field: "default_builder_enabled", labelKey: "defaultBuilderEnabled", defaultValue: false },
+  { field: "planner_enabled", labelKey: "plannerEnabled", defaultValue: true },
+  { field: "replace_plan", labelKey: "replacePlan", defaultValue: true },
 ];
 
 export function SisyphusSection({
@@ -26,6 +27,8 @@ export function SisyphusSection({
   overrides,
   onSisyphusToggle,
 }: SisyphusSectionProps) {
+  const t = useTranslations("ohMyOpenCode");
+
   return (
     <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-muted)] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
@@ -47,15 +50,15 @@ export function SisyphusSection({
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        <span className="flex-1 text-left">Sisyphus Agent</span>
+        <span className="flex-1 text-left">{t("sisyphusAgent")}</span>
       </button>
       {isExpanded && (
         <div className="px-3 pb-3 space-y-1">
-          {SISYPHUS_FIELDS.map(({ field, label, defaultValue }) => {
+          {SISYPHUS_FIELDS.map(({ field, labelKey, defaultValue }) => {
             const isEnabled = overrides.sisyphus_agent?.[field] ?? defaultValue;
             return (
               <div key={field} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)]">
-                <span className="text-xs text-[var(--text-secondary)] font-mono">{label}</span>
+                <span className="text-xs text-[var(--text-secondary)] font-mono">{t(labelKey as never)}</span>
                 <button
                   type="button"
                   onClick={() => onSisyphusToggle(field)}

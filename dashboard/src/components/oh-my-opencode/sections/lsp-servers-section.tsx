@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 
 interface LspServersSectionProps {
@@ -39,6 +40,7 @@ export function LspServersSection({
   onLspAdd,
   onLspRemove,
 }: LspServersSectionProps) {
+  const t = useTranslations("ohMyOpenCode");
   const lspEntries = Object.entries(overrides.lsp ?? {});
 
   return (
@@ -60,15 +62,15 @@ export function LspServersSection({
               <polyline points="16 18 22 12 16 6" />
               <polyline points="8 6 2 12 8 18" />
             </svg>
-            LSP Servers
+            {t("lspServers")}
           </h3>
-          <p className="text-xs text-[var(--text-muted)] mt-1">Configure Language Server Protocol for code intelligence</p>
+          <p className="text-xs text-[var(--text-muted)] mt-1">{t("lspDesc")}</p>
           <code className="text-[10px] text-emerald-700/70 font-mono block mt-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded">
             {`"lsp": { "typescript": { "command": ["typescript-language-server", "--stdio"] } }`}
           </code>
         </div>
         <span className="px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-xs font-mono shrink-0">
-          {Object.keys(overrides.lsp ?? {}).length} configured
+          {t("lspConfiguredCount", { count: Object.keys(overrides.lsp ?? {}).length })}
         </span>
       </div>
 
@@ -92,21 +94,21 @@ export function LspServersSection({
       <div className="grid grid-cols-[1fr,2fr,1.5fr,auto] gap-2">
         <input
           type="text"
-          placeholder="language"
+          placeholder={t("languagePlaceholder")}
           value={lspLanguage}
           onChange={(e) => onLspLanguageChange(e.target.value)}
           className="px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/20"
         />
         <input
           type="text"
-          placeholder="command"
+          placeholder={t("commandPlaceholder")}
           value={lspCommand}
           onChange={(e) => onLspCommandChange(e.target.value)}
           className="px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/20"
         />
         <input
           type="text"
-          placeholder=".ts,.tsx (optional)"
+          placeholder={t("extensionsPlaceholder")}
           value={lspExtensions}
           onChange={(e) => onLspExtensionsChange(e.target.value)}
           onKeyDown={(e) => {
@@ -122,7 +124,7 @@ export function LspServersSection({
           onClick={onLspAdd}
           className="px-3 py-1.5 text-xs bg-emerald-500/10 text-emerald-700 rounded-lg hover:bg-emerald-500/15"
         >
-          Add
+          {t("addButton")}
         </button>
       </div>
 

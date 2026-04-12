@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,18 +15,19 @@ export default function SetupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const t = useTranslations("setup");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("passwordMismatchError"));
       return;
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("passwordTooShortError"));
       return;
     }
 
@@ -43,7 +45,7 @@ export default function SetupPage() {
       if (!res.ok) {
         const errorMsg = typeof data.error === "string" 
           ? data.error 
-          : (data.error?.message ?? "Setup failed");
+          : (data.error?.message ?? t('setupFailed'));
         setError(errorMsg);
         setLoading(false);
         return;
@@ -53,7 +55,7 @@ export default function SetupPage() {
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Network error. Please try again.");
+      setError(t("networkError"));
       setLoading(false);
     }
   };
@@ -70,20 +72,20 @@ export default function SetupPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
-            CLIProxyAPI
+            {t("pageTitle")}
           </h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">First-time setup</p>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">{t("firstTimeSetup")}</p>
         </div>
 
          <div className="glass-card rounded-2xl p-6">
            <div className="mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-sm text-amber-700">
-            Create your administrator account. Keep these credentials secure.
+            {t("createAdminDescription")}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="username" className="mb-2 block text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
-                Username
+                {t("usernameLabel")}
               </label>
               <Input
                 type="text"
@@ -92,13 +94,13 @@ export default function SetupPage() {
                 onChange={setUsername}
                 required
                 autoComplete="username"
-                placeholder="admin"
+                placeholder={t("usernamePlaceholder")}
               />
             </div>
 
             <div>
               <label htmlFor="password" className="mb-2 block text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
-                Password
+                {t("passwordLabel")}
               </label>
               <Input
                 type="password"
@@ -107,13 +109,13 @@ export default function SetupPage() {
                 onChange={setPassword}
                 required
                 autoComplete="new-password"
-                placeholder="Minimum 8 characters"
+                placeholder={t("passwordPlaceholder")}
               />
             </div>
 
             <div>
               <label htmlFor="confirmPassword" className="mb-2 block text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
-                Confirm Password
+                {t("confirmPasswordLabel")}
               </label>
               <Input
                 type="password"
@@ -132,13 +134,13 @@ export default function SetupPage() {
             )}
 
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Creating account\u2026" : "Create Account"}
+              {loading ? t("creatingAccount") : t("createAccount")}
             </Button>
           </form>
         </div>
 
         <p className="mt-6 text-center text-xs text-[var(--text-muted)]">
-          CLIProxyAPI Management Dashboard
+          {t("footerText")}
         </p>
       </div>
     </main>

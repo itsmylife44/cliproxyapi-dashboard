@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
 interface ErrorProps {
@@ -9,6 +10,7 @@ interface ErrorProps {
 }
 
 export default function DashboardError({ error, reset }: ErrorProps) {
+  const t = useTranslations("errors");
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
       <div className="w-full max-w-md space-y-6 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-8">
@@ -32,10 +34,10 @@ export default function DashboardError({ error, reset }: ErrorProps) {
           </svg>
 
           <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">Error</p>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Something went wrong</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">{t("errorTitle")}</p>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t("somethingWentWrong")}</h1>
             <p className="text-sm text-[var(--text-muted)]">
-              An unexpected error occurred while loading this page.
+              {t("unexpectedError")}
             </p>
             {error.digest && (
               <p className="mt-2 font-mono text-[11px] text-[var(--text-muted)]">
@@ -47,10 +49,10 @@ export default function DashboardError({ error, reset }: ErrorProps) {
 
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Button variant="primary" onClick={reset}>
-            Try Again
+            {t("tryAgain")}
           </Button>
           <Link href="/dashboard" className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 glass-button-secondary text-[var(--text-primary)]">
-            Go to Dashboard
+            {t("goToDashboard")}
           </Link>
         </div>
       </div>

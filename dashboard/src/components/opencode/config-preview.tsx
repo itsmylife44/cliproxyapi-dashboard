@@ -2,6 +2,7 @@
 
 import { CopyBlock } from "@/components/copy-block";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 interface ConfigPreviewProps {
   isExpanded: boolean;
@@ -18,6 +19,7 @@ export function ConfigPreview({
   onDownload,
   downloadFilename,
 }: ConfigPreviewProps) {
+  const t = useTranslations("openCodeConfig");
   return (
     <>
       <button
@@ -39,7 +41,7 @@ export function ConfigPreview({
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        {isExpanded ? "Hide config" : "Show config"}
+        {isExpanded ? t("hideConfig") : t("showConfig")}
       </button>
 
       {isExpanded && (
@@ -53,7 +55,7 @@ export function ConfigPreview({
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Download {downloadFilename}
+              {t("download")} {downloadFilename}
             </Button>
           </div>
         </div>

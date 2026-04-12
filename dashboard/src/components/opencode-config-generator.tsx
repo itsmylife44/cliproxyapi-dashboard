@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { PluginSection } from "@/components/opencode/plugin-section";
@@ -72,6 +73,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   const envIdCounter = useRef(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingDataRef = useRef<{ mcps: McpEntry[]; plugins: string[]; defaultModel: string } | null>(null);
+  const t = useTranslations("openCodeConfig");
 
   useEffect(() => {
     async function loadConfig() {
@@ -134,10 +136,10 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
         });
         if (!response.ok) {
           const errorData = await response.json();
-          setSaveError(extractApiError(errorData, "Failed to save config"));
+          setSaveError(extractApiError(errorData, t("errorSaveConfigFailed")));
         }
       } catch {
-        setSaveError("Network error while saving config");
+        setSaveError(t("networkError"));
       }
     }, 300);
 
@@ -301,16 +303,15 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
     return (
       <div className="space-y-4">
         <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 text-sm rounded-r-xl">
-          <p className="text-[var(--text-primary)] font-medium mb-1">No providers configured</p>
+          <p className="text-[var(--text-primary)] font-medium mb-1">{t("noProvidersTitle")}</p>
           <p className="text-[var(--text-muted)] text-xs">
-            You need to configure at least one AI provider before generating an OpenCode config.
-            Head to the{" "}
+            {t("noProvidersDesc")}{" "}
             <Link href="/dashboard/providers" className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[#ccc]">
-              Providers
+              {t("noProvidersLink")}
             </Link>{" "}
-            page to add Gemini, Claude, Codex, or OpenAI Compatible keys, or set up{" "}
+            {t("noProvidersDescMid")}{" "}
             <Link href="/dashboard/providers" className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[#ccc]">
-              Providers
+              {t("noProvidersLink")}
             </Link>.
           </p>
         </div>
@@ -322,15 +323,15 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
     return (
       <div className="space-y-3">
         <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 rounded-r-xl">
-          <div className="text-sm font-medium text-[var(--text-primary)] mb-1">API Key Required</div>
+          <div className="text-sm font-medium text-[var(--text-primary)] mb-1">{t("apiKeyRequiredTitle")}</div>
           <p className="text-sm text-[var(--text-secondary)]">
-            Create an API key to generate your configuration.
+            {t("apiKeyRequiredDesc")}
           </p>
           <Link
             href="/dashboard/api-keys"
             className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] text-[var(--text-primary)] text-sm font-medium hover:bg-[var(--surface-hover)] transition-colors"
           >
-            Create API Key &rarr;
+            {t("createApiKeyLink")}
           </Link>
         </div>
       </div>
@@ -341,14 +342,13 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
     return (
       <div className="space-y-4">
         <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 text-sm rounded-r-xl">
-          <p className="text-[var(--text-primary)] font-medium mb-1">No models available yet</p>
+          <p className="text-[var(--text-primary)] font-medium mb-1">{t("noModelsTitle")}</p>
           <p className="text-[var(--text-muted)] text-xs">
-            Providers are configured, but no models were discovered yet. If you just added providers,
-            wait a moment and refresh. If the issue persists, verify provider credentials on the{" "}
+            {t("noModelsDesc")}{" "}
             <Link href="/dashboard/providers" className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[#ccc]">
-              Providers
+              {t("noModelsLink")}
             </Link>{" "}
-            page.
+            {t("noModelsDescSuffix")}
           </p>
         </div>
       </div>
@@ -360,7 +360,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
       <div className="space-y-4">
         <div className="flex items-center justify-center gap-3 py-8">
           <div className="h-5 w-5 rounded-full border-2 border-[var(--surface-border)] border-t-black animate-spin" />
-          <span className="text-sm text-[var(--text-muted)]">Loading configuration...</span>
+          <span className="text-sm text-[var(--text-muted)]">{t("loadingConfig")}</span>
         </div>
       </div>
     );
@@ -377,7 +377,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
         apiKeys.length > 1 ? (
           <div className="space-y-2">
             <label htmlFor="api-key-select" className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-              Select API Key
+              {t("selectApiKeyLabel")}
             </label>
             <select
               id="api-key-select"
@@ -387,7 +387,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
             >
               {apiKeys.map((apiKey, index) => (
                 <option key={apiKey.key} value={index} className="bg-[var(--surface-base)] text-[var(--text-primary)]">
-                  {apiKey.name || "Unnamed Key"}
+                  {apiKey.name || t("unnamedKey")}
                 </option>
               ))}
             </select>
@@ -396,7 +396,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             <span>
-              Using API key: <strong className="text-[var(--text-secondary)]">{apiKeys[0].name || "Unnamed Key"}</strong>
+              {t("usingApiKeyPrefix")} <strong className="text-[var(--text-secondary)]">{apiKeys[0].name || t("unnamedKey")}</strong>
             </span>
           </div>
         )
@@ -404,22 +404,22 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
         <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
           <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
           <span>
-            OAuth providers connected — using placeholder key <code className="px-1.5 py-0.5 rounded bg-[var(--surface-hover)] text-amber-700 font-mono">your-api-key-from-dashboard</code>
+            {t("oauthConnected")} <code className="px-1.5 py-0.5 rounded bg-[var(--surface-hover)] text-amber-700 font-mono">your-api-key-from-dashboard</code>
           </span>
         </div>
       ) : (
         <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 text-sm rounded-r-xl">
-          <p className="text-[var(--text-primary)] font-medium mb-1">No API keys found</p>
+          <p className="text-[var(--text-primary)] font-medium mb-1">{t("noApiKeysTitle")}</p>
           <p className="text-[var(--text-muted)] text-xs">
-            Create an API key on the{" "}
+            {t("noApiKeysDesc")}{" "}
             <Link href="/dashboard/api-keys" className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[#ccc]">
-              API Keys
+              {t("noApiKeysApiKeysLink")}
             </Link>{" "}
-            page or connect an OAuth provider on the{" "}
+            {t("noApiKeysDescMid")}{" "}
             <Link href="/dashboard/providers" className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[#ccc]">
-              Providers
+              {t("noApiKeysProvidersLink")}
             </Link>{" "}
-            page. The config below uses a placeholder.
+            {t("noApiKeysDescSuffix")}
           </p>
         </div>
        )}
@@ -427,7 +427,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
         <div className="space-y-4 border-t border-[var(--surface-border)] pt-4">
           <div className="space-y-2">
             <label htmlFor="default-model-select" className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-              Default Model <HelpTooltip content="Choose one of the available OpenCode models for the `model` field in opencode.json. If you already saved a custom value that is not in the discovered list, it will appear as a custom option." />
+              {t("defaultModelLabel")} <HelpTooltip content={t("defaultModelTooltip")} />
             </label>
             <select
               id="default-model-select"
@@ -436,11 +436,11 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
               className="w-full bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-primary)] font-mono focus:border-[var(--accent)]/20 focus:bg-[var(--surface-base)] focus:outline-none transition-all"
             >
               <option value="" className="bg-[var(--surface-base)] text-[var(--text-primary)]">
-                Auto fallback ({fallbackModel})
+                {t("autoFallback", { model: fallbackModel })}
               </option>
               {hasCustomDefaultModel ? (
                 <option value={defaultModel.trim()} className="bg-[var(--surface-base)] text-[var(--text-primary)]">
-                  Custom saved value ({defaultModel.trim()})
+                  {t("customSavedValue", { model: defaultModel.trim() })}
                 </option>
               ) : null}
               {availableModelOptions.map((option) => (
@@ -450,12 +450,12 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
               ))}
             </select>
             <p className="text-xs text-[var(--text-muted)]">
-              Choose a discovered model, or leave it on auto fallback to use <span className="font-mono text-[var(--text-muted)]">{fallbackModel}</span>.
+              {t("defaultModelHint")} <span className="font-mono text-[var(--text-muted)]">{fallbackModel}</span>.
             </p>
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Oh My Open Agent Variant <HelpTooltip content="Normal: 9 specialized agents with categories for fine-grained control. Slim: 6 agents, lower token usage, built-in fallback chains. Both use your proxy models." /></p>
+            <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">{t("variantLabel")} <HelpTooltip content={t("variantTooltip")} /></p>
            <div className="flex gap-2">
              <button
                type="button"
@@ -466,8 +466,8 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
                    : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:border-[var(--surface-border)]"
                }`}
              >
-                <div className="font-semibold">Oh My Open Agent</div>
-               <div className="mt-0.5 text-[10px] opacity-70">9 agents + categories</div>
+                <div className="font-semibold">{t("variantNormalTitle")}</div>
+               <div className="mt-0.5 text-[10px] opacity-70">{t("variantNormalSubtitle")}</div>
              </button>
              <button
                type="button"
@@ -478,8 +478,8 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
                    : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:border-[var(--surface-border)]"
                }`}
              >
-                <div className="font-semibold">Oh My OpenCode Slim</div>
-               <div className="mt-0.5 text-[10px] opacity-70">6 agents, less tokens</div>
+                <div className="font-semibold">{t("variantSlimTitle")}</div>
+               <div className="mt-0.5 text-[10px] opacity-70">{t("variantSlimSubtitle")}</div>
              </button>
            </div>
          </div>

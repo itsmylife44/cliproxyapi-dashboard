@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 interface SyncToken {
   id: string;
@@ -46,34 +47,33 @@ export function TelegramSettings({
   onConfirmRevokeToken,
   onUpdateTokenApiKey,
 }: TelegramSettingsProps) {
+  const t = useTranslations("settings.telegram");
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Config Sync</h2>
-        <p className="text-xs text-[var(--text-muted)]">Sync tokens for OpenCode configuration</p>
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('sectionTitle')}</h2>
+        <p className="text-xs text-[var(--text-muted)]">{t('sectionDescription')}</p>
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Sync Tokens</h3>
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('syncTokensTitle')}</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-[var(--text-muted)]">
-              Generate tokens to sync OpenCode configurations
-            </p>
+            <p className="text-sm text-[var(--text-muted)]">{t('syncTokensDescription')}</p>
             <Button onClick={onGenerateToken} disabled={generatingToken}>
-              {generatingToken ? "Generating..." : "Generate Token"}
+              {generatingToken ? t("buttonGenerating") : t("buttonGenerateToken")}
             </Button>
           </div>
 
           {generatedToken && (
             <div className="space-y-3 rounded-sm border border-emerald-500/20 bg-emerald-500/10 p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-emerald-700">New Token Generated</span>
+                <span className="text-sm font-medium text-emerald-700">{t("newTokenGeneratedLabel")}</span>
                 <button
                   type="button"
                   onClick={onClearGeneratedToken}
                   className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                  aria-label="Dismiss token notification"
+                  aria-label={t("dismissAriaLabel")}
                 >
                   ✕
                 </button>
@@ -83,22 +83,22 @@ export function TelegramSettings({
                   {generatedToken}
                 </div>
                 <Button variant="secondary" onClick={() => onCopyToken(generatedToken)}>
-                  Copy to Clipboard
+                  {t("buttonCopyToClipboard")}
                 </Button>
               </div>
               <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3 text-sm">
                 <span className="text-amber-700">
-                  This token will only be shown once. Copy it now.
+                  {t("tokenOneTimeWarning")}
                 </span>
               </div>
             </div>
           )}
 
           {syncTokensLoading ? (
-            <div className="p-4 text-center text-[var(--text-muted)]">Loading tokens...</div>
+            <div className="p-4 text-center text-[var(--text-muted)]">{t('loadingTokens')}</div>
           ) : syncTokens.length === 0 ? (
             <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-sm text-[var(--text-muted)]">
-              No sync tokens configured. Generate one to get started.
+              {t('noTokensMessage')}
             </div>
           ) : (
             <div className="overflow-hidden rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)]">
@@ -113,16 +113,16 @@ export function TelegramSettings({
                         <div className="text-sm font-medium text-[var(--text-primary)]">{token.name}</div>
                         {token.isRevoked && (
                           <span className="rounded-sm border border-rose-500/20 bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-600">
-                            Revoked
+                            {t('revokedBadge')}
                           </span>
                         )}
                       </div>
                       <div className="text-xs text-[var(--text-muted)]">
-                        Created: {new Date(token.createdAt).toLocaleDateString()}
+                        {t('createdLabel')}{' '}{new Date(token.createdAt).toLocaleDateString()}
                       </div>
                       {token.lastUsedAt && (
                         <div className="text-xs text-[var(--text-muted)]">
-                          Last used: {new Date(token.lastUsedAt).toLocaleDateString()}
+                          {t('lastUsedLabel')}{' '}{new Date(token.lastUsedAt).toLocaleDateString()}
                         </div>
                       )}
                     </div>
@@ -131,14 +131,14 @@ export function TelegramSettings({
                         variant="danger"
                         onClick={() => onConfirmRevokeToken(token.id)}
                       >
-                        Revoke
+                        {t("buttonRevoke")}
                       </Button>
                     )}
                   </div>
                   {!token.isRevoked && (
                     <div className="flex flex-col gap-2 border-t border-[var(--surface-border)] pt-2 sm:flex-row sm:items-center sm:gap-3 sm:pt-1">
                       <label htmlFor={`sync-api-key-${token.id}`} className="whitespace-nowrap text-xs font-medium text-[var(--text-muted)]">
-                        Sync API Key
+                        {t('syncApiKeyLabel')}
                       </label>
                       <select
                         id={`sync-api-key-${token.id}`}
@@ -149,7 +149,7 @@ export function TelegramSettings({
                         {availableApiKeys.length > 0 ? (
                           <>
                             <option value="" className="bg-[var(--surface-base)] text-[var(--text-primary)]">
-                              Auto (first available)
+                              {t('syncApiKeyAutoOption')}
                             </option>
                             {availableApiKeys.map((apiKey) => (
                               <option key={apiKey.id} value={apiKey.id} className="bg-[var(--surface-base)] text-[var(--text-primary)]">
@@ -159,7 +159,7 @@ export function TelegramSettings({
                           </>
                         ) : (
                           <option value="" className="bg-[var(--surface-base)] text-[var(--text-primary)]">
-                            No API keys — create one first
+                            {t('syncApiKeyNoKeysOption')}
                           </option>
                         )}
                       </select>
@@ -178,25 +178,25 @@ export function TelegramSettings({
             className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)] hover:text-[var(--text-primary)]"
           >
             <span>{showInstructions ? "▼" : "▶"}</span>
-            Setup Instructions
+            {t("setupInstructionsToggle")}
           </button>
           {showInstructions && (
             <div className="mt-3 space-y-4 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-sm text-[var(--text-secondary)]">
               <div>
-                <div className="font-medium text-[var(--text-primary)]">1. Add to opencode.jsonc plugin array:</div>
+                <div className="font-medium text-[var(--text-primary)]">{t('setupStep1Title')}</div>
                 <div className="mt-2 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-2 font-mono text-xs">
-                  {`"plugin": ["opencode-cliproxyapi-sync@latest", ...]`}
+                  {t('setupStep1Code')}
                 </div>
               </div>
 
               <div>
-                <div className="font-medium text-[var(--text-primary)] mb-3">2. Create config file:</div>
+                <div className="font-medium text-[var(--text-primary)] mb-3">{t('setupStep2Title')}</div>
 
                 <div className="space-y-4">
                   <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3">
-                    <div className="mb-2 text-xs font-medium text-[var(--text-primary)]">Standard:</div>
+                    <div className="mb-2 text-xs font-medium text-[var(--text-primary)]">{t('setupStandardLabel')}</div>
                     <div className="mb-2 font-mono text-xs text-[var(--text-muted)] break-all">
-                      ~/.config/opencode-cliproxyapi-sync/config.json
+                      {t('setupStandardPath')}
                     </div>
                     <div className="overflow-x-auto rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-2 font-mono text-xs">
                       {`{
@@ -208,9 +208,9 @@ export function TelegramSettings({
                   </div>
 
                   <div className="rounded-sm border border-emerald-500/20 bg-emerald-500/10 p-3">
-                    <div className="mb-2 text-xs font-medium text-emerald-700">With OCX Profile:</div>
+                    <div className="mb-2 text-xs font-medium text-emerald-700">{t('setupOcxProfileLabel')}</div>
                     <div className="mb-2 font-mono text-xs text-emerald-700 break-all">
-                      ~/.config/opencode/profiles/&lt;profilename&gt;/opencode-cliproxyapi-sync/config.json
+                      {t("setupOcxProfilePath")}
                     </div>
                     <div className="overflow-x-auto rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-2 font-mono text-xs">
                       {`{
@@ -224,7 +224,7 @@ export function TelegramSettings({
               </div>
 
               <div className="border-t border-[var(--surface-border)] pt-2 text-xs text-[var(--text-muted)]">
-                The plugin will be auto-installed from npm when opencode starts.
+                {t('setupAutoInstallNote')}
               </div>
             </div>
           )}

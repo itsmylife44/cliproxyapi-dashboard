@@ -1,6 +1,7 @@
 "use client";
 
 import { Bar, BarChart, Legend, RadialBar, RadialBarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useTranslations } from "next-intl";
 
 import { CHART_COLORS, ChartContainer, ChartEmpty, useChartTheme } from "@/components/ui/chart-theme";
 import { isModelFirstProviderQuotaUnverified, type ModelFirstProviderSummary } from "@/lib/model-first-monitoring";
@@ -30,10 +31,10 @@ interface QuotaChartProps {
   modelFirstOnlyView: boolean;
 }
 
-function formatRelativeTime(isoDate: string | null | undefined): string {
-  if (!isoDate) return "Unknown";
+function formatRelativeTime(isoDate: string | null | undefined, unknownLabel = "Unknown"): string {
+  if (!isoDate) return unknownLabel;
   const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return "Unknown";
+  if (Number.isNaN(date.getTime())) return unknownLabel;
   const diffMs = date.getTime() - Date.now();
   if (diffMs <= 0) return "Resetting...";
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -51,6 +52,8 @@ export function QuotaChart({
   modelFirstOnlyView,
 }: QuotaChartProps) {
   const { axisTickStyle, tooltipStyle, tokens } = useChartTheme();
+  const t = useTranslations("quota");
+
   if (modelFirstOnlyView && modelFirstSummary) {
     const quotaUnverified = isModelFirstProviderQuotaUnverified(modelFirstSummary);
     const readyPct =
@@ -79,9 +82,9 @@ export function QuotaChart({
 
     return (
       <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <ChartContainer title="Effective Snapshot Readiness" subtitle="Fresh grouped Antigravity snapshots with at least one ready family">
+        <ChartContainer title={t("modelFirstReadinessTitle")} subtitle={t("modelFirstReadinessSubtitle")}>
           {modelFirstSummary.totalAccounts === 0 ? (
-            <ChartEmpty message="No Antigravity snapshots" />
+            <ChartEmpty message={t("noAntigravitySnapshots")} />
           ) : (
             <div className="relative flex h-48 items-center justify-center">
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
@@ -103,24 +106,24 @@ export function QuotaChart({
                   {quotaUnverified ? "N/A" : `${readyPct}%`}
                 </span>
                 <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: CHART_COLORS.text.dimmed }}>
-                  {quotaUnverified ? "Snapshot" : "Ready"}
+                  {quotaUnverified ? t("snapshotLabel") : t("readyLabel")}
                 </span>
                 <span className="mt-2 text-[11px]" style={{ color: CHART_COLORS.text.dimmed }}>
                   {quotaUnverified
-                    ? `${Math.max(0, modelFirstSummary.totalAccounts - modelFirstSummary.staleAccounts)}/${modelFirstSummary.totalAccounts} fresh snapshots`
-                    : `${modelFirstSummary.readyAccounts}/${modelFirstSummary.totalAccounts} accounts`}
+                    ? t("freshSnapshotsCount", { fresh: Math.max(0, modelFirstSummary.totalAccounts - modelFirstSummary.staleAccounts), total: modelFirstSummary.totalAccounts })
+                    : t("readyAccountsCount", { ready: modelFirstSummary.readyAccounts, total: modelFirstSummary.totalAccounts })}
                 </span>
                 <span className="mt-1 text-[10px]" style={{ color: CHART_COLORS.text.muted }}>
-                  Next reset: {formatRelativeTime(modelFirstSummary.nextWindowResetAt)}
+                  {t("nextResetShort")}: {formatRelativeTime(modelFirstSummary.nextWindowResetAt, t("unknown"))}
                 </span>
               </div>
             </div>
           )}
         </ChartContainer>
 
-        <ChartContainer title="Grouped Snapshot" subtitle="Grouped family quota view with minimum and median remaining percentages">
+        <ChartContainer title={t("groupedSnapshotTitle")} subtitle={t("groupedSnapshotSubtitle")}>
           {groupData.length === 0 ? (
-            <ChartEmpty message="No grouped model data" />
+            <ChartEmpty message={t("noGroupedModelData")} />
           ) : (
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
@@ -145,8 +148,8 @@ export function QuotaChart({
                     {...tooltipStyle}
                     formatter={(value, name, props) => {
                       if (value === null) return ["-", name];
-                      const label = name === "p50Remaining" ? "Median Remaining" : "Minimum Remaining";
-                      const extra = ` | ${props.payload.readyAccounts}/${props.payload.totalAccounts} ready`;
+                      const label = name === "p50Remaining" ? t("medianRemainingLabel") : t("minimumRemainingLabel");
+                      const extra = ` | ${props.payload.readyAccounts}/${props.payload.totalAccounts} ${t("readyLabel").toLowerCase()}`;
                       return [`${value}%${extra}`, label];
                     }}
                     labelFormatter={(label, payload) => {
@@ -154,13 +157,13 @@ export function QuotaChart({
                         | { nextReset?: string | null; fullReset?: string | null; nextRecovery?: string | null; bottleneckModel?: string | null }
                         | undefined;
                       if (!item) return label;
-                      return `${label} | reset ${formatRelativeTime(item.nextReset)} | recovery ${formatRelativeTime(item.nextRecovery)} | bottleneck ${item.bottleneckModel ?? "-"}`;
+                      return `${label} | ${t("resetLabel")} ${formatRelativeTime(item.nextReset, t("unknown"))} | ${t("recoveryLabel")} ${formatRelativeTime(item.nextRecovery, t("unknown"))} | ${t("bottleneckLabel")} ${item.bottleneckModel ?? "-"}`;
                     }}
                   />
                   <Legend
                     verticalAlign="top"
                     height={24}
-                    formatter={(value: string) => (value === "p50Remaining" ? "Median Remaining" : "Minimum Remaining")}
+                    formatter={(value: string) => (value === "p50Remaining" ? t("medianRemainingLabel") : t("minimumRemainingLabel"))}
                     wrapperStyle={{ fontSize: 10, color: tokens.text.dimmed }}
                   />
                   <Bar dataKey="p50Remaining" radius={[0, 3, 3, 0]} fill={CHART_COLORS.cyan} />
@@ -176,9 +179,9 @@ export function QuotaChart({
 
   return (
     <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-      <ChartContainer title="Overall Capacity" subtitle="Weighted across all providers">
+      <ChartContainer title={t("overallCapacityTitle")} subtitle={t("overallCapacitySubtitle")}>
         {providerSummaries.length === 0 ? (
-          <ChartEmpty message="No provider data" />
+          <ChartEmpty message={t("noProviderData")} />
         ) : (() => {
           const pct = Math.round(overallCapacity.value * 100);
           const gaugeColor =
@@ -205,21 +208,17 @@ export function QuotaChart({
                 </RadialBarChart>
               </ResponsiveContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold" style={{ color: gaugeColor }}>
-                  {pct}%
-                </span>
-                <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: CHART_COLORS.text.dimmed }}>
-                  Capacity
-                </span>
+                <span className="text-3xl font-bold" style={{ color: gaugeColor }}>{pct}%</span>
+                <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: tokens.text.dimmed }}>{t("capacityLabel")}</span>
               </div>
             </div>
           );
         })()}
       </ChartContainer>
 
-      <ChartContainer title="Provider Capacity" subtitle="Window minimums or grouped snapshot minimums per provider">
+      <ChartContainer title={t("providerCapacityTitle")} subtitle={t("providerCapacitySubtitle")}>
         {providerSummaries.length === 0 ? (
-          <ChartEmpty message="No provider data" />
+          <ChartEmpty message={t("noProviderData")} />
         ) : (() => {
           const barData = providerSummaries.map((summary) => {
             if (summary.monitorMode === "model-first" && summary.modelFirstSummary) {
@@ -281,13 +280,13 @@ export function QuotaChart({
                       if (value === null) return ["-", name];
 
                       if (props.payload.monitorMode === "model-first") {
-                        return [`${value}% (${props.payload.healthy}/${props.payload.total} healthy)`, "Grouped Snapshot Minimum"];
+                        return [`${value}% (${props.payload.healthy}/${props.payload.total} ${t("healthyLabel")})`, t("groupedSnapshotMinLabel")];
                       }
 
-                      const label = name === "longTerm" ? "Long-Term" : "Short-Term";
+                      const label = name === "longTerm" ? t("longTermLabel") : t("shortTermLabel");
                       const extra =
                         name === "longTerm"
-                          ? ` (${props.payload.healthy}/${props.payload.total} healthy${props.payload.issues > 0 ? `, ${props.payload.issues} issues` : ""})`
+                          ? ` (${props.payload.healthy}/${props.payload.total} ${t("healthyLabel")}${props.payload.issues > 0 ? `, ${props.payload.issues} ${t("issuesLabel")}` : ""})`
                           : "";
                       return [`${value}%${extra}`, label];
                     }}
@@ -295,7 +294,7 @@ export function QuotaChart({
                   <Legend
                     verticalAlign="top"
                     height={24}
-                    formatter={(value: string) => (value === "longTerm" ? "Primary Metric" : "Short-Term")}
+                    formatter={(value: string) => (value === "longTerm" ? t("primaryMetricLabel") : t("shortTermLabel"))}
                     wrapperStyle={{ fontSize: 10, color: tokens.text.dimmed }}
                   />
                   <Bar dataKey="longTerm" radius={[0, 3, 3, 0]} fill={CHART_COLORS.success} />

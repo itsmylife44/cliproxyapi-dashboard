@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
 type DateFilter = "today" | "7d" | "30d" | "all" | "custom";
@@ -23,42 +24,43 @@ export function TimeFilter({
   onCustomToChange,
   onCustomDateApply,
 }: TimeFilterProps) {
+  const t = useTranslations('usage');
   return (
     <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Time Period</h2>
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('timePeriod')}</h2>
       <div className="flex flex-wrap gap-2">
         <Button
           onClick={() => onFilterChange("today")}
           variant={activeFilter === "today" ? "primary" : "secondary"}
           className="text-xs"
         >
-          Today
+          {t('today')}
         </Button>
         <Button
           onClick={() => onFilterChange("7d")}
           variant={activeFilter === "7d" ? "primary" : "secondary"}
           className="text-xs"
         >
-          7 Days
+          {t('sevenDays')}
         </Button>
         <Button
           onClick={() => onFilterChange("30d")}
           variant={activeFilter === "30d" ? "primary" : "secondary"}
           className="text-xs"
         >
-          30 Days
+          {t('thirtyDays')}
         </Button>
         <Button
           onClick={() => onFilterChange("all")}
           variant={activeFilter === "all" ? "primary" : "secondary"}
           className="text-xs"
         >
-          All Time
+          {t('allTime')}
         </Button>
       </div>
       <div className="mt-3 flex flex-wrap items-end gap-2">
         <div>
-          <label htmlFor="custom-from" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">From</label>
+          <label htmlFor="custom-from" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('from')}</label>
           <input
             id="custom-from"
             type="date"
@@ -68,7 +70,7 @@ export function TimeFilter({
           />
         </div>
         <div>
-          <label htmlFor="custom-to" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">To</label>
+          <label htmlFor="custom-to" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('to')}</label>
           <input
             id="custom-to"
             type="date"
@@ -78,7 +80,7 @@ export function TimeFilter({
           />
         </div>
         <Button onClick={onCustomDateApply} disabled={!customFrom || !customTo} className="text-xs">
-          Apply
+          {t('apply')}
         </Button>
       </div>
     </section>

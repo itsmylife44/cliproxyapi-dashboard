@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import useSWR from "swr";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { NotificationBell } from "@/components/header/notification-bell";
@@ -56,6 +57,8 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
   const status = hasExternalStatus ? externalStatus : (swrStatus ?? null);
   const isLoading = hasExternalStatus ? status === null : swrLoading;
 
+  const t = useTranslations("header");
+
   const initial = username ? username.charAt(0).toUpperCase() : "?";
 
   return (
@@ -66,17 +69,17 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
           {isLoading ? (
             <>
               <div className="w-2.5 h-2.5 rounded-full bg-amber-500/100 animate-pulse" />
-              <span className="text-[var(--text-muted)]">Checking…</span>
+              <span className="text-[var(--text-muted)]">{t('checking')}</span>
             </>
           ) : status?.running ? (
             <>
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/100 animate-pulse-dot" />
-              <span className="text-emerald-600 font-medium">All systems operational</span>
+              <span className="text-emerald-600 font-medium">{t('allSystemsOperational')}</span>
             </>
           ) : (
             <>
               <div className="w-2.5 h-2.5 rounded-full bg-red-500/100" />
-              <span className="text-red-600 font-medium">System offline</span>
+              <span className="text-red-600 font-medium">{t('systemOffline')}</span>
             </>
           )}
         </div>
@@ -85,7 +88,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
           <>
             <div className="w-px h-4 bg-[var(--surface-border)]" />
             <span className="text-[var(--text-muted)] text-xs">
-              Uptime: {formatUptime(status.uptime)}
+              {t('uptimeLabel')}{formatUptime(status.uptime)}
             </span>
           </>
         )}
@@ -113,7 +116,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
         <button
           type="button"
           onClick={onUserClick}
-          aria-label="User settings"
+          aria-label={t('userSettingsAriaLabel')}
           className="flex items-center gap-3 group transition-[color,box-shadow]"
         >
           <div className="hidden sm:flex flex-col items-end">
@@ -122,7 +125,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
             </span>
             {isAdmin && (
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                Admin
+                {t('adminBadge')}
               </span>
             )}
           </div>

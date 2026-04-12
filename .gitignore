@@ -118,3 +118,6 @@ infrastructure/.env
 
 # OpenCode (local dev state)
 /.opencode/
+
+# Sisyphus (multi-agent harness metadata - local dev only)
+/.sisyphus/

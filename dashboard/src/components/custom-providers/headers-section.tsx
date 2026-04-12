@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -24,12 +25,14 @@ export function HeadersSection({
   onRemoveHeader,
   onUpdateHeader,
 }: HeadersSectionProps) {
+  const t = useTranslations("providers");
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <label htmlFor="headers" className="text-sm font-semibold text-[var(--text-primary)]">Headers (Optional)</label>
+        <label htmlFor="headers" className="text-sm font-semibold text-[var(--text-primary)]">{t("headersLabel")}</label>
         <Button variant="ghost" onClick={onAddHeader} className="px-3 py-1.5 text-xs" disabled={saving}>
-          + Add Header
+          {t("addHeaderButton")}
         </Button>
       </div>
       {headers.length > 0 && (
@@ -41,7 +44,7 @@ export function HeadersSection({
                 name={`header-key-${idx}`}
                 value={header.key}
                 onChange={(val) => onUpdateHeader(idx, "key", val)}
-                placeholder="Header-Name"
+                placeholder={t("headerKeyPlaceholder")}
                 disabled={saving}
                 className="flex-1"
               />
@@ -50,7 +53,7 @@ export function HeadersSection({
                 name={`header-value-${idx}`}
                 value={header.value}
                 onChange={(val) => onUpdateHeader(idx, "value", val)}
-                placeholder="Header-Value"
+                placeholder={t("headerValuePlaceholder")}
                 disabled={saving}
                 className="flex-1"
               />

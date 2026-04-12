@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { cn } from "@/lib/utils";
 import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
 import {
@@ -12,10 +14,10 @@ import {
   type QuotaGroup,
 } from "@/lib/model-first-monitoring";
 
-function maskEmail(email: unknown): string {
-  if (typeof email !== "string") return "unknown";
+function maskEmail(email: unknown, unknownLabel = "unknown"): string {
+  if (typeof email !== "string") return unknownLabel;
   const trimmed = email.trim();
-  if (trimmed === "") return "unknown";
+  if (trimmed === "") return unknownLabel;
 
   const atIndex = trimmed.indexOf("@");
   if (atIndex <= 0 || atIndex === trimmed.length - 1) {
@@ -28,11 +30,11 @@ function maskEmail(email: unknown): string {
   return `${maskedLocal}@${domain}`;
 }
 
-function formatRelativeTime(isoDate: string | null | undefined): string {
-  if (!isoDate) return "Unknown";
+function formatRelativeTime(isoDate: string | null | undefined, unknownLabel = "Unknown"): string {
+  if (!isoDate) return unknownLabel;
 
   const resetDate = new Date(isoDate);
-  if (Number.isNaN(resetDate.getTime())) return "Unknown";
+  if (Number.isNaN(resetDate.getTime())) return unknownLabel;
   const diffMs = resetDate.getTime() - Date.now();
 
   if (diffMs <= 0) return "Resetting...";
@@ -82,6 +84,8 @@ export function QuotaDetails({
   loading,
   modelFirstOnlyView,
 }: QuotaDetailsProps) {
+  const t = useTranslations("quota");
+
   const sections = (() => {
     if (filteredAccounts.length === 0) {
       return [];
@@ -129,7 +133,7 @@ export function QuotaDetails({
 
   return (
     <section id="quota-accounts" className="scroll-mt-24 space-y-2">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Accounts</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("accountsTitle")}</h2>
       <div className="space-y-3">
         {sections.map((section) => (
           <div key={section.key} className="space-y-1">
@@ -147,11 +151,11 @@ export function QuotaDetails({
                   )}
                 >
                   <span></span>
-                  <span>Account</span>
-                  <span>Provider</span>
-                  <span>Status</span>
-                  <span>{section.modelFirstView ? "Ready" : "Long-Term"}</span>
-                  <span>{section.modelFirstView ? "Recovery" : "Short-Term"}</span>
+                  <span>{t("accountColumn")}</span>
+                  <span>{t("providerColumn")}</span>
+                  <span>{t("statusColumn")}</span>
+                  <span>{section.modelFirstView ? t("readyColumnLabel") : t("longTermLabel")}</span>
+                  <span>{section.modelFirstView ? t("recoveryColumnLabel") : t("shortTermLabel")}</span>
                 </div>
 
                 {section.accounts.map((account) => {
@@ -161,21 +165,21 @@ export function QuotaDetails({
                   const shortScores = scores.filter((score) => score.isShortTerm);
                   const longMin = longScores.length > 0 ? Math.min(...longScores.map((score) => score.score)) : null;
                   const shortMin = shortScores.length > 0 ? Math.min(...shortScores.map((score) => score.score)) : null;
-                  const statusLabel = account.supported ? (account.error ? "Error" : "Active") : "Unsupported";
+                  const statusLabel = account.supported ? (account.error ? t("errorStatus") : t("activeStatus")) : t("unsupportedStatus");
                   const accountSummary = isModelFirstAccount(account) ? summarizeModelFirstAccount(account) : null;
                   const accountQuotaUnverified =
                     isModelFirstAccount(account) && accountSummary
                       ? isModelFirstAccountQuotaUnverified(account, accountSummary)
                       : false;
                   const modelFirstStatus = account.error
-                    ? "Error"
+                    ? t("errorStatus")
                     : !account.supported
-                      ? "Unsupported"
+                      ? t("unsupportedStatus")
                       : accountSummary?.staleSnapshot
-                        ? "Stale"
+                        ? t("staleStatus")
                         : accountQuotaUnverified
-                          ? "Snapshot"
-                          : "Ready";
+                          ? t("snapshotStatus")
+                          : t("readyStatus");
 
                   return (
                     <div key={account.auth_index} className="border-b border-[var(--surface-border)] last:border-b-0">
@@ -189,8 +193,8 @@ export function QuotaDetails({
                             : "grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px]"
                         )}
                       >
-                        <span className={cn("text-xs text-[var(--text-muted)] transition-transform", isRowExpanded && "rotate-180")}>v</span>
-                        <span className="truncate text-xs text-[var(--text-primary)]">{maskEmail(account.email)}</span>
+                        <span className={cn("text-xs text-[var(--text-muted)] transition-transform", isRowExpanded && "rotate-180")}>⌄</span>
+                        <span className="truncate text-xs text-[var(--text-primary)]">{maskEmail(account.email, t("unknown"))}</span>
                         <span className="truncate text-xs capitalize text-[var(--text-secondary)]">{account.provider}</span>
                         <span
                           className={cn(
@@ -217,12 +221,12 @@ export function QuotaDetails({
                             <span className="text-xs text-[var(--text-secondary)]">
                               {accountSummary
                                 ? accountQuotaUnverified
-                                  ? "snapshot full"
+                                  ? t("snapshotFullLabel")
                                   : `${accountSummary.readyGroups}/${accountSummary.totalGroups}`
                                 : "-"}
                             </span>
                             <span className="text-xs text-[var(--text-muted)]">
-                              {accountSummary ? formatRelativeTime(accountSummary.nextRecoveryAt ?? accountSummary.nextWindowResetAt) : "-"}
+                              {accountSummary ? formatRelativeTime(accountSummary.nextRecoveryAt ?? accountSummary.nextWindowResetAt, t("unknown")) : "-"}
                             </span>
                           </>
                         ) : (
@@ -259,13 +263,13 @@ export function QuotaDetails({
                         <div className="border-t border-[var(--surface-border)] bg-[var(--surface-base)] px-4 py-3">
                           {account.error && <p className="mb-2 break-all text-xs text-rose-600">{account.error}</p>}
                           {!account.supported && !account.error && (
-                            <p className="mb-2 text-xs text-amber-700">Quota monitoring not available for this provider.</p>
+                            <p className="mb-2 text-xs text-amber-700">{t("quotaNotAvailable")}</p>
                           )}
                           {section.modelFirstView && accountSummary && (
                             <div className="mb-2 flex flex-wrap gap-3 text-[11px] text-[var(--text-muted)]">
-                              <span>Snapshot: {accountSummary.staleSnapshot ? "stale" : "fresh"}</span>
-                              <span>Confidence: {accountQuotaUnverified ? "snapshot only" : "grouped ready"}</span>
-                              <span>Ready groups: {accountSummary.readyGroups}</span>
+                              <span>{t("snapshotStatusLabel")}: {accountSummary.staleSnapshot ? t("staleLabel") : t("freshLabel")}</span>
+                              <span>{t("confidenceLabel")}: {accountQuotaUnverified ? t("snapshotOnlyLabel") : t("groupedReadyLabel")}</span>
+                              <span>{t("readyGroupsLabel")}: {accountSummary.readyGroups}</span>
                             </div>
                           )}
 
@@ -274,13 +278,13 @@ export function QuotaDetails({
                               {section.modelFirstView ? (
                                 <div className="min-w-[900px]">
                                   <div className="grid grid-cols-[minmax(0,1fr)_90px_110px_140px_140px_140px_160px] border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                                    <span>Group</span>
-                                    <span>Ready</span>
-                                    <span>Min / P50</span>
-                                    <span>Next Reset</span>
-                                    <span>Full Reset</span>
-                                    <span>Recovery</span>
-                                    <span>Bottleneck</span>
+                                    <span>{t("groupColumnLabel")}</span>
+                                    <span>{t("readyColumnLabel")}</span>
+                                    <span>{t("minP50ColumnLabel")}</span>
+                                    <span>{t("nextResetColumnLabel")}</span>
+                                    <span>{t("fullResetColumnLabel")}</span>
+                                    <span>{t("recoveryColumnLabel")}</span>
+                                    <span>{t("bottleneckColumnLabel")}</span>
                                   </div>
                                   {account.groups.map((group) => {
                                     const enrichedGroup = group.monitorMode === "model-first" ? group : enrichModelFirstGroup(group);
@@ -299,9 +303,9 @@ export function QuotaDetails({
                                           {minPct === null ? "-" : `${Math.round(minPct * 100)}%`}
                                           {p50Pct === null ? "" : ` / ${Math.round(p50Pct * 100)}%`}
                                         </span>
-                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.nextWindowResetAt ?? enrichedGroup.resetTime)}</span>
-                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.fullWindowResetAt ?? enrichedGroup.resetTime)}</span>
-                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.nextRecoveryAt)}</span>
+                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.nextWindowResetAt ?? enrichedGroup.resetTime, t("unknown"))}</span>
+                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.fullWindowResetAt ?? enrichedGroup.resetTime, t("unknown"))}</span>
+                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.nextRecoveryAt, t("unknown"))}</span>
                                         <span className="truncate text-xs text-[var(--text-muted)]">{enrichedGroup.bottleneckModel ?? "-"}</span>
                                       </div>
                                     );
@@ -319,7 +323,7 @@ export function QuotaDetails({
                                       >
                                         <span className="truncate text-xs text-[var(--text-primary)]">{group.label}</span>
                                         <span className="text-xs text-[var(--text-secondary)]">{pct === null ? "-" : `${pct}%`}</span>
-                                        <span className="truncate text-xs text-[var(--text-muted)]">{formatRelativeTime(group.resetTime)}</span>
+                                        <span className="truncate text-xs text-[var(--text-muted)]">{formatRelativeTime(group.resetTime, t("unknown"))}</span>
                                       </div>
                                     );
                                   })}
@@ -340,7 +344,7 @@ export function QuotaDetails({
 
       {filteredAccounts.length === 0 && !loading && (
         <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
-          No accounts found for the selected filter.
+          {t("noAccountsFound")}
         </div>
       )}
     </section>

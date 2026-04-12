@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PublicThemeToggle } from "@/components/public-theme-toggle";
 
-export default function NotFound() {
+export default async function NotFound() {
+  const t = await getTranslations("errors");
   return (
     <main id="main-content" className="flex min-h-screen items-center justify-center px-4">
       <PublicThemeToggle />
@@ -25,16 +27,16 @@ export default function NotFound() {
 
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">404</p>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Page not found</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t("pageNotFound")}</h1>
             <p className="text-sm text-[var(--text-muted)]">
-              The page you are looking for does not exist or has been moved.
+              {t("pageNotFoundDescription")}
             </p>
           </div>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Link href="/dashboard" className="inline-flex items-center justify-center rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 bg-[var(--accent)] text-[var(--surface-base)] border-[var(--accent)] hover:bg-[var(--accent-strong)]">
-            Go to Dashboard
+            {t("goToDashboard")}
           </Link>
         </div>
       </div>

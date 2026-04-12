@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
@@ -130,23 +131,23 @@ function CollapseIcon({ collapsed }: { collapsed: boolean }) {
 }
 
 const NAV_SECTIONS = [
-  { key: "general", label: "General" },
-  { key: "access", label: "Access" },
-  { key: "admin", label: "Admin" },
+  { key: "general", labelKey: "sectionGeneral" },
+  { key: "access", labelKey: "sectionAccess" },
+  { key: "admin", labelKey: "sectionAdmin" },
 ] as const;
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Quick Start", icon: IconPlayCircle, adminOnly: false, section: "general" },
-  { href: "/dashboard/providers", label: "Providers", icon: IconLayers, adminOnly: false, section: "general" },
-  { href: "/dashboard/usage", label: "Usage", icon: IconBarChart, adminOnly: false, section: "general" },
-  { href: "/dashboard/quota", label: "Quota", icon: IconGauge, adminOnly: false, section: "general" },
-  { href: "/dashboard/api-keys", label: "API Keys", icon: IconKey, adminOnly: false, section: "access" },
-  { href: "/dashboard/settings", label: "Settings", icon: IconSettings, adminOnly: false, section: "access" },
-  { href: "/dashboard/monitoring", label: "Monitoring", icon: IconActivity, adminOnly: true, section: "admin" },
-  { href: "/dashboard/containers", label: "Containers", icon: IconBox, adminOnly: true, section: "admin" },
-  { href: "/dashboard/config", label: "Config", icon: IconFileCode, adminOnly: true, section: "admin" },
-  { href: "/dashboard/admin/users", label: "Users", icon: IconUsers, adminOnly: true, section: "admin" },
-  { href: "/dashboard/admin/logs", label: "Logs", icon: IconLogs, adminOnly: true, section: "admin" },
+  { href: "/dashboard", labelKey: "quickStart", icon: IconPlayCircle, adminOnly: false, section: "general" },
+  { href: "/dashboard/providers", labelKey: "providers", icon: IconLayers, adminOnly: false, section: "general" },
+  { href: "/dashboard/usage", labelKey: "usage", icon: IconBarChart, adminOnly: false, section: "general" },
+  { href: "/dashboard/quota", labelKey: "quota", icon: IconGauge, adminOnly: false, section: "general" },
+  { href: "/dashboard/api-keys", labelKey: "apiKeys", icon: IconKey, adminOnly: false, section: "access" },
+  { href: "/dashboard/settings", labelKey: "settings", icon: IconSettings, adminOnly: false, section: "access" },
+  { href: "/dashboard/monitoring", labelKey: "monitoring", icon: IconActivity, adminOnly: true, section: "admin" },
+  { href: "/dashboard/containers", labelKey: "containers", icon: IconBox, adminOnly: true, section: "admin" },
+  { href: "/dashboard/config", labelKey: "config", icon: IconFileCode, adminOnly: true, section: "admin" },
+  { href: "/dashboard/admin/users", labelKey: "users", icon: IconUsers, adminOnly: true, section: "admin" },
+  { href: "/dashboard/admin/logs", labelKey: "logs", icon: IconLogs, adminOnly: true, section: "admin" },
 ] as const;
 
 export function DashboardNav() {
@@ -154,6 +155,7 @@ export function DashboardNav() {
   const { isOpen, isCollapsed, toggleCollapsed, close } = useMobileSidebar();
   const { user } = useAuth();
   const isAdmin = user?.isAdmin ?? false;
+  const t = useTranslations("nav");
   const navRef = useRef<HTMLElement>(null);
 
   useFocusTrap(isOpen, navRef as React.RefObject<HTMLElement | null>);
@@ -188,7 +190,7 @@ export function DashboardNav() {
         ref={navRef}
         role={isOpen ? "dialog" : undefined}
         aria-modal={isOpen ? "true" : undefined}
-        aria-label="Navigation"
+        aria-label={t("navigationAriaLabel")}
         className={cn(
           "glass-nav flex flex-col overflow-hidden",
           "lg:transition-[width] lg:duration-300 lg:ease-in-out",
@@ -212,7 +214,7 @@ export function DashboardNav() {
             <h1 className="truncate text-base font-semibold tracking-tight text-[var(--text-primary)]">
               CLIProxy
             </h1>
-            <p className="truncate text-xs text-[var(--text-muted)]">Management</p>
+            <p className="truncate text-xs text-[var(--text-muted)]">{t('appSubtitle')}</p>
           </div>
         </div>
 
@@ -229,7 +231,7 @@ export function DashboardNav() {
                     "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] truncate transition-opacity duration-200",
                     isCollapsed && "lg:opacity-0"
                   )}>
-                    {section.label}
+                    {t(section.labelKey)}
                   </p>
                   <ul className="space-y-0.5">
                     {items.map((item) => {
@@ -247,11 +249,11 @@ export function DashboardNav() {
                                 ? "glass-nav-item-active text-[var(--text-primary)]"
                                 : "glass-nav-item text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                             )}
-                            title={isCollapsed ? item.label : undefined}
+                            title={isCollapsed ? t(item.labelKey) : undefined}
                           >
                             <IconComponent className="h-4 w-4 shrink-0" />
                             <span className={cn("truncate transition-opacity duration-200", isCollapsed && "lg:opacity-0")}>
-                              {item.label}
+                              {t(item.labelKey)}
                             </span>
                           </Link>
                         </li>

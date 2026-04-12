@@ -319,10 +319,31 @@ async function fetchAntigravityQuota(
       if ("status_code" in apiCallResult || "statusCode" in apiCallResult) {
         const statusCode = Number(apiCallResult.status_code ?? apiCallResult.statusCode ?? 0);
         if (statusCode < 200 || statusCode >= 300) {
-          lastError = `Provider API failed: ${statusCode}`;
-          if (statusCode === 429 || statusCode >= 500) {
-            continue;
+          // Parse error body for more context
+          let errorDetail = "";
+          if (typeof apiCallResult.body === "string") {
+            try {
+              const errBody = JSON.parse(apiCallResult.body);
+              errorDetail = errBody?.error?.message || errBody?.error?.status || "";
+            } catch { /* ignore */ }
           }
+          
+          if (statusCode === 403) {
+            if (errorDetail.toLowerCase().includes("validation_required") || errorDetail.toLowerCase().includes("verify")) {
+              return { error: "Google account requires verification - visit accounts.google.com" };
+            }
+            lastError = `Antigravity access denied${errorDetail ? `: ${errorDetail}` : ""}`;
+            return { error: lastError };
+          }
+          if (statusCode === 429) {
+            lastError = `Antigravity rate limited${errorDetail ? `: ${errorDetail}` : " - quota exhausted"}`;
+            continue; // Try next endpoint
+          }
+          if (statusCode >= 500) {
+            lastError = `Antigravity server error: ${statusCode}`;
+            continue; // Try next endpoint
+          }
+          lastError = `Antigravity API error: ${statusCode}${errorDetail ? ` - ${errorDetail}` : ""}`;
           return { error: lastError };
         }
 
@@ -439,7 +460,10 @@ async function fetchCodexQuota(
 
     if (!response.ok) {
       await response.body?.cancel();
-      return { error: `API call failed: ${response.status}` };
+      if (response.status === 502) {
+        return { error: "Cannot reach chatgpt.com - check network connectivity (502 Bad Gateway)" };
+      }
+      return { error: `Management API call failed: ${response.status}` };
     }
 
     const apiCallResult = (await response.json()) as ApiCallResponse | CodexWhamUsageResponse;
@@ -454,7 +478,24 @@ async function fetchCodexQuota(
       const typedResult = apiCallResult as ApiCallResponse;
       const statusCode = Number(typedResult.status_code ?? typedResult.statusCode ?? 0);
       if (statusCode < 200 || statusCode >= 300) {
-        return { error: `Provider API failed: ${statusCode}` };
+        // Parse error body for more context
+        let errorDetail = "";
+        if (typeof typedResult.body === "string") {
+          try {
+            const errBody = JSON.parse(typedResult.body);
+            errorDetail = errBody?.detail || errBody?.error?.message || "";
+          } catch { /* ignore parse errors */ }
+        }
+        if (statusCode === 401) {
+          return { error: "Codex OAuth token expired - re-authenticate in CLIProxyAPI" };
+        }
+        if (statusCode === 403) {
+          return { error: `Codex access denied${errorDetail ? `: ${errorDetail}` : " - account may need verification"}` };
+        }
+        if (statusCode === 429) {
+          return { error: "Codex rate limited - quota exceeded" };
+        }
+        return { error: `Codex API error: ${statusCode}${errorDetail ? ` - ${errorDetail}` : ""}` };
       }
 
       if (typeof typedResult.body === "string") {
@@ -552,14 +593,27 @@ async function fetchKimiQuota(
 
     if (!response.ok) {
       await response.body?.cancel();
-      return { error: `API call failed: ${response.status}` };
+      return { error: `Management API call failed: ${response.status}` };
     }
 
     const apiCallResult = (await response.json()) as ApiCallResponse;
     const statusCode = Number(apiCallResult.status_code ?? apiCallResult.statusCode ?? 0);
 
     if (statusCode < 200 || statusCode >= 300) {
-      return { error: `Provider API failed: ${statusCode}` };
+      let errorDetail = "";
+      if (typeof apiCallResult.body === "string") {
+        try {
+          const errBody = JSON.parse(apiCallResult.body);
+          errorDetail = errBody?.message || errBody?.error?.message || "";
+        } catch { /* ignore */ }
+      }
+      if (statusCode === 401) {
+        return { error: "Kimi token expired - re-authenticate in CLIProxyAPI" };
+      }
+      if (statusCode === 429) {
+        return { error: `Kimi rate limited${errorDetail ? `: ${errorDetail}` : ""}` };
+      }
+      return { error: `Kimi API error: ${statusCode}${errorDetail ? ` - ${errorDetail}` : ""}` };
     }
 
     const body = parseApiCallBody(apiCallResult) as KimiUsagesResponse;
@@ -710,14 +764,30 @@ async function fetchCopilotQuota(
 
     if (!response.ok) {
       await response.body?.cancel();
-      return { error: `API call failed: ${response.status}` };
+      return { error: `Management API call failed: ${response.status}` };
     }
 
     const apiCallResult = (await response.json()) as ApiCallResponse;
     const statusCode = Number(apiCallResult.status_code ?? apiCallResult.statusCode ?? 0);
 
     if (statusCode < 200 || statusCode >= 300) {
-      return { error: `Provider API failed: ${statusCode}` };
+      let errorDetail = "";
+      if (typeof apiCallResult.body === "string") {
+        try {
+          const errBody = JSON.parse(apiCallResult.body);
+          errorDetail = errBody?.message || "";
+        } catch { /* ignore */ }
+      }
+      if (statusCode === 401) {
+        return { error: "GitHub Copilot token expired - re-authenticate in CLIProxyAPI" };
+      }
+      if (statusCode === 403) {
+        return { error: "GitHub Copilot access denied - check subscription status" };
+      }
+      if (statusCode === 404) {
+        return { error: "GitHub Copilot not enabled for this account" };
+      }
+      return { error: `Copilot API error: ${statusCode}${errorDetail ? ` - ${errorDetail}` : ""}` };
     }
 
     const body = parseApiCallBody(apiCallResult) as CopilotUserResponse;
@@ -967,14 +1037,37 @@ async function fetchClaudeQuota(
 
     if (!response.ok) {
       await response.body?.cancel();
-      return { error: `API call failed: ${response.status}` };
+      return { error: `Management API call failed: ${response.status}` };
     }
 
     const apiCallResult = (await response.json()) as ApiCallResponse;
     const statusCode = Number(apiCallResult.status_code ?? apiCallResult.statusCode ?? 0);
 
     if (statusCode < 200 || statusCode >= 300) {
-      return { error: `Provider API failed: ${statusCode}` };
+      // Parse error body for more context
+      let errorDetail = "";
+      if (typeof apiCallResult.body === "string") {
+        try {
+          const errBody = JSON.parse(apiCallResult.body);
+          errorDetail = errBody?.error?.message || "";
+        } catch { /* ignore parse errors */ }
+      }
+      if (statusCode === 401) {
+        return { error: "Claude OAuth token expired - re-authenticate in CLIProxyAPI" };
+      }
+      if (statusCode === 403) {
+        if (errorDetail.toLowerCase().includes("verify")) {
+          return { error: "Claude account requires verification - check email or console.anthropic.com" };
+        }
+        return { error: `Claude access denied${errorDetail ? `: ${errorDetail}` : ""}` };
+      }
+      if (statusCode === 429) {
+        if (errorDetail.toLowerCase().includes("extra usage")) {
+          return { error: "Claude rate limited - extra usage required for long context" };
+        }
+        return { error: `Claude rate limited${errorDetail ? `: ${errorDetail}` : " - try again later"}` };
+      }
+      return { error: `Claude API error: ${statusCode}${errorDetail ? ` - ${errorDetail}` : ""}` };
     }
 
     const headers = apiCallResult.header ?? apiCallResult.headers;

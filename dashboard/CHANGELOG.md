@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.73](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.72...dashboard-v0.1.73) (2026-04-12)
+
+
+### Bug Fixes
+
+* **docker:** copy messages directory for i18n support ([d7298d5](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d7298d51ca7c86e36652a458575ffc18cdc42ffd))
+
 ## [0.1.72](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.71...dashboard-v0.1.72) (2026-04-12)
 
 

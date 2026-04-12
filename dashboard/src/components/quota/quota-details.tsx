@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface QuotaModel {
   id: string;
@@ -36,10 +37,10 @@ function normalizeFraction(value: unknown): number | null {
   return value;
 }
 
-function maskEmail(email: unknown): string {
-  if (typeof email !== "string") return "unknown";
+function maskEmail(email: unknown, unknownLabel = "unknown"): string {
+  if (typeof email !== "string") return unknownLabel;
   const trimmed = email.trim();
-  if (trimmed === "") return "unknown";
+  if (trimmed === "") return unknownLabel;
 
   const atIndex = trimmed.indexOf("@");
   if (atIndex <= 0 || atIndex === trimmed.length - 1) {
@@ -52,12 +53,12 @@ function maskEmail(email: unknown): string {
   return `${maskedLocal}@${domain}`;
 }
 
-function formatRelativeTime(isoDate: string | null): string {
-  if (!isoDate) return "Unknown";
+function formatRelativeTime(isoDate: string | null, unknownLabel = "Unknown"): string {
+  if (!isoDate) return unknownLabel;
 
   try {
     const resetDate = new Date(isoDate);
-    if (Number.isNaN(resetDate.getTime())) return "Unknown";
+    if (Number.isNaN(resetDate.getTime())) return unknownLabel;
     const now = new Date();
     const diffMs = resetDate.getTime() - now.getTime();
 
@@ -75,7 +76,7 @@ function formatRelativeTime(isoDate: string | null): string {
     }
     return `Resets in ${minutes}m`;
   } catch {
-    return "Unknown";
+    return unknownLabel;
   }
 }
 
@@ -123,16 +124,17 @@ interface QuotaDetailsProps {
 }
 
 export function QuotaDetails({ filteredAccounts, expandedCards, onToggleCard, loading }: QuotaDetailsProps) {
+  const t = useTranslations("quota");
   return (
     <section id="quota-accounts" className="scroll-mt-24 space-y-2">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Accounts</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("accountsTitle")}</h2>
       <div className="overflow-x-auto rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
         <div className="min-w-[650px]">
         <div className="grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px] border-b border-[var(--surface-border)] bg-[var(--surface-base)]/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
           <span></span>
-          <span>Account</span>
-          <span>Provider</span>
-          <span>Status</span>
+          <span>{t("accountColumn")}</span>
+          <span>{t("providerColumn")}</span>
+          <span>{t("statusColumn")}</span>
           <span>Long-Term</span>
           <span>Short-Term</span>
         </div>
@@ -154,7 +156,7 @@ export function QuotaDetails({ filteredAccounts, expandedCards, onToggleCard, lo
                  className="grid w-full grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px] items-center px-3 py-2 text-left transition-colors hover:bg-[var(--surface-hover)]"
                >
                  <span className={cn("text-xs text-[var(--text-muted)] transition-transform", isRowExpanded && "rotate-180")}>⌄</span>
-                 <span className="truncate text-xs text-[var(--text-primary)]">{maskEmail(account.email)}</span>
+                 <span className="truncate text-xs text-[var(--text-primary)]">{maskEmail(account.email, t("unknown"))}</span>
                  <span className="truncate text-xs capitalize text-[var(--text-secondary)]">{account.provider}</span>
                 <span className={cn("text-xs", account.error ? "text-rose-600" : account.supported ? "text-emerald-700" : "text-amber-700")}>{statusLabel}</span>
                 <span className="block pr-3">
@@ -202,7 +204,7 @@ export function QuotaDetails({ filteredAccounts, expandedCards, onToggleCard, lo
                             <div key={group.id} className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 last:border-b-0">
                               <span className="truncate text-xs text-[var(--text-primary)]">{group.label}</span>
                               <span className="text-xs text-[var(--text-secondary)]">{pct === null ? "-" : `${pct}%`}</span>
-                              <span className="truncate text-xs text-[var(--text-muted)]">{formatRelativeTime(group.resetTime)}</span>
+                              <span className="truncate text-xs text-[var(--text-muted)]">{formatRelativeTime(group.resetTime, t("unknown"))}</span>
                             </div>
                           );
                         })}

@@ -29,6 +29,16 @@ const ALERT_PROVIDERS = [
   { key: "kimi", label: "Kimi" },
 ] as const;
 
+const ALERT_PROVIDER_LABEL_KEYS: Record<string, string> = {
+  "claude": "providerClaude",
+  "antigravity": "providerAntigravity",
+  "gemini-cli": "providerGeminiCli",
+  "gemini": "providerGemini",
+  "codex": "providerCodex",
+  "github-copilot": "providerCopilot",
+  "kimi": "providerKimi",
+};
+
 interface CheckAlertResult {
   checked?: boolean;
   skipped?: boolean;
@@ -203,7 +213,7 @@ export function QuotaAlerts() {
   return (
     <section className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
       <div>
-        <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">Telegram Alerts</h2>
+        <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">{t("sectionTitle")}</h2>
         <p className="mt-0.5 text-xs text-[var(--text-muted)]">Get notified when quota drops below a threshold.</p>
       </div>
 
@@ -228,11 +238,11 @@ export function QuotaAlerts() {
               )}
             />
           </button>
-            <span className="text-xs text-[var(--text-secondary)]">Enable alerts</span>
+            <span className="text-xs text-[var(--text-secondary)]">{t("enableAlertsLabel")}</span>
         </label>
 
         <div className="space-y-1">
-          <label htmlFor="tg-bot-token" className="text-xs font-medium text-[var(--text-muted)]">Bot Token</label>
+          <label htmlFor="tg-bot-token" className="text-xs font-medium text-[var(--text-muted)]">{t("botTokenLabel")}</label>
           <div className="flex gap-2">
             <Input
               type={showToken ? "text" : "password"}
@@ -254,7 +264,7 @@ export function QuotaAlerts() {
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="tg-chat-id" className="text-xs font-medium text-[var(--text-muted)]">Chat ID</label>
+          <label htmlFor="tg-chat-id" className="text-xs font-medium text-[var(--text-muted)]">{t("chatIdLabel")}</label>
           <Input
             name="tg-chat-id"
             value={settings.chatId}
@@ -322,7 +332,7 @@ export function QuotaAlerts() {
         </div>
 
         <div className="space-y-1.5">
-          <p className="text-xs font-medium text-[var(--text-muted)]">Monitored Providers</p>
+          <p className="text-xs font-medium text-[var(--text-muted)]">{t("monitoredProviders")}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1.5">
             {ALERT_PROVIDERS.map((provider) => {
               const isChecked = settings.providers.includes(provider.key);
@@ -341,7 +351,7 @@ export function QuotaAlerts() {
                     }}
                     className="size-3.5 rounded border-[var(--surface-border)] bg-[var(--surface-muted)] text-blue-500 focus:ring-blue-500/30 focus:ring-offset-0"
                   />
-                  <span className="text-xs text-[var(--text-secondary)]">{provider.label}</span>
+                  <span className="text-xs text-[var(--text-secondary)]">{t(ALERT_PROVIDER_LABEL_KEYS[provider.key] as Parameters<typeof t>[0])}</span>
                 </label>
               );
             })}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { groupModelsByProvider } from "@/lib/providers/model-grouping";
 
@@ -70,6 +71,7 @@ export function ModelBadge({
   extraFields,
   onFieldChange,
 }: ModelBadgeProps) {
+  const t = useTranslations('ohMyOpenCode');
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [openUp, setOpenUp] = useState(false);
@@ -210,7 +212,7 @@ export function ModelBadge({
             />
           </div>
           <div className="space-y-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Fallbacks</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{t('fallbacksLabel')}</p>
             <div className="flex flex-wrap gap-1">
               {(extraFields?.fallback_models ?? []).map((fm) => (
                 <span
@@ -256,7 +258,7 @@ export function ModelBadge({
           {extraFields?.supportsUltrawork && (
                 <div className="space-y-1 pt-1 border-t border-[var(--surface-border)]">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Ultrawork</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{t('ultraworkLabel')}</p>
                 {hasUltraworkValues && (
                   <button
                     type="button"
@@ -375,7 +377,7 @@ export function ModelBadge({
               </div>
             ))}
             {groupedFilteredModels.length === 0 && (
-              <div className="px-3 py-2 text-xs text-[var(--text-muted)]">No models found</div>
+              <div className="px-3 py-2 text-xs text-[var(--text-muted)]">{t('noModelsFound')}</div>
             )}
           </div>
         </div>

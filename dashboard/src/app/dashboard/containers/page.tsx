@@ -331,8 +331,8 @@ export default function ContainersPage() {
         onConfirm={handleAction}
         title={`${pendingAction?.action} Container`}
         message={`Are you sure you want to ${pendingAction?.action} ${pendingAction?.displayName}?`}
-        confirmLabel={pendingAction?.action || "Confirm"}
-        cancelLabel="Cancel"
+        confirmLabel={pendingAction?.action || t('confirmLabel')}
+        cancelLabel={t('cancelLabel')}
         variant={pendingAction?.action.toLowerCase() === "stop" ? "danger" : "warning"}
       />
     </div>

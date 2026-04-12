@@ -180,7 +180,8 @@
     "claudeCodeReplaceMiddle": "mit Ihrem SchlÃ¼ssel aus dem",
     "claudeCodeApiKeysLink": "API-SchlÃ¼ssel",
     "claudeCodePageSuffix": "Seite.",
-    "modelSourceOAuthAlias": "OAuth-Alias"
+    "modelSourceOAuthAlias": "OAuth-Alias",
+    "quickStartTitle": "Schnellstart"
   },
   "settings": {
     "password": {
@@ -636,7 +637,10 @@
     "discoverySelectAll": "Alle auswÃ¤hlen",
     "discoveryDeselectAll": "Alle abwÃ¤hlen",
     "discoveryAddSelected": "AusgewÃ¤hlte hinzufÃ¼gen ({count})",
-    "discoveryManualHint": "Oder Modellzuordnungen manuell unten hinzufÃ¼gen"
+    "discoveryManualHint": "Oder Modellzuordnungen manuell unten hinzufügen",
+    "customProvidersTitle": "Benutzerdefinierte Anbieter",
+    "noCustomProviders": "Keine benutzerdefinierten Anbieter konfiguriert",
+    "oauthAccountsTitle": "OAuth-Konten"
   },
   "quota": {
     "pageTitle": "Kontingent-Verwaltung",
@@ -658,7 +662,18 @@
     "filterClaude": "Claude",
     "filterCodex": "Codex",
     "filterCopilot": "Copilot",
-    "filterKimi": "Kimi"
+    "filterKimi": "Kimi",
+    "capacityLabel": "Kapazität",
+    "overallCapacityTitle": "Gesamtkapazität",
+    "overallCapacitySubtitle": "Gewichtet über alle Anbieter",
+    "noProviderData": "Keine Anbieterdaten",
+    "providerCapacityTitle": "Anbieterkapazität",
+    "providerCapacitySubtitle": "Langzeit- & Kurzzeit-Fenster-Minimum pro Anbieter",
+    "accountsTitle": "Konten",
+    "accountColumn": "Konto",
+    "providerColumn": "Anbieter",
+    "statusColumn": "Status",
+    "unknown": "Unbekannt"
   },
   "usage": {
     "pageTitle": "Nutzung",
@@ -739,7 +754,15 @@
     "other": "Sonstige",
     "successFailureRatio": "Erfolgs-/Fehlerquote",
     "successRate": "Erfolgsrate",
-    "failureRate": "Fehlerrate"
+    "failureRate": "Fehlerrate",
+    "totalRequests": "Gesamtanfragen",
+    "successful": "Erfolgreich",
+    "failedLabel": "Fehlgeschlagen",
+    "totalTokens": "Gesamttoken",
+    "inputTokens": "Eingabetoken",
+    "outputTokens": "Ausgabetoken",
+    "avgLatency": "Durchschn. Latenz",
+    "slowestRequest": "Langsamste Anfrage"
   },
   "monitoring": {
     "pageTitle": "Ãœberwachung",
@@ -808,7 +831,9 @@
     "actionStarting": "Wird gestartet...",
     "actionStopping": "Wird gestoppt...",
     "actionRestarting": "Wird neugestartet...",
-    "actionFailed": "Aktion fehlgeschlagen"
+    "actionFailed": "Aktion fehlgeschlagen",
+    "confirmLabel": "Bestätigen",
+    "cancelLabel": "Abbrechen"
   },
   "config": {
     "pageTitle": "Konfiguration",
@@ -1216,7 +1241,14 @@
     "toastCheckSkipped": "PrÃ¼fung Ã¼bersprungen: {reason}",
     "toastAlertSent": "Benachrichtigung fÃ¼r {count} Konto(en) gesendet",
     "toastAllAboveThreshold": "Alle Konten Ã¼ber dem Schwellenwert",
-    "toastCheckFailed": "Benachrichtigungen konnten nicht geprÃ¼ft werden"
+    "toastCheckFailed": "Benachrichtigungen konnten nicht geprüft werden",
+    "providerClaude": "Claude",
+    "providerAntigravity": "Antigravity",
+    "providerGeminiCli": "Gemini CLI",
+    "providerGemini": "Gemini",
+    "providerCodex": "Codex",
+    "providerCopilot": "Copilot",
+    "providerKimi": "Kimi"
   },
   "agentConfig": {
     "sectionGeneral": "Allgemeine Einstellungen",
@@ -1490,7 +1522,18 @@
     "skillCartographyDesc": "Repository-Codemap-Generierung",
     "skillAgentBrowserLabel": "Agent Browser",
     "skillAgentBrowserDesc": "Browser-Automatisierung für den Designer",
-    "skillExcluded": "(ausgeschlossen)"
+    "skillExcluded": "(ausgeschlossen)",
+    "tier1Label": "Stufe 1",
+    "tier1Hint": "Kritisches Denken",
+    "tier2Label": "Stufe 2",
+    "tier2Hint": "Planung und Überprüfung",
+    "tier3Label": "Stufe 3",
+    "tier3Hint": "Schnelle Ausführung",
+    "tier4Label": "Stufe 4",
+    "tier4Hint": "Visuell und kreativ",
+    "fallbacksLabel": "Fallbacks",
+    "ultraworkLabel": "Ultrawork",
+    "noModelsFound": "Keine Modelle gefunden"
   },
   "ohMyOpenCodeSlim": {
     "apiKeyRequiredTitle": "API-SchlÃ¼ssel erforderlich",

@@ -341,7 +341,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
       <div id="provider-custom" className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Custom Providers</h2>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('customProvidersTitle')}</h2>
             <p className="text-xs text-[var(--text-muted)]">OpenAI-compatible endpoints and mappings</p>
           </div>
           <div className="flex items-center gap-2">
@@ -371,7 +371,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
               </svg>
             </div>
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">No custom providers configured</h3>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('noCustomProviders')}</h3>
               <p className="text-xs text-[var(--text-muted)]">Add an OpenAI-compatible provider to extend your AI capabilities</p>
             </div>
             <Button onClick={() => setShowCustomProviderModal(true)} className="px-3 py-1.5 text-xs">

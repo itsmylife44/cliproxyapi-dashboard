@@ -1,7 +1,7 @@
 "use client";
 
 import type { SlimAgentConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
-import { ModelBadge, TIER_META } from "@/components/oh-my-opencode/model-badge";
+import { ModelBadge } from "@/components/oh-my-opencode/model-badge";
 import { AgentSkillsSection } from "@/components/oh-my-opencode-slim/skills-section";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { useTranslations } from 'next-intl';
@@ -47,15 +47,17 @@ export function SlimTierAssignments({
       {[1, 2, 3, 4].map((tier) => {
         const tierAssignments = agentAssignments.filter((item) => item.tier === tier);
         if (tierAssignments.length === 0) return null;
-        const tierMeta = TIER_META[tier as 1 | 2 | 3 | 4];
+        const tierLabelKeys = { 1: "tier1Label", 2: "tier2Label", 3: "tier3Label", 4: "tier4Label" } as const;
+        const tierHintKeys = { 1: "tier1Hint", 2: "tier2Hint", 3: "tier3Hint", 4: "tier4Hint" } as const;
+        const tierKey = tier as 1 | 2 | 3 | 4;
 
         return (
           <div key={`slim-tier-${tier}`} className="space-y-2">
             <div className="flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                  {tierMeta.label}
+                  {t(tierLabelKeys[tierKey])}
                 </p>
-                <p className="text-[11px] text-[var(--text-muted)]">{tierMeta.hint}</p>
+                <p className="text-[11px] text-[var(--text-muted)]">{t(tierHintKeys[tierKey])}</p>
             </div>
             <div className="space-y-2">
               {tierAssignments.map(({ name, model, isOverride, isUnresolved, config, label }) => (

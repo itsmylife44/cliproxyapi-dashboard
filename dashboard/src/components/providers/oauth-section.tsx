@@ -783,7 +783,7 @@ export function OAuthSection({
       <div id="provider-oauth" className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">OAuth Accounts</h2>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('oauthAccountsTitle')}</h2>
             <p className="text-xs text-[var(--text-muted)]">Subscription-based provider connections</p>
           </div>
           <span className="text-xs font-medium text-[var(--text-muted)]">{accounts.length} connected</span>

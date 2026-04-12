@@ -301,19 +301,19 @@ export default function UsagePage() {
         <>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
             <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total Requests</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalRequests')}</p>
               <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.totalRequests.toLocaleString()}</p>
             </div>
             <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Successful</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('successful')}</p>
               <p className="mt-0.5 text-xs font-semibold text-emerald-700">{usageData.totals.successCount.toLocaleString()}</p>
             </div>
             <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Failed</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('failedLabel')}</p>
               <p className="mt-0.5 text-xs font-semibold text-rose-600">{usageData.totals.failureCount.toLocaleString()}</p>
             </div>
             <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total Tokens</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalTokens')}</p>
               <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.totalTokens.toLocaleString()}</p>
             </div>
           </div>
@@ -321,15 +321,15 @@ export default function UsagePage() {
           {hasInputOutputBreakdown && (
             <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
               <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Input Tokens</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('inputTokens')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.inputTokens.toLocaleString()}</p>
               </div>
               <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Output Tokens</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('outputTokens')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.outputTokens.toLocaleString()}</p>
               </div>
               <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total Tokens</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalTokens')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.totalTokens.toLocaleString()}</p>
               </div>
             </div>
@@ -338,7 +338,7 @@ export default function UsagePage() {
           {hasLatencyBreakdown && usageData?.latencySummary ? (
             <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
               <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Avg Latency</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('avgLatency')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{formatLatencyValue(usageData.latencySummary.averageMs)}</p>
               </div>
               <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-2">
@@ -346,7 +346,7 @@ export default function UsagePage() {
                 <p className="mt-0.5 text-xs font-semibold text-amber-800">{formatLatencyValue(usageData.latencySummary.p95Ms)}</p>
               </div>
               <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-600">Slowest Request</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-600">{t('slowestRequest')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-rose-800">{formatLatencyValue(usageData.latencySummary.maxMs)}</p>
               </div>
             </div>

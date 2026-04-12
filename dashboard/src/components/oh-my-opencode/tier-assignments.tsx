@@ -2,7 +2,7 @@
 
 import type { AgentConfigEntry, CategoryConfigEntry } from "@/lib/config-generators/oh-my-opencode-types";
 
-import { ModelBadge, TIER_META, type ModelBadgeFieldValue } from "@/components/oh-my-opencode/model-badge";
+import { ModelBadge, type ModelBadgeFieldValue } from "@/components/oh-my-opencode/model-badge";
 import { useTranslations } from 'next-intl';
 
 interface TierAssignmentItem<TConfig> {
@@ -55,15 +55,17 @@ export function TierAssignments({
             if (tierAssignments.length === 0) {
               return null;
             }
-            const tierMeta = TIER_META[tier as 1 | 2 | 3 | 4];
+            const tierLabelKeys = { 1: "tier1Label", 2: "tier2Label", 3: "tier3Label", 4: "tier4Label" } as const;
+            const tierHintKeys = { 1: "tier1Hint", 2: "tier2Hint", 3: "tier3Hint", 4: "tier4Hint" } as const;
+            const tierKey = tier as 1 | 2 | 3 | 4;
 
             return (
               <div key={`agent-tier-${tier}`} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                    {tierMeta.label}
+                    {t(tierLabelKeys[tierKey])}
                   </p>
-                  <p className="text-[11px] text-[var(--text-muted)]">{tierMeta.hint}</p>
+                  <p className="text-[11px] text-[var(--text-muted)]">{t(tierHintKeys[tierKey])}</p>
                 </div>
                 <div className="space-y-1.5">
                   {tierAssignments.map(({ name, model, isOverride, isUnresolved, config, label }) => (
@@ -124,15 +126,17 @@ export function TierAssignments({
             if (tierAssignments.length === 0) {
               return null;
             }
-            const tierMeta = TIER_META[tier as 1 | 2 | 3 | 4];
+            const tierLabelKeys = { 1: "tier1Label", 2: "tier2Label", 3: "tier3Label", 4: "tier4Label" } as const;
+            const tierHintKeys = { 1: "tier1Hint", 2: "tier2Hint", 3: "tier3Hint", 4: "tier4Hint" } as const;
+            const tierKey = tier as 1 | 2 | 3 | 4;
 
             return (
               <div key={`category-tier-${tier}`} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                    {tierMeta.label}
+                    {t(tierLabelKeys[tierKey])}
                   </p>
-                  <p className="text-[11px] text-[var(--text-muted)]">{tierMeta.hint}</p>
+                  <p className="text-[11px] text-[var(--text-muted)]">{t(tierHintKeys[tierKey])}</p>
                 </div>
                 <div className="space-y-1.5">
                   {tierAssignments.map(({ name, model, isOverride, isUnresolved, config, label }) => (

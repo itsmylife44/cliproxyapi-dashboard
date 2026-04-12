@@ -180,7 +180,8 @@
     "claudeCodeReplaceMiddle": "with your key from the",
     "claudeCodeApiKeysLink": "API Keys",
     "claudeCodePageSuffix": "page.",
-    "modelSourceOAuthAlias": "OAuth Alias"
+    "modelSourceOAuthAlias": "OAuth Alias",
+    "quickStartTitle": "Quick Start"
   },
   "settings": {
     "password": {
@@ -636,7 +637,10 @@
     "discoverySelectAll": "Select All",
     "discoveryDeselectAll": "Deselect All",
     "discoveryAddSelected": "Add Selected ({count})",
-    "discoveryManualHint": "Or manually add model mappings below"
+    "discoveryManualHint": "Or manually add model mappings below",
+    "customProvidersTitle": "Custom Providers",
+    "noCustomProviders": "No custom providers configured",
+    "oauthAccountsTitle": "OAuth Accounts"
   },
   "quota": {
     "pageTitle": "Quota Management",
@@ -658,7 +662,18 @@
     "filterClaude": "Claude",
     "filterCodex": "Codex",
     "filterCopilot": "Copilot",
-    "filterKimi": "Kimi"
+    "filterKimi": "Kimi",
+    "capacityLabel": "Capacity",
+    "overallCapacityTitle": "Overall Capacity",
+    "overallCapacitySubtitle": "Weighted across all providers",
+    "noProviderData": "No provider data",
+    "providerCapacityTitle": "Provider Capacity",
+    "providerCapacitySubtitle": "Long-term & short-term window minimum per provider",
+    "accountsTitle": "Accounts",
+    "accountColumn": "Account",
+    "providerColumn": "Provider",
+    "statusColumn": "Status",
+    "unknown": "Unknown"
   },
   "usage": {
     "pageTitle": "Usage",
@@ -739,7 +754,15 @@
     "other": "Other",
     "successFailureRatio": "Success / Failure Ratio",
     "successRate": "Success Rate",
-    "failureRate": "Failure Rate"
+    "failureRate": "Failure Rate",
+    "totalRequests": "Total Requests",
+    "successful": "Successful",
+    "failedLabel": "Failed",
+    "totalTokens": "Total Tokens",
+    "inputTokens": "Input Tokens",
+    "outputTokens": "Output Tokens",
+    "avgLatency": "Avg Latency",
+    "slowestRequest": "Slowest Request"
   },
   "monitoring": {
     "pageTitle": "Monitoring",
@@ -808,7 +831,9 @@
     "actionStarting": "Starting...",
     "actionStopping": "Stopping...",
     "actionRestarting": "Restarting...",
-    "actionFailed": "Action failed"
+    "actionFailed": "Action failed",
+    "confirmLabel": "Confirm",
+    "cancelLabel": "Cancel"
   },
   "config": {
     "pageTitle": "Configuration",
@@ -1216,7 +1241,14 @@
     "toastCheckSkipped": "Check skipped: {reason}",
     "toastAlertSent": "Alert sent for {count} account(s)",
     "toastAllAboveThreshold": "All accounts above threshold",
-    "toastCheckFailed": "Failed to check alerts"
+    "toastCheckFailed": "Failed to check alerts",
+    "providerClaude": "Claude",
+    "providerAntigravity": "Antigravity",
+    "providerGeminiCli": "Gemini CLI",
+    "providerGemini": "Gemini",
+    "providerCodex": "Codex",
+    "providerCopilot": "Copilot",
+    "providerKimi": "Kimi"
   },
   "agentConfig": {
     "sectionGeneral": "General Settings",
@@ -1490,7 +1522,18 @@
     "skillCartographyDesc": "Repository codemap generation",
     "skillAgentBrowserLabel": "Agent Browser",
     "skillAgentBrowserDesc": "Browser automation for designer",
-    "skillExcluded": "(excluded)"
+    "skillExcluded": "(excluded)",
+    "tier1Label": "Tier 1",
+    "tier1Hint": "Critical reasoning",
+    "tier2Label": "Tier 2",
+    "tier2Hint": "Planning and review",
+    "tier3Label": "Tier 3",
+    "tier3Hint": "Fast execution",
+    "tier4Label": "Tier 4",
+    "tier4Hint": "Visual and creative",
+    "fallbacksLabel": "Fallbacks",
+    "ultraworkLabel": "Ultrawork",
+    "noModelsFound": "No models found"
   },
   "ohMyOpenCodeSlim": {
     "apiKeyRequiredTitle": "API Key Required",

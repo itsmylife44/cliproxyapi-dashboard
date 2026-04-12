@@ -244,15 +244,15 @@ export function ConfigPublisher() {
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Status</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('statusLabel')}</div>
               <div className={status.isActive ? "text-xs font-semibold text-emerald-700" : "text-xs font-semibold text-amber-700"}>{status.isActive ? "Active" : "Inactive"}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Subscribers</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('subscribersLabel')}</div>
               <div className="text-xs font-semibold text-[var(--text-primary)]">{status.subscriberCount}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Created</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('createdLabel')}</div>
               <div className="text-xs font-semibold text-[var(--text-primary)]">{new Date(status.createdAt).toLocaleDateString()}</div>
             </div>
           </div>

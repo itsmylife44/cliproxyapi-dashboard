@@ -310,7 +310,7 @@ export default async function QuickStartPage() {
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Quick Start</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('quickStartTitle')}</h1>
             <p className="mt-1 text-sm text-[var(--text-muted)]">
               Configure providers, generate client config, and validate access from one place.
             </p>
@@ -392,7 +392,7 @@ export default async function QuickStartPage() {
         <details className="group/details rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Integrations</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{t('integrationsTitle')}</p>
               <p className="text-xs text-[var(--text-muted)]">Reference setup snippets for external clients.</p>
             </div>
             <svg className="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 group-open/details:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>

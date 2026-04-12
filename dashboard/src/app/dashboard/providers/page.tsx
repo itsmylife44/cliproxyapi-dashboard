@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
@@ -70,6 +71,7 @@ export default function ProvidersPage() {
   const [customProviderCount, setCustomProviderCount] = useState(0);
   const [incognitoBrowserEnabled, setIncognitoBrowserEnabled] = useState(false);
   const { showToast } = useToast();
+  const t = useTranslations("providers");
 
   const loadMaxKeysPerUser = useCallback(async (isAdminUser: boolean, signal?: AbortSignal) => {
     if (!isAdminUser) return;
@@ -153,31 +155,31 @@ export default function ProvidersPage() {
     <div className="space-y-6">
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-          AI Provider Configuration
+          {t("pageTitle")}
         </h1>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
-          Manage API keys, OAuth accounts, and custom provider endpoints in one place.
+          {t("pageDescription")}
         </p>
       </section>
 
       <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">API Keys</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t("statsApiKeysLabel")}</p>
           <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
-            {totalApiKeys} configured{currentUser ? ` · ${ownApiKeyCount} yours` : ""}
+            {t("statsApiKeysValue", { count: totalApiKeys })}{currentUser ? ` ${t("statsApiKeysOwn", { own: ownApiKeyCount })}` : ""}
           </p>
         </div>
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Active Providers</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t("statsActiveProvidersLabel")}</p>
           <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{activeApiProviders}/{API_KEY_PROVIDERS.length}</p>
         </div>
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">OAuth Accounts</p>
-          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{oauthAccountCount} connected</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t("statsOAuthAccountsLabel")}</p>
+          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{t("statsOAuthValue", { count: oauthAccountCount })}</p>
         </div>
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Custom Providers</p>
-          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{customProviderCount} configured</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t("statsCustomProvidersLabel")}</p>
+          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{t("statsCustomValue", { count: customProviderCount })}</p>
         </div>
       </section>
 
@@ -186,7 +188,7 @@ export default function ProvidersPage() {
           <div className="flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
               <div className="size-8 animate-spin rounded-full border-4 border-[#ddd] border-t-blue-500"></div>
-              <p className="text-[var(--text-secondary)]">Loading providers...</p>
+              <p className="text-[var(--text-secondary)]">{t("loadingText")}</p>
             </div>
           </div>
         </div>
@@ -224,19 +226,19 @@ export default function ProvidersPage() {
           {currentUser?.isAdmin && (
             <section id="provider-admin" className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
               <div>
-                <h2 className="text-sm font-semibold text-[var(--text-primary)]">Admin Settings</h2>
-                <p className="text-xs text-[var(--text-muted)]">Provider limits and policies</p>
+                <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t("adminSettingsTitle")}</h2>
+                <p className="text-xs text-[var(--text-muted)]">{t("adminSettingsDescription")}</p>
               </div>
 
               <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Key Contribution Limits</h3>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t("keyLimitsTitle")}</h3>
                 <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  Control how many provider keys each user can contribute
+                  {t("keyLimitsDescription")}
                 </p>
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <label htmlFor="max-keys" className="mb-2 block text-sm font-semibold text-[var(--text-secondary)]">
-                      Max Keys Per User
+                      {t("maxKeysLabel")}
                     </label>
                     <Input
                       type="number"
@@ -250,7 +252,7 @@ export default function ProvidersPage() {
                       }}
                     />
                     <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                      Maximum number of provider keys a single user can contribute (current: {maxKeysPerUser})
+                      {t("maxKeysHint", { current: maxKeysPerUser })}
                     </p>
                   </div>
                   <Button
@@ -267,17 +269,17 @@ export default function ProvidersPage() {
                           }),
                         });
                         if (res.ok) {
-                          showToast("Setting updated successfully", "success");
+                          showToast(t("toastSettingSaved"), "success");
                         } else {
                           const data = await res.json();
-                          showToast(extractApiError(data, "Failed to update setting"), "error");
+                          showToast(extractApiError(data, t("toastSettingSaveFailed")), "error");
                         }
                       } catch {
-                        showToast("Network error", "error");
+                        showToast(t("toastNetworkError"), "error");
                       }
                     }}
                   >
-                    Save
+                    {t("saveButton")}
                   </Button>
                 </div>
               </div>

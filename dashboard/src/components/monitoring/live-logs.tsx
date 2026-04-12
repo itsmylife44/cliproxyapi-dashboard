@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ export function LiveLogs({
   onEnableLogging,
   onRetryLogging,
 }: LiveLogsProps) {
+  const t = useTranslations('monitoring');
   const logsEndRef = useRef<HTMLDivElement>(null);
   const logsContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -54,14 +56,14 @@ export function LiveLogs({
   return (
     <section className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Live Logs</h2>
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('liveLogsTitle')}</h2>
         {loggingState === "enabled" && (
           <Button
             variant="ghost"
             onClick={onClearLogs}
             className="px-3 py-1 text-xs"
           >
-            Clear
+            {t('clearButton')}
           </Button>
         )}
       </div>
@@ -72,7 +74,7 @@ export function LiveLogs({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              <span className="text-sm">Checking logging status...</span>
+              <span className="text-sm">{t('checkingStatus')}</span>
             </div>
           </div>
         )}
@@ -83,9 +85,9 @@ export function LiveLogs({
               <span className="text-xl">&#128196;</span>
             </div>
             <div className="text-center space-y-2">
-              <p className="text-sm font-medium text-[var(--text-primary)]">File logging is disabled</p>
+              <p className="text-sm font-medium text-[var(--text-primary)]">{t('loggingDisabledTitle')}</p>
               <p className="text-xs text-[var(--text-muted)] max-w-sm">
-                Enable file logging in CLIProxyAPI to view live logs here.
+                {t('loggingDisabledDescription')}
               </p>
             </div>
             <Button
@@ -94,7 +96,7 @@ export function LiveLogs({
               disabled={enablingLogging}
               className="mt-2"
             >
-              {enablingLogging ? "Enabling..." : "Enable File Logging"}
+              {enablingLogging ? t('enablingLoggingButton') : t('enableLoggingButton')}
             </Button>
           </div>
         )}
@@ -105,7 +107,7 @@ export function LiveLogs({
               <span className="text-xl">&#9888;</span>
             </div>
             <div className="text-center space-y-2">
-              <p className="text-sm font-medium text-[var(--text-primary)]">Logs unavailable</p>
+              <p className="text-sm font-medium text-[var(--text-primary)]">{t('logsUnavailable')}</p>
               <p className="text-xs text-[var(--text-muted)] max-w-sm">
                 {loggingError}
               </p>
@@ -128,7 +130,7 @@ export function LiveLogs({
               className="h-96 overflow-auto rounded-sm border border-[var(--surface-border)] bg-[#1a1a1a] p-3 font-mono text-[10px] sm:p-4 sm:text-xs"
             >
               {logs.length === 0 ? (
-                <div className="text-[var(--text-muted)]">Waiting for logs...</div>
+                <div className="text-[var(--text-muted)]">{t('waitingForLogs')}</div>
               ) : (
                 logs.map((log) => (
                   <div
@@ -157,7 +159,7 @@ export function LiveLogs({
             </div>
             {!autoScroll && (
               <div className="mt-2 text-center text-xs text-[var(--text-muted)]">
-                Scroll to bottom to enable auto-scroll
+                {t('autoScrollMessage')}
               </div>
             )}
           </>

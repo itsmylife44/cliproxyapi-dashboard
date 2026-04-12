@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 interface CreatedKey {
   id: string;
@@ -30,6 +31,7 @@ interface RevealBoxProps {
 }
 
 export function RevealBox({ createdKey }: RevealBoxProps) {
+  const t = useTranslations("setupWizard");
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -53,8 +55,7 @@ export function RevealBox({ createdKey }: RevealBoxProps) {
   return (
     <div className="mt-3 space-y-2">
       <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
-        Copy your API key now -- it will not be shown again after you leave this
-        page.
+        {t("copyKeyWarning")}
       </div>
       <div className="flex items-center gap-2 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]/60 px-3 py-2">
         <code className="flex-1 truncate font-mono text-xs text-[var(--text-primary)]">
@@ -66,7 +67,7 @@ export function RevealBox({ createdKey }: RevealBoxProps) {
           className="flex flex-shrink-0 items-center gap-1 rounded border border-[var(--surface-border)]/60 bg-[var(--surface-muted)]/70 px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]/80 hover:text-[var(--text-primary)]"
         >
           <CopyIcon />
-          {copied ? "Copied" : "Copy"}
+          {copied ? t("step2Copied") : t("step2Copy")}
         </button>
       </div>
     </div>

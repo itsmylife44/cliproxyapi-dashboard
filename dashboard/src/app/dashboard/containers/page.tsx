@@ -6,6 +6,7 @@ import { cn, extractApiError } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useTranslations } from "next-intl";
 
 interface ContainerInfo {
   name: string;
@@ -40,6 +41,7 @@ function formatUptime(seconds: number): string {
 }
 
 export default function ContainersPage() {
+  const t = useTranslations("containers");
   const [containers, setContainers] = useState<ContainerInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -73,12 +75,12 @@ export default function ContainersPage() {
           const message =
             typeof data.error === "string"
               ? data.error
-              : `Failed to load containers (${res.status})`;
+              : t("toastLoadFailed");
           setFetchError(message);
         }
       } catch {
         if (!controller.signal.aborted) {
-          setFetchError("Network error while loading containers.");
+          setFetchError(t("toastNetworkError"));
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -114,7 +116,7 @@ export default function ContainersPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        showToast(extractApiError(data, "Action failed"), "error");
+        showToast(extractApiError(data, t("actionFailed")), "error");
       }
       const refreshRes = await fetch(API_ENDPOINTS.CONTAINERS.LIST);
       if (refreshRes.ok) {
@@ -126,11 +128,11 @@ export default function ContainersPage() {
         const message =
           typeof data.error === "string"
             ? data.error
-            : `Failed to refresh containers (${refreshRes.status})`;
+            : t("toastLoadFailed");
         setFetchError(message);
       }
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
     } finally {
       setActionLoading((prev) => ({ ...prev, [containerName]: false }));
     }
@@ -146,10 +148,10 @@ export default function ContainersPage() {
         const lines: string[] = data.lines || [];
         setLogLines(lines.map((line, i) => ({ id: `${containerName}-${i}-${line.slice(0, 20)}`, text: line })));
       } else {
-        setLogLines([{ id: "error", text: "Failed to load logs" }]);
+        setLogLines([{ id: "error", text: t('logsLoadFailed') }]);
       }
     } catch {
-      setLogLines([{ id: "error", text: "Failed to load logs" }]);
+      setLogLines([{ id: "error", text: t('logsLoadFailed') }]);
     } finally {
       setLogsLoading(false);
     }
@@ -182,11 +184,11 @@ export default function ContainersPage() {
   const getActionLoadingText = (action: string): string => {
     switch (action.toLowerCase()) {
       case "start":
-        return "Starting...";
+        return t("actionStarting");
       case "stop":
-        return "Stopping...";
+        return t("actionStopping");
       case "restart":
-        return "Restarting...";
+        return t("actionRestarting");
       default:
         return `${action}ing...`;
     }
@@ -197,11 +199,11 @@ export default function ContainersPage() {
   return (
     <div className="space-y-4">
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Containers</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
       </section>
 
       {loading ? (
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">Loading containers...</div>
+        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">{t('loadingText')}</div>
       ) : (
         <>
           {fetchError && (
@@ -218,8 +220,8 @@ export default function ContainersPage() {
                   </svg>
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">No containers found</h3>
-                  <p className="text-xs text-[var(--text-muted)]">No Docker containers are currently running or available</p>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('emptyTitle')}</h3>
+                  <p className="text-xs text-[var(--text-muted)]">{t('emptyDescription')}</p>
                 </div>
               </div>
             </div>
@@ -227,11 +229,11 @@ export default function ContainersPage() {
           <div className="overflow-x-auto">
             <div className="min-w-[600px] divide-y divide-[var(--surface-border)] overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
               <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1.2fr)_80px_100px_100px_minmax(140px,auto)] border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                <span>Container</span>
-                <span>State</span>
-                <span>Uptime</span>
-                <span>Resources</span>
-                <span>Actions</span>
+                <span>{t('tableHeaderContainer')}</span>
+                <span>{t('tableHeaderState')}</span>
+                <span>{t('tableHeaderUptime')}</span>
+                <span>{t('tableHeaderResources')}</span>
+                <span>{t('tableHeaderActions')}</span>
               </div>
             {containers.map((container) => {
               const isActionLoading = actionLoading[container.name] || false;
@@ -268,7 +270,7 @@ export default function ContainersPage() {
                           onClick={() => handleViewLogs(container.name)}
                           className="px-2.5 py-1 text-xs"
                         >
-                          Logs
+                          {t('logsButton')}
                         </Button>
                       </div>
                   </div>
@@ -282,7 +284,7 @@ export default function ContainersPage() {
           {selectedContainer && (
             <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-[var(--text-primary)]">Logs: {selectedContainerInfo?.displayName || selectedContainer}</h2>
+                <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('logsTitle', { name: selectedContainerInfo?.displayName || selectedContainer })}</h2>
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
@@ -290,22 +292,22 @@ export default function ContainersPage() {
                     className="px-3 py-1 text-xs"
                     disabled={logsLoading}
                   >
-                    {logsLoading ? "Loading..." : "Refresh"}
+                    {logsLoading ? t('logsLoading') : t('refreshButton')}
                   </Button>
                   <Button
                     variant="ghost"
                     onClick={handleCloseLogs}
                     className="px-3 py-1 text-xs"
                   >
-                    Close
+                    {t('closeButton')}
                   </Button>
                 </div>
               </div>
                 <div className="h-96 overflow-auto rounded-sm border border-[var(--surface-border)] bg-[#1a1a1a] p-3 font-mono text-[10px] sm:p-4 sm:text-xs">
                   {logsLoading ? (
-                    <div className="text-gray-400">Loading logs...</div>
+                    <div className="text-gray-400">{t('logsLoading')}</div>
                   ) : logLines.length === 0 ? (
-                    <div className="text-gray-400">No logs available</div>
+                    <div className="text-gray-400">{t('logsEmpty')}</div>
                   ) : (
                     logLines.map((entry) => (
                       <div key={entry.id} className="mb-1 break-all text-gray-200">
@@ -329,8 +331,8 @@ export default function ContainersPage() {
         onConfirm={handleAction}
         title={`${pendingAction?.action} Container`}
         message={`Are you sure you want to ${pendingAction?.action} ${pendingAction?.displayName}?`}
-        confirmLabel={pendingAction?.action || "Confirm"}
-        cancelLabel="Cancel"
+        confirmLabel={pendingAction?.action || t('confirmLabel')}
+        cancelLabel={t('cancelLabel')}
         variant={pendingAction?.action.toLowerCase() === "stop" ? "danger" : "warning"}
       />
     </div>

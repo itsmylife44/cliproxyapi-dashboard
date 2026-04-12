@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
 interface RequestEvent {
@@ -23,14 +24,17 @@ interface UsageRequestEventsProps {
 
 const EVENTS_PER_PAGE = 25;
 
-function formatRelativeTime(timestamp: string): string {
+function formatRelativeTime(
+  timestamp: string,
+  t: ReturnType<typeof useTranslations>,
+): string {
   const diff = Date.now() - new Date(timestamp).getTime();
   const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return t("justNow");
+  if (minutes < 60) return t("minutesAgo", { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return t("hoursAgo", { count: hours });
+  return t("daysAgo", { count: Math.floor(hours / 24) });
 }
 
 function formatTimestamp(timestamp: string): string {
@@ -56,6 +60,7 @@ function formatLatency(latencyMs: number): string {
 }
 
 export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestEventsProps) {
+  const t = useTranslations("usage");
   const [currentPage, setCurrentPage] = useState(1);
 
   const safeEvents = useMemo(() => events ?? [], [events]);
@@ -72,8 +77,8 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
   if (safeEvents.length === 0) {
     return (
       <section className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Request Event Details</h2>
-        <p className="mt-3 text-sm text-[var(--text-muted)]">No request events found in the selected period</p>
+        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("requestEvents")}</h2>
+        <p className="mt-3 text-sm text-[var(--text-muted)]">{t("noEventsFound")}</p>
       </section>
     );
   }
@@ -82,14 +87,14 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
     <section className="overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
       <div className="flex flex-col gap-2 border-b border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Request Event Details</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("requestEvents")}</h2>
           <p className="mt-1 text-xs text-[var(--text-muted)]">
-            Showing the most recent {safeEvents.length} requests in the selected window.
-            {truncated ? " Larger result sets were truncated on the server." : ""}
+            {t("showingMostRecent", { count: safeEvents.length })}
+            {truncated ? ` ${t("truncatedOnServer")}` : ""}
           </p>
         </div>
         {hasMissingLatency ? (
-          <p className="text-[11px] text-[var(--text-muted)]">\u2014 means latency was not available for that collected request</p>
+          <p className="text-[11px] text-[var(--text-muted)]">{t("latencyNotAvailableNote")}</p>
         ) : null}
       </div>
 
@@ -97,17 +102,17 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
         <table className="w-full min-w-[880px] text-sm">
           <thead>
             <tr className="sticky top-0 z-10 border-b border-[var(--surface-border)] bg-[var(--surface-base)]">
-              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Time</th>
-              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Key</th>
+              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("time")}</th>
+              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("key")}</th>
               {isAdmin ? (
-                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">User</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("user")}</th>
               ) : null}
-              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Model</th>
-              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Status</th>
-              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Latency</th>
-              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Input</th>
-              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Output</th>
-              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Tokens</th>
+              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("model")}</th>
+              <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("status")}</th>
+              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("latency")}</th>
+              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("input")}</th>
+              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("output")}</th>
+              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("tokens")}</th>
             </tr>
           </thead>
           <tbody>
@@ -118,7 +123,7 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
               >
                 <td className="px-3 py-2">
                   <div className="flex flex-col">
-                    <span className="text-xs text-[var(--text-primary)]">{formatRelativeTime(event.timestamp)}</span>
+                    <span className="text-xs text-[var(--text-primary)]">{formatRelativeTime(event.timestamp, t)}</span>
                     <span className="text-[10px] text-[var(--text-muted)]">{formatTimestamp(event.timestamp)}</span>
                   </div>
                 </td>
@@ -135,7 +140,7 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
                         : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
                     }`}
                   >
-                    {event.failed ? "Failed" : "Success"}
+                    {event.failed ? t("failed") : t("success")}
                   </span>
                 </td>
                 <td className="px-3 py-2 text-right">
@@ -160,10 +165,10 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
             disabled={activePage === 1}
             className="px-2.5 py-1 text-xs"
           >
-            Previous
+            {t("previous")}
           </Button>
           <span className="text-xs text-[var(--text-muted)]">
-            Page {activePage} of {totalPages}
+            {t("pageOf", { page: activePage, total: totalPages })}
           </span>
           <Button
             variant="ghost"
@@ -171,7 +176,7 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
             disabled={activePage === totalPages}
             className="px-2.5 py-1 text-xs"
           >
-            Next
+            {t("next")}
           </Button>
         </div>
       ) : null}

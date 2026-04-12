@@ -1,7 +1,10 @@
-export default function DashboardLoading() {
+import { getTranslations } from "next-intl/server";
+
+export default async function DashboardLoading() {
+  const t = await getTranslations("common");
   return (
-    <div className="space-y-4" role="status" aria-busy="true" aria-label="Loading dashboard">
-      <span className="sr-only">Loading dashboard content…</span>
+    <div className="space-y-4" role="status" aria-busy="true" aria-label={t("loadingDashboard")}>
+      <span className="sr-only">{t("loadingDashboardContent")}</span>
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">

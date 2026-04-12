@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
 import { ChartContainer, CHART_COLORS, SERIES_PALETTE, useChartTheme, formatCompact, formatDateShort } from "@/components/ui/chart-theme";
 
@@ -75,6 +76,7 @@ function formatLatencyValue(value: number): string {
 }
 
 export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, latencySummary, totals }: UsageChartsProps) {
+   const t = useTranslations('usage');
    const uid = useId();
    const { axisTickStyle, tooltipStyle, tokens } = useChartTheme();
    const gradInputId = `${uid}-gradInput`;
@@ -83,7 +85,7 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       {dailyBreakdown && dailyBreakdown.length > 0 ? (
-        <ChartContainer title="Daily Requests">
+        <ChartContainer title={t('dailyRequests')}>
           <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
              <LineChart data={dailyBreakdown} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
                <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} />
@@ -92,7 +94,7 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                <Tooltip
                  {...tooltipStyle}
                  labelFormatter={(label) => formatDateShort(label)}
-                 formatter={(value) => [formatCompact(Number(value)), "Requests"]}
+                 formatter={(value) => [formatCompact(Number(value)), t('requestsLabel')]}
                />
               <Line type="monotone" dataKey="requests" stroke={CHART_COLORS.primary} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
             </LineChart>
@@ -101,7 +103,7 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
       ) : null}
 
       {dailyBreakdown && dailyBreakdown.length > 0 ? (
-        <ChartContainer title="Token Usage">
+        <ChartContainer title={t('tokenUsage')}>
           <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
             <AreaChart data={dailyBreakdown} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
               <defs>
@@ -123,8 +125,8 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                  formatter={(value) => [formatCompact(Number(value)), ""]}
                />
               <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
-              <Area type="monotone" dataKey="inputTokens" name="Input" stackId="1" stroke={CHART_COLORS.primary} fill={`url(#${gradInputId})`} strokeWidth={1.5} />
-              <Area type="monotone" dataKey="outputTokens" name="Output" stackId="1" stroke={CHART_COLORS.success} fill={`url(#${gradOutputId})`} strokeWidth={1.5} />
+              <Area type="monotone" dataKey="inputTokens" name={t('input')} stackId="1" stroke={CHART_COLORS.primary} fill={`url(#${gradInputId})`} strokeWidth={1.5} />
+              <Area type="monotone" dataKey="outputTokens" name={t('output')} stackId="1" stroke={CHART_COLORS.success} fill={`url(#${gradOutputId})`} strokeWidth={1.5} />
             </AreaChart>
           </ResponsiveContainer>
         </ChartContainer>
@@ -132,11 +134,11 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
 
       {latencySeries && latencySeries.length > 0 ? (
         <ChartContainer
-          title="Request Latency"
+          title={t('requestLatency')}
           subtitle={
             latencySummary && latencySummary.sampleCount > 0
               ? `Avg ${formatLatencyValue(latencySummary.averageMs)} • P95 ${formatLatencyValue(latencySummary.p95Ms)} • Max ${formatLatencyValue(latencySummary.maxMs)}`
-              : "Recent requests with latency data"
+              : t('recentRequestsLatency')
           }
         >
           <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
@@ -166,10 +168,10 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                  {...tooltipStyle}
                  labelFormatter={(label, payload) => {
                    const point = payload?.[0]?.payload as LatencyPoint | undefined;
-                   const status = point == null ? "Unknown" : point.failed ? "Failed" : "Success";
-                   return `${formatLatencyLabel(label)} • ${point?.model ?? "Unknown model"} • ${status}`;
+                   const status = point == null ? t('unknownProvider') : point.failed ? t('failed') : t('success');
+                   return `${formatLatencyLabel(label)} • ${point?.model ?? t('unknownProvider')} • ${status}`;
                  }}
-                 formatter={(value) => [formatLatencyValue(Number(value)), "Latency"]}
+                 formatter={(value) => [formatLatencyValue(Number(value)), t('latency')]}
                />
               {latencySummary && latencySummary.p95Ms > 0 ? (
                 <ReferenceLine y={latencySummary.p95Ms} stroke={CHART_COLORS.rose} strokeDasharray="4 4" ifOverflow="extendDomain" />
@@ -177,7 +179,7 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
               <Area
                 type="monotone"
                 dataKey="latencyMs"
-                name="Latency"
+                name={t('latency')}
                 stroke={CHART_COLORS.warning}
                 fill={`url(#${gradLatencyId})`}
                 strokeWidth={2}
@@ -194,10 +196,10 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
         const rest = sorted.slice(6);
         const otherRequests = rest.reduce((s, m) => s + m.requests, 0);
         const pieData = otherRequests > 0
-          ? [...top6, { model: "Other", requests: otherRequests, tokens: 0 }]
+          ? [...top6, { model: t('other'), requests: otherRequests, tokens: 0 }]
           : top6;
         return (
-          <ChartContainer title="Model Distribution">
+          <ChartContainer title={t('modelDistribution')}>
             <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
               <PieChart>
                 <Pie
@@ -214,7 +216,7 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                 </Pie>
                 <Tooltip
                    {...tooltipStyle}
-                   formatter={(value) => [formatCompact(Number(value)), "Requests"]}
+                   formatter={(value) => [formatCompact(Number(value)), t('requestsLabel')]}
                  />
                 <Legend
                   wrapperStyle={{ fontSize: 10, color: tokens.text.muted }}
@@ -231,11 +233,11 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
         const successPct = total > 0 ? (totals.successCount / total) * 100 : 0;
         const failPct = total > 0 ? (totals.failureCount / total) * 100 : 0;
         return (
-          <ChartContainer title="Success / Failure Ratio">
+          <ChartContainer title={t('successFailureRatio')}>
             <div className="flex h-[220px] flex-col justify-center gap-4 px-2">
               <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-                <span className="font-semibold text-emerald-600">{totals.successCount.toLocaleString()} success</span>
-                <span className="font-semibold text-rose-600">{totals.failureCount.toLocaleString()} failed</span>
+                <span className="font-semibold text-emerald-600">{totals.successCount.toLocaleString()} {t('success')}</span>
+                <span className="font-semibold text-rose-600">{totals.failureCount.toLocaleString()} {t('failed')}</span>
               </div>
               <div className="h-4 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
                 <div className="flex h-full">
@@ -255,11 +257,11 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
               </div>
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div className="rounded-md border border-emerald-500/20 bg-emerald-500/100/10 px-3 py-2 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Success Rate</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('successRate')}</p>
                   <p className="mt-0.5 text-lg font-bold text-emerald-600">{successPct.toFixed(1)}%</p>
                 </div>
                 <div className="rounded-md border border-rose-500/20 bg-rose-500/100/10 px-3 py-2 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Failure Rate</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('failureRate')}</p>
                   <p className="mt-0.5 text-lg font-bold text-rose-600">{failPct.toFixed(1)}%</p>
                 </div>
               </div>

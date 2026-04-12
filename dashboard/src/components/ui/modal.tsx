@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { createContext, useContext, type ReactNode, useEffect, useId, useRef } from "react";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { useTranslations } from "next-intl";
 
 const ModalTitleIdContext = createContext<string>("");
 
@@ -14,6 +15,7 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, children, className }: ModalProps) {
+  const t = useTranslations('common');
   const modalRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useFocusTrap(isOpen, modalRef as React.RefObject<HTMLElement | null>);
@@ -44,7 +46,7 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
           type="button"
           className="absolute inset-0"
           onClick={onClose}
-          aria-label="Close modal"
+          aria-label={t('closeModal')}
         />
         <div
           ref={modalRef}
@@ -58,7 +60,7 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
             type="button"
             onClick={onClose}
             className="absolute right-3 top-3 rounded-md p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
-            aria-label="Close"
+            aria-label={t('close')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

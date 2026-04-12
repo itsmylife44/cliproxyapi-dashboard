@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useTranslations } from "next-intl";
 
 interface SubscriptionStatus {
   templateName: string;
@@ -28,6 +29,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
   const [actionLoading, setActionLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const { showToast } = useToast();
+  const t = useTranslations('configSharing');
 
   const fetchStatus = useCallback(async () => {
     setLoading(true);
@@ -62,12 +64,12 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
 
   const handleSubscribe = async () => {
     if (!hasApiKey) {
-      showToast("Cannot subscribe without an API key. Please add one first.", "error");
+      showToast(t('toastNoApiKey'), "error");
       return;
     }
 
     if (!shareCode.trim()) {
-      showToast("Please enter a share code", "error");
+      showToast(t('toastEnterShareCode'), "error");
       return;
     }
 
@@ -80,14 +82,14 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error?.message ?? data.error ?? "Failed to subscribe", "error");
+        showToast(data.error?.message ?? data.error ?? t('toastSubscribeFailed'), "error");
         return;
       }
       setStatus(data);
       setShareCode("");
-      showToast("Successfully subscribed to config", "success");
+      showToast(t('toastSubscribed'), "success");
     } catch {
-      showToast("Network error", "error");
+      showToast(t('toastNetworkError'), "error");
     } finally {
       setActionLoading(false);
     }
@@ -104,16 +106,16 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error?.message ?? data.error ?? "Failed to toggle status", "error");
+        showToast(data.error?.message ?? data.error ?? t('toastToggleSubscribeFailed'), "error");
         return;
       }
       setStatus(data);
       showToast(
-        data.isActive ? "Subscription activated" : "Subscription paused",
+        data.isActive ? t('toastSubscriptionActivated') : t('toastSubscriptionPaused'),
         "success"
       );
     } catch {
-      showToast("Network error", "error");
+      showToast(t('toastNetworkError'), "error");
     } finally {
       setActionLoading(false);
     }
@@ -131,13 +133,13 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error?.message ?? data.error ?? "Failed to unsubscribe", "error");
+        showToast(data.error?.message ?? data.error ?? t('toastUnsubscribeFailed'), "error");
         return;
       }
       setStatus(null);
-      showToast("Successfully unsubscribed", "success");
+      showToast(t('toastUnsubscribed'), "success");
     } catch {
-      showToast("Network error", "error");
+      showToast(t('toastNetworkError'), "error");
     } finally {
       setActionLoading(false);
     }
@@ -152,7 +154,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
               <span className="w-6 h-6 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] flex items-center justify-center text-sm" aria-hidden="true">
                 &#9733;
               </span>
-              Subscribe to Shared Config
+              {t('subscriberTitle')}
             </span>
           </CardTitle>
         </CardHeader>
@@ -174,7 +176,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
               <span className="w-6 h-6 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] flex items-center justify-center text-sm" aria-hidden="true">
                 &#9733;
               </span>
-              Subscribe to Shared Config
+              {t('subscriberTitle')}
             </span>
           </CardTitle>
         </CardHeader>
@@ -189,7 +191,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
               <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
                 <span className="text-lg">⚠️</span>
                 <p className="text-sm text-amber-700/90">
-                  You need at least one API key to subscribe. Please add an API key first.
+                  {t('noApiKeyWarning')}
                 </p>
               </div>
             )}
@@ -203,7 +205,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
                   name="share-code-input"
                   value={shareCode}
                   onChange={setShareCode}
-                  placeholder="Enter share code from publisher"
+                  placeholder={t('shareCodeInputPlaceholder')}
                   disabled={actionLoading || !hasApiKey}
                 />
               </div>
@@ -213,7 +215,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
                 variant="primary"
                 className="w-full"
               >
-                {actionLoading ? "Subscribing..." : "Subscribe"}
+                {actionLoading ? t('subscribingButton') : t('subscribeButton')}
               </Button>
             </div>
           </div>
@@ -230,7 +232,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
             <span className="w-6 h-6 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] flex items-center justify-center text-sm" aria-hidden="true">
               &#9733;
             </span>
-            Active Subscription
+            {t('activeSubscriptionTitle')}
           </span>
         </CardTitle>
       </CardHeader>
@@ -238,19 +240,19 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Publisher</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('publisherLabel')}</div>
               <div className="text-xs font-semibold text-[var(--text-primary)]">{status.publisherUsername}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Template</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('templateLabel')}</div>
               <div className="text-xs font-semibold text-[var(--text-primary)]">{status.templateName}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Status</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('statusLabel')}</div>
               <div className={status.isActive ? "text-xs font-semibold text-emerald-700" : "text-xs font-semibold text-amber-700"}>{status.isActive ? "Active" : "Paused"}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Last Synced</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('lastSyncedLabel')}</div>
               <div className="text-xs font-semibold text-[var(--text-primary)]">{status.lastSyncedAt ? new Date(status.lastSyncedAt).toLocaleString() : "Never"}</div>
             </div>
           </div>
@@ -270,7 +272,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
               variant="secondary"
               className="flex-1"
             >
-              {actionLoading ? "Updating..." : status.isActive ? "Pause Subscription" : "Activate Subscription"}
+              {actionLoading ? t('updatingButton') : status.isActive ? t('pauseSubscriptionButton') : t('activateSubscriptionButton')}
             </Button>
             <Button
               onClick={confirmUnsubscribe}
@@ -278,7 +280,7 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
               variant="danger"
               className="flex-1"
             >
-              {actionLoading ? "Unsubscribing..." : "Unsubscribe"}
+              {actionLoading ? t('unsubscribingButton') : t('unsubscribeButton')}
             </Button>
           </div>
         </div>
@@ -288,10 +290,10 @@ export function ConfigSubscriber({ hasApiKey }: ConfigSubscriberProps) {
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
         onConfirm={handleUnsubscribe}
-        title="Unsubscribe from Config"
-        message="Are you sure you want to unsubscribe? Your previous config settings will be restored."
-        confirmLabel="Unsubscribe"
-        cancelLabel="Cancel"
+        title={t('confirmUnsubscribeTitle')}
+        message={t('confirmUnsubscribeMessage')}
+        confirmLabel={t('confirmUnsubscribeLabel')}
+        cancelLabel={t('cancelButton')}
         variant="warning"
       />
     </Card>

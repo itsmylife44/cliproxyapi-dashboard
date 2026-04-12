@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 interface DisabledMcpsSectionProps {
   isExpanded: boolean;
   onToggleExpand: () => void;
@@ -19,6 +21,8 @@ export function DisabledMcpsSection({
   onMcpAdd,
   onMcpRemove,
 }: DisabledMcpsSectionProps) {
+  const t = useTranslations("ohMyOpenCode");
+
   return (
     <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-muted)] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
@@ -40,7 +44,7 @@ export function DisabledMcpsSection({
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        <span className="flex-1 text-left">Disabled MCPs</span>
+        <span className="flex-1 text-left">{t("disabledMcps")}</span>
         <span className="px-1.5 py-0.5 rounded-md bg-[var(--surface-muted)] text-[var(--text-muted)] text-[10px] font-mono">
           {disabledMcps.length}
         </span>
@@ -50,7 +54,7 @@ export function DisabledMcpsSection({
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder="MCP name"
+              placeholder={t("mcpNamePlaceholder")}
               value={mcpInput}
               onChange={(e) => onMcpInputChange(e.target.value)}
               onKeyDown={(e) => {
@@ -66,7 +70,7 @@ export function DisabledMcpsSection({
               onClick={onMcpAdd}
               className="px-3 py-1.5 text-xs bg-[var(--surface-muted)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--surface-hover)]"
             >
-              Add
+              {t("addButton")}
             </button>
           </div>
           <div className="flex flex-wrap gap-1.5">

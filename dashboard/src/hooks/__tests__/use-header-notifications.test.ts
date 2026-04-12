@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { filterNotifications } from "@/lib/notification-dismissal";
 import { buildNotifications } from "@/hooks/notification-utils";
-import type { HealthStatus, QuotaAccount, UpdateCheckResult } from "@/hooks/notification-utils";
+import type { HealthStatus, QuotaAccount, UpdateCheckResult, TranslationFn } from "@/hooks/notification-utils";
 
 const NOW = 1000000;
+// Returns the key so assertions on IDs still pass; titles/messages are not tested here.
+const t: TranslationFn = (key) => key;
 
 const healthBothError: HealthStatus = { status: "degraded", database: "error", proxy: "error" };
 const healthDbError: HealthStatus = { status: "degraded", database: "error", proxy: "connected" };
@@ -42,49 +44,37 @@ const dashUpdate: UpdateCheckResult = {
 
 describe("buildNotifications — deterministic IDs", () => {
   it("generates stable ID health-db when database is error", () => {
-    const result = buildNotifications(healthDbError, null, null, null, NOW);
+    const result = buildNotifications(healthDbError, null, null, null, t, NOW);
     const ids = result.map((n) => n.id);
     expect(ids).toContain("health-db");
   });
 
   it("generates stable ID health-proxy when proxy is error", () => {
-    const result = buildNotifications(healthProxyError, null, null, null, NOW);
+    const result = buildNotifications(healthProxyError, null, null, null, t, NOW);
     const ids = result.map((n) => n.id);
     expect(ids).toContain("health-proxy");
   });
 
   it("generates stable ID for quota-critical notification", () => {
-    const result = buildNotifications(
-      healthOk,
-      { accounts: [accountWithCriticalQuota] },
-      null,
-      null,
-      NOW
-    );
+    const result = buildNotifications(healthOk, { accounts: [accountWithCriticalQuota] }, null, null, t, NOW);
     const ids = result.map((n) => n.id);
     expect(ids).toContain("quota-critical-claude-0-5h-session");
   });
 
   it("generates stable ID for quota-warn notification", () => {
-    const result = buildNotifications(
-      healthOk,
-      { accounts: [accountWithWarnQuota] },
-      null,
-      null,
-      NOW
-    );
+    const result = buildNotifications(healthOk, { accounts: [accountWithWarnQuota] }, null, null, t, NOW);
     const ids = result.map((n) => n.id);
     expect(ids).toContain("quota-warn-gemini-1-daily");
   });
 
   it("generates stable ID update-proxy when proxy update available", () => {
-    const result = buildNotifications(healthOk, null, proxyUpdate, null, NOW);
+    const result = buildNotifications(healthOk, null, proxyUpdate, null, t, NOW);
     const ids = result.map((n) => n.id);
     expect(ids).toContain("update-proxy");
   });
 
   it("generates stable ID update-dashboard when dashboard update available", () => {
-    const result = buildNotifications(healthOk, null, null, dashUpdate, NOW);
+    const result = buildNotifications(healthOk, null, null, dashUpdate, t, NOW);
     const ids = result.map((n) => n.id);
     expect(ids).toContain("update-dashboard");
   });
@@ -97,28 +87,22 @@ describe("buildNotifications — deterministic IDs", () => {
       dashUpdate,
     ] as const;
 
-    const first = buildNotifications(...inputs, NOW).map((n) => n.id);
-    const second = buildNotifications(...inputs, NOW).map((n) => n.id);
+    const first = buildNotifications(...inputs, t, NOW).map((n) => n.id);
+    const second = buildNotifications(...inputs, t, NOW).map((n) => n.id);
     expect(first).toEqual(second);
   });
 });
 
 describe("buildNotifications — filtering dismissed IDs", () => {
   it("dismissed health-db ID filters out the notification (pure filtering test — PASSES)", () => {
-    const notifications = buildNotifications(healthDbError, null, null, null, NOW);
+    const notifications = buildNotifications(healthDbError, null, null, null, t, NOW);
     const dismissedIds = new Set(["health-db"]);
     const visible = notifications.filter((n) => !dismissedIds.has(n.id));
     expect(visible.length).toBe(notifications.length - 1);
   });
 
   it("dismissed quota-critical ID filters out critical notification from criticalCount (pure filtering test — PASSES)", () => {
-    const notifications = buildNotifications(
-      healthOk,
-      { accounts: [accountWithCriticalQuota] },
-      null,
-      null,
-      NOW
-    );
+    const notifications = buildNotifications(healthOk, { accounts: [accountWithCriticalQuota] }, null, null, t, NOW);
     const dismissedIds = new Set(["quota-critical-claude-0-5h-session"]);
     const visible = notifications.filter((n) => !dismissedIds.has(n.id));
     const criticalCount = visible.filter((n) => n.type === "critical").length;
@@ -126,20 +110,14 @@ describe("buildNotifications — filtering dismissed IDs", () => {
   });
 
   it("filterNotifications removes health-db from totalCount", () => {
-    const notifications = buildNotifications(healthDbError, null, null, null, NOW);
+    const notifications = buildNotifications(healthDbError, null, null, null, t, NOW);
     const visible = filterNotifications(notifications, new Set(["health-db"]));
     expect(visible.length).toBe(notifications.length - 1);
     expect(visible.find((n) => n.id === "health-db")).toBeUndefined();
   });
 
   it("filterNotifications removes dismissed critical from criticalCount", () => {
-    const notifications = buildNotifications(
-      healthOk,
-      { accounts: [accountWithCriticalQuota] },
-      null,
-      null,
-      NOW
-    );
+    const notifications = buildNotifications(healthOk, { accounts: [accountWithCriticalQuota] }, null, null, t, NOW);
     const visible = filterNotifications(
       notifications,
       new Set(["quota-critical-claude-0-5h-session"])

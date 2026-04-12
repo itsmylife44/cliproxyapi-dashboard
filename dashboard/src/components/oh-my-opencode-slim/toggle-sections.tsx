@@ -9,6 +9,7 @@ import type {
 } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { SLIM_TMUX_LAYOUTS, SLIM_SCORING_VERSIONS } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { HelpTooltip } from "@/components/ui/tooltip";
+import { useTranslations } from 'next-intl';
 
 // ---------------------------------------------------------------------------
 // Collapsible section wrapper
@@ -77,6 +78,7 @@ export function SlimToggleSections({
   onDisabledMcpRemove,
   onScalarChange,
 }: SlimToggleSectionsProps) {
+  const t = useTranslations('ohMyOpenCode');
   const [showTmux, setShowTmux] = useState(false);
   const [showBackground, setShowBackground] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
@@ -93,7 +95,7 @@ export function SlimToggleSections({
       <div className="flex flex-col md:flex-row gap-3">
         <div className="flex-1 space-y-3">
           {/* Tmux */}
-          <Section label="Tmux" isExpanded={showTmux} onToggle={() => setShowTmux(!showTmux)} tooltip="Split your terminal into panes to monitor agent activity in real-time">
+          <Section label={t("tmuxSectionLabel")} isExpanded={showTmux} onToggle={() => setShowTmux(!showTmux)} tooltip={t("tmuxSectionTooltip")}>
             <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
               <input
                 type="checkbox"
@@ -104,12 +106,12 @@ export function SlimToggleSections({
                 }}
                 className="accent-black"
               />
-              Enable tmux integration
+              {t("enableTmux")}
             </label>
             {tmux.enabled && (
               <>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--text-muted)] w-16">Layout</span>
+                  <span className="text-xs text-[var(--text-muted)] w-16">{t("layoutLabel")}</span>
                   <select
                     value={tmux.layout ?? "main-vertical"}
                     onChange={(e) => onTmuxChange({ ...tmux, layout: e.target.value as SlimTmuxConfig["layout"] })}
@@ -119,7 +121,7 @@ export function SlimToggleSections({
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--text-muted)] w-16">Pane %</span>
+                  <span className="text-xs text-[var(--text-muted)] w-16">{t("paneSizeLabel")}</span>
                   <input
                     type="number" min={20} max={80}
                     value={tmux.main_pane_size ?? 60}
@@ -132,9 +134,9 @@ export function SlimToggleSections({
           </Section>
 
           {/* Background */}
-          <Section label="Background" isExpanded={showBackground} onToggle={() => setShowBackground(!showBackground)} tooltip="Limit how many agent tasks can run simultaneously">
+          <Section label={t("backgroundSectionLabel")} isExpanded={showBackground} onToggle={() => setShowBackground(!showBackground)} tooltip={t("backgroundSectionTooltip")}>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[var(--text-muted)]">Max concurrent</span>
+              <span className="text-xs text-[var(--text-muted)]">{t("maxConcurrentLabel")}</span>
               <input
                 type="number" min={1} max={50}
                 value={bg.maxConcurrentStarts ?? 10}
@@ -148,9 +150,9 @@ export function SlimToggleSections({
           </Section>
 
           {/* Scoring Engine */}
-          <Section label="Scoring & Balance" isExpanded={showScoring} onToggle={() => setShowScoring(!showScoring)} tooltip="Scoring engine ranks models for auto-assignment. Balance distributes requests across providers to avoid rate limits.">
+          <Section label={t("scoringSectionLabel")} isExpanded={showScoring} onToggle={() => setShowScoring(!showScoring)} tooltip={t("scoringSectionTooltip")}>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[var(--text-muted)] w-28">Scoring engine</span>
+              <span className="text-xs text-[var(--text-muted)] w-28">{t("scoringEngineLabel")}</span>
               <select
                 value={overrides.scoringEngineVersion ?? "v1"}
                 onChange={(e) => onScalarChange("scoringEngineVersion", e.target.value)}
@@ -166,14 +168,14 @@ export function SlimToggleSections({
                 onChange={() => onScalarChange("balanceProviderUsage", !overrides.balanceProviderUsage)}
                 className="accent-black"
               />
-              Balance provider usage
+              {t("balanceProviderLabel")}
             </label>
           </Section>
         </div>
 
         <div className="flex-1 space-y-3">
           {/* Fallback */}
-          <Section label="Fallback" isExpanded={showFallback} onToggle={() => setShowFallback(!showFallback)} tooltip="When a model times out, automatically retry with the next model in the fallback chain">
+          <Section label={t("fallbackSectionLabel")} isExpanded={showFallback} onToggle={() => setShowFallback(!showFallback)} tooltip={t("fallbackSectionTooltip")}>
             <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
               <input
                 type="checkbox"
@@ -181,12 +183,12 @@ export function SlimToggleSections({
                 onChange={() => onFallbackChange({ ...fb, enabled: !(fb.enabled ?? true) })}
                 className="accent-black"
               />
-              Enable fallback
+              {t("enableFallback")}
             </label>
             {(fb.enabled ?? true) && (
               <>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--text-muted)] w-24">Timeout (ms)</span>
+                  <span className="text-xs text-[var(--text-muted)] w-24">{t("timeoutLabel")}</span>
                   <input
                     type="number" min={0}
                     value={fb.timeoutMs ?? 15000}
@@ -195,7 +197,7 @@ export function SlimToggleSections({
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--text-muted)] w-24">Retry delay</span>
+                  <span className="text-xs text-[var(--text-muted)] w-24">{t("retryDelayLabel")}</span>
                   <input
                     type="number" min={0}
                     value={fb.retryDelayMs ?? 500}
@@ -208,7 +210,7 @@ export function SlimToggleSections({
           </Section>
 
           {/* Disabled MCPs */}
-          <Section label="Disabled MCPs" isExpanded={showMcps} onToggle={() => setShowMcps(!showMcps)} tooltip="MCP servers you want to exclude from agent use. Agents won't be able to call these tools.">
+          <Section label={t("disabledMcpsSectionLabel")} isExpanded={showMcps} onToggle={() => setShowMcps(!showMcps)} tooltip={t("disabledMcpsSectionTooltip")}>
             {(overrides.disabled_mcps ?? []).length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {(overrides.disabled_mcps ?? []).map((mcp) => (
@@ -230,7 +232,7 @@ export function SlimToggleSections({
                     if (onDisabledMcpAdd(mcpInput)) setMcpInput("");
                   }
                 }}
-                placeholder="MCP name to disable"
+                placeholder={t("mcpNamePlaceholder")}
                 className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)] placeholder:text-[var(--text-muted)]"
               />
               <button
@@ -238,7 +240,7 @@ export function SlimToggleSections({
                 onClick={() => { if (onDisabledMcpAdd(mcpInput)) setMcpInput(""); }}
                 className="rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-2 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               >
-                Add
+                {t("mcpAddButton")}
               </button>
             </div>
           </Section>

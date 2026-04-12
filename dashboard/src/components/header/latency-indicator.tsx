@@ -1,6 +1,7 @@
 "use client";
 
 import { useHealthStatus } from "@/hooks/use-health-status";
+import { useTranslations } from "next-intl";
 
 function getLatencyColor(ms: number): string {
   if (ms < 100) return "text-emerald-600";
@@ -16,12 +17,13 @@ function getLatencyDotColor(ms: number): string {
 
 export function LatencyIndicator() {
   const { latencyMs } = useHealthStatus();
+  const t = useTranslations("latency");
 
   if (latencyMs === null) return null;
 
   if (latencyMs === -1) {
     return (
-      <div className="flex items-center gap-1.5" title="Proxy unreachable">
+      <div className="flex items-center gap-1.5" title={t('proxyUnreachableTitle')}>
         <div className="h-1.5 w-1.5 rounded-full bg-red-500/100" />
         <span className="text-xs text-red-600">--ms</span>
       </div>

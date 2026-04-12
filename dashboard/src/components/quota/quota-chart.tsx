@@ -2,6 +2,7 @@
 
 import { RadialBarChart, RadialBar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { ChartContainer, ChartEmpty, CHART_COLORS, useChartTheme } from "@/components/ui/chart-theme";
+import { useTranslations } from "next-intl";
 
 interface WindowCapacity {
   id: string;
@@ -26,11 +27,12 @@ interface QuotaChartProps {
 
 export function QuotaChart({ overallCapacity, providerSummaries }: QuotaChartProps) {
    const { axisTickStyle, tooltipStyle, tokens } = useChartTheme();
+   const t = useTranslations("quota");
    return (
     <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-      <ChartContainer title="Overall Capacity" subtitle="Weighted across all providers">
+      <ChartContainer title={t("overallCapacityTitle")} subtitle={t("overallCapacitySubtitle")}>
         {providerSummaries.length === 0 ? (
-          <ChartEmpty message="No provider data" />
+          <ChartEmpty message={t("noProviderData")} />
         ) : (() => {
           const pct = Math.round(overallCapacity.value * 100);
           const gaugeColor =
@@ -58,16 +60,16 @@ export function QuotaChart({ overallCapacity, providerSummaries }: QuotaChartPro
               </ResponsiveContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-3xl font-bold" style={{ color: gaugeColor }}>{pct}%</span>
-                <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: tokens.text.dimmed }}>Capacity</span>
+                <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: tokens.text.dimmed }}>{t("capacityLabel")}</span>
               </div>
             </div>
           );
         })()}
       </ChartContainer>
 
-      <ChartContainer title="Provider Capacity" subtitle="Long-term & short-term window minimum per provider">
+      <ChartContainer title={t("providerCapacityTitle")} subtitle={t("providerCapacitySubtitle")}>
         {providerSummaries.length === 0 ? (
-          <ChartEmpty message="No provider data" />
+          <ChartEmpty message={t("noProviderData")} />
         ) : (() => {
           const barData = providerSummaries.map((s) => {
             const longTerm = s.windowCapacities.filter((w) => !w.isShortTerm);

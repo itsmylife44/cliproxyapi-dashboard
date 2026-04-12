@@ -1,3 +1,8 @@
+// Minimal translation function type compatible with next-intl's useTranslations return value.
+// Callers (hooks) obtain this via useTranslations('notifications') and pass it in; pure utility
+// code never imports React or next-intl directly so it remains testable without a provider.
+export type TranslationFn = (key: string, values?: Record<string, string | number>) => string;
+
 export type NotificationType = "critical" | "warning" | "info";
 
 export interface Notification {
@@ -43,6 +48,7 @@ export function buildNotifications(
   quotaData: { accounts: readonly QuotaAccount[] } | null | undefined,
   proxyUpdateData: UpdateCheckResult | null | undefined,
   dashUpdateData: UpdateCheckResult | null | undefined,
+  t: TranslationFn,
   now: number = Date.now()
 ): Notification[] {
   const items: Notification[] = [];
@@ -53,8 +59,8 @@ export function buildNotifications(
       items.push({
         id: "health-db",
         type: "critical",
-        title: "Database Unreachable",
-        message: "The database connection has failed. Some features may not work.",
+        title: t("healthDbTitle"),
+        message: t("healthDbMessage"),
         timestamp: now,
       });
     }
@@ -62,8 +68,8 @@ export function buildNotifications(
       items.push({
         id: "health-proxy",
         type: "critical",
-        title: "Proxy Unreachable",
-        message: "Cannot connect to CLIProxyAPI backend service.",
+        title: t("healthProxyTitle"),
+        message: t("healthProxyMessage"),
         link: "/dashboard/monitoring",
         timestamp: now,
       });
@@ -75,12 +81,14 @@ export function buildNotifications(
   for (const account of accounts) {
     if (!account.supported || !account.groups) continue;
     for (const group of account.groups) {
+      const percent = Math.round(group.remainingFraction * 100);
+      const message = t("quotaMessage", { email: account.email, label: group.label, percent });
       if (group.remainingFraction <= QUOTA_CRITICAL_THRESHOLD) {
         items.push({
           id: `quota-critical-${account.provider}-${account.auth_index}-${group.id}`,
           type: "critical",
-          title: `${account.provider} Quota Exhausted`,
-          message: `${account.email} — ${group.label} at ${Math.round(group.remainingFraction * 100)}%`,
+          title: t("quotaExhaustedTitle", { provider: account.provider }),
+          message,
           link: "/dashboard/quota",
           timestamp: now,
         });
@@ -88,8 +96,8 @@ export function buildNotifications(
         items.push({
           id: `quota-warn-${account.provider}-${account.auth_index}-${group.id}`,
           type: "warning",
-          title: `${account.provider} Quota Low`,
-          message: `${account.email} — ${group.label} at ${Math.round(group.remainingFraction * 100)}%`,
+          title: t("quotaLowTitle", { provider: account.provider }),
+          message,
           link: "/dashboard/quota",
           timestamp: now,
         });
@@ -102,8 +110,8 @@ export function buildNotifications(
     items.push({
       id: "update-proxy",
       type: "info",
-      title: "Proxy Update Available",
-      message: `${proxyUpdateData.currentVersion} → ${proxyUpdateData.latestVersion}`,
+      title: t("proxyUpdateTitle"),
+      message: t("updateVersionMessage", { current: proxyUpdateData.currentVersion, latest: proxyUpdateData.latestVersion }),
       link: "/dashboard/settings",
       timestamp: now,
     });
@@ -112,8 +120,8 @@ export function buildNotifications(
     items.push({
       id: "update-dashboard",
       type: "info",
-      title: "Dashboard Update Available",
-      message: `${dashUpdateData.currentVersion} → ${dashUpdateData.latestVersion}`,
+      title: t("dashboardUpdateTitle"),
+      message: t("updateVersionMessage", { current: dashUpdateData.currentVersion, latest: dashUpdateData.latestVersion }),
       link: "/dashboard/settings",
       timestamp: now,
     });

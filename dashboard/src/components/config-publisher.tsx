@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/toast";
 import { CopyBlock } from "@/components/copy-block";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useTranslations } from "next-intl";
 
 interface PublishStatus {
   id: string;
@@ -27,6 +28,7 @@ export function ConfigPublisher() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const { showToast } = useToast();
+  const t = useTranslations('configSharing');
 
   const fetchStatus = useCallback(async () => {
     setLoading(true);
@@ -66,14 +68,14 @@ export function ConfigPublisher() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error?.message ?? data.error ?? "Failed to publish config", "error");
+        showToast(data.error?.message ?? data.error ?? t('toastPublishFailed'), "error");
         return;
       }
       setStatus(data);
       setTemplateName(data.name);
-      showToast("Config published successfully", "success");
+      showToast(t('toastPublished'), "success");
     } catch {
-      showToast("Network error", "error");
+      showToast(t('toastNetworkError'), "error");
     } finally {
       setActionLoading(false);
     }
@@ -81,7 +83,7 @@ export function ConfigPublisher() {
 
   const handleUpdateName = async () => {
     if (!status || !templateName.trim()) {
-      showToast("Name cannot be empty", "error");
+      showToast(t('toastNameEmpty'), "error");
       return;
     }
     setActionLoading(true);
@@ -93,14 +95,14 @@ export function ConfigPublisher() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error?.message ?? data.error ?? "Failed to update name", "error");
+        showToast(data.error?.message ?? data.error ?? t('toastNameUpdateFailed'), "error");
         return;
       }
       setStatus(data);
       setIsEditing(false);
-      showToast("Template name updated", "success");
+      showToast(t('toastNameUpdated'), "success");
     } catch {
-      showToast("Network error", "error");
+      showToast(t('toastNetworkError'), "error");
     } finally {
       setActionLoading(false);
     }
@@ -117,16 +119,16 @@ export function ConfigPublisher() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error?.message ?? data.error ?? "Failed to toggle status", "error");
+        showToast(data.error?.message ?? data.error ?? t('toastToggleFailed'), "error");
         return;
       }
       setStatus(data);
       showToast(
-        data.isActive ? "Template activated" : "Template deactivated",
+        data.isActive ? t('toastActivated') : t('toastDeactivated'),
         "success"
       );
     } catch {
-      showToast("Network error", "error");
+      showToast(t('toastNetworkError'), "error");
     } finally {
       setActionLoading(false);
     }
@@ -144,14 +146,14 @@ export function ConfigPublisher() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error?.message ?? data.error ?? "Failed to unpublish", "error");
+        showToast(data.error?.message ?? data.error ?? t('toastUnpublishFailed'), "error");
         return;
       }
       setStatus(null);
       setTemplateName("");
-      showToast("Config unpublished successfully", "success");
+      showToast(t('toastUnpublished'), "success");
     } catch {
-      showToast("Network error", "error");
+      showToast(t('toastNetworkError'), "error");
     } finally {
       setActionLoading(false);
     }
@@ -166,7 +168,7 @@ export function ConfigPublisher() {
               <span className="w-6 h-6 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] flex items-center justify-center text-sm" aria-hidden="true">
                 &#9733;
               </span>
-              Share Your Config
+              {t('publisherTitle')}
             </span>
           </CardTitle>
         </CardHeader>
@@ -188,7 +190,7 @@ export function ConfigPublisher() {
               <span className="w-6 h-6 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] flex items-center justify-center text-sm" aria-hidden="true">
                 &#9733;
               </span>
-              Share Your Config
+              {t('publisherTitle')}
             </span>
           </CardTitle>
         </CardHeader>
@@ -207,7 +209,7 @@ export function ConfigPublisher() {
                   name="template-name"
                   value={templateName}
                   onChange={setTemplateName}
-                  placeholder="My Config"
+                  placeholder={t('templateNamePlaceholder')}
                   disabled={actionLoading}
                 />
               </div>
@@ -217,7 +219,7 @@ export function ConfigPublisher() {
                 variant="primary"
                 className="w-full"
               >
-                {actionLoading ? "Publishing..." : "Publish Config"}
+                {actionLoading ? t('publishingButton') : t('publishButton')}
               </Button>
             </div>
           </div>
@@ -234,7 +236,7 @@ export function ConfigPublisher() {
             <span className="w-6 h-6 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] flex items-center justify-center text-sm" aria-hidden="true">
               &#9733;
             </span>
-            Published Config
+            {t('publishedTitle')}
           </span>
         </CardTitle>
       </CardHeader>
@@ -242,15 +244,15 @@ export function ConfigPublisher() {
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Status</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('statusLabel')}</div>
               <div className={status.isActive ? "text-xs font-semibold text-emerald-700" : "text-xs font-semibold text-amber-700"}>{status.isActive ? "Active" : "Inactive"}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Subscribers</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('subscribersLabel')}</div>
               <div className="text-xs font-semibold text-[var(--text-primary)]">{status.subscriberCount}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Created</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('createdLabel')}</div>
               <div className="text-xs font-semibold text-[var(--text-primary)]">{new Date(status.createdAt).toLocaleDateString()}</div>
             </div>
           </div>
@@ -282,7 +284,7 @@ export function ConfigPublisher() {
                   disabled={actionLoading}
                   variant="primary"
                 >
-                  Save
+                  {t('saveButton')}
                 </Button>
                 <Button
                   onClick={() => {
@@ -292,7 +294,7 @@ export function ConfigPublisher() {
                   disabled={actionLoading}
                   variant="ghost"
                 >
-                  Cancel
+                  {t('cancelButton')}
                 </Button>
               </div>
             ) : (
@@ -305,7 +307,7 @@ export function ConfigPublisher() {
                   disabled={actionLoading}
                   variant="secondary"
                 >
-                  Edit
+                  {t('editButton')}
                 </Button>
               </div>
             )}
@@ -318,7 +320,7 @@ export function ConfigPublisher() {
               variant="secondary"
               className="flex-1"
             >
-              {actionLoading ? "Updating..." : status.isActive ? "Deactivate" : "Activate"}
+              {actionLoading ? t('updatingButton') : status.isActive ? t('deactivateButton') : t('activateButton')}
             </Button>
             <Button
               onClick={confirmUnpublish}
@@ -326,7 +328,7 @@ export function ConfigPublisher() {
               variant="danger"
               className="flex-1"
             >
-              {actionLoading ? "Unpublishing..." : "Unpublish"}
+              {actionLoading ? t('unpublishingButton') : t('unpublishButton')}
             </Button>
           </div>
         </div>
@@ -336,10 +338,10 @@ export function ConfigPublisher() {
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
         onConfirm={handleUnpublish}
-        title="Unpublish Configuration"
-        message="Are you sure you want to unpublish? All subscribers will lose access."
-        confirmLabel="Unpublish"
-        cancelLabel="Cancel"
+        title={t('confirmUnpublishTitle')}
+        message={t('confirmUnpublishMessage')}
+        confirmLabel={t('confirmUnpublishLabel')}
+        cancelLabel={t('cancelButton')}
         variant="danger"
       />
     </Card>

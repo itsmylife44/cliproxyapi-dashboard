@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { ChartContainer, SERIES_PALETTE, useChartTheme, formatCompact } from "@/components/ui/chart-theme";
 import {
@@ -114,6 +115,7 @@ function truncateModelName(name: string, maxLen = 28): string {
 /* ── Component ────────────────────────────────────────────── */
 
 export function CostEstimation({ keys }: CostEstimationProps) {
+   const t = useTranslations('usage');
    const { axisTickStyle, tooltipStyle } = useChartTheme();
    const customPricing = useMemo(() => loadCustomPricing(), []);
    const costBreakdown = useMemo(() => buildCostBreakdown(keys, customPricing), [keys, customPricing]);
@@ -140,15 +142,15 @@ export function CostEstimation({ keys }: CostEstimationProps) {
       {/* ── Summary Cards ──────────────────────────────────── */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
         <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700/70">Estimated Cost</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700/70">{t('estimatedCost')}</p>
           <p className="mt-0.5 text-lg font-bold text-emerald-700">{formatUSD(totalEstimatedCost)}</p>
         </div>
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Priced Models</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('pricedModels')}</p>
           <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{pricedModels.length} / {costBreakdown.length}</p>
         </div>
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Providers</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('providersLabel')}</p>
           <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{providerBreakdown.length}</p>
         </div>
       </div>
@@ -156,7 +158,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* ── Cost by Model Bar Chart ──────────────────────── */}
         {topModelChart.length > 0 && (
-          <ChartContainer title="Cost by Model" subtitle="Top models by estimated cost (USD)">
+          <ChartContainer title={t('costByModel')} subtitle={t('costByModelSubtitle')}>
             <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
               <BarChart data={topModelChart} margin={{ top: 4, right: 8, left: -8, bottom: 0 }} layout="vertical">
                <XAxis
@@ -176,10 +178,10 @@ export function CostEstimation({ keys }: CostEstimationProps) {
                  />
                  <Tooltip
                    {...tooltipStyle}
-                   formatter={(value) => [formatUSD(Number(value)), "Est. Cost"]}
+                   formatter={(value) => [formatUSD(Number(value)), t('estCostHeader')]}
                    labelFormatter={(_label, payload) => {
                      const item = payload?.[0]?.payload as { fullName: string; provider: string } | undefined;
-                     return `${item?.fullName ?? _label} (${item?.provider ?? "Unknown"})`;
+                     return `${item?.fullName ?? _label} (${item?.provider ?? t('unknownProvider')})`;
                    }}
                  />
                 <Bar dataKey="cost" radius={[0, 4, 4, 0]} maxBarSize={20}>
@@ -194,7 +196,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
 
         {/* ── Provider Breakdown ──────────────────────────── */}
         {providerBreakdown.length > 0 && (
-          <ChartContainer title="Cost by Provider" subtitle="Aggregated estimated cost per provider">
+          <ChartContainer title={t('costByProvider')} subtitle={t('costByProviderSubtitle')}>
             <div className="flex h-[220px] flex-col justify-center gap-2 px-1">
               {providerBreakdown.map((prov, index) => {
                 const pct = totalEstimatedCost > 0 ? (prov.estimatedCost / totalEstimatedCost) * 100 : 0;
@@ -211,7 +213,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
                         style={{ width: `${Math.max(pct, 1)}%`, backgroundColor: color }}
                       />
                     </div>
-                    <p className="text-[10px] text-[var(--text-muted)]">{prov.models} model{prov.models !== 1 ? "s" : ""} · {formatCompact(prov.requests)} requests</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{t('providerStats', { models: prov.models, requests: formatCompact(prov.requests) })}</p>
                   </div>
                 );
               })}
@@ -223,19 +225,19 @@ export function CostEstimation({ keys }: CostEstimationProps) {
       {/* ── Detailed Model Table ────────────────────────────── */}
       <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
         <div className="border-b border-[var(--surface-border)] px-4 py-2.5">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Model Cost Details</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('modelCostDetails')}</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[var(--surface-border)] bg-[var(--surface-muted)]">
-                <th className="px-3 py-2 text-left font-semibold text-[var(--text-muted)]">Model</th>
-                <th className="px-3 py-2 text-left font-semibold text-[var(--text-muted)]">Provider</th>
-                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">Requests</th>
-                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">Input Tokens</th>
-                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">Output Tokens</th>
-                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">Rate ($/1M)</th>
-                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">Est. Cost</th>
+                <th className="px-3 py-2 text-left font-semibold text-[var(--text-muted)]">{t('modelHeader')}</th>
+                <th className="px-3 py-2 text-left font-semibold text-[var(--text-muted)]">{t('providerHeader')}</th>
+                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('requestsHeader')}</th>
+                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('inputTokensHeader')}</th>
+                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('outputTokensHeader')}</th>
+                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('rateHeader')}</th>
+                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('estCostHeader')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f0f0f0]">
@@ -256,7 +258,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
                 <>
                   <tr>
                     <td colSpan={7} className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] bg-[var(--surface-muted)]">
-                      Unpriced Models ({unpricedModels.length})
+                      {t('unpricedModels')} ({unpricedModels.length})
                     </td>
                   </tr>
                   {unpricedModels.map((entry) => (
@@ -275,15 +277,15 @@ export function CostEstimation({ keys }: CostEstimationProps) {
             </tbody>
             <tfoot>
               <tr className="border-t border-[var(--surface-border)] bg-[var(--surface-muted)]">
-                <td colSpan={6} className="px-3 py-2 font-semibold text-[var(--text-primary)]">Total Estimated Cost</td>
+                <td colSpan={6} className="px-3 py-2 font-semibold text-[var(--text-primary)]">{t('totalEstimatedCost')}</td>
                 <td className="px-3 py-2 text-right font-bold text-emerald-700 text-sm">{formatUSD(totalEstimatedCost)}</td>
               </tr>
             </tfoot>
           </table>
         </div>
         <div className="border-t border-[var(--surface-border)] px-4 py-2 text-[10px] text-[var(--text-muted)]">
-          💡 Costs are estimates based on official API pricing. OAuth/subscription usage may have different or zero actual cost.
-          Customize rates in your browser&apos;s localStorage under <code className="bg-[var(--surface-muted)] px-1 rounded text-[9px]">cliproxy-custom-pricing</code>.
+          💡 {t('costDisclaimerPart1')}{' '}
+          {t('costDisclaimerPart2')} <code className="bg-[var(--surface-muted)] px-1 rounded text-[9px]">cliproxy-custom-pricing</code>.
         </div>
       </div>
     </div>

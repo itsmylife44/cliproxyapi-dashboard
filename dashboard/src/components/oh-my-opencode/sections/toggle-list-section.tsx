@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 interface ToggleListSectionProps {
   label: string;
   isExpanded: boolean;
@@ -17,6 +19,8 @@ export function ToggleListSection({
   disabledItems,
   onItemToggle,
 }: ToggleListSectionProps) {
+  const t = useTranslations("ohMyOpenCode");
+
   return (
     <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-muted)] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
@@ -40,7 +44,7 @@ export function ToggleListSection({
         </svg>
         <span className="flex-1 text-left">{label}</span>
         <span className="px-1.5 py-0.5 rounded-md bg-[var(--surface-muted)] text-[var(--text-muted)] text-[10px] font-mono">
-          {disabledItems.length} disabled
+          {t("disabledCount", { count: disabledItems.length })}
         </span>
       </button>
       {isExpanded && (

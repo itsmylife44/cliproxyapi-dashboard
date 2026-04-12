@@ -29,6 +29,7 @@ import {
   TmuxSection,
   ToggleListSection,
 } from "./sections";
+import { useTranslations } from 'next-intl';
 
 interface ToggleSectionsProps {
   overrides: OhMyOpenCodeFullConfig;
@@ -87,6 +88,7 @@ export function ToggleSections({
   onLspAdd,
   onLspRemove,
 }: ToggleSectionsProps) {
+  const t = useTranslations('ohMyOpenCode');
   const [showAgents, setShowAgents] = useState(false);
   const [showSkills, setShowSkills] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
@@ -148,7 +150,7 @@ export function ToggleSections({
         <div className="flex flex-col md:flex-row gap-3">
           <div className="flex-1 space-y-3">
             <ToggleListSection
-              label="Agents"
+              label={t("agentsToggleLabel")}
               isExpanded={showAgents}
               onToggleExpand={() => setShowAgents(!showAgents)}
               items={AVAILABLE_AGENTS}
@@ -157,7 +159,7 @@ export function ToggleSections({
             />
 
             <ToggleListSection
-              label="Commands"
+              label={t("commandsToggleLabel")}
               isExpanded={showCommands}
               onToggleExpand={() => setShowCommands(!showCommands)}
               items={AVAILABLE_COMMANDS}
@@ -191,7 +193,7 @@ export function ToggleSections({
 
           <div className="flex-1 space-y-3">
             <ToggleListSection
-              label="Skills"
+              label={t("skillsToggleLabel")}
               isExpanded={showSkills}
               onToggleExpand={() => setShowSkills(!showSkills)}
               items={AVAILABLE_SKILLS}

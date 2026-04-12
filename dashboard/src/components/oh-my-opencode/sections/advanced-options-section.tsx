@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { ExperimentalConfig, OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 
 interface AdvancedOptionsSectionProps {
@@ -12,11 +13,11 @@ interface AdvancedOptionsSectionProps {
 
 const EXPERIMENTAL_FIELDS: ReadonlyArray<{
   field: keyof ExperimentalConfig;
-  label: string;
+  labelKey: string;
   defaultValue: boolean;
 }> = [
-  { field: "aggressive_truncation", label: "Aggressive Truncation", defaultValue: false },
-  { field: "task_system", label: "Task System", defaultValue: false },
+  { field: "aggressive_truncation", labelKey: "aggressiveTruncation", defaultValue: false },
+  { field: "task_system", labelKey: "taskSystem", defaultValue: false },
 ];
 
 export function AdvancedOptionsSection({
@@ -26,6 +27,7 @@ export function AdvancedOptionsSection({
   onHashlineEditToggle,
   onExperimentalToggle,
 }: AdvancedOptionsSectionProps) {
+  const t = useTranslations("ohMyOpenCode");
   const hashlineEditEnabled = overrides.hashline_edit ?? false;
 
   return (
@@ -49,12 +51,12 @@ export function AdvancedOptionsSection({
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        <span className="flex-1 text-left">Advanced Options</span>
+        <span className="flex-1 text-left">{t("advancedOptions")}</span>
       </button>
       {isExpanded && (
         <div className="px-3 pb-3 space-y-1">
             <div className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)]">
-            <span className="text-xs text-[var(--text-secondary)] font-mono">Hashline Edit</span>
+            <span className="text-xs text-[var(--text-secondary)] font-mono">{t("hashlineEdit")}</span>
             <button
               type="button"
               onClick={onHashlineEditToggle}
@@ -70,11 +72,11 @@ export function AdvancedOptionsSection({
             </button>
           </div>
 
-          {EXPERIMENTAL_FIELDS.map(({ field, label, defaultValue }) => {
+          {EXPERIMENTAL_FIELDS.map(({ field, labelKey, defaultValue }) => {
             const isEnabled = overrides.experimental?.[field] ?? defaultValue;
             return (
               <div key={field} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)]">
-                <span className="text-xs text-[var(--text-secondary)] font-mono">{label}</span>
+                <span className="text-xs text-[var(--text-secondary)] font-mono">{t(labelKey as never)}</span>
                 <button
                   type="button"
                   onClick={() => onExperimentalToggle(field)}

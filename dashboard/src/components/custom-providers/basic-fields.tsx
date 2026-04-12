@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 
 interface BasicFieldsProps {
@@ -42,18 +43,20 @@ export function BasicFields({
   onPrefixChange,
   onProxyUrlChange,
 }: BasicFieldsProps) {
+  const t = useTranslations("providers");
+
   return (
     <>
       <div>
         <label htmlFor="name" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
-          Name <span className="text-red-600">*</span>
+          {t("fieldNameLabel")} <span className="text-red-600">*</span>
         </label>
         <Input
           type="text"
           name="name"
           value={name}
           onChange={onNameChange}
-          placeholder="My Custom Provider"
+          placeholder={t("fieldNamePlaceholder")}
           required
           disabled={saving}
         />
@@ -62,32 +65,32 @@ export function BasicFields({
 
       <div>
         <label htmlFor="providerId" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
-          Provider ID <span className="text-red-600">*</span>
+          {t("fieldProviderIdLabel")} <span className="text-red-600">*</span>
         </label>
         <Input
           type="text"
           name="providerId"
           value={providerId}
           onChange={onProviderIdChange}
-          placeholder="my-custom-provider"
+          placeholder={t("fieldProviderIdPlaceholder")}
           required
           disabled={saving || isEdit}
           className={isEdit ? "opacity-60 cursor-not-allowed" : ""}
         />
         {errors.providerId && <p className="mt-1.5 text-xs text-red-600">{errors.providerId}</p>}
-        {!errors.providerId && <p className="mt-1.5 text-xs text-[var(--text-muted)]">Lowercase alphanumeric with hyphens. {isEdit ? "Cannot be changed." : "Auto-generated from name."}</p>}
+        {!errors.providerId && <p className="mt-1.5 text-xs text-[var(--text-muted)]">{t("fieldProviderIdHint")} {isEdit ? t("fieldProviderIdHintEdit") : t("fieldProviderIdHintNew")}</p>}
       </div>
 
       <div>
         <label htmlFor="baseUrl" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
-          Base URL <span className="text-red-600">*</span>
+          {t("fieldBaseUrlLabel")} <span className="text-red-600">*</span>
         </label>
         <Input
           type="text"
           name="baseUrl"
           value={baseUrl}
           onChange={onBaseUrlChange}
-          placeholder="https://api.example.com/v1"
+          placeholder={t("fieldBaseUrlPlaceholder")}
           required
           disabled={saving}
         />
@@ -96,46 +99,46 @@ export function BasicFields({
 
       <div>
         <label htmlFor="apiKey" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
-          API Key {!isEdit && <span className="text-red-600">*</span>}
+          {t("fieldApiKeyLabel")} {!isEdit && <span className="text-red-600">*</span>}
         </label>
         <Input
           type="password"
           name="apiKey"
           value={apiKey}
           onChange={onApiKeyChange}
-          placeholder={isEdit ? "Leave empty to keep existing key" : "sk-..."}
+          placeholder={isEdit ? t("fieldApiKeyEditPlaceholder") : t("fieldApiKeyPlaceholder")}
           required={!isEdit}
           disabled={saving}
         />
         {errors.apiKey && <p className="mt-1.5 text-xs text-red-600">{errors.apiKey}</p>}
-        {!errors.apiKey && isEdit && <p className="mt-1.5 text-xs text-[var(--text-muted)]">Leave empty to keep existing API key</p>}
+        {!errors.apiKey && isEdit && <p className="mt-1.5 text-xs text-[var(--text-muted)]">{t("fieldApiKeyEditHint")}</p>}
       </div>
 
       <div>
         <label htmlFor="prefix" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
-          Prefix (Optional)
+          {t("fieldPrefixLabel")}
         </label>
         <Input
           type="text"
           name="prefix"
           value={prefix}
           onChange={onPrefixChange}
-          placeholder="custom/"
+          placeholder={t("fieldPrefixPlaceholder")}
           disabled={saving}
         />
-        <p className="mt-1.5 text-xs text-[var(--text-muted)]">Model name prefix for routing</p>
+        <p className="mt-1.5 text-xs text-[var(--text-muted)]">{t("fieldPrefixHint")}</p>
       </div>
 
       <div>
         <label htmlFor="proxyUrl" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
-          Proxy URL (Optional)
+          {t("fieldProxyUrlLabel")}
         </label>
         <Input
           type="text"
           name="proxyUrl"
           value={proxyUrl}
           onChange={onProxyUrlChange}
-          placeholder="http://proxy.example.com:8080"
+          placeholder={t("fieldProxyUrlPlaceholder")}
           disabled={saving}
         />
       </div>

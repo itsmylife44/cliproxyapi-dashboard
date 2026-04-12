@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -26,14 +27,16 @@ export function ModelMappings({
   onRemoveModelMapping,
   onUpdateModelMapping,
 }: ModelMappingsProps) {
+  const t = useTranslations("providers");
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
         <label htmlFor="models" className="text-sm font-semibold text-[var(--text-primary)]">
-          Model Mappings <span className="text-red-500">*</span>
+          {t("modelMappingsLabel")} <span className="text-red-500">*</span>
         </label>
         <Button variant="ghost" onClick={onAddModelMapping} className="px-3 py-1.5 text-xs" disabled={saving}>
-          + Add Model
+          {t("addModelButton")}
         </Button>
       </div>
       <div className="space-y-2">
@@ -44,7 +47,7 @@ export function ModelMappings({
               name={`model-upstream-${idx}`}
               value={model.upstreamName}
               onChange={(val) => onUpdateModelMapping(idx, "upstreamName", val)}
-              placeholder="gpt-4"
+              placeholder={t("modelUpstreamPlaceholder")}
               disabled={saving}
               className="flex-1"
             />
@@ -53,7 +56,7 @@ export function ModelMappings({
               name={`model-alias-${idx}`}
               value={model.alias}
               onChange={(val) => onUpdateModelMapping(idx, "alias", val)}
-              placeholder="custom-gpt-4"
+              placeholder={t("modelAliasPlaceholder")}
               disabled={saving}
               className="flex-1"
             />
@@ -66,7 +69,7 @@ export function ModelMappings({
         ))}
       </div>
       {error && <p className="mt-1.5 text-xs text-red-500">{error}</p>}
-      {!error && <p className="mt-1.5 text-xs text-[var(--text-muted)]">Map upstream model names to aliases</p>}
+      {!error && <p className="mt-1.5 text-xs text-[var(--text-muted)]">{t("modelMappingsHint")}</p>}
     </div>
   );
 }

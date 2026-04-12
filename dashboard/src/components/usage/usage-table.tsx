@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 
 interface KeyUsage {
   keyName: string;
@@ -28,33 +29,34 @@ interface UsageTableProps {
 }
 
 export function UsageTable({ keys, isAdmin }: UsageTableProps) {
+  const t = useTranslations("usage");
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
 
   if (Object.keys(keys).length === 0) {
     return (
       <section className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center">
-        <p className="text-sm text-[var(--text-muted)]">No usage data yet</p>
+        <p className="text-sm text-[var(--text-muted)]">{t("noUsageData")}</p>
       </section>
     );
   }
 
   return (
     <section className="space-y-2">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Usage by API Key</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("usageByApiKey")}</h2>
       <div className="overflow-x-auto">
         <div className="min-w-[600px] rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
           <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 border-b border-[var(--surface-border)] bg-[var(--surface-base)]">
             <tr>
               <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] w-8"></th>
-              <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Key Name</th>
+              <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("keyName")}</th>
               {isAdmin && (
-                <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Username</th>
+                <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("username")}</th>
               )}
-              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total</th>
-              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Success</th>
-              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Failed</th>
-              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Tokens</th>
+              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("total")}</th>
+              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("success")}</th>
+              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("failed")}</th>
+              <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("tokens")}</th>
             </tr>
           </thead>
           <tbody>
@@ -120,11 +122,11 @@ export function UsageTable({ keys, isAdmin }: UsageTableProps) {
                           <table className="w-full text-xs">
                             <thead className="border-b border-[var(--surface-border)]">
                               <tr>
-                                <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Model</th>
-                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Requests</th>
-                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Input</th>
-                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Output</th>
-                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total</th>
+                                <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("model")}</th>
+                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("requests")}</th>
+                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("input")}</th>
+                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("output")}</th>
+                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("total")}</th>
                               </tr>
                             </thead>
                             <tbody>

@@ -1,6 +1,7 @@
 "use client";
 
 import type { McpEntry } from "@/lib/config-generators/opencode";
+import { useTranslations } from "next-intl";
 
 interface EnvRow {
   id: number;
@@ -45,10 +46,11 @@ export function McpSection({
   onUpdateEnvRow,
   onRemoveEnvRow,
 }: McpSectionProps) {
+  const t = useTranslations("openCodeConfig");
   return (
     <div className="space-y-2">
       <label htmlFor="mcp-name-input" className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-        MCP Servers
+        {t("mcpServersTitle")}
       </label>
       <div className="space-y-2">
         <div className="flex gap-2">
@@ -57,7 +59,7 @@ export function McpSection({
             type="text"
             value={mcpName}
             onChange={(e) => onMcpNameChange(e.target.value)}
-            placeholder="server-name"
+            placeholder={t("mcpServerNamePlaceholder")}
             className="flex-1 bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] font-mono placeholder:text-[var(--text-muted)] focus:border-[var(--accent)]/20 focus:bg-[var(--surface-base)] focus:outline-none transition-colors"
           />
           <select
@@ -65,8 +67,8 @@ export function McpSection({
             onChange={(e) => onMcpTypeChange(e.target.value as "local" | "remote")}
             className="bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[rgba(0,0,0,0.15)] focus:bg-[var(--surface-base)] focus:outline-none transition-colors"
           >
-            <option value="local" className="bg-[var(--surface-base)] text-[var(--text-primary)]">Local</option>
-            <option value="remote" className="bg-[var(--surface-base)] text-[var(--text-primary)]">Remote</option>
+            <option value="local" className="bg-[var(--surface-base)] text-[var(--text-primary)]">{t("typeLocal")}</option>
+            <option value="remote" className="bg-[var(--surface-base)] text-[var(--text-primary)]">{t("typeRemote")}</option>
           </select>
         </div>
         {mcpType === "remote" ? (
@@ -76,7 +78,7 @@ export function McpSection({
               value={mcpUrl}
               onChange={(e) => onMcpUrlChange(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && onAddMcp()}
-              placeholder="https://mcp.example.com/mcp"
+              placeholder={t("mcpUrlPlaceholder")}
               className="w-full bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] font-mono placeholder:text-[var(--text-muted)] focus:border-[var(--accent)]/20 focus:bg-[var(--surface-base)] focus:outline-none transition-colors"
             />
           </div>
@@ -87,7 +89,7 @@ export function McpSection({
               value={mcpCommand}
               onChange={(e) => onMcpCommandChange(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && onAddMcp()}
-              placeholder="npx -y @modelcontextprotocol/server-everything"
+              placeholder={t("mcpCommandPlaceholder")}
               className="w-full bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] font-mono placeholder:text-[var(--text-muted)] focus:border-[var(--accent)]/20 focus:bg-[var(--surface-base)] focus:outline-none transition-colors"
             />
           </div>
@@ -96,7 +98,7 @@ export function McpSection({
         <div className="space-y-2 pt-2 border-t border-[var(--surface-border)]">
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-              Environment Variables
+              {t("envVarsLabel")}
             </label>
             <button
               type="button"
@@ -107,7 +109,7 @@ export function McpSection({
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
-              Add Env Var
+              {t("addEnvVar")}
             </button>
           </div>
 
@@ -119,14 +121,14 @@ export function McpSection({
                     type="text"
                     value={row.key}
                     onChange={(e) => onUpdateEnvRow(index, "key", e.target.value)}
-                    placeholder="KEY"
+                    placeholder={t("keyPlaceholder")}
                     className="w-1/3 bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] font-mono placeholder:text-[var(--text-muted)] focus:border-[var(--accent)]/20 focus:bg-[var(--surface-base)] focus:outline-none transition-colors"
                   />
                   <input
                     type="text"
                     value={row.value}
                     onChange={(e) => onUpdateEnvRow(index, "value", e.target.value)}
-                    placeholder="Value"
+                    placeholder={t("valuePlaceholder")}
                     className="flex-1 bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] font-mono placeholder:text-[var(--text-muted)] focus:border-[var(--accent)]/20 focus:bg-[var(--surface-base)] focus:outline-none transition-colors"
                   />
                   <button
@@ -150,7 +152,7 @@ export function McpSection({
               onClick={onAddMcp}
               className="px-4 py-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] text-[var(--text-primary)] text-sm font-medium hover:bg-[var(--surface-hover)] hover:border-[var(--surface-border)] transition-colors"
             >
-              Add MCP Server
+              {t("addMcpServer")}
             </button>
           </div>
         </div>
@@ -167,6 +169,7 @@ interface McpListProps {
 }
 
 function McpList({ mcps, onRemove, onToggleEnabled }: McpListProps) {
+  const t = useTranslations("openCodeConfig");
   return (
     <div className="space-y-1.5">
       {mcps.map((mcp) => {
@@ -187,12 +190,12 @@ function McpList({ mcps, onRemove, onToggleEnabled }: McpListProps) {
                 <span className="text-[var(--text-muted)]">&rarr;</span>
                 {mcp.type === "remote" ? (
                   <>
-                    <span className={isEnabled ? "text-[var(--text-secondary)] text-xs" : "text-[var(--text-muted)] text-xs"}>Remote</span>
+                    <span className={isEnabled ? "text-[var(--text-secondary)] text-xs" : "text-[var(--text-muted)] text-xs"}>{t("typeRemote")}</span>
                     <span className="text-[var(--text-muted)] text-xs truncate" title={mcp.url}>{mcp.url}</span>
                   </>
                 ) : (
                   <>
-                    <span className={isEnabled ? "text-emerald-600 text-xs" : "text-[var(--text-muted)] text-xs"}>Local</span>
+                    <span className={isEnabled ? "text-emerald-600 text-xs" : "text-[var(--text-muted)] text-xs"}>{t("typeLocal")}</span>
                     <div className="flex flex-wrap gap-1">
                       {mcp.command.map((cmd, i) => (
                         <span key={i} className="px-1.5 py-0.5 bg-[var(--surface-muted)] rounded text-[var(--text-secondary)] text-[10px] whitespace-nowrap">
@@ -206,7 +209,7 @@ function McpList({ mcps, onRemove, onToggleEnabled }: McpListProps) {
               {envCount > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[var(--surface-hover)] text-[var(--text-muted)] uppercase">
-                    {envCount} Env Var{envCount !== 1 ? "s" : ""}
+                    {envCount} {envCount !== 1 ? t("envVars") : t("envVar")}
                   </span>
                   <div className="flex gap-1 overflow-x-auto pb-1">
                     {Object.entries(mcp.environment!).map(([k, v]) => (
@@ -225,7 +228,7 @@ function McpList({ mcps, onRemove, onToggleEnabled }: McpListProps) {
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
                   isEnabled ? "bg-emerald-500/100" : "bg-[var(--surface-hover)]"
                 }`}
-                aria-label={`Toggle ${mcp.name}`}
+                aria-label={`${t("toggleAriaLabel")} ${mcp.name}`}
               >
                 <span
                   className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-[var(--surface-base)] shadow-lg transition duration-200 ease-in-out ${
@@ -237,10 +240,10 @@ function McpList({ mcps, onRemove, onToggleEnabled }: McpListProps) {
                 type="button"
                 onClick={() => onRemove(mcp.name)}
                 className="text-[var(--text-muted)] hover:text-red-500 transition-colors"
-                aria-label={`Remove ${mcp.name}`}
+                aria-label={`${t("removeAriaLabel")} ${mcp.name}`}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <title>Remove</title>
+                  <title>{t("removeAriaLabel")}</title>
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>

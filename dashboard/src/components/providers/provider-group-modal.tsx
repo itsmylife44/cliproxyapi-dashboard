@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { extractApiError } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface ProviderGroup {
   id: string;
@@ -29,6 +30,7 @@ const PRESET_COLORS = [
 
 export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: ProviderGroupModalProps) {
   const { showToast } = useToast();
+  const t = useTranslations("providers");
   
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -87,11 +89,11 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
         throw new Error(extractApiError(data, `Failed to ${isEditing ? "update" : "create"} group`));
       }
 
-      showToast(`Group ${isEditing ? "updated" : "created"} successfully`, "success");
+      showToast(isEditing ? t("toastGroupUpdatedSuccess") : t("toastGroupCreatedSuccess"), "success");
       onSuccess();
       onClose();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "An error occurred", "error");
+      showToast(error instanceof Error ? error.message : t("errorGroupSave"), "error");
     } finally {
       setSaving(false);
     }
@@ -100,7 +102,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <ModalHeader>
-        <ModalTitle>{group ? "Edit Provider Group" : "Create Provider Group"}</ModalTitle>
+        <ModalTitle>{group ? t("providerGroupEditTitle") : t("providerGroupCreateTitle")}</ModalTitle>
       </ModalHeader>
       
       <form onSubmit={handleSubmit}>
@@ -108,14 +110,14 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
           <div className="space-y-6">
             <div>
               <label htmlFor="groupName" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
-                Group Name <span className="text-red-600">*</span>
+                {t("providerGroupNameLabel")} <span className="text-red-600">*</span>
               </label>
               <Input
                 id="groupName"
                 name="groupName"
                 value={name}
                 onChange={setName}
-                placeholder="e.g. Production Models"
+                placeholder={t("providerGroupNamePlaceholder")}
                 required
                 disabled={saving}
               />
@@ -123,7 +125,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
             
             <div>
               <label className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
-                Color (Optional)
+                {t("providerGroupColorLabel")}
               </label>
               <div className="flex flex-wrap gap-2">
                 {PRESET_COLORS.map(color => (
@@ -134,7 +136,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
                     disabled={saving}
                     className={`w-7 h-7 rounded-full border-2 transition-[border-color,transform] ${selectedColor === color ? "border-black scale-110" : "border-transparent hover:border-[var(--surface-border)]"} disabled:opacity-50 disabled:cursor-not-allowed`}
                     style={{ backgroundColor: color }}
-                    aria-label={`Select color ${color}`}
+                    aria-label={t("providerGroupSelectColor", { color })}
                   />
                 ))}
                 
@@ -144,7 +146,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
                   onClick={() => setSelectedColor(null)} 
                   disabled={saving}
                   className={`w-7 h-7 rounded-full border-2 border-dashed flex items-center justify-center text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${selectedColor === null ? "border-black text-[var(--text-primary)] bg-[var(--surface-hover)]" : "border-[var(--surface-border)] text-[var(--text-muted)] hover:border-[var(--surface-border)]"}`}
-                  aria-label="No color"
+                  aria-label={t("providerGroupNoColor")}
                 >
                   ✕
                 </button>
@@ -160,13 +162,13 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
             onClick={handleClose} 
             disabled={saving}
           >
-            Cancel
+            {t("providerGroupCancelButton")}
           </Button>
           <Button 
             type="submit" 
             disabled={saving || !name.trim()}
           >
-            {saving ? "Saving..." : group ? "Save Changes" : "Create Group"}
+            {saving ? t("providerGroupSavingButton") : group ? t("providerGroupSaveChanges") : t("providerGroupCreateButton")}
           </Button>
         </ModalFooter>
       </form>

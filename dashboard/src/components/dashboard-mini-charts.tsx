@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   AreaChart,
   Area,
@@ -70,12 +71,14 @@ export function DashboardMiniCharts() {
     fetchData();
   }, []);
 
+  const t = useTranslations("common");
+
   if (!data || data.daily.length < 2) return null;
 
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
       <MiniSparkCard
-        label="Requests (7d)"
+        label={`${t("requests")} (7d)`}
         value={formatCompact(data.totalRequests)}
         data={data.daily}
         dataKey="requests"
@@ -83,7 +86,7 @@ export function DashboardMiniCharts() {
         gradientId="reqGrad"
       />
       <MiniSparkCard
-        label="Tokens (7d)"
+        label={`${t("tokens")} (7d)`}
         value={formatCompact(data.totalTokens)}
         data={data.daily}
         dataKey="tokens"
@@ -91,7 +94,7 @@ export function DashboardMiniCharts() {
         gradientId="tokGrad"
       />
       <MiniSparkCard
-        label="Success Rate (7d)"
+        label={`${t("successRate")} (7d)`}
         value={`${data.successRate.toFixed(1)}%`}
         data={data.daily}
         dataKey="successRate"

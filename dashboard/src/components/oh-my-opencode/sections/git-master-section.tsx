@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { GitMasterConfig, OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 
 interface GitMasterSectionProps {
@@ -11,11 +12,11 @@ interface GitMasterSectionProps {
 
 const GIT_MASTER_FIELDS: ReadonlyArray<{
   field: keyof GitMasterConfig;
-  label: string;
+  labelKey: string;
   defaultValue: boolean;
 }> = [
-  { field: "commit_footer", label: "Commit Footer", defaultValue: false },
-  { field: "include_co_authored_by", label: "Include Co-Authored-By", defaultValue: false },
+  { field: "commit_footer", labelKey: "commitFooter", defaultValue: false },
+  { field: "include_co_authored_by", labelKey: "includeCoAuthoredBy", defaultValue: false },
 ];
 
 export function GitMasterSection({
@@ -24,6 +25,8 @@ export function GitMasterSection({
   overrides,
   onGitMasterToggle,
 }: GitMasterSectionProps) {
+  const t = useTranslations("ohMyOpenCode");
+
   return (
     <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-muted)] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
@@ -45,15 +48,15 @@ export function GitMasterSection({
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        <span className="flex-1 text-left">Git Master</span>
+        <span className="flex-1 text-left">{t("gitMaster")}</span>
       </button>
       {isExpanded && (
         <div className="px-3 pb-3 space-y-1">
-          {GIT_MASTER_FIELDS.map(({ field, label, defaultValue }) => {
+          {GIT_MASTER_FIELDS.map(({ field, labelKey, defaultValue }) => {
             const isEnabled = overrides.git_master?.[field] ?? defaultValue;
             return (
               <div key={field} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)]">
-                <span className="text-xs text-[var(--text-secondary)] font-mono">{label}</span>
+                <span className="text-xs text-[var(--text-secondary)] font-mono">{t(labelKey as never)}</span>
                 <button
                   type="button"
                   onClick={() => onGitMasterToggle(field)}

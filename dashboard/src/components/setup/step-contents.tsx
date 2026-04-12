@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useTranslations } from "next-intl";
 
 interface CreatedKey {
   id: string;
@@ -39,12 +40,12 @@ function SpinnerIcon() {
 }
 
 export function Step1Content({ done }: { done: boolean }) {
+  const t = useTranslations("setupWizard");
   if (done) return null;
   return (
     <div className="mt-3 space-y-3">
       <p className="text-sm text-[var(--text-muted)]">
-        Open the Providers page in a new tab to add your first provider. This
-        wizard will automatically detect when a provider is connected.
+        {t('step1Description')}
       </p>
       <a
         href="/dashboard/providers"
@@ -52,7 +53,7 @@ export function Step1Content({ done }: { done: boolean }) {
         rel="noopener noreferrer"
         className="inline-block text-xs px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md border glass-button-primary"
       >
-        Open Providers
+        {t('step1OpenProviders')}
       </a>
     </div>
   );
@@ -66,6 +67,7 @@ interface Step2ContentProps {
 
 export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
   const { showToast } = useToast();
+  const t = useTranslations("setupWizard");
   const [keyName, setKeyName] = useState("default");
   const [submitting, setSubmitting] = useState(false);
   const [createdKey, setCreatedKey] = useState<CreatedKey | null>(null);
@@ -84,7 +86,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
       });
       if (!res.ok) {
         const body = (await res.json()) as { error?: string };
-        showToast(body.error ?? "Failed to create API key", "error");
+        showToast(body.error ?? t('step2ToastCreateFailed'), "error");
         return;
       }
       const body = (await res.json()) as {
@@ -98,9 +100,9 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
       const created: CreatedKey = { id: body.id, key: body.key, name: body.name };
       setCreatedKey(created);
       onCreated(created);
-      showToast("API key created successfully", "success");
+      showToast(t('step2ToastCreateSuccess'), "success");
     } catch {
-      showToast("Network error -- please try again", "error");
+      showToast(t('step2ToastNetworkError'), "error");
     } finally {
       setSubmitting(false);
     }
@@ -126,7 +128,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
   if (locked) {
     return (
       <div className="mt-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-muted)]">
-        Complete Step 1 first to unlock this step.
+        {t('step2Locked')}
       </div>
     );
   }
@@ -135,7 +137,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
     return (
       <div className="mt-3 space-y-2">
         <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
-          Copy your API key now -- it will not be shown again.
+          {t('step2ApiKeyWarning')}
         </div>
         <div className="flex items-center gap-2 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]/60 px-3 py-2">
           <code className="flex-1 truncate font-mono text-xs text-[var(--text-primary)]">
@@ -147,11 +149,11 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
             className="flex flex-shrink-0 items-center gap-1 rounded border border-[var(--surface-border)]/60 bg-[var(--surface-muted)]/70 px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]/80 hover:text-[var(--text-primary)]"
           >
             <CopyIcon />
-            {copied ? "Copied" : "Copy"}
+            {copied ? t('step2Copied') : t('step2Copy')}
           </button>
         </div>
         <p className="text-xs text-[var(--text-muted)]">
-          Key name: <span className="text-[var(--text-secondary)]">{createdKey.name}</span>
+          {t('step2KeyNameLabel')} <span className="text-[var(--text-secondary)]">{createdKey.name}</span>
         </p>
       </div>
     );
@@ -165,7 +167,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
             name="api-key-name"
             value={keyName}
             onChange={setKeyName}
-            placeholder="My API Key"
+            placeholder={t('step2PlaceholderName')}
             disabled={submitting}
           />
         </div>
@@ -175,11 +177,11 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
           disabled={submitting || !keyName.trim()}
           onClick={() => void handleCreate()}
         >
-          {submitting ? "Creating..." : "Create API Key"}
+          {submitting ? t('step2Creating') : t('step2CreateKey')}
         </Button>
       </div>
       <p className="text-xs text-[var(--text-muted)]">
-        Give your key a memorable name, then click Create.
+        {t('step2Hint')}
       </p>
     </div>
   );
@@ -193,12 +195,13 @@ interface Step3ContentProps {
 }
 
 export function Step3Content({ done, locked, modelCount, statusLoaded }: Step3ContentProps) {
+  const t = useTranslations("setupWizard");
   if (done) return null;
 
   if (locked) {
     return (
       <div className="mt-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-muted)]">
-        Complete the previous steps first to unlock this step.
+        {t('step3Locked')}
       </div>
     );
   }
@@ -207,7 +210,7 @@ export function Step3Content({ done, locked, modelCount, statusLoaded }: Step3Co
     return (
       <div className="mt-3 flex items-center gap-2 text-sm text-[var(--text-muted)]">
         <SpinnerIcon />
-        Checking model catalog...
+        {t('step3CheckingCatalog')}
       </div>
     );
   }
@@ -216,7 +219,7 @@ export function Step3Content({ done, locked, modelCount, statusLoaded }: Step3Co
     return (
       <div className="mt-3 flex items-center gap-2 text-sm text-[var(--text-muted)]">
         <SpinnerIcon />
-        Waiting for models to become available...
+        {t('step3WaitingModels')}
       </div>
     );
   }

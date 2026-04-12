@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,16 @@ const ALERT_PROVIDERS = [
   { key: "github-copilot", label: "Copilot" },
   { key: "kimi", label: "Kimi" },
 ] as const;
+
+const ALERT_PROVIDER_LABEL_KEYS: Record<string, string> = {
+  "claude": "providerClaude",
+  "antigravity": "providerAntigravity",
+  "gemini-cli": "providerGeminiCli",
+  "gemini": "providerGemini",
+  "codex": "providerCodex",
+  "github-copilot": "providerCopilot",
+  "kimi": "providerKimi",
+};
 
 interface CheckAlertResult {
   checked?: boolean;
@@ -62,6 +73,8 @@ export function QuotaAlerts() {
   const [testing, setTesting] = useState(false);
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState<CheckAlertResult | null>(null);
+
+  const t = useTranslations("quotaAlerts");
 
   useEffect(() => {
     if (authLoading) return;
@@ -115,7 +128,7 @@ export function QuotaAlerts() {
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        showToast("Telegram settings saved", "success");
+        showToast(t("toastSettingsSaved"), "success");
         const refreshRes = await fetch(API_ENDPOINTS.ADMIN.TELEGRAM);
         if (refreshRes.ok) {
           const refreshData = await refreshRes.json();
@@ -136,7 +149,7 @@ export function QuotaAlerts() {
         showToast(msg, "error");
       }
     } catch {
-      showToast("Failed to save settings", "error");
+      showToast(t("toastFailedToSave"), "error");
     } finally {
       setSaving(false);
     }
@@ -151,14 +164,14 @@ export function QuotaAlerts() {
         body: JSON.stringify({}),
       });
       if (res.ok) {
-        showToast("Test message sent! Check your Telegram.", "success");
+        showToast(t("toastTestSent"), "success");
       } else {
         const errData = await res.json();
         const msg = errData?.error?.message ?? errData?.error ?? "Test failed";
         showToast(msg, "error");
       }
     } catch {
-      showToast("Failed to send test message", "error");
+      showToast(t("toastTestFailed"), "error");
     } finally {
       setTesting(false);
     }
@@ -182,14 +195,14 @@ export function QuotaAlerts() {
       const data = await res.json();
       setCheckResult(data);
       if (data.skipped) {
-        showToast(`Check skipped: ${data.reason}`, "info");
+        showToast(t("toastCheckSkipped", { reason: data.reason }), "info");
       } else if (data.breachedCount > 0) {
-        showToast(`Alert sent for ${data.breachedCount} account(s)`, "success");
+        showToast(t("toastAlertSent", { count: data.breachedCount }), "success");
       } else {
-        showToast("All accounts above threshold", "success");
+        showToast(t("toastAllAboveThreshold"), "success");
       }
     } catch {
-      showToast("Failed to check alerts", "error");
+      showToast(t("toastCheckFailed"), "error");
     } finally {
       setChecking(false);
     }
@@ -200,8 +213,8 @@ export function QuotaAlerts() {
   return (
     <section className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
       <div>
-        <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">Telegram Alerts</h2>
-        <p className="mt-0.5 text-xs text-[var(--text-muted)]">Get notified when quota drops below a threshold.</p>
+        <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">{t("sectionTitle")}</h2>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t("sectionDescription")}</p>
       </div>
 
       <div className="space-y-3">
@@ -225,11 +238,11 @@ export function QuotaAlerts() {
               )}
             />
           </button>
-            <span className="text-xs text-[var(--text-secondary)]">Enable alerts</span>
+            <span className="text-xs text-[var(--text-secondary)]">{t("enableAlertsLabel")}</span>
         </label>
 
         <div className="space-y-1">
-          <label htmlFor="tg-bot-token" className="text-xs font-medium text-[var(--text-muted)]">Bot Token</label>
+          <label htmlFor="tg-bot-token" className="text-xs font-medium text-[var(--text-muted)]">{t("botTokenLabel")}</label>
           <div className="flex gap-2">
             <Input
               type={showToken ? "text" : "password"}
@@ -244,25 +257,25 @@ export function QuotaAlerts() {
               onClick={() => setShowToken((v) => !v)}
               className="shrink-0 px-2 text-xs"
             >
-              {showToken ? "Hide" : "Show"}
+              {showToken ? t("buttonHide") : t("buttonShow")}
             </Button>
           </div>
-          <p className="text-[10px] text-[var(--text-muted)]">Create a bot via @BotFather on Telegram</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{t("botTokenHint")}</p>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="tg-chat-id" className="text-xs font-medium text-[var(--text-muted)]">Chat ID</label>
+          <label htmlFor="tg-chat-id" className="text-xs font-medium text-[var(--text-muted)]">{t("chatIdLabel")}</label>
           <Input
             name="tg-chat-id"
             value={settings.chatId}
             onChange={(v) => setSettings((s) => ({ ...s, chatId: v }))}
             placeholder="-1001234567890"
           />
-          <p className="text-[10px] text-[var(--text-muted)]">Your Telegram user/group ID. Use @userinfobot to find it</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{t("chatIdHint")}</p>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="tg-threshold" className="text-xs font-medium text-[var(--text-muted)]">Threshold %</label>
+          <label htmlFor="tg-threshold" className="text-xs font-medium text-[var(--text-muted)]">{t("thresholdLabel")}</label>
           <Input
             type="number"
             name="tg-threshold"
@@ -277,11 +290,11 @@ export function QuotaAlerts() {
             }}
             placeholder="20"
           />
-          <p className="text-[10px] text-[var(--text-muted)]">Alert when any account drops below this capacity</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{t("thresholdHint")}</p>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="tg-check-interval" className="text-xs font-medium text-[var(--text-muted)]">Check Interval (minutes)</label>
+          <label htmlFor="tg-check-interval" className="text-xs font-medium text-[var(--text-muted)]">{t("checkIntervalLabel")}</label>
           <Input
             type="number"
             name="tg-check-interval"
@@ -296,11 +309,11 @@ export function QuotaAlerts() {
             }}
             placeholder="5"
           />
-          <p className="text-[10px] text-[var(--text-muted)]">How often to check quota levels (1-1440 min, default: 5)</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{t("checkIntervalHint")}</p>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="tg-cooldown" className="text-xs font-medium text-[var(--text-muted)]">Cooldown (minutes)</label>
+          <label htmlFor="tg-cooldown" className="text-xs font-medium text-[var(--text-muted)]">{t("cooldownLabel")}</label>
           <Input
             type="number"
             name="tg-cooldown"
@@ -315,11 +328,11 @@ export function QuotaAlerts() {
             }}
             placeholder="60"
           />
-          <p className="text-[10px] text-[var(--text-muted)]">Minimum time between notifications (1-1440 min, default: 60)</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{t("cooldownHint")}</p>
         </div>
 
         <div className="space-y-1.5">
-          <p className="text-xs font-medium text-[var(--text-muted)]">Monitored Providers</p>
+          <p className="text-xs font-medium text-[var(--text-muted)]">{t("monitoredProviders")}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1.5">
             {ALERT_PROVIDERS.map((provider) => {
               const isChecked = settings.providers.includes(provider.key);
@@ -338,17 +351,17 @@ export function QuotaAlerts() {
                     }}
                     className="size-3.5 rounded border-[var(--surface-border)] bg-[var(--surface-muted)] text-blue-500 focus:ring-blue-500/30 focus:ring-offset-0"
                   />
-                  <span className="text-xs text-[var(--text-secondary)]">{provider.label}</span>
+                  <span className="text-xs text-[var(--text-secondary)]">{t(ALERT_PROVIDER_LABEL_KEYS[provider.key] as Parameters<typeof t>[0])}</span>
                 </label>
               );
             })}
           </div>
-          <p className="text-[10px] text-[var(--text-muted)]">Only selected providers will trigger alerts</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{t("monitoredProvidersHint")}</p>
         </div>
 
         <div className="flex flex-wrap gap-2 pt-1">
           <Button onClick={handleSave} disabled={saving} className="text-xs">
-            {saving ? "Saving..." : "Save"}
+            {saving ? t("buttonSaving") : t("buttonSave")}
           </Button>
           <Button
             variant="secondary"
@@ -356,7 +369,7 @@ export function QuotaAlerts() {
             disabled={testing || !hasSavedConfig}
             className="text-xs"
           >
-            {testing ? "Sending..." : "Send Test"}
+            {testing ? t("buttonSending") : t("buttonSendTest")}
           </Button>
           <Button
             variant="secondary"
@@ -364,7 +377,7 @@ export function QuotaAlerts() {
             disabled={checking || !hasSavedConfig}
             className="text-xs"
           >
-            {checking ? "Checking..." : "Check Now"}
+            {checking ? t("buttonChecking") : t("buttonCheckNow")}
           </Button>
         </div>
 

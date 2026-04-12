@@ -1,9 +1,11 @@
 "use client";
 
 import { useMobileSidebar } from "@/components/mobile-sidebar-context";
+import { useTranslations } from "next-intl";
 
 export function MobileTopBar() {
   const { isOpen, toggle } = useMobileSidebar();
+  const t = useTranslations('mobile');
 
   return (
     <div className="fixed left-0 right-0 top-0 z-30 border-b border-[var(--surface-border)] glass-nav lg:hidden">
@@ -12,7 +14,7 @@ export function MobileTopBar() {
           type="button"
           onClick={toggle}
           className="rounded-md p-2 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--surface-hover)]"
-          aria-label="Toggle menu"
+          aria-label={t('toggleMenuAriaLabel')}
           aria-expanded={isOpen}
         >
           <svg
@@ -34,13 +36,13 @@ export function MobileTopBar() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/icon.png"
-            alt="CLIProxy Logo"
+            alt={t('logoAlt')}
             width={22}
             height={24}
             className="rounded-sm"
           />
           <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
-            CLIProxy
+            {t('appName')}
           </h1>
         </div>
       </div>

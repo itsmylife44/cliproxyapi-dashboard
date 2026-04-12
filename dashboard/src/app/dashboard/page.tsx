@@ -13,6 +13,7 @@ import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extrac
 import type { ConfigData } from "@/lib/config-generators/shared";
 import { resolveOwnedByDisplay } from "@/lib/providers/model-grouping";
 import { LazyDashboardMiniCharts } from "@/components/lazy-dashboard-mini-charts";
+import { getTranslations } from 'next-intl/server';
 
 interface ManagementFetchParams {
   path: string;
@@ -104,6 +105,8 @@ function buildProvidersMap(proxyModels: { id: string; owned_by: string }[]): Map
 }
 
 export default async function QuickStartPage() {
+  const t = await getTranslations('dashboard');
+
   const [config, isHealthy, oauthData, session] = await Promise.all([
     fetchManagementJson({ path: "config" }),
     getServiceHealth(),
@@ -213,7 +216,7 @@ export default async function QuickStartPage() {
   const modelSourceMap = buildSourceMap(proxyModels);
   const modelProvidersMap = buildProvidersMap(proxyModels);
   for (const aliasId of oauthAliasIds) {
-    modelSourceMap.set(aliasId, "OAuth Alias");
+    modelSourceMap.set(aliasId, t('modelSourceOAuthAlias'));
     const existing = modelProvidersMap.get(aliasId) ?? [];
     if (!existing.includes("OAuth Alias")) {
       modelProvidersMap.set(aliasId, [...existing, "OAuth Alias"]);
@@ -245,22 +248,22 @@ export default async function QuickStartPage() {
   }
   const setupItems = [
     {
-      label: "Provider connected",
+      label: t('setupProviderConnectedLabel'),
       done: providerCount > 0,
       link: "/dashboard/providers",
-      linkLabel: "Providers",
+      linkLabel: t('setupProviderConnectedLink'),
     },
     {
-      label: "API key created",
+      label: t('setupApiKeyCreatedLabel'),
       done: apiKeys.length > 0,
       link: "/dashboard/api-keys",
-      linkLabel: "API Keys",
+      linkLabel: t('setupApiKeyCreatedLink'),
     },
     {
-      label: "Model catalog available",
+      label: t('setupModelCatalogLabel'),
       done: availableModelIds.length > 0,
       link: "/dashboard/providers",
-      linkLabel: "Verify providers",
+      linkLabel: t('setupModelCatalogLink'),
     },
   ];
   const completedSetupItems = setupItems.filter((item) => item.done).length;
@@ -272,28 +275,28 @@ export default async function QuickStartPage() {
   }
   const statusCards = [
     {
-      label: "Service",
-      value: isHealthy ? "Online" : "Offline",
+      label: t('statusServiceLabel'),
+      value: isHealthy ? t('statusOnline') : t('statusOffline'),
       tone: isHealthy ? "text-emerald-600" : "text-rose-600",
       icon: "●",
       iconTone: isHealthy ? "text-emerald-700" : "text-rose-600",
     },
     {
-      label: "Providers",
-      value: `${providerCount} configured`,
+      label: t('statusProvidersLabel'),
+      value: t('statusProvidersValue', { count: providerCount }),
       tone: "text-[var(--text-primary)]",
       icon: "◆",
       iconTone: "text-blue-600",
     },
     {
-      label: "API Keys",
-      value: `${apiKeys.length} active`,
+      label: t('statusApiKeysLabel'),
+      value: t('statusApiKeysValue', { count: apiKeys.length }),
       tone: "text-[var(--text-primary)]",
       icon: "♟",
       iconTone: "text-amber-700",
     },
     {
-      label: "Proxy URL",
+      label: t('statusProxyUrlLabel'),
       value: getProxyUrl(),
       tone: "text-[var(--text-primary)]",
       icon: "◈",
@@ -307,7 +310,7 @@ export default async function QuickStartPage() {
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Quick Start</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('quickStartTitle')}</h1>
             <p className="mt-1 text-sm text-[var(--text-muted)]">
               Configure providers, generate client config, and validate access from one place.
             </p>
@@ -317,19 +320,19 @@ export default async function QuickStartPage() {
               href="/dashboard/providers"
               className="rounded-md border border-[var(--surface-border)]/80 bg-[var(--surface-muted)]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]/80"
             >
-              Providers
+              {t('navProviders')}
             </Link>
             <Link
               href="/dashboard/api-keys"
               className="rounded-md border border-[var(--surface-border)]/80 bg-[var(--surface-muted)]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]/80"
             >
-              API Keys
+              {t('navApiKeys')}
             </Link>
             <Link
               href="/dashboard/settings"
               className="rounded-md border border-[var(--surface-border)]/80 bg-[var(--surface-muted)]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]/80"
             >
-              Settings
+              {t('navSettings')}
             </Link>
           </div>
         </div>
@@ -373,8 +376,8 @@ export default async function QuickStartPage() {
         <details className="group/details rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Publisher / Subscriber</p>
-              <p className="text-xs text-[var(--text-muted)]">Share your config template or subscribe to another user.</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{t('publisherSubscriberTitle')}</p>
+              <p className="text-xs text-[var(--text-muted)]">{t('publisherSubscriberDescription')}</p>
             </div>
             <svg className="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 group-open/details:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
           </summary>
@@ -389,8 +392,8 @@ export default async function QuickStartPage() {
         <details className="group/details rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Integrations</p>
-              <p className="text-xs text-[var(--text-muted)]">Reference setup snippets for external clients.</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{t('integrationsTitle')}</p>
+              <p className="text-xs text-[var(--text-muted)]">{t('integrationsDescription')}</p>
             </div>
             <svg className="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 group-open/details:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
           </summary>
@@ -407,9 +410,9 @@ export default async function QuickStartPage() {
                 Replace <code className="break-all rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-blue-600">your-api-key</code> with
                 your key from the{" "}
                 <Link href="/dashboard/api-keys" className="font-medium text-blue-600 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-800">
-                  API Keys
+                  {t('claudeCodeApiKeysLink')}
                 </Link>{" "}
-                page.
+                {t('claudeCodePageSuffix')}
               </p>
               <CopyBlock code={getClaudeCodeEnv()} />
             </div>

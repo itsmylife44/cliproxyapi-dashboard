@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslations } from "next-intl";
 
 function SunIcon() {
   return (
@@ -48,6 +49,7 @@ function MoonIcon() {
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
+  const t = useTranslations("common");
   const isDark = theme === "dark";
 
   return (
@@ -55,7 +57,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       data-testid="theme-toggle"
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={isDark ? t("switchToLightMode") : t("switchToDarkMode")}
       className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors"
     >
       {isDark ? <SunIcon /> : <MoonIcon />}

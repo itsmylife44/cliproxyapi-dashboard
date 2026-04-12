@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { HookGroupName } from "@/lib/config-generators/oh-my-opencode-types";
 import { HOOK_GROUPS } from "@/lib/config-generators/oh-my-opencode-types";
 
@@ -20,6 +21,8 @@ export function HooksSection({
   onHookToggle,
   onHookGroupToggle,
 }: HooksSectionProps) {
+  const t = useTranslations("ohMyOpenCode");
+
   return (
     <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-muted)] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
@@ -41,9 +44,9 @@ export function HooksSection({
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        <span className="flex-1 text-left">Hooks</span>
+        <span className="flex-1 text-left">{t("hooks")}</span>
         <span className="px-1.5 py-0.5 rounded-md bg-[var(--surface-muted)] text-[var(--text-muted)] text-[10px] font-mono">
-          {disabledHooks.length} disabled
+          {t("disabledCount", { count: disabledHooks.length })}
         </span>
       </button>
       {isExpanded && (
@@ -72,7 +75,7 @@ export function HooksSection({
                   >
                     <polyline points="9 18 15 12 9 6" />
                   </svg>
-                  {groupName} ({disabledCount}/{hooks.length} disabled)
+                  {groupName} {t("hookGroupStats", { disabled: disabledCount, total: hooks.length })}
                 </button>
                 {isGroupExpanded && (
                   <div className="space-y-1 pl-4 mt-1">

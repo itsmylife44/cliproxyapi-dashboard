@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const router = useRouter();
+  const t = useTranslations("auth");
 
   useEffect(() => {
     fetch(API_ENDPOINTS.SETUP.BASE)
@@ -43,7 +45,7 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error?.message ?? data.error ?? "Login failed");
+        setError(data.error?.message ?? data.error ?? t("loginFailed"));
         setLoading(false);
         return;
       }
@@ -51,17 +53,17 @@ export default function LoginPage() {
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Network error. Please try again.");
+      setError(t("networkError"));
       setLoading(false);
     }
   };
 
   if (!ready) {
     return (
-      <main id="main-content" className="flex min-h-screen items-center justify-center px-4" aria-busy="true" aria-label="Loading">
+      <main id="main-content" className="flex min-h-screen items-center justify-center px-4" aria-busy="true" aria-label={t("ariaLabelLoading")}>
         <PublicThemeToggle />
         <div className="w-full max-w-sm">
-          <span className="sr-only">Loading login page…</span>
+          <span className="sr-only">{t("loadingLoginPage")}</span>
           <div className="mb-6 text-center">
             <div className="mx-auto mb-3 h-12 w-12 rounded-xl bg-[var(--surface-muted)] animate-pulse" />
             <div className="mx-auto h-7 w-40 rounded bg-[var(--surface-muted)] animate-pulse" />
@@ -96,16 +98,16 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
-            CLIProxyAPI
+            {t('appName')}
           </h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">Sign in to your dashboard</p>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">{t('signInTitle')}</p>
         </div>
 
          <div className="glass-card rounded-2xl p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="username" className="mb-2 block text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
-                Username
+                {t('usernameLabel')}
               </label>
               <Input
                 type="text"
@@ -119,7 +121,7 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="password" className="mb-2 block text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
-                Password
+                {t('passwordLabel')}
               </label>
               <Input
                 type="password"
@@ -138,13 +140,13 @@ export default function LoginPage() {
             )}
 
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Signing in\u2026" : "Sign in"}
+              {loading ? t("signingIn") : t("signIn")}
             </Button>
           </form>
         </div>
 
         <p className="mt-6 text-center text-xs text-[var(--text-muted)]">
-          CLIProxyAPI Management Dashboard
+          {t('footerText')}
         </p>
       </div>
     </main>

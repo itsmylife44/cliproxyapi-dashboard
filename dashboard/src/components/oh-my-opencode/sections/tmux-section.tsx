@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { OhMyOpenCodeFullConfig, TmuxConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { TMUX_LAYOUTS } from "@/lib/config-generators/oh-my-opencode-types";
 
@@ -20,6 +21,8 @@ export function TmuxSection({
   onTmuxLayoutChange,
   onTmuxNumberChange,
 }: TmuxSectionProps) {
+  const t = useTranslations("ohMyOpenCode");
+
   return (
     <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-muted)] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
@@ -41,17 +44,17 @@ export function TmuxSection({
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        <span className="flex-1 text-left">Tmux</span>
+        <span className="flex-1 text-left">{t("tmux")}</span>
         {overrides.tmux?.enabled && (
           <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600/80 text-[10px] font-mono">
-            enabled
+            {t("tmuxEnabled")}
           </span>
         )}
       </button>
       {isExpanded && (
         <div className="px-3 pb-3 space-y-2">
           <div className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)]">
-            <span className="text-xs text-[var(--text-secondary)] font-mono">Enabled</span>
+            <span className="text-xs text-[var(--text-secondary)] font-mono">{t("tmuxEnabledLabel")}</span>
             <button
               type="button"
               onClick={onTmuxEnabledToggle}
@@ -69,7 +72,7 @@ export function TmuxSection({
           {overrides.tmux?.enabled && (
             <>
               <div className="space-y-1">
-                <span className="text-xs text-[var(--text-muted)]">Layout</span>
+                <span className="text-xs text-[var(--text-muted)]">{t("tmuxLayout")}</span>
                 <select
                   value={overrides.tmux.layout ?? "main-vertical"}
                   onChange={(e) => onTmuxLayoutChange(e.target.value)}
@@ -83,7 +86,7 @@ export function TmuxSection({
                 </select>
               </div>
               <div className="space-y-1">
-                <span className="text-xs text-[var(--text-muted)]">Main Pane Size (20-80)</span>
+                <span className="text-xs text-[var(--text-muted)]">{t("mainPaneSize")}</span>
                 <input
                   type="number"
                   min={20}
@@ -99,7 +102,7 @@ export function TmuxSection({
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-xs text-[var(--text-muted)]">Main Pane Min Width</span>
+                <span className="text-xs text-[var(--text-muted)]">{t("mainPaneMinWidth")}</span>
                 <input
                   type="number"
                   min={0}
@@ -114,7 +117,7 @@ export function TmuxSection({
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-xs text-[var(--text-muted)]">Agent Pane Min Width</span>
+                <span className="text-xs text-[var(--text-muted)]">{t("agentPaneMinWidth")}</span>
                 <input
                   type="number"
                   min={0}

@@ -1,17 +1,18 @@
 "use client";
 
 import type { SlimAgentConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
+import { useTranslations } from 'next-intl';
 
 /**
  * Known skills available for oh-my-opencode-slim agents.
  * These are installed via `bunx oh-my-opencode-slim@latest install --skills=yes`
  */
-const KNOWN_SKILLS = [
-  { id: "*", label: "All skills", description: "Enable every available skill" },
-  { id: "simplify", label: "Simplify", description: "YAGNI code simplification" },
-  { id: "cartography", label: "Cartography", description: "Repository codemap generation" },
-  { id: "agent-browser", label: "Agent Browser", description: "Browser automation for designer" },
-] as const;
+const KNOWN_SKILLS: Array<{ id: string; labelKey: string; descKey: string }> = [
+  { id: "*", labelKey: "skillAllLabel", descKey: "skillAllDesc" },
+  { id: "simplify", labelKey: "skillSimplifyLabel", descKey: "skillSimplifyDesc" },
+  { id: "cartography", labelKey: "skillCartographyLabel", descKey: "skillCartographyDesc" },
+  { id: "agent-browser", labelKey: "skillAgentBrowserLabel", descKey: "skillAgentBrowserDesc" },
+];
 
 interface AgentSkillsSectionProps {
   agentName: string;
@@ -20,6 +21,7 @@ interface AgentSkillsSectionProps {
 }
 
 export function AgentSkillsSection({ agentName, config, onSkillsChange }: AgentSkillsSectionProps) {
+  const t = useTranslations('ohMyOpenCode');
   const currentSkills = config.skills ?? [];
   const hasWildcard = currentSkills.includes("*");
 
@@ -73,7 +75,7 @@ export function AgentSkillsSection({ agentName, config, onSkillsChange }: AgentS
             key={skill.id}
             type="button"
             onClick={() => toggleSkill(skill.id)}
-            title={`${skill.description}${excluded ? " (excluded)" : ""}`}
+            title={`${t(skill.descKey)}${excluded ? ` ${t("skillExcluded")}` : ""}`}
             className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors ${
               enabled
                 ? "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-primary)]"
@@ -83,7 +85,7 @@ export function AgentSkillsSection({ agentName, config, onSkillsChange }: AgentS
             }`}
           >
             <span className={`inline-block w-1.5 h-1.5 rounded-full ${enabled ? "bg-emerald-500/100" : excluded ? "bg-red-400" : "bg-[var(--surface-border)]"}`} />
-            {skill.label}
+            {t(skill.labelKey)}
           </button>
         );
       })}

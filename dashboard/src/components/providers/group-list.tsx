@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ProviderRow } from "@/components/providers/provider-row";
 import type { CustomProvider, ProviderGroup } from "@/components/providers/custom-provider-section";
@@ -33,6 +34,8 @@ export function GroupList({
   onMoveProviderUp,
   onMoveProviderDown,
 }: GroupListProps) {
+  const t = useTranslations("providers");
+
   return (
     <>
       {groups.map((group, groupIndex) => {
@@ -65,7 +68,7 @@ export function GroupList({
                   onClick={() => onToggleGroupActive(group.id, group.isActive)}
                   className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-sm transition-colors ${group.isActive ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15' : 'bg-[var(--surface-border)] text-[var(--text-muted)] hover:bg-[var(--surface-border)]'}`}
                 >
-                  {group.isActive ? "Active" : "Disabled"}
+                  {group.isActive ? t("statusActive") : t("groupStatusDisabled")}
                 </button>
 
                 <div className="flex items-center gap-0.5">
@@ -74,7 +77,7 @@ export function GroupList({
                     onClick={() => onMoveGroupUp(group.id, groupIndex)}
                     disabled={groupIndex === 0}
                     className="text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30 p-1"
-                    title="Move Group Up"
+                    title={t("moveGroupUp")}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
                   </button>
@@ -83,7 +86,7 @@ export function GroupList({
                     onClick={() => onMoveGroupDown(group.id, groupIndex)}
                     disabled={groupIndex === groups.length - 1}
                     className="text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30 p-1"
-                    title="Move Group Down"
+                    title={t("moveGroupDown")}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                   </button>
@@ -91,10 +94,10 @@ export function GroupList({
 
                   <div className="flex items-center gap-1 border-l border-[var(--surface-border)] pl-3">
                   <Button variant="ghost" onClick={() => onEditGroup(group)} className="px-2 py-1 text-[10px] h-auto">
-                    Edit
+                    {t("editButton")}
                   </Button>
                   <Button variant="ghost" onClick={() => onDeleteGroup(group.id)} className="px-2 py-1 text-[10px] h-auto text-red-600 hover:text-red-600 hover:bg-red-400/10">
-                    Delete
+                    {t("deleteButton")}
                   </Button>
                   <button
                     type="button"
@@ -113,16 +116,16 @@ export function GroupList({
                 <div className="min-w-[600px]">
                   {group.providers.length === 0 ? (
                     <div className="px-3 py-6 text-center text-xs text-[var(--text-muted)] italic">
-                      No providers in this group
+                      {t("noProvidersInGroup")}
                     </div>
                   ) : (
                     <>
                       <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        <span>Name</span>
-                        <span>Endpoint</span>
-                        <span>Models</span>
-                        <span>Order</span>
-                        <span className="text-right">Actions</span>
+                        <span>{t("tableHeaderName")}</span>
+                        <span>{t("tableHeaderEndpoint")}</span>
+                        <span>{t("tableHeaderModels")}</span>
+                        <span>{t("tableHeaderOrder")}</span>
+                        <span className="text-right">{t("tableHeaderActions")}</span>
                       </div>
                       {group.providers.map((provider, idx) => (
                         <ProviderRow

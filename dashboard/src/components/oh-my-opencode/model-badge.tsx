@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { groupModelsByProvider } from "@/lib/providers/model-grouping";
 
@@ -70,6 +71,7 @@ export function ModelBadge({
   extraFields,
   onFieldChange,
 }: ModelBadgeProps) {
+  const t = useTranslations('ohMyOpenCode');
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [openUp, setOpenUp] = useState(false);
@@ -158,7 +160,7 @@ export function ModelBadge({
                 ? "bg-amber-500/10 border-amber-500/20 text-amber-700/80 hover:bg-amber-500/10"
                 : "bg-[var(--surface-muted)] border-[var(--surface-border)] text-[var(--text-muted)] hover:text-[var(--text-muted)] hover:bg-[var(--surface-hover)]"
             }`}
-            title="Configure variant, temperature, and more"
+            title={t('configureTooltip')}
           >
             <svg
               aria-hidden="true"
@@ -210,7 +212,7 @@ export function ModelBadge({
             />
           </div>
           <div className="space-y-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Fallbacks</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{t('fallbacksLabel')}</p>
             <div className="flex flex-wrap gap-1">
               {(extraFields?.fallback_models ?? []).map((fm) => (
                 <span
@@ -256,7 +258,7 @@ export function ModelBadge({
           {extraFields?.supportsUltrawork && (
                 <div className="space-y-1 pt-1 border-t border-[var(--surface-border)]">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Ultrawork</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{t('ultraworkLabel')}</p>
                 {hasUltraworkValues && (
                   <button
                     type="button"
@@ -331,7 +333,7 @@ export function ModelBadge({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search models..."
+              placeholder={t('searchModelsPlaceholder')}
               className="w-full px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/20"
             />
           </div>
@@ -375,7 +377,7 @@ export function ModelBadge({
               </div>
             ))}
             {groupedFilteredModels.length === 0 && (
-              <div className="px-3 py-2 text-xs text-[var(--text-muted)]">No models found</div>
+              <div className="px-3 py-2 text-xs text-[var(--text-muted)]">{t('noModelsFound')}</div>
             )}
           </div>
         </div>

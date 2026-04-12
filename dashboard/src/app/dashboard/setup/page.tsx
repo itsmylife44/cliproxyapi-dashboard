@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { StepIndicator } from "@/components/setup/step-indicator";
@@ -22,6 +23,7 @@ interface CreatedKey {
 
 export default function SetupWizardPage() {
   const [status, setStatus] = useState<SetupStatus | null>(null);
+  const t = useTranslations("setupWizard");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [justCreatedKey, setJustCreatedKey] = useState<CreatedKey | null>(null);
@@ -30,7 +32,7 @@ export default function SetupWizardPage() {
     try {
       const res = await fetch(API_ENDPOINTS.SETUP.STATUS);
       if (!res.ok) {
-        let message = "Failed to load setup status";
+        let message = t("errorLoadStatus");
         try {
           const data = (await res.json()) as { error?: string };
           if (data.error) message = data.error;
@@ -42,7 +44,7 @@ export default function SetupWizardPage() {
       setStatus(data);
       setError(null);
     } catch {
-      setError("Network error -- retrying...");
+      setError(t("errorNetworkRetrying"));
     } finally {
       setLoading(false);
     }
@@ -67,16 +69,16 @@ export default function SetupWizardPage() {
   }, [fetchStatus, allDone]);
 
   const STEPS = [
-    { id: 1, title: "Connect a Provider", doneLabel: "Provider connected" },
-    { id: 2, title: "Create an API Key", doneLabel: "API key created" },
-    { id: 3, title: "Verify Model Catalog", doneLabel: "Models available" },
-  ] as const;
+    { id: 1, title: t("stepTitle1"), doneLabel: t("stepDone1") },
+    { id: 2, title: t("stepTitle2"), doneLabel: t("stepDone2") },
+    { id: 3, title: t("stepTitle3"), doneLabel: t("stepDone3") },
+  ];
 
   const stepDescriptions = [
-    "Add an OAuth account or configure an API key provider. Providers are the AI services that power your proxy (Claude, Gemini, Codex, and more).",
-    "Generate a personal API key. This key is what your clients (Claude Code, Gemini CLI, etc.) use to authenticate with the proxy.",
-    "Once a provider and API key are set up, the proxy exposes models automatically. This step confirms the catalog is populated and the proxy is reachable.",
-  ] as const;
+    t("stepDesc1"),
+    t("stepDesc2"),
+    t("stepDesc3"),
+  ];
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -84,10 +86,10 @@ export default function SetupWizardPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-              Setup Wizard
+              {t("title")}
             </h1>
             <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Complete these steps to get CLIProxyAPI up and running.
+              {t("subtitle")}
             </p>
           </div>
           {status && (
@@ -214,8 +216,7 @@ export default function SetupWizardPage() {
 
       {!allDone && (
         <p className="text-center text-xs text-[var(--text-muted)]">
-          This page auto-refreshes every 5 seconds. Complete steps in any tab
-          and they will appear here automatically.
+          {t("autoRefreshNote")}
         </p>
       )}
     </div>

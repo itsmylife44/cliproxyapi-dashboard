@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
 interface StatusResponse {
@@ -31,26 +32,27 @@ function formatUptime(seconds: number): string {
 }
 
 export function ServiceStatus({ status, restarting, onConfirmRestart }: ServiceStatusProps) {
+  const t = useTranslations('monitoring');
   return (
     <section className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-      <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Service Status</h2>
+      <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">{t('serviceStatusTitle')}</h2>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-[var(--text-primary)]">CLIProxyAPI</span>
+            <span className="text-sm font-medium text-[var(--text-primary)]">{t('serviceName')}</span>
             {status?.running ? (
               <span className="rounded-sm border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700">
-                RUNNING
+                {t('statusRunning')}
               </span>
             ) : (
               <span className="rounded-sm border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-xs font-medium text-rose-700">
-                STOPPED
+                {t('statusStopped')}
               </span>
             )}
           </div>
 
           {status?.uptime !== null && status?.uptime !== undefined && (
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-[var(--text-primary)]">Uptime</span>
+              <span className="text-sm font-medium text-[var(--text-primary)]">{t('uptimeLabel')}</span>
               <span className="text-sm text-[var(--text-secondary)]">{formatUptime(status.uptime)}</span>
             </div>
           )}
@@ -62,7 +64,7 @@ export function ServiceStatus({ status, restarting, onConfirmRestart }: ServiceS
                disabled={restarting}
                className="flex-1 py-2 text-sm"
              >
-               {restarting ? "Restarting..." : "Restart Service"}
+               {restarting ? t('restartingButton') : t('restartButton')}
              </Button>
            </div>
         </div>

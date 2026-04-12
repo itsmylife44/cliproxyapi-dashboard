@@ -561,7 +561,13 @@
     "lowCapacityTooltip": "Anzahl der Konten mit verbleibender Quote unter 20%",
     "providersLabel": "Anbieter",
     "refreshButton": "Aktualisieren",
-    "weightedCapacity": "Gewichtete Kapazität"
+    "weightedCapacity": "Gewichtete Kapazität",
+    "filterAll": "Alle",
+    "filterAntigravity": "Antigravity",
+    "filterClaude": "Claude",
+    "filterCodex": "Codex",
+    "filterCopilot": "Copilot",
+    "filterKimi": "Kimi"
   },
   "usage": {
     "pageTitle": "Nutzung",
@@ -575,7 +581,10 @@
     "daysAgo": "vor {count}d",
     "lastSyncedLabel": "Zuletzt synchronisiert:",
     "toastLoadFailed": "Fehler beim Laden der Nutzungsdaten",
-    "toastNetworkError": "Netzwerkfehler"
+    "toastNetworkError": "Netzwerkfehler",
+    "never": "Nie",
+    "refreshButton": "Aktualisieren",
+    "errorLoadFailed": "Nutzungsstatistiken konnten nicht geladen werden"
   },
   "monitoring": {
     "pageTitle": "Überwachung",
@@ -598,7 +607,17 @@
     "logsLoading": "Protokolle werden geladen...",
     "logsEmpty": "Keine Protokolle verfügbar",
     "closeButton": "Schließen",
-    "refreshButton": "Aktualisieren"
+    "refreshButton": "Aktualisieren",
+    "tableHeaderContainer": "Container",
+    "tableHeaderState": "Status",
+    "tableHeaderUptime": "Laufzeit",
+    "tableHeaderResources": "Ressourcen",
+    "tableHeaderActions": "Aktionen",
+    "logsButton": "Protokolle",
+    "actionStarting": "Wird gestartet...",
+    "actionStopping": "Wird gestoppt...",
+    "actionRestarting": "Wird neugestartet...",
+    "actionFailed": "Aktion fehlgeschlagen"
   },
   "config": {
     "pageTitle": "Konfiguration",
@@ -727,7 +746,12 @@
     "daysAgo": "vor {count} Tagen",
     "toastAdminRequired": "Admin-Zugriff erforderlich",
     "toastClearFailed": "Protokolle konnten nicht gelöscht werden",
-    "toastCleared": "Protokolle gelöscht"
+    "toastCleared": "Protokolle gelöscht",
+    "recentLogsTitle": "Aktuelle Protokolle",
+    "logsEmptyProxy": "Keine Protokolle verfügbar. Dateiprotokollierung ist möglicherweise in der CLIProxyAPI-Konfiguration deaktiviert.",
+    "logsEmptyProxyHint": "Prüfen Sie logging-to-file in der Konfiguration.",
+    "tipLabel": "TIPP:",
+    "tipText": "Protokolle werden vom CLIProxyAPI-Dienst abgerufen. Aktuelle Einträge werden hier angezeigt. Für vollständige Protokolle überprüfen Sie die Docker-Container-Protokolle."
   },
   "setupWizard": {
     "title": "Setup-Assistent",

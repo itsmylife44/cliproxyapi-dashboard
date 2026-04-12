@@ -116,7 +116,7 @@ export default function ContainersPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        showToast(extractApiError(data, "Action failed"), "error");
+        showToast(extractApiError(data, t("actionFailed")), "error");
       }
       const refreshRes = await fetch(API_ENDPOINTS.CONTAINERS.LIST);
       if (refreshRes.ok) {
@@ -184,11 +184,11 @@ export default function ContainersPage() {
   const getActionLoadingText = (action: string): string => {
     switch (action.toLowerCase()) {
       case "start":
-        return "Starting...";
+        return t("actionStarting");
       case "stop":
-        return "Stopping...";
+        return t("actionStopping");
       case "restart":
-        return "Restarting...";
+        return t("actionRestarting");
       default:
         return `${action}ing...`;
     }
@@ -229,11 +229,11 @@ export default function ContainersPage() {
           <div className="overflow-x-auto">
             <div className="min-w-[600px] divide-y divide-[var(--surface-border)] overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
               <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1.2fr)_80px_100px_100px_minmax(140px,auto)] border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                <span>Container</span>
-                <span>State</span>
-                <span>Uptime</span>
-                <span>Resources</span>
-                <span>Actions</span>
+                <span>{t('tableHeaderContainer')}</span>
+                <span>{t('tableHeaderState')}</span>
+                <span>{t('tableHeaderUptime')}</span>
+                <span>{t('tableHeaderResources')}</span>
+                <span>{t('tableHeaderActions')}</span>
               </div>
             {containers.map((container) => {
               const isActionLoading = actionLoading[container.name] || false;
@@ -270,7 +270,7 @@ export default function ContainersPage() {
                           onClick={() => handleViewLogs(container.name)}
                           className="px-2.5 py-1 text-xs"
                         >
-                          Logs
+                          {t('logsButton')}
                         </Button>
                       </div>
                   </div>

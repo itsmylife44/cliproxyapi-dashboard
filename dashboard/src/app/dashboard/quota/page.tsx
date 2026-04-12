@@ -267,13 +267,13 @@ export default function QuotaPage() {
   ).length;
 
   const providerFilters = [
-    { key: PROVIDERS.ALL, label: "All" },
-    { key: PROVIDERS.ANTIGRAVITY, label: "Antigravity" },
-    { key: PROVIDERS.CLAUDE, label: "Claude" },
-    { key: PROVIDERS.CODEX, label: "Codex" },
-    { key: PROVIDERS.COPILOT, label: "Copilot" },
-    { key: PROVIDERS.KIMI, label: "Kimi" },
-  ] as const;
+    { key: PROVIDERS.ALL, label: t('filterAll') },
+    { key: PROVIDERS.ANTIGRAVITY, label: t('filterAntigravity') },
+    { key: PROVIDERS.CLAUDE, label: t('filterClaude') },
+    { key: PROVIDERS.CODEX, label: t('filterCodex') },
+    { key: PROVIDERS.COPILOT, label: t('filterCopilot') },
+    { key: PROVIDERS.KIMI, label: t('filterKimi') },
+  ];
 
   const toggleCard = (accountId: string) => {
     setExpandedCards((prev) => ({ ...prev, [accountId]: !prev[accountId] }));
@@ -284,7 +284,7 @@ export default function QuotaPage() {
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Quota</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t("pageTitle")}</h1>
             <p className="mt-1 text-sm text-[var(--text-muted)]">{t("pageDescription")}</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">

@@ -148,7 +148,7 @@ export default function UsagePage() {
   const t = useTranslations("usage");
 
   function getRelativeTime(isoString: string): string {
-    if (!isoString) return "Never";
+    if (!isoString) return t('never');
     const diff = Date.now() - new Date(isoString).getTime();
     const minutes = Math.floor(diff / 60000);
     if (minutes < 1) return t("justNow");
@@ -274,7 +274,7 @@ export default function UsagePage() {
             </div>
           </div>
           <Button onClick={handleRefresh} disabled={loading}>
-            Refresh
+            {t('refreshButton')}
           </Button>
         </div>
       </section>
@@ -295,7 +295,7 @@ export default function UsagePage() {
         </div>
       ) : !usageData ? (
         <div className="rounded-md border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-700">
-          Unable to load usage statistics
+          {t('errorLoadFailed')}
         </div>
       ) : (
         <>

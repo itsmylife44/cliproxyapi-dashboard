@@ -204,10 +204,10 @@ export default function LogsPage() {
     <div className="space-y-4">
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Logs</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <Button onClick={handleRefresh} disabled={loading} className="px-2.5 py-1 text-xs">
-            Refresh
+            {t('refreshButton')}
           </Button>
           <Button onClick={confirmClear} disabled={loading} className="px-2.5 py-1 text-xs">
             {t('clearLogsButton')}
@@ -221,20 +221,20 @@ export default function LogsPage() {
         onClose={() => setShowConfirm(false)}
         onConfirm={handleClearLogs}
         title={t('clearAllLogsTitle')}
-        message="Clear all logs? This cannot be undone."
-        confirmLabel="Clear"
-        cancelLabel="Cancel"
+        message={t('clearAllLogsMessage')}
+        confirmLabel={t('clearButton')}
+        cancelLabel={t('cancelButton')}
         variant="danger"
       />
 
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Recent Logs</h2>
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">{t('recentLogsTitle')}</h2>
           {loading ? (
-            <div className="p-4 text-center text-[var(--text-muted)]">Loading logs...</div>
+            <div className="p-4 text-center text-[var(--text-muted)]">{t('loadingText')}</div>
           ) : logs.length === 0 ? (
               <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-sm text-[var(--text-muted)]">
-                No logs available. File logging may be disabled in the CLIProxyAPI configuration.
-                Check <code className="rounded bg-[var(--surface-muted)] px-1">logging-to-file</code> in config.
+                {t('logsEmptyProxy')}
+                <code className="rounded bg-[var(--surface-muted)] px-1">logging-to-file</code>
               </div>
           ) : (
             <div
@@ -260,10 +260,10 @@ export default function LogsPage() {
                 disabled={currentPage === 1}
                 className="px-2.5 py-1 text-xs"
               >
-                ← Previous
+                {t('previous')}
               </Button>
               <span className="text-xs text-[var(--text-muted)]">
-                Page {currentPage} of {totalPages}
+                {t('pageOf', { page: currentPage, total: totalPages })}
               </span>
               <Button
                 variant="ghost"
@@ -271,15 +271,14 @@ export default function LogsPage() {
                 disabled={currentPage === totalPages}
                 className="px-2.5 py-1 text-xs"
               >
-                Next →
+                {t('next')}
               </Button>
             </div>
           )}
       </section>
 
       <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-xs text-[var(--text-muted)]">
-        <strong>TIP:</strong> Logs are fetched from the CLIProxyAPI service. Recent entries are shown here.
-        For complete logs, check the Docker container logs.
+        <strong>{t('tipLabel')}</strong> {t('tipText')}
       </div>
     </div>
   );

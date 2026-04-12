@@ -561,7 +561,13 @@
     "lowCapacityTooltip": "Number of accounts with remaining quota below 20%",
     "providersLabel": "Providers",
     "refreshButton": "Refresh",
-    "weightedCapacity": "Weighted capacity"
+    "weightedCapacity": "Weighted capacity",
+    "filterAll": "All",
+    "filterAntigravity": "Antigravity",
+    "filterClaude": "Claude",
+    "filterCodex": "Codex",
+    "filterCopilot": "Copilot",
+    "filterKimi": "Kimi"
   },
   "usage": {
     "pageTitle": "Usage",
@@ -575,7 +581,10 @@
     "daysAgo": "{count}d ago",
     "lastSyncedLabel": "Last synced:",
     "toastLoadFailed": "Failed to load usage data",
-    "toastNetworkError": "Network error"
+    "toastNetworkError": "Network error",
+    "never": "Never",
+    "refreshButton": "Refresh",
+    "errorLoadFailed": "Unable to load usage statistics"
   },
   "monitoring": {
     "pageTitle": "Monitoring",
@@ -598,7 +607,17 @@
     "logsLoading": "Loading logs...",
     "logsEmpty": "No logs available",
     "closeButton": "Close",
-    "refreshButton": "Refresh"
+    "refreshButton": "Refresh",
+    "tableHeaderContainer": "Container",
+    "tableHeaderState": "State",
+    "tableHeaderUptime": "Uptime",
+    "tableHeaderResources": "Resources",
+    "tableHeaderActions": "Actions",
+    "logsButton": "Logs",
+    "actionStarting": "Starting...",
+    "actionStopping": "Stopping...",
+    "actionRestarting": "Restarting...",
+    "actionFailed": "Action failed"
   },
   "config": {
     "pageTitle": "Configuration",
@@ -727,7 +746,12 @@
     "daysAgo": "{count} days ago",
     "toastAdminRequired": "Admin access required",
     "toastClearFailed": "Failed to clear logs",
-    "toastCleared": "Logs cleared"
+    "toastCleared": "Logs cleared",
+    "recentLogsTitle": "Recent Logs",
+    "logsEmptyProxy": "No logs available. File logging may be disabled in the CLIProxyAPI configuration.",
+    "logsEmptyProxyHint": "Check logging-to-file in config.",
+    "tipLabel": "TIP:",
+    "tipText": "Logs are fetched from the CLIProxyAPI service. Recent entries are shown here. For complete logs, check the Docker container logs."
   },
   "updateOverlay": {
     "updateAvailableTitle": "Update Available",

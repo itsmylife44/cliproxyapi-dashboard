@@ -54,7 +54,7 @@ export default function AgentConfigEditor({
   return (
     <>
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <SectionHeader title="General Settings" />
+        <SectionHeader title={t("sectionGeneral")} />
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label={t("fieldProxyUrlLabel")} description={t("fieldProxyUrlDesc")}>
             <Input type="text" name="proxy-url" value={config["proxy-url"]} onChange={(value) => updateConfig("proxy-url", value)} placeholder="socks5://user:pass@host:port" className="font-mono" />
@@ -90,7 +90,7 @@ export default function AgentConfigEditor({
       </section>
 
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <SectionHeader title="Streaming" />
+        <SectionHeader title={t("sectionStreaming")} />
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label={t("fieldKeepaliveSecondsLabel")} description={t("fieldKeepaliveSecondsDesc")}>
             <Input type="number" name="keepalive-seconds" value={String(config.streaming["keepalive-seconds"])} onChange={(value) => updateStreamingConfig("keepalive-seconds", Number(value))} className="font-mono" />
@@ -105,7 +105,7 @@ export default function AgentConfigEditor({
       </section>
 
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <SectionHeader title="Retry & Resilience" />
+        <SectionHeader title={t("sectionRetry")} />
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label={t("fieldRequestRetryLabel")} description={t("fieldRequestRetryDesc")}>
             <Input type="number" name="request-retry" value={String(config["request-retry"])} onChange={(value) => updateConfig("request-retry", Number(value))} className="font-mono" />
@@ -129,7 +129,7 @@ export default function AgentConfigEditor({
       </section>
 
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <SectionHeader title="Logging" />
+        <SectionHeader title={t("sectionLogging")} />
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label={t("fieldLoggingToFileLabel")} description={t("fieldLoggingToFileDesc")}>
             <Toggle enabled={config["logging-to-file"]} onChange={(value) => updateConfig("logging-to-file", value)} />
@@ -147,9 +147,9 @@ export default function AgentConfigEditor({
       </section>
 
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <SectionHeader title="TLS / HTTPS" />
+        <SectionHeader title={t("sectionTls")} />
         <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-muted)] p-3 text-xs text-[var(--text-muted)]">
-          TLS is typically handled by Caddy reverse proxy. Only configure this for direct TLS termination.
+          {t("tlsNotice")}
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label={t("fieldEnableTlsLabel")} description={t("fieldEnableTlsDesc")}>
@@ -165,7 +165,7 @@ export default function AgentConfigEditor({
       </section>
 
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <SectionHeader title="Kiro" />
+        <SectionHeader title={t("sectionKiro")} />
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label={t("fieldKiroEndpointLabel")} description={t("fieldKiroEndpointDesc")}>
             <Input type="text" name="kiro-preferred-endpoint" value={config["kiro-preferred-endpoint"] ?? ""} onChange={(value) => updateConfig("kiro-preferred-endpoint", value)} placeholder="https://..." className="font-mono" />
@@ -174,8 +174,8 @@ export default function AgentConfigEditor({
       </section>
 
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <SectionHeader title="Claude Header Defaults" />
-        <p className="text-xs text-[var(--text-muted)]">Custom headers sent with all Claude API requests</p>
+        <SectionHeader title={t("sectionClaudeHeaderDefaults")} />
+        <p className="text-xs text-[var(--text-muted)]">{t("claudeHeaderDesc")}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label={t("fieldUserAgentLabel")} description={t("fieldUserAgentDesc")}>
             <Input type="text" name="claude-header-user-agent" value={config["claude-header-defaults"]?.["user-agent"] ?? ""} onChange={(value) => updateClaudeHeaderDefaults("user-agent", value)} className="font-mono" />
@@ -193,8 +193,8 @@ export default function AgentConfigEditor({
       </section>
 
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <SectionHeader title="Amp Code" />
-        <p className="text-xs text-[var(--text-muted)]">Configuration for Amp Code upstream integration</p>
+        <SectionHeader title={t("sectionAmpCode")} />
+        <p className="text-xs text-[var(--text-muted)]">{t("ampCodeDesc")}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label={t("fieldAmpUpstreamUrlLabel")} description={t("fieldAmpUpstreamUrlDesc")}>
             <Input type="text" name="ampcode-upstream-url" value={config.ampcode?.["upstream-url"] ?? ""} onChange={(value) => updateAmpcodeConfig("upstream-url", value)} className="font-mono" />
@@ -212,9 +212,9 @@ export default function AgentConfigEditor({
       </section>
 
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <SectionHeader title="Profiling (pprof)" />
+        <SectionHeader title={t("sectionPprof")} />
         <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-muted)] p-3 text-xs text-[var(--text-muted)]">
-          Go runtime profiling. Only enable for debugging.
+          {t("pprofNotice")}
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <ConfigField label={t("fieldEnablePprofLabel")} description={t("fieldEnablePprofDesc")}>
@@ -227,11 +227,11 @@ export default function AgentConfigEditor({
       </section>
 
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <SectionHeader title="OAuth Model Aliases" />
-        <p className="text-xs text-[var(--text-muted)]">Override model names for OAuth providers. Each provider has a list of model name mappings.</p>
+        <SectionHeader title={t("sectionOAuthAliases")} />
+        <p className="text-xs text-[var(--text-muted)]">{t("oauthAliasesDesc")}</p>
         <div className="space-y-3">
           {Object.keys(config["oauth-model-alias"] ?? {}).length === 0 && (
-            <p className="text-xs text-[var(--text-muted)] italic">No OAuth model aliases configured.</p>
+            <p className="text-xs text-[var(--text-muted)] italic">{t("oauthNoAliases")}</p>
           )}
           {Object.entries(config["oauth-model-alias"] ?? {}).map(([provider, entries]) => (
             <div key={provider} className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)]">
@@ -242,7 +242,7 @@ export default function AgentConfigEditor({
               >
                 <span>{provider}</span>
                 <span className="text-[var(--text-muted)] text-xs">
-                  {entries.length} {entries.length === 1 ? "alias" : "aliases"}
+                  {entries.length} {entries.length === 1 ? t("aliasesSingular") : t("aliasesPlural")}
                   <span className="ml-2">{expandedProviders[provider] ? "\u25B2" : "\u25BC"}</span>
                 </span>
               </button>
@@ -250,9 +250,9 @@ export default function AgentConfigEditor({
                 <div className="border-t border-[var(--surface-border)] p-4 space-y-3">
                   {entries.length > 0 && (
                     <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide pb-1 border-b border-[var(--surface-border)]/30">
-                      <span>Name</span>
-                      <span>Alias</span>
-                      <span>Fork</span>
+                      <span>{t("oauthColumnName")}</span>
+                      <span>{t("oauthColumnAlias")}</span>
+                      <span>{t("oauthColumnFork")}</span>
                       <span></span>
                     </div>
                   )}
@@ -265,7 +265,7 @@ export default function AgentConfigEditor({
                         type="button"
                         onClick={() => removeOAuthAliasEntry(provider, index)}
                         className="flex size-6 items-center justify-center rounded text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                        title="Remove entry"
+                        title={t("removeEntryTitle")}
                       >
                         <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
                           <path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z" />
@@ -291,8 +291,8 @@ export default function AgentConfigEditor({
       </section>
 
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <SectionHeader title="Payload Manipulation" />
-        <p className="text-xs text-[var(--text-muted)]">Override or filter request payloads sent to upstream providers. Values are JSON.</p>
+        <SectionHeader title={t("sectionPayload")} />
+        <p className="text-xs text-[var(--text-muted)]">{t("payloadDesc")}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           {(["default", "default-raw", "override", "override-raw", "filter"] as const).map((key) => (
             <ConfigField

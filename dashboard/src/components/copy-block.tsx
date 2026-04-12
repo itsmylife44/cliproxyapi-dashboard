@@ -42,7 +42,7 @@ export function CopyBlock({ code }: CopyBlockProps) {
       <button
         type="button"
         onClick={handleCopy}
-        aria-label={copied ? "Copied to clipboard" : "Copy to clipboard"}
+        aria-label={copied ? t("copiedToClipboard") : t("copyToClipboard")}
         className="absolute top-3 right-3 px-3 py-1.5 text-xs font-medium rounded-lg border transition-[color,background-color,border-color,transform] duration-200 bg-[var(--surface-base)] border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] active:scale-95"
       >
         {copied ? (

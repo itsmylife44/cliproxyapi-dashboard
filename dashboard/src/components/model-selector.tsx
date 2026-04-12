@@ -213,7 +213,7 @@ export function ModelSelector({
               <polyline points="9 18 15 12 9 6" />
             </svg>
             <span className="text-sm font-semibold text-[var(--text-primary)]">
-              Model Selection <HelpTooltip content="Deselect models to exclude them from your config. Excluded models won't appear in opencode.json or be assigned to agents." />
+              {t("title")} <HelpTooltip content={t("tooltip")} />
             </span>
             {isLocked && (
               <span className="text-amber-600" title={t("lockedBySubscription")}>
@@ -223,7 +223,7 @@ export function ModelSelector({
           </button>
 
           <span className="px-2 py-0.5 rounded-full bg-[var(--surface-hover)] text-xs text-[var(--text-muted)]">
-            {selectedCount} of {availableModels.length} selected
+            {t("selectedCount", { selected: selectedCount, total: availableModels.length })}
           </span>
         </div>
 
@@ -234,7 +234,7 @@ export function ModelSelector({
         ) : (
           <>
             {saveStatus === SAVE_STATUS.SAVING && (
-              <span className="text-xs text-[var(--text-muted)]">Saving...</span>
+              <span className="text-xs text-[var(--text-muted)]">{t("saving")}</span>
             )}
             {saveStatus === SAVE_STATUS.SAVED && (
               <span className="flex items-center gap-1 text-xs text-green-600">
@@ -323,7 +323,7 @@ export function ModelSelector({
                       </svg>
                       {group.provider}
                       <span className="px-2 py-0.5 rounded-full bg-[var(--surface-hover)] text-xs font-normal text-[var(--text-muted)]">
-                        {groupSelectedCount}/{groupTotalCount} selected
+                        {t("groupSelectedCount", { selected: groupSelectedCount, total: groupTotalCount })}
                       </span>
                     </button>
                     {isExpanded && (

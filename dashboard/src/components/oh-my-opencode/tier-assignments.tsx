@@ -3,6 +3,7 @@
 import type { AgentConfigEntry, CategoryConfigEntry } from "@/lib/config-generators/oh-my-opencode-types";
 
 import { ModelBadge, TIER_META, type ModelBadgeFieldValue } from "@/components/oh-my-opencode/model-badge";
+import { useTranslations } from 'next-intl';
 
 interface TierAssignmentItem<TConfig> {
   name: string;
@@ -35,6 +36,7 @@ export function TierAssignments({
   onCategoryModelChange,
   onCategoryFieldChange,
 }: TierAssignmentsProps) {
+  const t = useTranslations('ohMyOpenCode');
   const agentOverrideCount = agentAssignments.filter((item) => item.isOverride).length;
   const categoryOverrideCount = categoryAssignments.filter((item) => item.isOverride).length;
 
@@ -43,9 +45,9 @@ export function TierAssignments({
       {agentAssignments.length > 0 && (
         <div className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)] p-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">Agent Assignments</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t("agentAssignments")}</p>
             <p className="text-[11px] text-[var(--text-muted)]">
-              {agentOverrideCount}/{agentAssignments.length} custom
+              {agentOverrideCount}/{agentAssignments.length} {t("custom")}
             </p>
           </div>
           {[1, 2, 3, 4].map((tier) => {
@@ -73,11 +75,11 @@ export function TierAssignments({
                         <div className="flex items-center gap-1.5">
                           <p className="truncate text-xs font-semibold text-[var(--text-primary)] font-mono">{name}</p>
                           {isUnresolved && (
-                            <span className="text-amber-500 text-xs" title="Model not available — select a different model">⚠️</span>
+                            <span className="text-amber-500 text-xs" title={t("modelNotAvailableTooltip")}>⚠️</span>
                           )}
                         </div>
                         <p className={`truncate text-[11px] ${isUnresolved ? "text-amber-500" : "text-[var(--text-muted)]"}`}>
-                          {isUnresolved ? "Model unavailable" : label}
+                          {isUnresolved ? t("modelUnavailable") : label}
                         </p>
                       </div>
                       <ModelBadge
@@ -93,7 +95,7 @@ export function TierAssignments({
                           temperature: config.temperature,
                           thirdField: config.prompt_append,
                           thirdFieldKey: "prompt_append",
-                          thirdFieldPlaceholder: "prompt append",
+                          thirdFieldPlaceholder: t("promptAppendPlaceholder"),
                           fallback_models: config.fallback_models,
                           supportsUltrawork: true,
                           ultrawork: config.ultrawork,
@@ -112,9 +114,9 @@ export function TierAssignments({
       {categoryAssignments.length > 0 && (
         <div className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)] p-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">Category Assignments</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t("categoryAssignments")}</p>
             <p className="text-[11px] text-[var(--text-muted)]">
-              {categoryOverrideCount}/{categoryAssignments.length} custom
+              {categoryOverrideCount}/{categoryAssignments.length} {t("custom")}
             </p>
           </div>
           {[1, 2, 3, 4].map((tier) => {
@@ -142,11 +144,11 @@ export function TierAssignments({
                         <div className="flex items-center gap-1.5">
                           <p className="truncate text-xs font-semibold text-[var(--text-primary)] font-mono">{name}</p>
                           {isUnresolved && (
-                            <span className="text-amber-500 text-xs" title="Model not available — select a different model">⚠️</span>
+                            <span className="text-amber-500 text-xs" title={t("modelNotAvailableTooltip")}>⚠️</span>
                           )}
                         </div>
                         <p className={`truncate text-[11px] ${isUnresolved ? "text-amber-500" : "text-[var(--text-muted)]"}`}>
-                          {isUnresolved ? "Model unavailable" : label}
+                          {isUnresolved ? t("modelUnavailable") : label}
                         </p>
                       </div>
                       <ModelBadge
@@ -162,7 +164,7 @@ export function TierAssignments({
                           temperature: config.temperature,
                           thirdField: config.description,
                           thirdFieldKey: "description",
-                          thirdFieldPlaceholder: "description",
+                          thirdFieldPlaceholder: t("descriptionPlaceholder"),
                           fallback_models: config.fallback_models,
                         }}
                         onFieldChange={(field, value) => {

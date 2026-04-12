@@ -93,7 +93,7 @@ export function QuickStartConfigSection({
           <CardTitle>
             <span className="flex items-center gap-3">
              <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] text-sm text-[var(--text-secondary)]" aria-hidden="true">&#9654;</span>
-               Using with OpenCode
+               {t("usingWithOpenCode")}
             </span>
           </CardTitle>
         </CardHeader>
@@ -101,9 +101,9 @@ export function QuickStartConfigSection({
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-secondary)]">
               {hasSyncActive ? (
-                <span>Config auto-syncs via <code className="rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-blue-600">opencode-cliproxyapi-sync@latest</code> plugin.</span>
+                <span>{t("configAutoSyncsPrefix")} <code className="rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-blue-600">opencode-cliproxyapi-sync@latest</code> {t("configAutoSyncsSuffix")}</span>
               ) : (
-                <span>Place at <code className="break-all rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-amber-700">~/.config/opencode/opencode.json</code> or project root.</span>
+                <span>{t("placeAtPrefix")} <code className="break-all rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-amber-700">~/.config/opencode/opencode.json</code> {t("placeAtSuffix")}</span>
               )}
             </p>
 
@@ -135,17 +135,17 @@ export function QuickStartConfigSection({
             <div className="space-y-1.5 text-sm text-[var(--text-secondary)]">
               <p className="flex items-start gap-2">
                 <span className="text-[var(--text-secondary)]">•</span>
-                <span>Add providers via <Link href="/dashboard/providers" className="font-medium text-blue-600 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-800">Providers</Link></span>
+                <span>{t("addProvidersPrefix")} <Link href="/dashboard/providers" className="font-medium text-blue-600 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-800">{t("addProvidersLink")}</Link></span>
               </p>
               <p className="flex items-start gap-2">
                 <span className="text-[var(--text-secondary)]">•</span>
-                <span>Set default model: <code className="break-all rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-amber-700">cliproxyapi/model-name</code></span>
+                <span>{t("setDefaultModel")} <code className="break-all rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-amber-700">cliproxyapi/model-name</code></span>
               </p>
             </div>
 
             <div className="flex items-start gap-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-3">
               <p className="text-sm text-[var(--text-secondary)]">
-                Auto-sync: Get token in <Link href="/dashboard/settings" className="font-medium text-blue-600 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-800">Settings</Link>, install <code className="rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-blue-600">opencode-cliproxyapi-sync@latest</code>
+                {t("autoSyncPrefix")} <Link href="/dashboard/settings" className="font-medium text-blue-600 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-800">{t("autoSyncSettings")}</Link>{t("autoSyncMiddle")} <code className="rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-blue-600">opencode-cliproxyapi-sync@latest</code>
               </p>
             </div>
            </div>
@@ -160,7 +160,7 @@ export function QuickStartConfigSection({
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                 <span className="flex items-center gap-3 text-sm font-semibold text-[var(--text-primary)]">
                   <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] text-sm text-[var(--text-secondary)]" aria-hidden="true">&#9654;</span>
-                  Advanced Config: Oh-My-Open-Agent Assignments
+                  {t("advancedConfigNormal")}
                 </span>
                 <span className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-muted)] transition-transform duration-200 group-open/details:rotate-180">&#8964;</span>
               </summary>
@@ -187,7 +187,7 @@ export function QuickStartConfigSection({
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                 <span className="flex items-center gap-3 text-sm font-semibold text-[var(--text-primary)]">
                   <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] text-sm text-[var(--text-secondary)]" aria-hidden="true">&#9654;</span>
-                  Advanced Config: Oh-My-OpenCode Slim Assignments
+                  {t("advancedConfigSlim")}
                 </span>
                 <span className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-muted)] transition-transform duration-200 group-open/details:rotate-180">&#8964;</span>
               </summary>

@@ -214,13 +214,13 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
     return (
       <div className="space-y-3">
         <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 rounded-r-xl">
-          <div className="text-sm font-medium text-[var(--text-primary)] mb-1">API Key Required</div>
-          <p className="text-sm text-[var(--text-secondary)]">Create an API key to generate your slim configuration.</p>
+          <div className="text-sm font-medium text-[var(--text-primary)] mb-1">{t("apiKeyRequiredTitle")}</div>
+          <p className="text-sm text-[var(--text-secondary)]">{t("apiKeyRequiredDesc")}</p>
           <Link
             href="/dashboard/api-keys"
             className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] text-[var(--text-primary)] text-sm font-medium hover:bg-[var(--surface-hover)] transition-colors"
           >
-            Create API Key →
+            {t("createApiKeyLink")}
           </Link>
         </div>
       </div>
@@ -231,14 +231,14 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
     return (
       <div className="space-y-4">
         <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 text-sm rounded-r-xl">
-          <p className="text-[var(--text-primary)] font-medium mb-1">No providers configured</p>
+          <p className="text-[var(--text-primary)] font-medium mb-1">{t("noProvidersTitle")}</p>
           <p className="text-[var(--text-muted)] text-xs">
-            Configure at least one AI provider before generating a slim config. Head to{" "}
+            {t("noProvidersDesc")}{" "}
             <Link
               href="/dashboard/providers"
               className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[var(--surface-border)]"
             >
-              Providers
+              {t("noProvidersLink")}
             </Link>
             .
           </p>
@@ -308,9 +308,8 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
   return (
     <div className="space-y-4">
       <p className="text-sm text-[var(--text-secondary)]">
-        Slim uses 6 specialized agents (orchestrator, oracle, designer, explorer, librarian, fixer) with a dedicated fallback system.
-        Changes save automatically.
-        {saving && <span className="ml-2 text-amber-700/70 text-xs">Saving...</span>}
+        {t("description")}
+        {saving && <span className="ml-2 text-amber-700/70 text-xs">{t("saving")}</span>}
       </p>
 
       <SlimTierAssignments

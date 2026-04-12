@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { BROWSER_PROVIDERS } from "@/lib/config-generators/oh-my-opencode-types";
 
@@ -16,6 +17,8 @@ export function BrowserSection({
   overrides,
   onBrowserProviderChange,
 }: BrowserSectionProps) {
+  const t = useTranslations("ohMyOpenCode");
+
   return (
     <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-muted)] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
@@ -37,11 +40,11 @@ export function BrowserSection({
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        <span className="flex-1 text-left">Browser Automation</span>
+        <span className="flex-1 text-left">{t("browserAutomation")}</span>
       </button>
       {isExpanded && (
         <div className="px-3 pb-3 space-y-1">
-          <span className="text-xs text-[var(--text-muted)]">Provider</span>
+          <span className="text-xs text-[var(--text-muted)]">{t("providerLabel")}</span>
           <select
             value={overrides.browser_automation_engine?.provider ?? "playwright"}
             onChange={(e) => onBrowserProviderChange(e.target.value)}

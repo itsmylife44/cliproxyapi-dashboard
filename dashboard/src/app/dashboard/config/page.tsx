@@ -532,13 +532,13 @@ export default function ConfigPage() {
     return (
       <div className="space-y-4">
         <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4">
-          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Configuration</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
         </section>
         <div className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6">
           <div className="flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
               <div className="size-8 animate-spin rounded-full border-4 border-[#ddd] border-t-blue-500"></div>
-              <p className="text-[var(--text-muted)]">Loading configuration...</p>
+              <p className="text-[var(--text-muted)]">{t('loadingConfigText')}</p>
             </div>
           </div>
         </div>
@@ -574,12 +574,12 @@ export default function ConfigPage() {
     return (
       <div className="space-y-4">
         <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4">
-          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Configuration</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
         </section>
         <div className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6 text-center space-y-4">
-          <p className="text-[var(--text-secondary)]">Failed to load configuration</p>
+          <p className="text-[var(--text-secondary)]">{t('errorTitle')}</p>
           <p className="text-xs text-[var(--text-muted)]">
-            This can happen if an invalid proxy URL was configured, preventing CLIProxyAPI from responding.
+            {t('failedToLoadDescription')}
           </p>
           <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
             <Button onClick={fetchConfig} className="px-2.5 py-1 text-xs">
@@ -604,9 +604,9 @@ export default function ConfigPage() {
       <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Configuration</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
             <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Configure system settings, streaming, retry behavior, and logging.
+              {t('settingsDescription')}
             </p>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
@@ -629,7 +629,7 @@ export default function ConfigPage() {
       </section>
 
       <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-700">
-        <strong>Warning:</strong>{" "}
+        <strong>{t('warning')}</strong>{" "}
         <span>
           {t('warningText')}
         </span>
@@ -656,8 +656,7 @@ export default function ConfigPage() {
       <ConfigPreview rawJson={rawJson} />
 
       <div className="rounded-sm border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4 text-xs text-[var(--text-muted)]">
-        <strong>TIP:</strong> Changes are saved immediately to the management API. The service may need to be
-        restarted for some configuration changes to take effect.
+        <strong>{t('tip')}</strong> {t('tipText')}
       </div>
 
       <ConfirmDialog

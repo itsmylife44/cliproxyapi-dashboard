@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -20,12 +21,14 @@ export function ExcludedModels({
   onRemoveExcludedModel,
   onUpdateExcludedModel,
 }: ExcludedModelsProps) {
+  const t = useTranslations("providers");
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <label htmlFor="excludedModels" className="text-sm font-semibold text-[var(--text-primary)]">Excluded Models (Optional)</label>
+        <label htmlFor="excludedModels" className="text-sm font-semibold text-[var(--text-primary)]">{t("excludedModelsLabel")}</label>
         <Button variant="ghost" onClick={onAddExcludedModel} className="px-3 py-1.5 text-xs" disabled={saving}>
-          + Add Exclusion
+          {t("addExclusionButton")}
         </Button>
       </div>
       {excludedModels.length > 0 && (
@@ -37,7 +40,7 @@ export function ExcludedModels({
                 name={`excluded-${idx}`}
                 value={pattern}
                 onChange={(val) => onUpdateExcludedModel(idx, val)}
-                placeholder="gpt-4-* or specific-model"
+                placeholder={t("excludedModelPlaceholder")}
                 disabled={saving}
                 className="flex-1"
               />
@@ -49,7 +52,7 @@ export function ExcludedModels({
         </div>
       )}
       {excludedModels.length === 0 && (
-        <p className="text-xs text-[var(--text-muted)]">Supports wildcards: gpt-4, claude-*, *-mini</p>
+        <p className="text-xs text-[var(--text-muted)]">{t("excludedModelsHint")}</p>
       )}
     </div>
   );

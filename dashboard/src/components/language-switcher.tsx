@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { supportedLocales, localeNames, type Locale } from "@/i18n/config";
 
 export function LanguageSwitcher() {
   const router = useRouter();
   const currentLocale = useLocale() as Locale;
+  const t = useTranslations("common");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLanguageChange = async (newLocale: Locale) => {
@@ -37,7 +38,7 @@ export function LanguageSwitcher() {
   return (
     <div className="border-t border-[#e5e5e5] px-6 py-3 mt-3">
       <label className="block text-xs font-medium text-[#777169] mb-2">
-        Language
+        {t("language")}
       </label>
       <select
         value={currentLocale}

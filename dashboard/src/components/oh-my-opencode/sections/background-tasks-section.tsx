@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { BackgroundTaskConfig, OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 
 interface ConcurrencyRow {
@@ -37,6 +38,8 @@ export function BackgroundTasksSection({
   onModelConcurrencyAdd,
   onModelConcurrencyRemove,
 }: BackgroundTasksSectionProps) {
+  const t = useTranslations("ohMyOpenCode");
+
   return (
     <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-muted)] overflow-hidden transition-colors hover:border-[var(--surface-border)]">
       <button
@@ -58,12 +61,12 @@ export function BackgroundTasksSection({
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        <span className="flex-1 text-left">Background Tasks</span>
+        <span className="flex-1 text-left">{t("backgroundTasks")}</span>
       </button>
       {isExpanded && (
         <div className="px-3 pb-3 space-y-2">
           <div className="space-y-1">
-            <span className="text-xs text-[var(--text-muted)]">Default Concurrency</span>
+            <span className="text-xs text-[var(--text-muted)]">{t("defaultConcurrency")}</span>
             <input
               type="number"
               min={1}
@@ -78,7 +81,7 @@ export function BackgroundTasksSection({
             />
           </div>
           <div className="space-y-1">
-            <span className="text-xs text-[var(--text-muted)]">Stale Timeout (ms)</span>
+            <span className="text-xs text-[var(--text-muted)]">{t("staleTimeout")}</span>
             <input
               type="number"
               min={60000}
@@ -94,20 +97,20 @@ export function BackgroundTasksSection({
           </div>
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--text-muted)]">Provider Concurrency</span>
+              <span className="text-xs text-[var(--text-muted)]">{t("providerConcurrency")}</span>
               <button
                 type="button"
                 onClick={onProviderConcurrencyAdd}
                 className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               >
-                + Add
+                {t("addItem")}
               </button>
             </div>
             {providerConcurrencyRows.map((row, idx) => (
               <div key={row._id} className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Provider"
+                  placeholder={t("providerPlaceholder")}
                   value={row.key}
                   onChange={(e) => onProviderConcurrencyChange(idx, "key", e.target.value)}
                   className="flex-1 px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]/20"
@@ -129,27 +132,27 @@ export function BackgroundTasksSection({
                   onClick={() => onProviderConcurrencyRemove(idx)}
                   className="text-xs text-red-500 hover:text-red-600"
                 >
-                  Remove
+                  {t("removeItem")}
                 </button>
               </div>
             ))}
           </div>
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--text-muted)]">Model Concurrency</span>
+              <span className="text-xs text-[var(--text-muted)]">{t("modelConcurrency")}</span>
               <button
                 type="button"
                 onClick={onModelConcurrencyAdd}
                 className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               >
-                + Add
+                {t("addItem")}
               </button>
             </div>
             {modelConcurrencyRows.map((row, idx) => (
               <div key={row._id} className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Model"
+                  placeholder={t("modelPlaceholder")}
                   value={row.key}
                   onChange={(e) => onModelConcurrencyChange(idx, "key", e.target.value)}
                   className="flex-1 px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]/20"
@@ -171,7 +174,7 @@ export function BackgroundTasksSection({
                   onClick={() => onModelConcurrencyRemove(idx)}
                   className="text-xs text-red-500 hover:text-red-600"
                 >
-                  Remove
+                  {t("removeItem")}
                 </button>
               </div>
             ))}

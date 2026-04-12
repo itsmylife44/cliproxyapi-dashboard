@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 interface PluginSectionProps {
   plugins: string[];
   pluginInput: string;
@@ -15,10 +17,11 @@ export function PluginSection({
   onAddPlugin,
   onRemovePlugin,
 }: PluginSectionProps) {
+  const t = useTranslations("openCodeConfig");
   return (
     <div className="space-y-2">
       <label htmlFor="plugin-input" className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-        Plugins
+        {t("pluginsTitle")}
       </label>
       <div className="flex gap-2">
         <input
@@ -32,7 +35,7 @@ export function PluginSection({
               onAddPlugin();
             }
           }}
-          placeholder="plugin-name@version"
+          placeholder={t("pluginNamePlaceholder")}
           className="flex-1 bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] font-mono placeholder:text-[var(--text-muted)] focus:border-[var(--accent)]/20 focus:bg-[var(--surface-base)] focus:outline-none transition-colors"
         />
         <button
@@ -40,7 +43,7 @@ export function PluginSection({
           onClick={onAddPlugin}
           className="px-4 py-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] text-[var(--text-primary)] text-sm font-medium hover:bg-[var(--surface-hover)] hover:border-[var(--surface-border)] transition-colors"
         >
-          Add
+          {t("addPlugin")}
         </button>
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -54,10 +57,10 @@ export function PluginSection({
               type="button"
               onClick={() => onRemovePlugin(plugin)}
               className="hover:text-red-600 transition-colors"
-              aria-label={`Remove ${plugin}`}
+              aria-label={`${t("removePlugin")} ${plugin}`}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <title>Remove</title>
+                <title>{t("removePlugin")}</title>
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>

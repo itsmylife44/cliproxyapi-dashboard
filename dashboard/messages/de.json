@@ -21,7 +21,12 @@
     "switchToDarkMode": "Zum Dunkelmodus wechseln",
     "requests": "Anfragen",
     "tokens": "Token",
-    "successRate": "Erfolgsquote"
+    "successRate": "Erfolgsquote",
+    "loadingDashboard": "Dashboard wird geladen",
+    "loadingDashboardContent": "Dashboard-Inhalt wird geladen…",
+    "breadcrumbAriaLabel": "Brotkrümelnavigation",
+    "savedAriaLabel": "Gespeichert",
+    "notificationsAriaLabel": "Benachrichtigungen"
   },
   "nav": {
     "sectionGeneral": "Allgemein",
@@ -285,7 +290,12 @@
     "toastTokenCopied": "Token in Zwischenablage kopiert",
     "toastTokenCopyFailed": "Fehler beim Kopieren des Tokens",
     "toastSessionsRevoked": "Alle Sitzungen widerrufen",
-    "toastSessionsRevokeFailed": "Fehler beim Widerrufen der Sitzungen"
+    "toastSessionsRevokeFailed": "Fehler beim Widerrufen der Sitzungen",
+    "errorUpdateFailed": "Aktualisierung fehlgeschlagen",
+    "errorGenerateTokenFailed": "Token konnte nicht generiert werden",
+    "errorRevokeTokenFailed": "Token konnte nicht widerrufen werden",
+    "errorUpdateApiKeyFailed": "API-Schlüssel konnte nicht aktualisiert werden",
+    "errorRevokeSessionsFailed": "Sitzungen konnten nicht widerrufen werden"
   },
   "apiKeys": {
     "pageTitle": "API-SchlÃ¼ssel",
@@ -582,6 +592,9 @@
     "noAccountsConnected": "Noch keine OAuth-Konten verbunden. Verbinden Sie unten Ihr erstes Konto.",
     "statusError": "Fehler",
     "statusDisabled": "Deaktiviert",
+    "tokenValidTooltip": "Token ist gültig und funktioniert",
+    "accountErrorTooltip": "Konto hat einen Fehler",
+    "accountDisabledTooltip": "Konto ist deaktiviert",
     "claimButton": "Beanspruchen",
     "enableButton": "Aktivieren",
     "disableButton": "Deaktivieren",
@@ -640,7 +653,12 @@
     "discoveryManualHint": "Oder Modellzuordnungen manuell unten hinzufügen",
     "customProvidersTitle": "Benutzerdefinierte Anbieter",
     "noCustomProviders": "Keine benutzerdefinierten Anbieter konfiguriert",
-    "oauthAccountsTitle": "OAuth-Konten"
+    "oauthAccountsTitle": "OAuth-Konten",
+    "errorUpdateAccountFailed": "Konto konnte nicht aktualisiert werden",
+    "errorOAuthFailed": "OAuth-Autorisierung fehlgeschlagen.",
+    "errorOwnershipClaimFailed": "OAuth-Eigentumsübertragung konnte nicht abgeschlossen werden.",
+    "errorRelayCallbackFailed": "OAuth-Callback-URL konnte nicht weitergeleitet werden.",
+    "errorImportCredentialFailed": "Anmeldedaten konnten nicht importiert werden."
   },
   "quota": {
     "pageTitle": "Kontingent-Verwaltung",
@@ -673,7 +691,9 @@
     "accountColumn": "Konto",
     "providerColumn": "Anbieter",
     "statusColumn": "Status",
-    "unknown": "Unbekannt"
+    "unknown": "Unbekannt",
+    "longTermLabel": "Langfristig",
+    "shortTermLabel": "Kurzfristig"
   },
   "usage": {
     "pageTitle": "Nutzung",
@@ -1221,7 +1241,7 @@
     "thresholdHint": "Benachrichtigung, wenn ein Konto unter diese KapazitÃ¤t fÃ¤llt",
     "checkIntervalLabel": "PrÃ¼fintervall (Minuten)",
     "checkIntervalHint": "Wie oft KontingentstÃ¤nde geprÃ¼ft werden (1-1440 Min., Standard: 5)",
-    "cooldownLabel": "AbkÃ¼hlung (Minuten)",
+    "cooldownLabel": "Abkühlzeit (Minuten)",
     "cooldownHint": "Mindestzeit zwischen Benachrichtigungen (1-1440 Min., Standard: 60)",
     "monitoredProviders": "Ãœberwachte Anbieter",
     "monitoredProvidersHint": "Nur ausgewÃ¤hlte Anbieter lÃ¶sen Benachrichtigungen aus",
@@ -1415,7 +1435,8 @@
     "pluginsTitle": "Plugins",
     "pluginNamePlaceholder": "plugin-name@version",
     "addPlugin": "Hinzufügen",
-    "removePlugin": "Entfernen"
+    "removePlugin": "Entfernen",
+    "errorSaveConfigFailed": "Konfiguration konnte nicht gespeichert werden"
   },
   "ohMyOpenCode": {
     "apiKeyRequiredTitle": "API-SchlÃ¼ssel erforderlich",
@@ -1533,7 +1554,9 @@
     "tier4Hint": "Visuell und kreativ",
     "fallbacksLabel": "Fallbacks",
     "ultraworkLabel": "Ultrawork",
-    "noModelsFound": "Keine Modelle gefunden"
+    "noModelsFound": "Keine Modelle gefunden",
+    "searchModelsPlaceholder": "Modelle suchen...",
+    "configureTooltip": "Variante, Temperatur und mehr konfigurieren"
   },
   "ohMyOpenCodeSlim": {
     "apiKeyRequiredTitle": "API-SchlÃ¼ssel erforderlich",

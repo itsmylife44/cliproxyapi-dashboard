@@ -38,7 +38,7 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
   const t = useTranslations('common');
   return (
     <nav
-      aria-label="Breadcrumb"
+      aria-label={t('breadcrumbAriaLabel')}
       className={cn("flex items-center gap-1.5 text-sm text-[var(--text-muted)] mb-4", className)}
     >
       <ol className="flex items-center gap-1.5">

@@ -40,6 +40,7 @@ export function ModelSelector({
   isLocked = false,
 }: ModelSelectorProps) {
   const t = useTranslations("modelSelector");
+  const tCommon = useTranslations("common");
   const [excludedModels, setExcludedModels] = useState<Set<string>>(
     () => new Set(initialExcludedModels)
   );
@@ -247,7 +248,7 @@ export function ModelSelector({
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  aria-label="Saved"
+                  aria-label={tCommon("savedAriaLabel")}
                 >
                   <title>{t("saved")}</title>
                   <polyline points="20 6 9 17 4 12" />

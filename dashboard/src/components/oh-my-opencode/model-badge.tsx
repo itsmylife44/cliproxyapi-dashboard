@@ -160,7 +160,7 @@ export function ModelBadge({
                 ? "bg-amber-500/10 border-amber-500/20 text-amber-700/80 hover:bg-amber-500/10"
                 : "bg-[var(--surface-muted)] border-[var(--surface-border)] text-[var(--text-muted)] hover:text-[var(--text-muted)] hover:bg-[var(--surface-hover)]"
             }`}
-            title="Configure variant, temperature, and more"
+            title={t('configureTooltip')}
           >
             <svg
               aria-hidden="true"
@@ -333,7 +333,7 @@ export function ModelBadge({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search models..."
+              placeholder={t('searchModelsPlaceholder')}
               className="w-full px-2.5 py-1.5 text-xs bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/20"
             />
           </div>

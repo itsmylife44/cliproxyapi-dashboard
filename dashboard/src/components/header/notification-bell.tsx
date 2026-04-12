@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { Notification, NotificationType } from "@/hooks/use-header-notifications";
@@ -87,6 +88,7 @@ function NotificationDropdown({
   onClose: () => void;
   onDismiss: (id: string) => void;
 }) {
+  const t = useTranslations("common");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -117,7 +119,7 @@ function NotificationDropdown({
     <div
       ref={dropdownRef}
       role="menu"
-      aria-label="Notifications"
+      aria-label={t("notificationsAriaLabel")}
       className="fixed z-[9999] w-80 overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] shadow-[rgba(0,0,0,0.06)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_4px_8px]"
       style={{ top: position.top, right: position.right }}
     >

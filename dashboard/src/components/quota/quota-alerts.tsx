@@ -275,7 +275,7 @@ export function QuotaAlerts() {
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="tg-threshold" className="text-xs font-medium text-[var(--text-muted)]">Threshold %</label>
+          <label htmlFor="tg-threshold" className="text-xs font-medium text-[var(--text-muted)]">{t("thresholdLabel")}</label>
           <Input
             type="number"
             name="tg-threshold"
@@ -294,7 +294,7 @@ export function QuotaAlerts() {
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="tg-check-interval" className="text-xs font-medium text-[var(--text-muted)]">Check Interval (minutes)</label>
+          <label htmlFor="tg-check-interval" className="text-xs font-medium text-[var(--text-muted)]">{t("checkIntervalLabel")}</label>
           <Input
             type="number"
             name="tg-check-interval"
@@ -313,7 +313,7 @@ export function QuotaAlerts() {
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="tg-cooldown" className="text-xs font-medium text-[var(--text-muted)]">Cooldown (minutes)</label>
+          <label htmlFor="tg-cooldown" className="text-xs font-medium text-[var(--text-muted)]">{t("cooldownLabel")}</label>
           <Input
             type="number"
             name="tg-cooldown"

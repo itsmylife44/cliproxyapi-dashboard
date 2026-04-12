@@ -21,7 +21,12 @@
     "switchToDarkMode": "Switch to dark mode",
     "requests": "Requests",
     "tokens": "Tokens",
-    "successRate": "Success Rate"
+    "successRate": "Success Rate",
+    "loadingDashboard": "Loading dashboard",
+    "loadingDashboardContent": "Loading dashboard content…",
+    "breadcrumbAriaLabel": "Breadcrumb",
+    "savedAriaLabel": "Saved",
+    "notificationsAriaLabel": "Notifications"
   },
   "nav": {
     "sectionGeneral": "General",
@@ -285,7 +290,12 @@
     "toastTokenCopied": "Token copied to clipboard",
     "toastTokenCopyFailed": "Failed to copy token",
     "toastSessionsRevoked": "All sessions revoked",
-    "toastSessionsRevokeFailed": "Failed to revoke sessions"
+    "toastSessionsRevokeFailed": "Failed to revoke sessions",
+    "errorUpdateFailed": "Update failed",
+    "errorGenerateTokenFailed": "Failed to generate token",
+    "errorRevokeTokenFailed": "Failed to revoke token",
+    "errorUpdateApiKeyFailed": "Failed to update API key",
+    "errorRevokeSessionsFailed": "Failed to revoke sessions"
   },
   "apiKeys": {
     "pageTitle": "API Keys",
@@ -582,6 +592,9 @@
     "noAccountsConnected": "No OAuth accounts connected yet. Connect your first account below.",
     "statusError": "Error",
     "statusDisabled": "Disabled",
+    "tokenValidTooltip": "Token is valid and working",
+    "accountErrorTooltip": "Account has an error",
+    "accountDisabledTooltip": "Account is disabled",
     "claimButton": "Claim",
     "enableButton": "Enable",
     "disableButton": "Disable",
@@ -640,7 +653,12 @@
     "discoveryManualHint": "Or manually add model mappings below",
     "customProvidersTitle": "Custom Providers",
     "noCustomProviders": "No custom providers configured",
-    "oauthAccountsTitle": "OAuth Accounts"
+    "oauthAccountsTitle": "OAuth Accounts",
+    "errorUpdateAccountFailed": "Failed to update account",
+    "errorOAuthFailed": "OAuth authorization failed.",
+    "errorOwnershipClaimFailed": "Failed to complete OAuth ownership claim.",
+    "errorRelayCallbackFailed": "Failed to relay the OAuth callback URL.",
+    "errorImportCredentialFailed": "Failed to import credential."
   },
   "quota": {
     "pageTitle": "Quota Management",
@@ -673,7 +691,9 @@
     "accountColumn": "Account",
     "providerColumn": "Provider",
     "statusColumn": "Status",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "longTermLabel": "Long-Term",
+    "shortTermLabel": "Short-Term"
   },
   "usage": {
     "pageTitle": "Usage",
@@ -1415,7 +1435,8 @@
     "pluginsTitle": "Plugins",
     "pluginNamePlaceholder": "plugin-name@version",
     "addPlugin": "Add",
-    "removePlugin": "Remove"
+    "removePlugin": "Remove",
+    "errorSaveConfigFailed": "Failed to save config"
   },
   "ohMyOpenCode": {
     "apiKeyRequiredTitle": "API Key Required",
@@ -1533,7 +1554,9 @@
     "tier4Hint": "Visual and creative",
     "fallbacksLabel": "Fallbacks",
     "ultraworkLabel": "Ultrawork",
-    "noModelsFound": "No models found"
+    "noModelsFound": "No models found",
+    "searchModelsPlaceholder": "Search models...",
+    "configureTooltip": "Configure variant, temperature, and more"
   },
   "ohMyOpenCodeSlim": {
     "apiKeyRequiredTitle": "API Key Required",

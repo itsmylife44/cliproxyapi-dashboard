@@ -54,7 +54,7 @@ function OAuthStatusBadge({
 
   if (status === "active" && !unavailable) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600" title="Token is valid and working">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600" title={t('tokenValidTooltip')}>
         <span className="size-1.5 rounded-full bg-emerald-400" />
         {t("statusActive")}
       </span>
@@ -65,7 +65,7 @@ function OAuthStatusBadge({
     return (
       <span
         className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-600"
-        title={message || "Account has an error"}
+        title={message || t('accountErrorTooltip')}
       >
         <span className="size-1.5 rounded-full bg-red-400" />
         {message
@@ -77,7 +77,7 @@ function OAuthStatusBadge({
 
   if (status === "disabled") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-muted)]" title="Account is disabled">
+      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-muted)]" title={t('accountDisabledTooltip')}>
         <span className="size-1.5 rounded-full bg-[#999]" />
         {t("statusDisabled")}
       </span>

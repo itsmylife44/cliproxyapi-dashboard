@@ -136,7 +136,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
         });
         if (!response.ok) {
           const errorData = await response.json();
-          setSaveError(extractApiError(errorData, "Failed to save config"));
+          setSaveError(extractApiError(errorData, t("errorSaveConfigFailed")));
         }
       } catch {
         setSaveError(t("networkError"));

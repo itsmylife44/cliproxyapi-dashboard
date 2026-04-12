@@ -280,7 +280,7 @@ export function OAuthSection({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        showToast(extractApiError(data, "Failed to update account"), "error");
+        showToast(extractApiError(data, t("errorUpdateAccountFailed")), "error");
       } else {
         showToast(!currentlyDisabled ? t("toastOAuthDisabled") : t("toastOAuthEnabled"), "success");
         await loadAccounts();
@@ -379,7 +379,7 @@ export function OAuthSection({
         if (data.status === "error") {
           stopPolling();
           setOauthModalStatus(MODAL_STATUS.ERROR);
-          setOauthErrorMessage(extractApiError(data, "OAuth authorization failed."));
+          setOauthErrorMessage(extractApiError(data, t("errorOAuthFailed")));
           return;
         }
       } catch {
@@ -441,7 +441,7 @@ export function OAuthSection({
         stopNoCallbackClaimPolling();
         stopPolling();
         setOauthModalStatus(MODAL_STATUS.ERROR);
-        setOauthErrorMessage(extractApiError(data, "Failed to complete OAuth ownership claim."));
+        setOauthErrorMessage(extractApiError(data, t("errorOwnershipClaimFailed")));
         return;
       }
 
@@ -592,7 +592,7 @@ export function OAuthSection({
       if (!res.ok) {
         setOauthModalStatus(MODAL_STATUS.ERROR);
         setOauthErrorMessage(
-          extractApiError(data, "Failed to relay the OAuth callback URL.")
+          extractApiError(data, t("errorRelayCallbackFailed"))
         );
         return;
       }
@@ -741,7 +741,7 @@ export function OAuthSection({
 
       if (!res.ok) {
         setImportStatus("error");
-        setImportErrorMessage(extractApiError(data, "Failed to import credential."));
+        setImportErrorMessage(extractApiError(data, t("errorImportCredentialFailed")));
         return;
       }
 

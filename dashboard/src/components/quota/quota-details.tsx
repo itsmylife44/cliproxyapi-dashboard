@@ -135,8 +135,8 @@ export function QuotaDetails({ filteredAccounts, expandedCards, onToggleCard, lo
           <span>{t("accountColumn")}</span>
           <span>{t("providerColumn")}</span>
           <span>{t("statusColumn")}</span>
-          <span>Long-Term</span>
-          <span>Short-Term</span>
+          <span>{t("longTermLabel")}</span>
+          <span>{t("shortTermLabel")}</span>
         </div>
 
         {filteredAccounts.map((account) => {

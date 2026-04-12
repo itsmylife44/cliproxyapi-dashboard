@@ -177,7 +177,7 @@ export default function SettingsPage() {
         }, 10000);
       } else {
         const data = await res.json();
-        showToast(extractApiError(data, "Update failed"), "error");
+        showToast(extractApiError(data, t('errorUpdateFailed')), "error");
       }
     } catch {
       showToast(t('toastNetworkErrorUpdate'), 'error');
@@ -208,7 +208,7 @@ export default function SettingsPage() {
           fetchDashboardUpdateInfo();
         }, 10000);
       } else {
-        const errMsg = extractApiError(data, "Update failed");
+        const errMsg = extractApiError(data, t('errorUpdateFailed'));
         showToast(errMsg, "error");
       }
     } catch {
@@ -228,7 +228,7 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        showToast(extractApiError(data, "Failed to generate token"), "error");
+        showToast(extractApiError(data, t('errorGenerateTokenFailed')), "error");
         setGeneratingToken(false);
         return;
       }
@@ -260,7 +260,7 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        showToast(extractApiError(data, "Failed to revoke token"), "error");
+        showToast(extractApiError(data, t('errorRevokeTokenFailed')), "error");
         return;
       }
 
@@ -287,7 +287,7 @@ export default function SettingsPage() {
         );
       } else {
         const data = await res.json();
-        showToast(extractApiError(data, "Failed to update API key"), "error");
+        showToast(extractApiError(data, t('errorUpdateApiKeyFailed')), "error");
       }
     } catch {
       showToast(tc('networkError'), 'error');
@@ -316,7 +316,7 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        showToast(extractApiError(data, "Failed to revoke sessions"), "error");
+        showToast(extractApiError(data, t('errorRevokeSessionsFailed')), "error");
         setRevokingSessions(false);
         return;
       }

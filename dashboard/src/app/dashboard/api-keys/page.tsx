@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { useTranslations } from "next-intl";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface ApiKey {
   id: string;
@@ -76,7 +77,7 @@ export default function ApiKeysPage() {
   const fetchApiKeys = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/user/api-keys", { signal });
+      const res = await fetch(API_ENDPOINTS.USER.API_KEYS, { signal });
       if (!res.ok) {
         showToast(t("toastLoadFailed"), "error");
         setLoading(false);
@@ -110,7 +111,7 @@ export default function ApiKeysPage() {
     setCreating(true);
 
     try {
-      const res = await fetch("/api/user/api-keys", {
+      const res = await fetch(API_ENDPOINTS.USER.API_KEYS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: keyNameInput.trim() || "Default" }),
@@ -146,7 +147,7 @@ export default function ApiKeysPage() {
 
     try {
       const res = await fetch(
-        `/api/user/api-keys?id=${encodeURIComponent(id)}`,
+        `${API_ENDPOINTS.USER.API_KEYS}?id=${encodeURIComponent(id)}`,
         {
         method: "DELETE",
         }

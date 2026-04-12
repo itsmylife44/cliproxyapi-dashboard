@@ -73,6 +73,7 @@ export default function ApiKeysPage() {
   const { showToast } = useToast();
   const { copiedKey, copy } = useCopyToClipboard();
   const t = useTranslations("apiKeys");
+  const tc = useTranslations("common");
 
   const fetchApiKeys = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
@@ -114,7 +115,7 @@ export default function ApiKeysPage() {
       const res = await fetch(API_ENDPOINTS.USER.API_KEYS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: keyNameInput.trim() || "Default" }),
+        body: JSON.stringify({ name: keyNameInput.trim() || tc('default') }),
       });
 
       if (!res.ok) {

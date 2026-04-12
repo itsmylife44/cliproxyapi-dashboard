@@ -26,7 +26,9 @@
     "loadingDashboardContent": "Dashboard-Inhalt wird geladen…",
     "breadcrumbAriaLabel": "Brotkrümelnavigation",
     "savedAriaLabel": "Gespeichert",
-    "notificationsAriaLabel": "Benachrichtigungen"
+    "notificationsAriaLabel": "Benachrichtigungen",
+    "unknown": "Unbekannt",
+    "default": "Standard"
   },
   "nav": {
     "sectionGeneral": "Allgemein",
@@ -134,7 +136,8 @@
     "networkError": "Netzwerkfehler. Bitte versuchen Sie es erneut.",
     "creatingAccount": "Konto wird erstelltâ€¦",
     "createAccount": "Konto erstellen",
-    "footerText": "CLIProxyAPI-Verwaltungs-Dashboard"
+    "footerText": "CLIProxyAPI-Verwaltungs-Dashboard",
+    "setupFailed": "Einrichtung fehlgeschlagen"
   },
   "errors": {
     "notFoundCode": "404",

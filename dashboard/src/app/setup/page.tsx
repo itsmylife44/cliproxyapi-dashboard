@@ -45,7 +45,7 @@ export default function SetupPage() {
       if (!res.ok) {
         const errorMsg = typeof data.error === "string" 
           ? data.error 
-          : (data.error?.message ?? "Setup failed");
+          : (data.error?.message ?? t('setupFailed'));
         setError(errorMsg);
         setLoading(false);
         return;

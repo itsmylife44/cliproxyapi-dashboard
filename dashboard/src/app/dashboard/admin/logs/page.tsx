@@ -216,7 +216,7 @@ export default function AdminLogsPage() {
 
   return (
     <div className="space-y-4">
-      <Breadcrumbs items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Admin" }, { label: t('breadcrumbLabel') }]} />
+      <Breadcrumbs items={[{ label: tc('dashboard'), href: "/dashboard" }, { label: tc('admin') }, { label: t('breadcrumbLabel') }]} />
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>

@@ -26,7 +26,9 @@
     "loadingDashboardContent": "Loading dashboard content…",
     "breadcrumbAriaLabel": "Breadcrumb",
     "savedAriaLabel": "Saved",
-    "notificationsAriaLabel": "Notifications"
+    "notificationsAriaLabel": "Notifications",
+    "unknown": "Unknown",
+    "default": "Default"
   },
   "nav": {
     "sectionGeneral": "General",
@@ -134,7 +136,8 @@
     "networkError": "Network error. Please try again.",
     "creatingAccount": "Creating accountâ€¦",
     "createAccount": "Create Account",
-    "footerText": "CLIProxyAPI Management Dashboard"
+    "footerText": "CLIProxyAPI Management Dashboard",
+    "setupFailed": "Setup failed"
   },
   "errors": {
     "notFoundCode": "404",

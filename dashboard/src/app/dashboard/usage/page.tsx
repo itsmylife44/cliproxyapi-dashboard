@@ -146,6 +146,7 @@ function formatLatencyValue(value: number): string {
 
 export default function UsagePage() {
   const t = useTranslations("usage");
+  const tc = useTranslations("common");
 
   function getRelativeTime(isoString: string): string {
     if (!isoString) return t('never');
@@ -260,7 +261,7 @@ export default function UsagePage() {
   const hasInputOutputBreakdown = usageData && (usageData.totals.inputTokens > 0 || usageData.totals.outputTokens > 0);
   const hasLatencyBreakdown = (usageData?.latencySummary?.sampleCount ?? 0) > 0;
   const collectorStatusColor = usageData ? getStatusColor(usageData.collectorStatus.lastCollectedAt) : "bg-gray-500";
-  const collectorTimeAgo = usageData ? getRelativeTime(usageData.collectorStatus.lastCollectedAt) : "Unknown";
+  const collectorTimeAgo = usageData ? getRelativeTime(usageData.collectorStatus.lastCollectedAt) : tc('unknown');
 
   return (
     <div className="space-y-4">

@@ -176,15 +176,17 @@ export function inferModelDefinition(
 }
 
 /**
- * Deduplicate proxy models: prefer dot-notation (claude-opus-4.1) over
- * hyphenated (claude-opus-4-1), and drop dated variants (-20250514) when
- * the undated version exists. The proxy rotates accounts regardless of
- * which alias is used, so duplicates just clutter the config.
+ * Deduplicate proxy models: drop dated variants (-YYYYMMDD) when the undated
+ * base exists, and drop hyphenated versions (claude-opus-4-1) when the
+ * dot-notation version (claude-opus-4.1) is also present in the model list.
+ *
+ * Model IDs are preserved exactly as returned by the proxy - no automatic
+ * transformation is applied. The proxy requires exact model ID matches.
  */
 function deduplicateProxyModels(proxyModels: ProxyModel[]): ProxyModel[] {
   const idSet = new Set(proxyModels.map((m) => m.id));
   
-  const filtered = proxyModels.filter((pm) => {
+  return proxyModels.filter((pm) => {
     const id = pm.id;
     
     // 1. Drop dated variants (-YYYYMMDD) if the undated base exists
@@ -198,17 +200,12 @@ function deduplicateProxyModels(proxyModels: ProxyModel[]): ProxyModel[] {
       if (dotBase !== base && idSet.has(dotBase)) return false;
     }
     
-    // 2. Drop hyphenated version if dot-notation exists
-    //    e.g. claude-opus-4-1 -> claude-opus-4.1 exists -> drop
+    // 2. Drop hyphenated version if dot-notation exists in the proxy response
+    //    e.g. claude-opus-4-1 -> claude-opus-4.1 exists -> drop hyphenated
     const dotVersion = hyphenatedToDot(id);
     if (dotVersion !== id && idSet.has(dotVersion)) return false;
     
     return true;
-  });
-
-  return filtered.map((pm) => {
-    const dotId = hyphenatedToDot(pm.id);
-    return dotId !== pm.id ? { ...pm, id: dotId } : pm;
   });
 }
 

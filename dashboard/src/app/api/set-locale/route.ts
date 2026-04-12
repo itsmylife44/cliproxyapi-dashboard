@@ -1,8 +1,15 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { supportedLocales, type Locale } from "@/i18n/config";
+import { verifySession } from "@/lib/auth/session";
+import { Errors } from "@/lib/errors";
 
 export async function POST(request: NextRequest) {
+  const session = await verifySession();
+  if (!session) {
+    return Errors.unauthorized();
+  }
+
   try {
     const body = await request.json();
     const locale = body.locale as string;

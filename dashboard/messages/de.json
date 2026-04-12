@@ -552,14 +552,30 @@
     "pageDescription": "Zeigen Sie API-Ratenlimits und Kontingente an und verwalten Sie sie",
     "loadingText": "Wird geladen...",
     "quotaLimitsTitle": "Kontingent-Limits",
-    "alertsTitle": "Aktive Warnungen"
+    "alertsTitle": "Aktive Warnungen",
+    "noData": "Keine Daten",
+    "activeAccountsLabel": "Aktive Konten",
+    "overallCapacityLabel": "Gesamtkapazität",
+    "overallCapacityTooltip": "Gewichteter Durchschnitt der verbleibenden Quote über alle aktiven Anbieterkonten",
+    "lowCapacityLabel": "Niedrige Kapazität",
+    "lowCapacityTooltip": "Anzahl der Konten mit verbleibender Quote unter 20%",
+    "providersLabel": "Anbieter",
+    "refreshButton": "Aktualisieren",
+    "weightedCapacity": "Gewichtete Kapazität"
   },
   "usage": {
     "pageTitle": "Nutzung",
     "pageDescription": "API-Nutzungsstatistiken und Analysen",
     "loadingText": "Wird geladen...",
     "requestsLabel": "Anfragen",
-    "tokensLabel": "Verwendete Tokens"
+    "tokensLabel": "Verwendete Tokens",
+    "justNow": "Gerade eben",
+    "minutesAgo": "vor {count}m",
+    "hoursAgo": "vor {count}h",
+    "daysAgo": "vor {count}d",
+    "lastSyncedLabel": "Zuletzt synchronisiert:",
+    "toastLoadFailed": "Fehler beim Laden der Nutzungsdaten",
+    "toastNetworkError": "Netzwerkfehler"
   },
   "monitoring": {
     "pageTitle": "Überwachung",
@@ -574,7 +590,15 @@
     "loadingText": "Wird geladen...",
     "listTitle": "Container-Liste",
     "toastLoadFailed": "Fehler beim Laden von Containern",
-    "toastNetworkError": "Netzwerkfehler"
+    "toastNetworkError": "Netzwerkfehler",
+    "emptyTitle": "Keine Container gefunden",
+    "emptyDescription": "Derzeit sind keine Docker-Container aktiv oder verfügbar",
+    "logsLoadFailed": "Fehler beim Laden der Protokolle",
+    "logsTitle": "Container-Protokolle",
+    "logsLoading": "Protokolle werden geladen...",
+    "logsEmpty": "Keine Protokolle verfügbar",
+    "closeButton": "Schließen",
+    "refreshButton": "Aktualisieren"
   },
   "config": {
     "pageTitle": "Konfiguration",
@@ -730,7 +754,20 @@
     "step2ToastNetworkError": "Netzwerkfehler — bitte versuchen Sie es erneut",
     "step3Locked": "Schließen Sie zuerst die vorherigen Schritte ab, um diesen Schritt freizuschalten.",
     "step3CheckingCatalog": "Modellkatalog wird überprüft...",
-    "step3WaitingModels": "Warte auf verfügbare Modelle..."
+    "step3WaitingModels": "Warte auf verfügbare Modelle...",
+    "stepTitle1": "Anbieter verbinden",
+    "stepTitle2": "API-Schlüssel erstellen",
+    "stepTitle3": "Modellkatalog überprüfen",
+    "stepDone1": "Anbieter verbunden",
+    "stepDone2": "API-Schlüssel erstellt",
+    "stepDone3": "Modelle verfügbar",
+    "stepDesc1": "Fügen Sie ein OAuth-Konto hinzu oder konfigurieren Sie einen API-Schlüssel-Anbieter. Anbieter sind die KI-Dienste, die Ihren Proxy betreiben (Claude, Gemini, Codex und mehr).",
+    "stepDesc2": "Generieren Sie einen persönlichen API-Schlüssel. Dieser Schlüssel wird von Ihren Clients (Claude Code, Gemini CLI usw.) zur Authentifizierung mit dem Proxy verwendet.",
+    "stepDesc3": "Sobald ein Anbieter und ein API-Schlüssel eingerichtet sind, stellt der Proxy automatisch Modelle bereit. Dieser Schritt bestätigt, dass der Katalog gefüllt und der Proxy erreichbar ist.",
+    "subtitle": "Führen Sie diese Schritte aus, um CLIProxyAPI zum Laufen zu bringen.",
+    "errorLoadStatus": "Fehler beim Laden des Setup-Status",
+    "errorNetworkRetrying": "Netzwerkfehler -- wird erneut versucht...",
+    "autoRefreshNote": "Diese Seite wird alle 5 Sekunden automatisch aktualisiert, um zu erkennen, wann jeder Schritt abgeschlossen ist."
   },
   "updateOverlay": {
     "updateAvailableTitle": "Update verfügbar",

@@ -552,14 +552,30 @@
     "pageDescription": "View and manage API rate limits and quotas",
     "loadingText": "Loading...",
     "quotaLimitsTitle": "Quota Limits",
-    "alertsTitle": "Active Alerts"
+    "alertsTitle": "Active Alerts",
+    "noData": "No Data",
+    "activeAccountsLabel": "Active Accounts",
+    "overallCapacityLabel": "Overall Capacity",
+    "overallCapacityTooltip": "Weighted average of remaining quota across all active provider accounts",
+    "lowCapacityLabel": "Low Capacity",
+    "lowCapacityTooltip": "Number of accounts with remaining quota below 20%",
+    "providersLabel": "Providers",
+    "refreshButton": "Refresh",
+    "weightedCapacity": "Weighted capacity"
   },
   "usage": {
     "pageTitle": "Usage",
     "pageDescription": "API usage statistics and analytics",
     "loadingText": "Loading...",
     "requestsLabel": "Requests",
-    "tokensLabel": "Tokens Used"
+    "tokensLabel": "Tokens Used",
+    "justNow": "Just now",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "daysAgo": "{count}d ago",
+    "lastSyncedLabel": "Last synced:",
+    "toastLoadFailed": "Failed to load usage data",
+    "toastNetworkError": "Network error"
   },
   "monitoring": {
     "pageTitle": "Monitoring",
@@ -574,7 +590,15 @@
     "loadingText": "Loading...",
     "listTitle": "Container List",
     "toastLoadFailed": "Failed to load containers",
-    "toastNetworkError": "Network error"
+    "toastNetworkError": "Network error",
+    "emptyTitle": "No containers found",
+    "emptyDescription": "No Docker containers are currently running or available",
+    "logsLoadFailed": "Failed to load logs",
+    "logsTitle": "Container Logs",
+    "logsLoading": "Loading logs...",
+    "logsEmpty": "No logs available",
+    "closeButton": "Close",
+    "refreshButton": "Refresh"
   },
   "config": {
     "pageTitle": "Configuration",
@@ -751,7 +775,20 @@
     "step2ToastNetworkError": "Network error — please try again",
     "step3Locked": "Complete the previous steps first to unlock this step.",
     "step3CheckingCatalog": "Checking model catalog...",
-    "step3WaitingModels": "Waiting for models to become available..."
+    "step3WaitingModels": "Waiting for models to become available...",
+    "stepTitle1": "Connect a Provider",
+    "stepTitle2": "Create an API Key",
+    "stepTitle3": "Verify Model Catalog",
+    "stepDone1": "Provider connected",
+    "stepDone2": "API key created",
+    "stepDone3": "Models available",
+    "stepDesc1": "Add an OAuth account or configure an API key provider. Providers are the AI services that power your proxy (Claude, Gemini, Codex, and more).",
+    "stepDesc2": "Generate a personal API key. This key is what your clients (Claude Code, Gemini CLI, etc.) use to authenticate with the proxy.",
+    "stepDesc3": "Once a provider and API key are set up, the proxy exposes models automatically. This step confirms the catalog is populated and the proxy is reachable.",
+    "subtitle": "Complete these steps to get CLIProxyAPI up and running.",
+    "errorLoadStatus": "Failed to load setup status",
+    "errorNetworkRetrying": "Network error -- retrying...",
+    "autoRefreshNote": "This page auto-refreshes every 5 seconds to detect when each step is complete."
   },
   "updateNotification": {
     "dashboardTitle": "Dashboard Update Available",

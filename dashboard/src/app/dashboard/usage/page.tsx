@@ -130,16 +130,6 @@ function getDateRange(period: DateFilter, customFrom?: string, customTo?: string
   }
 }
 
-function getRelativeTime(isoString: string): string {
-  if (!isoString) return "Never";
-  const diff = Date.now() - new Date(isoString).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
 
 function getStatusColor(isoString: string): string {
   if (!isoString) return "bg-red-500/100";
@@ -156,6 +146,17 @@ function formatLatencyValue(value: number): string {
 
 export default function UsagePage() {
   const t = useTranslations("usage");
+
+  function getRelativeTime(isoString: string): string {
+    if (!isoString) return "Never";
+    const diff = Date.now() - new Date(isoString).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return t("justNow");
+    if (minutes < 60) return t("minutesAgo", { count: minutes });
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return t("hoursAgo", { count: hours });
+    return t("daysAgo", { count: Math.floor(hours / 24) });
+  }
   const [usageData, setUsageData] = useState<UsageData | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -179,7 +180,7 @@ export default function UsagePage() {
         const res = await fetch(`/api/usage/history?from=${from}&to=${to}`, { signal: abortController.signal });
 
         if (!res.ok) {
-          showToast("Failed to load usage data", "error");
+          showToast(t("toastLoadFailed"), "error");
           setLoading(false);
           return;
         }
@@ -191,7 +192,7 @@ export default function UsagePage() {
         setLoading(false);
       } catch {
         if (abortController.signal.aborted) return;
-        showToast("Network error", "error");
+        showToast(t("toastNetworkError"), "error");
         setLoading(false);
       }
     }
@@ -241,7 +242,7 @@ export default function UsagePage() {
       const res = await fetch(`/api/usage/history?from=${from}&to=${to}`);
 
       if (!res.ok) {
-        showToast("Failed to load usage data", "error");
+        showToast(t("toastLoadFailed"), "error");
         setLoading(false);
         return;
       }
@@ -251,7 +252,7 @@ export default function UsagePage() {
       setIsAdmin(json.isAdmin);
       setLoading(false);
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
       setLoading(false);
     }
   };
@@ -269,7 +270,7 @@ export default function UsagePage() {
             <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
             <div className="mt-1 flex items-center gap-2">
               <div className={`h-2 w-2 rounded-full ${collectorStatusColor}`}></div>
-              <p className="text-xs text-[var(--text-muted)]">Last synced: {collectorTimeAgo}</p>
+              <p className="text-xs text-[var(--text-muted)]">{t('lastSyncedLabel')} {collectorTimeAgo}</p>
             </div>
           </div>
           <Button onClick={handleRefresh} disabled={loading}>

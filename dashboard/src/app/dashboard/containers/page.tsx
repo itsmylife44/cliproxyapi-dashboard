@@ -148,10 +148,10 @@ export default function ContainersPage() {
         const lines: string[] = data.lines || [];
         setLogLines(lines.map((line, i) => ({ id: `${containerName}-${i}-${line.slice(0, 20)}`, text: line })));
       } else {
-        setLogLines([{ id: "error", text: "Failed to load logs" }]);
+        setLogLines([{ id: "error", text: t('logsLoadFailed') }]);
       }
     } catch {
-      setLogLines([{ id: "error", text: "Failed to load logs" }]);
+      setLogLines([{ id: "error", text: t('logsLoadFailed') }]);
     } finally {
       setLogsLoading(false);
     }
@@ -220,8 +220,8 @@ export default function ContainersPage() {
                   </svg>
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">No containers found</h3>
-                  <p className="text-xs text-[var(--text-muted)]">No Docker containers are currently running or available</p>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('emptyTitle')}</h3>
+                  <p className="text-xs text-[var(--text-muted)]">{t('emptyDescription')}</p>
                 </div>
               </div>
             </div>
@@ -284,7 +284,7 @@ export default function ContainersPage() {
           {selectedContainer && (
             <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-[var(--text-primary)]">Logs: {selectedContainerInfo?.displayName || selectedContainer}</h2>
+                <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('logsTitle', { name: selectedContainerInfo?.displayName || selectedContainer })}</h2>
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
@@ -292,22 +292,22 @@ export default function ContainersPage() {
                     className="px-3 py-1 text-xs"
                     disabled={logsLoading}
                   >
-                    {logsLoading ? "Loading..." : "Refresh"}
+                    {logsLoading ? t('logsLoading') : t('refreshButton')}
                   </Button>
                   <Button
                     variant="ghost"
                     onClick={handleCloseLogs}
                     className="px-3 py-1 text-xs"
                   >
-                    Close
+                    {t('closeButton')}
                   </Button>
                 </div>
               </div>
                 <div className="h-96 overflow-auto rounded-sm border border-[var(--surface-border)] bg-[#1a1a1a] p-3 font-mono text-[10px] sm:p-4 sm:text-xs">
                   {logsLoading ? (
-                    <div className="text-gray-400">Loading logs...</div>
+                    <div className="text-gray-400">{t('logsLoading')}</div>
                   ) : logLines.length === 0 ? (
-                    <div className="text-gray-400">No logs available</div>
+                    <div className="text-gray-400">{t('logsEmpty')}</div>
                   ) : (
                     logLines.map((entry) => (
                       <div key={entry.id} className="mb-1 break-all text-gray-200">

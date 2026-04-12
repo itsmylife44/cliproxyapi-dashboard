@@ -53,40 +53,40 @@ export function ProviderSettings({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Software Updates</h2>
-        <p className="text-xs text-[var(--text-muted)]">Manage CLIProxyAPI and Dashboard versions</p>
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('sectionTitle')}</h2>
+        <p className="text-xs text-[var(--text-muted)]">{t('sectionDescription')}</p>
       </div>
 
       <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-        CLIProxyAPI Updates
+        {t('proxyUpdatesTitle')}
         {proxyUpdateInfo?.updateAvailable && (
           <span className="rounded-sm border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
-            Update Available
+            {t('updateAvailableBadge')}
           </span>
         )}
       </h3>
       <div className="space-y-4">
         {proxyUpdateLoading ? (
-          <div className="text-[var(--text-muted)]">Checking for updates...</div>
+          <div className="text-[var(--text-muted)]">{t('checkingForUpdates')}</div>
         ) : proxyUpdateInfo ? (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-                <div className="text-sm font-medium text-[var(--text-muted)]">Current Version</div>
+                <div className="text-sm font-medium text-[var(--text-muted)]">{t('currentVersionLabel')}</div>
                 <div className="mt-1 break-all text-lg font-semibold text-[var(--text-primary)]">
                   {proxyUpdateInfo.currentVersion}
                 </div>
                 <div className="mt-1 break-all text-xs text-[var(--text-muted)]">
-                  Digest: <span className="font-mono text-[var(--text-primary)]">{proxyUpdateInfo.currentDigest}</span>
+                  {t('digestLabel')}{' '}<span className="font-mono text-[var(--text-primary)]">{proxyUpdateInfo.currentDigest}</span>
                 </div>
               </div>
               <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-                <div className="text-sm font-medium text-[var(--text-muted)]">Latest Version</div>
+                <div className="text-sm font-medium text-[var(--text-muted)]">{t('latestVersionLabel')}</div>
                 <div className="mt-1 break-all text-lg font-semibold text-[var(--text-primary)]">
                   {proxyUpdateInfo.latestVersion}
                 </div>
                 <div className="mt-1 break-all text-xs text-[var(--text-muted)]">
-                  Digest: <span className="font-mono text-[var(--text-primary)]">{proxyUpdateInfo.latestDigest}</span>
+                  {t('digestLabel')}{' '}<span className="font-mono text-[var(--text-primary)]">{proxyUpdateInfo.latestDigest}</span>
                 </div>
               </div>
             </div>
@@ -105,7 +105,7 @@ export function ProviderSettings({
 
             {proxyUpdateInfo.availableVersions.length > 0 && (
               <div className="border-t border-[var(--surface-border)] pt-4">
-                <div className="mb-2 text-sm font-medium text-[var(--text-muted)]">Available Versions</div>
+                <div className="mb-2 text-sm font-medium text-[var(--text-muted)]">{t('availableVersionsLabel')}</div>
                 <div className="flex flex-wrap gap-2">
                   {proxyUpdateInfo.availableVersions.slice(0, 5).map((v) => (
                     <button
@@ -123,33 +123,33 @@ export function ProviderSettings({
             )}
           </>
         ) : (
-          <div className="text-[var(--text-muted)]">Failed to check for updates</div>
+          <div className="text-[var(--text-muted)]">{t('failedToCheckUpdates')}</div>
         )}
       </div>
 
       <div className="border-t border-[var(--surface-border)] pt-4">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-          Dashboard Updates
+          {t('dashboardUpdatesTitle')}
           {dashboardUpdateInfo?.updateAvailable && (
             <span className="rounded-sm border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
-              Update Available
+              {t('updateAvailableBadge')}
             </span>
           )}
         </h3>
         <div className="mt-3 space-y-4">
           {dashboardUpdateLoading ? (
-          <div className="text-[var(--text-muted)]">Checking for updates...</div>
+          <div className="text-[var(--text-muted)]">{t('checkingForUpdates')}</div>
           ) : dashboardUpdateInfo ? (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-                  <div className="text-sm font-medium text-[var(--text-muted)]">Current Version</div>
+                  <div className="text-sm font-medium text-[var(--text-muted)]">{t('currentVersionLabel')}</div>
                   <div className="mt-1 break-all text-lg font-semibold text-[var(--text-primary)]">
                     {dashboardUpdateInfo.currentVersion}
                   </div>
                 </div>
                 <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-                  <div className="text-sm font-medium text-[var(--text-muted)]">Latest Version</div>
+                  <div className="text-sm font-medium text-[var(--text-muted)]">{t('latestVersionLabel')}</div>
                   <div className="mt-1 break-all text-lg font-semibold text-[var(--text-primary)]">
                     {dashboardUpdateInfo.latestVersion}
                   </div>
@@ -179,7 +179,7 @@ export function ProviderSettings({
               </div>
             </>
           ) : (
-          <div className="text-[var(--text-muted)]">Failed to check for updates</div>
+          <div className="text-[var(--text-muted)]">{t('failedToCheckUpdates')}</div>
           )}
         </div>
       </div>

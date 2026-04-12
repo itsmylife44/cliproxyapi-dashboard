@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { OwnerBadge, type CurrentUserLike } from "@/components/providers/api-key-section";
 
@@ -48,13 +49,14 @@ function OAuthStatusBadge({
   statusMessage: string | null;
   unavailable: boolean;
 }) {
+  const t = useTranslations("providers");
   const message = parseStatusMessage(statusMessage);
 
   if (status === "active" && !unavailable) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600" title="Token is valid and working">
         <span className="size-1.5 rounded-full bg-emerald-400" />
-        Active
+        {t("statusActive")}
       </span>
     );
   }
@@ -68,7 +70,7 @@ function OAuthStatusBadge({
         <span className="size-1.5 rounded-full bg-red-400" />
         {message
           ? message.length > 40 ? `${message.slice(0, 40)}…` : message
-          : "Error"}
+          : t("statusError")}
       </span>
     );
   }
@@ -77,7 +79,7 @@ function OAuthStatusBadge({
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-muted)]" title="Account is disabled">
         <span className="size-1.5 rounded-full bg-[#999]" />
-        Disabled
+        {t("statusDisabled")}
       </span>
     );
   }
@@ -97,22 +99,24 @@ export function OAuthCredentialList({
   onDelete,
   onClaim,
 }: OAuthCredentialListProps) {
+  const t = useTranslations("providers");
+
   return (
     <>
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Connected Accounts</h3>
-        <p className="mt-1 text-xs text-[var(--text-muted)]">Active OAuth provider connections</p>
+        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("connectedAccountsTitle")}</h3>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">{t("connectedAccountsDescription")}</p>
       </div>
       {loading ? (
         <div className="flex items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-8">
           <div className="flex flex-col items-center gap-3">
             <div className="size-8 animate-spin rounded-full border-4 border-[var(--surface-border)] border-t-blue-500"></div>
-            <p className="text-sm text-[var(--text-muted)]">Loading accounts...</p>
+            <p className="text-sm text-[var(--text-muted)]">{t("loadingAccounts")}</p>
           </div>
         </div>
       ) : accounts.length === 0 ? (
         <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 text-xs text-[var(--text-muted)]">
-          No OAuth accounts connected yet. Connect your first account below.
+          {t("noAccountsConnected")}
         </div>
       ) : (
         <div className="divide-y divide-[var(--surface-border)] rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
@@ -141,7 +145,7 @@ export function OAuthCredentialList({
                         disabled={claimingAccountName === account.accountName}
                         onClick={() => onClaim(account.accountName)}
                       >
-                        {claimingAccountName === account.accountName ? "..." : "Claim"}
+                        {claimingAccountName === account.accountName ? "..." : t("claimButton")}
                       </Button>
                     )}
                     <Button
@@ -150,14 +154,14 @@ export function OAuthCredentialList({
                       disabled={togglingAccountId === account.id}
                       onClick={() => onToggle(account.id, account.status === "disabled")}
                     >
-                      {togglingAccountId === account.id ? "..." : account.status === "disabled" ? "Enable" : "Disable"}
+                      {togglingAccountId === account.id ? "..." : account.status === "disabled" ? t("enableButton") : t("disableButton")}
                     </Button>
                     <Button
                       variant="danger"
                       className="px-2.5 py-1 text-xs"
                       onClick={() => onDelete(account.id)}
                     >
-                      Disconnect
+                      {t("disconnectButton")}
                     </Button>
                   </div>
                 )}

@@ -45,8 +45,7 @@ export function Step1Content({ done }: { done: boolean }) {
   return (
     <div className="mt-3 space-y-3">
       <p className="text-sm text-[var(--text-muted)]">
-        Open the Providers page in a new tab to add your first provider. This
-        wizard will automatically detect when a provider is connected.
+        {t('step1Description')}
       </p>
       <a
         href="/dashboard/providers"
@@ -129,7 +128,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
   if (locked) {
     return (
       <div className="mt-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-muted)]">
-        Complete Step 1 first to unlock this step.
+        {t('step2Locked')}
       </div>
     );
   }
@@ -138,7 +137,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
     return (
       <div className="mt-3 space-y-2">
         <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
-          Copy your API key now -- it will not be shown again.
+          {t('step2ApiKeyWarning')}
         </div>
         <div className="flex items-center gap-2 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]/60 px-3 py-2">
           <code className="flex-1 truncate font-mono text-xs text-[var(--text-primary)]">
@@ -154,7 +153,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
           </button>
         </div>
         <p className="text-xs text-[var(--text-muted)]">
-          Key name: <span className="text-[var(--text-secondary)]">{createdKey.name}</span>
+          {t('step2KeyNameLabel')} <span className="text-[var(--text-secondary)]">{createdKey.name}</span>
         </p>
       </div>
     );
@@ -182,7 +181,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
         </Button>
       </div>
       <p className="text-xs text-[var(--text-muted)]">
-        Give your key a memorable name, then click Create.
+        {t('step2Hint')}
       </p>
     </div>
   );
@@ -202,7 +201,7 @@ export function Step3Content({ done, locked, modelCount, statusLoaded }: Step3Co
   if (locked) {
     return (
       <div className="mt-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-muted)]">
-        Complete the previous steps first to unlock this step.
+        {t('step3Locked')}
       </div>
     );
   }

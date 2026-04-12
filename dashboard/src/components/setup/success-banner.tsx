@@ -31,7 +31,7 @@ export function SuccessBanner() {
             {t('successAllStepsComplete')}
           </p>
           <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-            Your CLIProxyAPI instance is fully configured and ready to use.
+            {t('successDescription')}
           </p>
         </div>
         <Link

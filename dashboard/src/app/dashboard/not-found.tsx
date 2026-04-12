@@ -24,10 +24,10 @@ export default async function DashboardNotFound() {
           </svg>
 
           <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">404</p>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Page not found</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">{t("notFoundCode")}</p>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t("pageNotFound")}</h1>
             <p className="text-sm text-[var(--text-muted)]">
-              This section does not exist or you may not have access to it.
+              {t("dashboardNotFoundDescription")}
             </p>
           </div>
         </div>

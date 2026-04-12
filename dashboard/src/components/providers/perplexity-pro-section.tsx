@@ -166,15 +166,15 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
     <div id="provider-perplexity" className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Perplexity Pro</h2>
-          <p className="text-xs text-[var(--text-muted)]">Browser session cookies for Perplexity Pro access</p>
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t("perplexitySectionTitle")}</h2>
+          <p className="text-xs text-[var(--text-muted)]">{t("perplexitySectionDescription")}</p>
         </div>
-        <span className="text-xs font-medium text-[var(--text-muted)]">{perplexityCookies.length} configured</span>
+        <span className="text-xs font-medium text-[var(--text-muted)]">{t("perplexityConfiguredCount", { count: perplexityCookies.length })}</span>
       </div>
 
       <div className="space-y-3">
         <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-700">
-          <strong className="text-amber-800">How to get your cookies:</strong>
+          <strong className="text-amber-800">{t("perplexityHowToTitle")}</strong>
           <ol className="mt-1.5 list-decimal space-y-1 pl-4">
             <li>{t("perplexityStep1")}</li>
             <li>{t("perplexityStep2")}</li>
@@ -183,18 +183,18 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
         </div>
 
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Saved Cookies</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("perplexitySavedCookiesTitle")}</h3>
         </div>
         {perplexityCookiesLoading ? (
           <div className="flex items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-6">
             <div className="flex flex-col items-center gap-3">
               <div className="size-6 animate-spin rounded-full border-4 border-[var(--surface-border)] border-t-blue-500"></div>
-              <p className="text-xs text-[var(--text-muted)]">Loading cookies...</p>
+              <p className="text-xs text-[var(--text-muted)]">{t("perplexityLoadingCookies")}</p>
             </div>
           </div>
         ) : perplexityCookies.length === 0 ? (
           <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 text-xs text-[var(--text-muted)]">
-            No Perplexity cookies configured yet.
+            {t("perplexityNoCookies")}
           </div>
         ) : (
           <div className="divide-y divide-[var(--surface-border)] rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
@@ -202,7 +202,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
               <div key={cookie.id} className="flex items-center justify-between gap-3 p-3">
                 <div className="min-w-0 space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-[var(--text-primary)]">{cookie.label || "Unnamed"}</span>
+                    <span className="text-sm font-medium text-[var(--text-primary)]">{cookie.label || t("perplexityUnnamed")}</span>
                     <span className={cn(
                       "inline-flex items-center rounded-sm px-2 py-0.5 text-[11px] font-medium",
                       cookie.isActive
@@ -213,7 +213,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
                     </span>
                   </div>
                   <p className="text-xs text-[var(--text-muted)]">
-                    Added {new Date(cookie.createdAt).toLocaleDateString()}
+                    {t("perplexityAddedDate", { date: new Date(cookie.createdAt).toLocaleDateString() })}
                     {cookie.lastUsedAt && (
                       <>{t("perplexityLastUsed", { date: new Date(cookie.lastUsedAt).toLocaleDateString() })}</>
                     )}
@@ -234,8 +234,8 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
         {perplexityCookies.length > 0 && (
           <div className="flex items-center justify-between rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-3">
             <div className="space-y-0.5">
-              <p className="text-xs font-medium text-[var(--text-secondary)]">Sync Models</p>
-              <p className="text-[11px] text-[var(--text-muted)]">Fetch latest models from sidecar and update proxy config</p>
+              <p className="text-xs font-medium text-[var(--text-secondary)]">{t("perplexitySyncModelsTitle")}</p>
+              <p className="text-[11px] text-[var(--text-muted)]">{t("perplexitySyncModelsDesc")}</p>
             </div>
             <Button
               className="shrink-0 px-3 py-1.5 text-xs"
@@ -248,12 +248,12 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
         )}
 
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Add Cookie</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("perplexityAddCookieTitle")}</h3>
         </div>
         <div className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-3">
           <div>
             <label htmlFor="perplexity-label" className="mb-1.5 block text-xs font-medium text-[var(--text-secondary)]">
-              Label <span className="text-[var(--text-muted)]">(optional)</span>
+              {t("perplexityLabelFieldLabel")} <span className="text-[var(--text-muted)]">{t("perplexityOptional")}</span>
             </label>
             <input
               id="perplexity-label"
@@ -267,7 +267,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
           </div>
           <div>
             <label htmlFor="perplexity-session-token" className="mb-1.5 block text-xs font-medium text-[var(--text-secondary)]">
-              Session Token <span className="text-red-600">*</span>
+              {t("perplexitySessionTokenLabel")} <span className="text-red-600">*</span>
             </label>
             <p className="mb-1.5 text-[11px] text-[var(--text-muted)] font-mono">next-auth.session-token</p>
             <div className="relative">
@@ -297,7 +297,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
           </div>
           <div>
             <label htmlFor="perplexity-csrf-token" className="mb-1.5 block text-xs font-medium text-[var(--text-secondary)]">
-              CSRF Token <span className="text-[var(--text-muted)]">(optional)</span>
+              {t("perplexityCsrfTokenLabel")} <span className="text-[var(--text-muted)]">{t("perplexityOptional")}</span>
             </label>
             <p className="mb-1.5 text-[11px] text-[var(--text-muted)] font-mono">next-auth.csrf-token</p>
             <div className="relative">

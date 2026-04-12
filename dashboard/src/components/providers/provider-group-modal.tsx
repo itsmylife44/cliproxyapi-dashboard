@@ -110,7 +110,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
           <div className="space-y-6">
             <div>
               <label htmlFor="groupName" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
-                Group Name <span className="text-red-600">*</span>
+                {t("providerGroupNameLabel")} <span className="text-red-600">*</span>
               </label>
               <Input
                 id="groupName"
@@ -125,7 +125,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
             
             <div>
               <label className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
-                Color (Optional)
+                {t("providerGroupColorLabel")}
               </label>
               <div className="flex flex-wrap gap-2">
                 {PRESET_COLORS.map(color => (
@@ -146,7 +146,7 @@ export function ProviderGroupModal({ isOpen, onClose, group, onSuccess }: Provid
                   onClick={() => setSelectedColor(null)} 
                   disabled={saving}
                   className={`w-7 h-7 rounded-full border-2 border-dashed flex items-center justify-center text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${selectedColor === null ? "border-black text-[var(--text-primary)] bg-[var(--surface-hover)]" : "border-[var(--surface-border)] text-[var(--text-muted)] hover:border-[var(--surface-border)]"}`}
-                  aria-label="No color"
+                  aria-label={t("providerGroupNoColor")}
                 >
                   ✕
                 </button>

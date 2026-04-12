@@ -77,7 +77,7 @@ export function OwnerBadge({ ownerUsername, isOwn }: OwnerBadgeProps) {
   if (isOwn) {
     return (
       <span className="inline-flex items-center rounded-sm border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-700">
-        You
+        {t("ownerYou")}
       </span>
     );
   }
@@ -92,7 +92,7 @@ export function OwnerBadge({ ownerUsername, isOwn }: OwnerBadgeProps) {
 
   return (
     <span className="inline-flex items-center rounded-sm border border-[var(--surface-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)]">
-      Team
+      {t("ownerTeam")}
     </span>
   );
 }
@@ -227,19 +227,19 @@ export function ApiKeySection({
       <div id="provider-api-keys" className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">API Key Providers</h2>
-            <p className="text-xs text-[var(--text-muted)]">Direct provider access keys</p>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t("sectionTitle")}</h2>
+            <p className="text-xs text-[var(--text-muted)]">{t("sectionDescription")}</p>
           </div>
-          <span className="text-xs font-medium text-[var(--text-muted)]">{totalApiKeys} keys total</span>
+          <span className="text-xs font-medium text-[var(--text-muted)]">{t("keysTotal", { count: totalApiKeys })}</span>
         </div>
 
         <div className="overflow-x-auto">
           <div className="min-w-[600px] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
             <div className="grid grid-cols-[minmax(0,1.6fr)_96px_120px_128px] items-center border-b border-[var(--surface-border)] bg-[var(--surface-base)]/60 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              <span>Provider</span>
-              <span>Status</span>
-              <span>Keys</span>
-              <span>Actions</span>
+              <span>{t("tableHeaderProvider")}</span>
+              <span>{t("tableHeaderStatus")}</span>
+              <span>{t("tableHeaderKeys")}</span>
+              <span>{t("tableHeaderActions")}</span>
             </div>
             {API_KEY_PROVIDERS.map((provider) => {
               const config = configs[provider.id];
@@ -255,10 +255,10 @@ export function ApiKeySection({
                       <p className="truncate text-xs text-[var(--text-muted)]">{provider.description}</p>
                     </div>
                     <span className={`text-xs font-medium ${isConfigured ? "text-emerald-700" : "text-[var(--text-muted)]"}`}>
-                      {isConfigured ? "Active" : "Inactive"}
+                      {isConfigured ? t("statusActive") : t("statusInactive")}
                     </span>
                     <span className="text-xs text-[var(--text-secondary)]">
-                      {configuredCount} {configuredCount === 1 ? "key" : "keys"}
+                      {configuredCount} {configuredCount === 1 ? t("keySingular") : t("keyPlural")}
                     </span>
                     <div className="flex justify-end">
                       <Button

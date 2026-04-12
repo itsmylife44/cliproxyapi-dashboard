@@ -69,17 +69,17 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
           {isLoading ? (
             <>
               <div className="w-2.5 h-2.5 rounded-full bg-amber-500/100 animate-pulse" />
-              <span className="text-[var(--text-muted)]">Checking…</span>
+              <span className="text-[var(--text-muted)]">{t('checking')}</span>
             </>
           ) : status?.running ? (
             <>
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/100 animate-pulse-dot" />
-              <span className="text-emerald-600 font-medium">All systems operational</span>
+              <span className="text-emerald-600 font-medium">{t('allSystemsOperational')}</span>
             </>
           ) : (
             <>
               <div className="w-2.5 h-2.5 rounded-full bg-red-500/100" />
-              <span className="text-red-600 font-medium">System offline</span>
+              <span className="text-red-600 font-medium">{t('systemOffline')}</span>
             </>
           )}
         </div>
@@ -88,7 +88,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
           <>
             <div className="w-px h-4 bg-[var(--surface-border)]" />
             <span className="text-[var(--text-muted)] text-xs">
-              Uptime: {formatUptime(status.uptime)}
+              {t('uptimeLabel')}{formatUptime(status.uptime)}
             </span>
           </>
         )}
@@ -125,7 +125,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
             </span>
             {isAdmin && (
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                Admin
+                {t('adminBadge')}
               </span>
             )}
           </div>

@@ -14,7 +14,7 @@ export function MobileTopBar() {
           type="button"
           onClick={toggle}
           className="rounded-md p-2 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--surface-hover)]"
-          aria-label="Toggle menu"
+          aria-label={t('toggleMenuAriaLabel')}
           aria-expanded={isOpen}
         >
           <svg
@@ -42,7 +42,7 @@ export function MobileTopBar() {
             className="rounded-sm"
           />
           <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
-            CLIProxy
+            {t('appName')}
           </h1>
         </div>
       </div>

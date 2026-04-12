@@ -157,26 +157,25 @@ export function DeployDashboard() {
     return (
       <div className="space-y-3">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Dashboard Deployment</h2>
-          <p className="text-xs text-[var(--text-muted)]">Deploy the latest dashboard changes from the repository</p>
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('title')}</h2>
+          <p className="text-xs text-[var(--text-muted)]">{t('description')}</p>
         </div>
 
         <div className="space-y-4">
           <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3">
-            <div className="text-sm font-medium text-amber-700">Webhook Not Configured</div>
+            <div className="text-sm font-medium text-amber-700">{t('webhookNotConfiguredTitle')}</div>
             <p className="mt-1 text-xs text-[var(--text-muted)]">
-              The deployment webhook is not set up. To enable dashboard deployments from the UI,
-              you need to configure the webhook server on your host machine.
+              {t('webhookNotConfiguredDescription')}
             </p>
           </div>
 
           <div className="space-y-3 text-sm text-[var(--text-secondary)]">
-            <div className="font-medium text-[var(--text-primary)]">Setup Instructions:</div>
+            <div className="font-medium text-[var(--text-primary)]">{t('setupInstructionsTitle')}</div>
             <ol className="list-decimal list-inside space-y-2 text-[var(--text-muted)]">
-              <li>Install webhook: <code className="rounded-sm bg-[var(--surface-muted)] px-1">apt install webhook</code></li>
-              <li>Copy webhook config from <code className="rounded-sm bg-[var(--surface-muted)] px-1">infrastructure/webhook.yaml</code></li>
-              <li>Set environment variables: <code className="rounded-sm bg-[var(--surface-muted)] px-1">WEBHOOK_HOST</code>, <code className="rounded-sm bg-[var(--surface-muted)] px-1">DEPLOY_SECRET</code></li>
-              <li>Start webhook service: <code className="rounded-sm bg-[var(--surface-muted)] px-1">webhook -hooks /path/to/webhook.yaml -port 9000</code></li>
+              <li>{t('step1Install')} <code className="rounded-sm bg-[var(--surface-muted)] px-1">apt install webhook</code></li>
+              <li>{t('step2CopyConfig')} <code className="rounded-sm bg-[var(--surface-muted)] px-1">infrastructure/webhook.yaml</code></li>
+              <li>{t('step3SetEnv')} <code className="rounded-sm bg-[var(--surface-muted)] px-1">WEBHOOK_HOST</code>, <code className="rounded-sm bg-[var(--surface-muted)] px-1">DEPLOY_SECRET</code></li>
+              <li>{t('step4Start')} <code className="rounded-sm bg-[var(--surface-muted)] px-1">webhook -hooks /path/to/webhook.yaml -port 9000</code></li>
             </ol>
           </div>
         </div>
@@ -188,30 +187,30 @@ export function DeployDashboard() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Dashboard Deployment</h2>
-          <p className="text-xs text-[var(--text-muted)]">Deploy the latest dashboard changes from the repository</p>
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('title')}</h2>
+          <p className="text-xs text-[var(--text-muted)]">{t('description')}</p>
         </div>
         <div className="flex items-center gap-2">
           {status.status === "running" && (
             <span className="rounded-sm border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600 animate-pulse">
-              Deploying...
+              {t('statusDeploying')}
             </span>
           )}
           {(status.status === "success" || status.status === "completed") && (
             <span className="rounded-sm border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
-              Success
+              {t('statusSuccess')}
             </span>
           )}
           {(status.status === "error" || status.status === "failed") && (
             <span className="rounded-sm border border-rose-500/20 bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-600">
-              Failed
+              {t('statusFailed')}
             </span>
           )}
         </div>
       </div>
 
         <p className="text-xs text-[var(--text-muted)]">
-        Quick Update uses Docker cache for faster builds. Full Rebuild rebuilds everything from scratch.
+        {t('cacheDescription')}
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -260,7 +259,7 @@ export function DeployDashboard() {
 
           {status.completedAt && (
             <div className="text-xs text-[var(--text-muted)]">
-              Completed: {new Date(status.completedAt).toLocaleString()}
+              {t('completedAt', { time: new Date(status.completedAt).toLocaleString() })}
             </div>
           )}
         </div>

@@ -72,20 +72,20 @@ export default function SetupPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
-            CLIProxyAPI
+            {t("pageTitle")}
           </h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">First-time setup</p>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">{t("firstTimeSetup")}</p>
         </div>
 
          <div className="glass-card rounded-2xl p-6">
            <div className="mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-sm text-amber-700">
-            Create your administrator account. Keep these credentials secure.
+            {t("createAdminDescription")}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="username" className="mb-2 block text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
-                Username
+                {t("usernameLabel")}
               </label>
               <Input
                 type="text"
@@ -100,7 +100,7 @@ export default function SetupPage() {
 
             <div>
               <label htmlFor="password" className="mb-2 block text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
-                Password
+                {t("passwordLabel")}
               </label>
               <Input
                 type="password"
@@ -115,7 +115,7 @@ export default function SetupPage() {
 
             <div>
               <label htmlFor="confirmPassword" className="mb-2 block text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
-                Confirm Password
+                {t("confirmPasswordLabel")}
               </label>
               <Input
                 type="password"
@@ -140,7 +140,7 @@ export default function SetupPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-[var(--text-muted)]">
-          CLIProxyAPI Management Dashboard
+          {t("footerText")}
         </p>
       </div>
     </main>

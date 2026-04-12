@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { ChartContainer, CHART_COLORS, SERIES_PALETTE, useChartTheme, formatCompact } from "@/components/ui/chart-theme";
 
@@ -26,6 +27,7 @@ interface UsageStatsProps {
 }
 
 export function UsageStats({ usage }: UsageStatsProps) {
+   const t = useTranslations('monitoring');
    const { axisTickStyle, tooltipStyle, tokens } = useChartTheme();
    const modelStats = usage?.usage.apis
     ? Object.entries(usage.usage.apis).flatMap(([, data]) =>
@@ -48,30 +50,30 @@ export function UsageStats({ usage }: UsageStatsProps) {
 
   return (
     <section className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-      <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Usage Statistics</h2>
+      <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">{t('usageStatsTitle')}</h2>
          {usage ? (
            <div className="space-y-4">
             <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
               <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total Requests</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalRequests')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
                   {(usage.usage?.total_requests ?? 0).toLocaleString()}
                 </p>
               </div>
               <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Success</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('successLabel')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-emerald-700">
                   {(usage.usage?.success_count ?? 0).toLocaleString()}
                 </p>
               </div>
               <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Failed</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('failedLabel')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-rose-600">
                   {(usage.usage?.failure_count ?? 0).toLocaleString()}
                 </p>
               </div>
               <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total Tokens</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalTokens')}</p>
                 <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
                 {(usage.usage?.total_tokens ?? 0).toLocaleString()}
                 </p>
@@ -79,7 +81,7 @@ export function UsageStats({ usage }: UsageStatsProps) {
             </div>
 
             {modelStats.length > 0 ? (
-              <ChartContainer title="Requests by Model">
+              <ChartContainer title={t('requestsByModel')}>
                 <ResponsiveContainer width="100%" height={200} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
                   <BarChart
                     layout="vertical"
@@ -114,7 +116,7 @@ export function UsageStats({ usage }: UsageStatsProps) {
             ) : null}
 
             {hourlyData.length > 0 ? (
-              <ChartContainer title="Requests by Hour">
+              <ChartContainer title={t('requestsByHour')}>
                 <ResponsiveContainer width="100%" height={200} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
                   <BarChart
                     data={hourlyData}
@@ -140,7 +142,7 @@ export function UsageStats({ usage }: UsageStatsProps) {
             ) : null}
           </div>
         ) : (
-          <div className="text-sm text-[var(--text-muted)]">Loading usage statistics...</div>
+          <div className="text-sm text-[var(--text-muted)]">{t('loadingUsageStats')}</div>
         )}
     </section>
   );

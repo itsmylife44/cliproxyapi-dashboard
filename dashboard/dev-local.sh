@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Local macOS Docker-based development script
 # Replaces SSH tunnel approach with local Docker containers
 # Usage: ./dev-local.sh [--down|--reset]

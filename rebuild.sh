@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Pull latest GHCR images and restart CLIProxyAPI Dashboard services
 # Usage: ./rebuild.sh [--dashboard-only]
 

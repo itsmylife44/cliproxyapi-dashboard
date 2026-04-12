@@ -372,7 +372,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
             </div>
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('noCustomProviders')}</h3>
-              <p className="text-xs text-[var(--text-muted)]">Add an OpenAI-compatible provider to extend your AI capabilities</p>
+              <p className="text-xs text-[var(--text-muted)]">{t('noCustomProvidersDescription')}</p>
             </div>
             <Button onClick={() => setShowCustomProviderModal(true)} className="px-3 py-1.5 text-xs">
               {t("addCustomProviderButton")}

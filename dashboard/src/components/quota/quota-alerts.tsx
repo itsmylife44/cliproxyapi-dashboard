@@ -214,7 +214,7 @@ export function QuotaAlerts() {
     <section className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
       <div>
         <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">{t("sectionTitle")}</h2>
-        <p className="mt-0.5 text-xs text-[var(--text-muted)]">Get notified when quota drops below a threshold.</p>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t("sectionDescription")}</p>
       </div>
 
       <div className="space-y-3">
@@ -309,7 +309,7 @@ export function QuotaAlerts() {
             }}
             placeholder="5"
           />
-          <p className="text-[10px] text-[var(--text-muted)]">How often to check quota levels (1-1440 min, default: 5)</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{t("checkIntervalHint")}</p>
         </div>
 
         <div className="space-y-1">

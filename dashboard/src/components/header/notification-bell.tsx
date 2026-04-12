@@ -89,6 +89,7 @@ function NotificationDropdown({
   onDismiss: (id: string) => void;
 }) {
   const t = useTranslations("common");
+  const tNotifications = useTranslations("notifications");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -138,7 +139,7 @@ function NotificationDropdown({
             <div className="text-[var(--text-muted)]">
               <BellIcon hasNotifications={false} />
             </div>
-            <p className="mt-2 text-xs text-[var(--text-muted)]">All clear — no notifications</p>
+            <p className="mt-2 text-xs text-[var(--text-muted)]">{tNotifications('emptyState')}</p>
           </div>
         ) : (
           <div className="space-y-1.5 p-2">

@@ -1073,22 +1073,6 @@
     "updatingButton": "Wird aktualisiert...",
     "updateToButton": "Auf {version} aktualisieren"
   },
-  "updateNotification": {
-    "dashboardTitle": "Dashboard-Update verfÃ¼gbar",
-    "dashboardDescription": "Eine neue Version des Dashboards ist verfÃ¼gbar. MÃ¶chten Sie jetzt aktualisieren?",
-    "proxyTitle": "Proxy-Update verfÃ¼gbar",
-    "proxyDescription": "Eine neue Version von CLIProxyAPI (dem Proxy) ist verfÃ¼gbar. MÃ¶chten Sie jetzt aktualisieren?",
-    "currentLabel": "Aktuell",
-    "latestLabel": "Neueste",
-    "whatsNew": "Was ist neu",
-    "selectVersion": "Oder wÃ¤hlen Sie eine bestimmte Version",
-    "latestOption": "Neueste ({version})",
-    "unknownVersion": "unbekannt",
-    "updatingMessage": "Aktualisierung auf {version}... Dies kann einen Moment dauern.",
-    "laterButton": "SpÃ¤ter",
-    "updatingButton": "Wird aktualisiert...",
-    "updateToButton": "Auf {version} aktualisieren"
-  },
   "deploy": {
     "title": "Dashboard-Bereitstellung",
     "description": "Stellen Sie die neuesten Dashboard-Ã„nderungen aus dem Repository bereit",

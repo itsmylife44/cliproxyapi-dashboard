@@ -1073,22 +1073,6 @@
     "autoRefreshNote": "This page auto-refreshes every 5 seconds to detect when each step is complete.",
     "copyKeyWarning": "Copy your API key now -- it will not be shown again after you leave this page."
   },
-  "updateNotification": {
-    "dashboardTitle": "Dashboard Update Available",
-    "dashboardDescription": "A new version of the Dashboard is available. Would you like to update now?",
-    "proxyTitle": "Proxy Update Available",
-    "proxyDescription": "A new version of CLIProxyAPI (the proxy) is available. Would you like to update now?",
-    "currentLabel": "Current",
-    "latestLabel": "Latest",
-    "whatsNew": "What's New",
-    "selectVersion": "Or select a specific version",
-    "latestOption": "Latest ({version})",
-    "unknownVersion": "unknown",
-    "updatingMessage": "Updating to {version}... This may take a moment.",
-    "laterButton": "Later",
-    "updatingButton": "Updating...",
-    "updateToButton": "Update to {version}"
-  },
   "deploy": {
     "title": "Dashboard Deployment",
     "description": "Deploy the latest dashboard changes from the repository",

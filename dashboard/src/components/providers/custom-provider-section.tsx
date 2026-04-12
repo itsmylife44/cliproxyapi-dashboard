@@ -342,7 +342,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('customProvidersTitle')}</h2>
-            <p className="text-xs text-[var(--text-muted)]">OpenAI-compatible endpoints and mappings</p>
+            <p className="text-xs text-[var(--text-muted)]">{t('customSectionDescription')}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="secondary" onClick={() => setShowGroupModal(true)} className="px-2.5 py-1 text-xs">
@@ -358,7 +358,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
           <div className="flex items-center justify-center p-8">
             <div className="flex flex-col items-center gap-3">
               <div className="size-8 animate-spin rounded-full border-4 border-[var(--surface-border)] border-t-blue-500"></div>
-              <p className="text-sm text-[var(--text-secondary)]">Loading custom providers...</p>
+              <p className="text-sm text-[var(--text-secondary)]">{t('loadingCustomProviders')}</p>
             </div>
           </div>
         ) : groups.length === 0 && ungroupedProviders.length === 0 ? (

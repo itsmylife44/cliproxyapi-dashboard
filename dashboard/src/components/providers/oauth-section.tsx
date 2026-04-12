@@ -784,7 +784,7 @@ export function OAuthSection({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('oauthAccountsTitle')}</h2>
-            <p className="text-xs text-[var(--text-muted)]">Subscription-based provider connections</p>
+            <p className="text-xs text-[var(--text-muted)]">{t('oauthSectionDescription')}</p>
           </div>
           <span className="text-xs font-medium text-[var(--text-muted)]">{accounts.length} connected</span>
         </div>
@@ -802,7 +802,7 @@ export function OAuthSection({
           />
 
           <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 text-xs text-[var(--text-muted)]">
-            <strong className="text-[var(--text-primary)]">Note:</strong>{" "}
+            <strong className="text-[var(--text-primary)]">{t("noteLabel")}</strong>{" "}
             {incognitoBrowserEnabled
               ? t("oauthIncognitoNote")
               : t("oauthPopupNote")}
@@ -901,7 +901,7 @@ export function OAuthSection({
                     Our server runs remotely, so the OAuth redirect can&apos;t reach
                     it directly. Copy the FULL URL from the address bar.
                   </li>
-                  <li>Paste the URL below and submit.</li>
+                  <li>{t("oauthStep4")}</li>
                 </ol>
               </div>
 
@@ -947,12 +947,12 @@ export function OAuthSection({
               <ol className="mt-3 list-decimal space-y-2 pl-4 text-[var(--text-primary)]">
                 <li>{incognitoBrowserEnabled ? "Open the authorization URL above in a private/incognito window." : "A browser window has opened with the authorization page."}</li>
                 <li>Log in and approve the access request.</li>
-                <li>Once approved, this dialog will update automatically.</li>
+                <li>{t("oauthDeviceStep3")}</li>
               </ol>
               {deviceCodeInfo && (
                 <div className="mt-4 space-y-3">
                   <div className="rounded-lg bg-[var(--surface-muted)] p-3">
-                    <p className="text-xs font-medium text-[var(--text-muted)]">Your authorization code:</p>
+                    <p className="text-xs font-medium text-[var(--text-muted)]">{t("oauthYourAuthCode")}</p>
                     <p className="mt-1 select-all font-mono text-lg font-bold tracking-wider text-[var(--text-primary)]">{deviceCodeInfo.userCode}</p>
                   </div>
                   <p className="text-xs text-[var(--text-muted)]">

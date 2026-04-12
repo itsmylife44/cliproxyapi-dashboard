@@ -376,8 +376,8 @@ export default async function QuickStartPage() {
         <details className="group/details rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Publisher / Subscriber</p>
-              <p className="text-xs text-[var(--text-muted)]">Share your config template or subscribe to another user.</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{t('publisherSubscriberTitle')}</p>
+              <p className="text-xs text-[var(--text-muted)]">{t('publisherSubscriberDescription')}</p>
             </div>
             <svg className="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 group-open/details:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
           </summary>
@@ -393,7 +393,7 @@ export default async function QuickStartPage() {
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-[var(--text-primary)]">{t('integrationsTitle')}</p>
-              <p className="text-xs text-[var(--text-muted)]">Reference setup snippets for external clients.</p>
+              <p className="text-xs text-[var(--text-muted)]">{t('integrationsDescription')}</p>
             </div>
             <svg className="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 group-open/details:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
           </summary>

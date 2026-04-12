@@ -693,7 +693,8 @@
     "statusColumn": "Status",
     "unknown": "Unknown",
     "longTermLabel": "Long-Term",
-    "shortTermLabel": "Short-Term"
+    "shortTermLabel": "Short-Term",
+    "quotaNotAvailable": "Quota monitoring not available for this provider."
   },
   "usage": {
     "pageTitle": "Usage",

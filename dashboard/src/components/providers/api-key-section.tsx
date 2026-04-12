@@ -330,12 +330,16 @@ export function ApiKeySection({
                 required
                 disabled={saving}
               />
-              <p className="mt-1.5 text-xs text-[var(--text-muted)]">Your API key will be stored securely and associated with your account</p>
+              <p className="mt-1.5 text-xs text-[var(--text-muted)]">{t("addKeyHint")}</p>
             </div>
             {currentUser && (
               <div className="rounded-sm border-l-4 border-blue-300 bg-blue-500/10 p-3 text-sm">
                 <p className="text-[var(--text-primary)]">
-                  <strong>Usage:</strong> You have contributed {currentUser ? configs[PROVIDER_IDS.CLAUDE].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.GEMINI].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.CODEX].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.OPENAI].keys.filter((k) => k.isOwn).length : 0} / {maxKeysPerUser} keys total
+                  <strong>{t("usageLabel")}</strong>{" "}
+                  {t("usageContributed", {
+                    contributed: configs[PROVIDER_IDS.CLAUDE].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.GEMINI].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.CODEX].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.OPENAI].keys.filter((k) => k.isOwn).length,
+                    max: maxKeysPerUser
+                  })}
                 </p>
               </div>
             )}

@@ -260,7 +260,7 @@ export function QuotaAlerts() {
               {showToken ? t("buttonHide") : t("buttonShow")}
             </Button>
           </div>
-          <p className="text-[10px] text-[var(--text-muted)]">Create a bot via @BotFather on Telegram</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{t("botTokenHint")}</p>
         </div>
 
         <div className="space-y-1">
@@ -271,7 +271,7 @@ export function QuotaAlerts() {
             onChange={(v) => setSettings((s) => ({ ...s, chatId: v }))}
             placeholder="-1001234567890"
           />
-          <p className="text-[10px] text-[var(--text-muted)]">Your Telegram user/group ID. Use @userinfobot to find it</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{t("chatIdHint")}</p>
         </div>
 
         <div className="space-y-1">
@@ -290,7 +290,7 @@ export function QuotaAlerts() {
             }}
             placeholder="20"
           />
-          <p className="text-[10px] text-[var(--text-muted)]">Alert when any account drops below this capacity</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{t("thresholdHint")}</p>
         </div>
 
         <div className="space-y-1">
@@ -328,7 +328,7 @@ export function QuotaAlerts() {
             }}
             placeholder="60"
           />
-          <p className="text-[10px] text-[var(--text-muted)]">Minimum time between notifications (1-1440 min, default: 60)</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{t("cooldownHint")}</p>
         </div>
 
         <div className="space-y-1.5">
@@ -356,7 +356,7 @@ export function QuotaAlerts() {
               );
             })}
           </div>
-          <p className="text-[10px] text-[var(--text-muted)]">Only selected providers will trigger alerts</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{t("monitoredProvidersHint")}</p>
         </div>
 
         <div className="flex flex-wrap gap-2 pt-1">

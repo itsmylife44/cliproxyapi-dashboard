@@ -191,7 +191,7 @@ export function QuotaDetails({ filteredAccounts, expandedCards, onToggleCard, lo
                       <p className="mb-2 break-all text-xs text-rose-600">{account.error}</p>
                     )}
                     {!account.supported && !account.error && (
-                      <p className="mb-2 text-xs text-amber-700">Quota monitoring not available for this provider.</p>
+                      <p className="mb-2 text-xs text-amber-700">{t("quotaNotAvailable")}</p>
                     )}
 
                     {account.groups && account.groups.length > 0 && (

@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.71](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.70...dashboard-v0.1.71) (2026-04-12)
+
+
+### Features
+
+* **i18n:** add multi-language support with English and German ([#178](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/178)) ([4201006](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/42010064d32ea11b7ae97f6fa7a086f2e4244e04))
+* **quota:** add model-first Antigravity snapshots with i18n ([#180](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/180)) ([404b354](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/404b3544d7a706a6c85764b2ecdea8651c56c7ac))
+
+
+### Bug Fixes
+
+* **ci:** decouple tag-contributors from build pipeline ([d4914cd](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d4914cdc2d6164e61e6941b537346d16c605c416))
+* **ci:** handle missing releases in tag-contributors job ([06b9941](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/06b994118d7a0ff16227155cd5e9c567fafb5025))
+* preserve original model IDs from proxy instead of transforming to dot-notation ([349f35b](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/349f35b34633c3f1c72f3571aabd8b1d10001db6)), closes [#179](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/179)
+* **ui:** use named Tailwind groups to prevent tooltip bleed in details sections ([cd557f2](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/cd557f229164371dc325b4bebe94206cffa8335a))
+
 ## [0.1.70](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.69...dashboard-v0.1.70) (2026-04-11)
 
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/screenshots/1.png" alt="CLIProxyAPI Dashboard" width="800">
+  <img src="docs/screenshots/providers-light.png" alt="CLIProxyAPI Dashboard" width="800">
 </p>
 
 <h1 align="center">CLIProxyAPI Dashboard</h1>
@@ -114,11 +114,23 @@ Each variant has its own config file (`oh-my-openagent.json` / `oh-my-opencode-s
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/1.png" alt="Dashboard" width="700">
+  <img src="docs/screenshots/setup-wizard.png" alt="Setup Wizard" width="700">
+  <br><em>Setup Wizard — guided initial configuration</em>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/2.png" alt="Dashboard" width="700">
+  <img src="docs/screenshots/providers-light.png" alt="Provider Configuration" width="700">
+  <br><em>Provider Configuration — manage API keys and OAuth accounts</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/quota.png" alt="Quota Management" width="700">
+  <br><em>Quota Management — track rate limits with Telegram alerts</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/settings.png" alt="Settings" width="700">
+  <br><em>Settings — config sync, system info, and updates</em>
 </p>
 
 ## Architecture

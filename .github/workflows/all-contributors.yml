@@ -1,14 +1,12 @@
 name: All Contributors
 
 on:
-  push:
-    branches: [main]
   pull_request_target:
     types: [closed]
 
 jobs:
   add-contributor:
-    if: github.event_name == 'pull_request_target' && github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true && github.event.pull_request.user.login != 'github-actions[bot]' && github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -17,23 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-          fetch-depth: 0
 
-      - name: Check if contributor exists
-        id: check
-        run: |
-          CONTRIBUTOR="${{ github.event.pull_request.user.login }}"
-          if grep -q "\"login\": \"$CONTRIBUTOR\"" .all-contributorsrc; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "contributor=$CONTRIBUTOR" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Add contributor
-        if: steps.check.outputs.exists == 'false'
-        uses: all-contributors/all-contributors-action@v1
+      - uses: JoshuaKGoldberg/all-contributors-auto-action@v0.5.0
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          contributor_key: ${{ steps.check.outputs.contributor }}
-          contribution_type: code
+          github-token: ${{ secrets.GITHUB_TOKEN }}

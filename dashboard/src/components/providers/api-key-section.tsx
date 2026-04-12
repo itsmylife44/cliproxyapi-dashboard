@@ -7,6 +7,7 @@ import { Modal, ModalContent, ModalFooter, ModalHeader, ModalTitle } from "@/com
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useTranslations } from "next-intl";
 
 type ShowToast = ReturnType<typeof useToast>["showToast"];
 
@@ -71,6 +72,8 @@ export const API_KEY_PROVIDERS = PROVIDERS.filter(
 );
 
 export function OwnerBadge({ ownerUsername, isOwn }: OwnerBadgeProps) {
+  const t = useTranslations("providers");
+
   if (isOwn) {
     return (
       <span className="inline-flex items-center rounded-sm border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-700">
@@ -109,6 +112,8 @@ export function ApiKeySection({
   maxKeysPerUser,
   refreshProviders,
 }: ApiKeySectionProps) {
+  const t = useTranslations("providers");
+
   const [modalProvider, setModalProvider] = useState<ProviderId | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [saving, setSaving] = useState(false);
@@ -132,7 +137,7 @@ export function ApiKeySection({
   const handleAddKey = async () => {
     if (!modalProvider) return;
     if (!apiKey.trim()) {
-      showToast("API key is required", "error");
+      showToast(t("toastApiKeyRequired"), "error");
       return;
     }
 
@@ -151,9 +156,9 @@ export function ApiKeySection({
       const data = await res.json();
 
       if (!res.ok) {
-        const errorMessage = data.error?.message ?? data.error ?? "Failed to add provider key";
+        const errorMessage = data.error?.message ?? data.error ?? t("toastAddFailed");
         if (res.status === 409) {
-          showToast("This API key has already been contributed", "error");
+          showToast(t("toastAlreadyContributed"), "error");
         } else if (res.status === 403) {
           showToast(errorMessage, "error");
         } else {
@@ -163,11 +168,11 @@ export function ApiKeySection({
         return;
       }
 
-      showToast("Provider key added successfully", "success");
+      showToast(t("toastAddSuccess"), "success");
       closeModal();
       await refreshProviders();
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
     } finally {
       setSaving(false);
     }
@@ -188,13 +193,13 @@ export function ApiKeySection({
       });
       if (!res.ok) {
         const data = await res.json();
-        showToast(data.error?.message ?? data.error ?? "Failed to delete provider key", "error");
+        showToast(data.error?.message ?? data.error ?? t("toastDeleteFailed"), "error");
         return;
       }
-      showToast("Provider key deleted", "success");
+      showToast(t("toastDeleteSuccess"), "success");
       await refreshProviders();
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
     }
   };
 
@@ -203,6 +208,19 @@ export function ApiKeySection({
     count: configs[provider.id]?.keys.length ?? 0,
   }));
   const totalApiKeys = providerStats.reduce((sum, item) => sum + item.count, 0);
+
+  const providerNameKey: Record<string, string> = {
+    [PROVIDER_IDS.CLAUDE]: "claudeName",
+    [PROVIDER_IDS.GEMINI]: "geminiName",
+    [PROVIDER_IDS.CODEX]: "codexName",
+    [PROVIDER_IDS.OPENAI]: "openaiName",
+  };
+  const providerDescKey: Record<string, string> = {
+    [PROVIDER_IDS.CLAUDE]: "claudeDescription",
+    [PROVIDER_IDS.GEMINI]: "geminiDescription",
+    [PROVIDER_IDS.CODEX]: "codexDescription",
+    [PROVIDER_IDS.OPENAI]: "openaiDescription",
+  };
 
   return (
     <>
@@ -248,7 +266,7 @@ export function ApiKeySection({
                         className="px-2.5 py-1 text-xs"
                         disabled={!currentUser}
                       >
-                        Add Key
+                        {t("addKeyButton")}
                       </Button>
                     </div>
                   </div>
@@ -276,7 +294,7 @@ export function ApiKeySection({
                                 className="px-2 py-1 text-[11px]"
                                 onClick={() => confirmDeleteKey(keyInfo.keyHash, provider.id)}
                               >
-                                Remove
+                                {t("removeButton")}
                               </Button>
                             )}
                           </div>
@@ -294,7 +312,7 @@ export function ApiKeySection({
       <Modal isOpen={modalProvider !== null} onClose={closeModal}>
         <ModalHeader>
           <ModalTitle>
-            {modalProvider && PROVIDERS.find((p) => p.id === modalProvider)?.name} - Add API Key
+            {modalProvider && t("addKeyModalTitle", { name: PROVIDERS.find((p) => p.id === modalProvider)?.name ?? "" })}
           </ModalTitle>
         </ModalHeader>
         <ModalContent>
@@ -308,7 +326,7 @@ export function ApiKeySection({
                 name="api-key"
                 value={apiKey}
                 onChange={setApiKey}
-                placeholder="sk-..."
+                placeholder={t("addKeyPlaceholder")}
                 required
                 disabled={saving}
               />
@@ -325,10 +343,10 @@ export function ApiKeySection({
         </ModalContent>
         <ModalFooter>
           <Button variant="ghost" onClick={closeModal}>
-            Cancel
+            {t("cancelButton")}
           </Button>
           <Button onClick={handleAddKey} disabled={saving}>
-            {saving ? "Adding..." : "Add API Key"}
+            {saving ? t("addingButton") : t("addApiKeyButton")}
           </Button>
         </ModalFooter>
       </Modal>
@@ -340,10 +358,10 @@ export function ApiKeySection({
           setPendingKeyDelete(null);
         }}
         onConfirm={handleDeleteKey}
-        title="Remove API Key"
-        message="Are you sure you want to remove this key?"
-        confirmLabel="Remove"
-        cancelLabel="Cancel"
+        title={t("removeConfirmTitle")}
+        message={t("removeConfirmMessage")}
+        confirmLabel={t("removeConfirmButton")}
+        cancelLabel={t("removeConfirmCancelButton")}
         variant="danger"
       />
     </>

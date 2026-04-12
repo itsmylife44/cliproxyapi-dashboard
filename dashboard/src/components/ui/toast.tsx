@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 interface Toast {
   id: string;
@@ -16,6 +17,7 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const t = useTranslations('common');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 

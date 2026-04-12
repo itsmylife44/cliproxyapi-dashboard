@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { extractApiError } from "@/lib/utils";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useTranslations } from 'next-intl';
 
 interface DeployStatus {
   status: "idle" | "running" | "success" | "error" | "completed" | "failed";
@@ -37,6 +38,7 @@ export function DeployDashboard() {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const fetchStatusRef = useRef<(shouldStartPolling?: boolean) => Promise<void>>(async () => {});
   const { showToast } = useToast();
+  const t = useTranslations('deploy');
 
   const fetchStatus = useCallback(async (shouldStartPolling = false) => {
     try {
@@ -99,10 +101,10 @@ export function DeployDashboard() {
     if (!pendingDeploy) return;
 
     const { noCache } = pendingDeploy;
-    const mode = noCache ? "Full Rebuild" : "Quick Update";
+    const mode = noCache ? t('confirmFullRebuildTitle') : t('confirmQuickUpdateTitle');
 
     setDeploying(true);
-    setStatus({ status: "running", step: "init", message: "Starting deployment..." });
+    setStatus({ status: "running", step: "init", message: t('startingDeployment') });
 
     try {
       const res = await fetch(API_ENDPOINTS.ADMIN.DEPLOY, {
@@ -112,31 +114,31 @@ export function DeployDashboard() {
       });
 
       if (res.ok) {
-        showToast(`${mode} started`, "success");
+        showToast(t('toastStarted', { mode }), "success");
         startPolling();
       } else {
         const data = await res.json();
-        const errorMessage = extractApiError(data, "Failed to start deployment");
+        const errorMessage = extractApiError(data, t('toastStartFailed'));
         showToast(errorMessage, "error");
         setDeploying(false);
         setStatus({ status: "error", error: errorMessage });
       }
     } catch {
-      showToast("Network error", "error");
+      showToast(t('toastNetworkError'), "error");
       setDeploying(false);
-      setStatus({ status: "error", error: "Network error" });
+      setStatus({ status: "error", error: t('toastNetworkError') });
     }
   };
 
   const getStepLabel = (step?: string) => {
     switch (step) {
-      case "init": return "Initializing...";
-      case "git": return "Pulling latest code...";
-      case "build": return "Building Docker image...";
-      case "deploy": return "Deploying container...";
-      case "health": return "Health check...";
-      case "done": return "Complete!";
-      default: return step || "Unknown";
+      case "init": return t('stepInit');
+      case "git": return t('stepGit');
+      case "build": return t('stepBuild');
+      case "deploy": return t('stepDeploy');
+      case "health": return t('stepHealth');
+      case "done": return t('stepDone');
+      default: return step || t('stepUnknown');
     }
   };
 
@@ -217,21 +219,21 @@ export function DeployDashboard() {
           onClick={() => handleDeploy(false)}
           disabled={deploying}
         >
-          {deploying ? "Deploying..." : "Quick Update"}
+          {deploying ? t('buttonDeploying') : t('buttonQuickUpdate')}
         </Button>
         <Button
           variant="secondary"
           onClick={() => handleDeploy(true)}
           disabled={deploying}
         >
-          Full Rebuild (no-cache)
+          {t('buttonFullRebuild')}
         </Button>
         <Button
           variant="ghost"
           onClick={fetchStatus}
           disabled={deploying}
         >
-          Refresh Status
+          {t('buttonRefreshStatus')}
         </Button>
       </div>
 
@@ -271,10 +273,10 @@ export function DeployDashboard() {
           setPendingDeploy(null);
         }}
         onConfirm={executeDeploy}
-        title={pendingDeploy?.noCache ? "Full Rebuild" : "Quick Update"}
-        message={`Start ${pendingDeploy?.noCache ? "Full Rebuild" : "Quick Update"}? The dashboard will restart after deployment.`}
-        confirmLabel="Deploy"
-        cancelLabel="Cancel"
+        title={pendingDeploy?.noCache ? t('confirmFullRebuildTitle') : t('confirmQuickUpdateTitle')}
+        message={t('confirmMessage', { mode: pendingDeploy?.noCache ? t('confirmFullRebuildTitle') : t('confirmQuickUpdateTitle') })}
+        confirmLabel={t('confirmLabel')}
+        cancelLabel={t('cancelLabel')}
         variant="warning"
       />
     </div>

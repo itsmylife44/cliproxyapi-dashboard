@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { PublicThemeToggle } from "@/components/public-theme-toggle";
 
-export default function NotFound() {
+export default async function NotFound() {
+  const t = await getTranslations("errors");
   return (
     <main id="main-content" className="flex min-h-screen items-center justify-center px-4">
       <PublicThemeToggle />

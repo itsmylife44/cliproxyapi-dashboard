@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,18 +15,19 @@ export default function SetupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const t = useTranslations("setup");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("passwordMismatchError"));
       return;
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("passwordTooShortError"));
       return;
     }
 
@@ -53,7 +55,7 @@ export default function SetupPage() {
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Network error. Please try again.");
+      setError(t("networkError"));
       setLoading(false);
     }
   };
@@ -92,7 +94,7 @@ export default function SetupPage() {
                 onChange={setUsername}
                 required
                 autoComplete="username"
-                placeholder="admin"
+                placeholder={t("usernamePlaceholder")}
               />
             </div>
 
@@ -107,7 +109,7 @@ export default function SetupPage() {
                 onChange={setPassword}
                 required
                 autoComplete="new-password"
-                placeholder="Minimum 8 characters"
+                placeholder={t("passwordPlaceholder")}
               />
             </div>
 
@@ -132,7 +134,7 @@ export default function SetupPage() {
             )}
 
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Creating account\u2026" : "Create Account"}
+              {loading ? t("creatingAccount") : t("createAccount")}
             </Button>
           </form>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 interface SyncToken {
   id: string;
@@ -46,6 +47,7 @@ export function TelegramSettings({
   onConfirmRevokeToken,
   onUpdateTokenApiKey,
 }: TelegramSettingsProps) {
+  const t = useTranslations("settings.telegram");
   return (
     <div className="space-y-3">
       <div>
@@ -61,14 +63,14 @@ export function TelegramSettings({
               Generate tokens to sync OpenCode configurations
             </p>
             <Button onClick={onGenerateToken} disabled={generatingToken}>
-              {generatingToken ? "Generating..." : "Generate Token"}
+              {generatingToken ? t("buttonGenerating") : t("buttonGenerateToken")}
             </Button>
           </div>
 
           {generatedToken && (
             <div className="space-y-3 rounded-sm border border-emerald-500/20 bg-emerald-500/10 p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-emerald-700">New Token Generated</span>
+                <span className="text-sm font-medium text-emerald-700">{t("newTokenGeneratedLabel")}</span>
                 <button
                   type="button"
                   onClick={onClearGeneratedToken}
@@ -83,12 +85,12 @@ export function TelegramSettings({
                   {generatedToken}
                 </div>
                 <Button variant="secondary" onClick={() => onCopyToken(generatedToken)}>
-                  Copy to Clipboard
+                  {t("buttonCopyToClipboard")}
                 </Button>
               </div>
               <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3 text-sm">
                 <span className="text-amber-700">
-                  This token will only be shown once. Copy it now.
+                  {t("tokenOneTimeWarning")}
                 </span>
               </div>
             </div>
@@ -131,7 +133,7 @@ export function TelegramSettings({
                         variant="danger"
                         onClick={() => onConfirmRevokeToken(token.id)}
                       >
-                        Revoke
+                        {t("buttonRevoke")}
                       </Button>
                     )}
                   </div>
@@ -178,7 +180,7 @@ export function TelegramSettings({
             className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)] hover:text-[var(--text-primary)]"
           >
             <span>{showInstructions ? "▼" : "▶"}</span>
-            Setup Instructions
+            {t("setupInstructionsToggle")}
           </button>
           {showInstructions && (
             <div className="mt-3 space-y-4 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-sm text-[var(--text-secondary)]">
@@ -210,7 +212,7 @@ export function TelegramSettings({
                   <div className="rounded-sm border border-emerald-500/20 bg-emerald-500/10 p-3">
                     <div className="mb-2 text-xs font-medium text-emerald-700">With OCX Profile:</div>
                     <div className="mb-2 font-mono text-xs text-emerald-700 break-all">
-                      ~/.config/opencode/profiles/&lt;profilename&gt;/opencode-cliproxyapi-sync/config.json
+                      {t("setupOcxProfilePath")}
                     </div>
                     <div className="overflow-x-auto rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-2 font-mono text-xs">
                       {`{

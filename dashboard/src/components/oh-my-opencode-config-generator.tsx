@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -58,6 +60,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
   const [presetsLoading, setPresetsLoading] = useState(true);
   const tmuxDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const { showToast } = useToast();
+  const t = useTranslations("ohMyOpenCode");
 
   const allModelIds = proxyModelIds ?? [];
   const availableModelIds = excludedModels
@@ -97,7 +100,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
       } catch {
         if (isMounted) {
           setPresets([]);
-          showToast("Failed to load preset source", "error");
+          showToast(t("toastPresetLoadFailed"), "error");
         }
       } finally {
         if (isMounted) {
@@ -131,21 +134,21 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
             latestSaveRef.current = previous;
             setOverrides(previous);
           }
-          showToast("Failed to save — reverted", "error");
+          showToast(t("toastSaveFailed"), "error");
           return;
         }
-        showToast("Assignment saved", "success");
+        showToast(t("toastSaved"), "success");
       } catch {
         if (latestSaveRef.current === newOverrides) {
           latestSaveRef.current = previous;
           setOverrides(previous);
         }
-        showToast("Network error — reverted", "error");
+        showToast(t("toastNetworkError"), "error");
       } finally {
         setSaving(false);
       }
     },
-    [showToast],
+    [showToast, t],
   );
 
   const handleAgentModelChange = (agent: string, model: string | undefined) => {
@@ -651,13 +654,13 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
                 const missing = getMissingPresetModels(preset, availableModelIds);
                 if (missing.length > 0) {
                   const modelList = missing.map(m => m.model).join(", ");
-                  showToast(`Preset applied — some models unavailable: ${modelList}`, "info");
+                  showToast(t("toastPresetApplied", { models: modelList }), "info");
                 }
               }
             }}
             value=""
           >
-            <option value="">{presetsLoading ? "Loading presets..." : "Apply preset..."}</option>
+            <option value="">{presetsLoading ? t("loadingPresets") : t("applyPreset")}</option>
             {presets.map((preset) => (
               <option key={preset.name} value={preset.name}>
                 {preset.name}
@@ -726,7 +729,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        {isExpanded ? "Hide config" : "Show config"}
+        {isExpanded ? t("hideConfig") : t("showConfig")}
       </button>
 
       {isExpanded && (
@@ -750,7 +753,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Download oh-my-openagent.json
+              {t("downloadButton")}
             </Button>
           </div>
         </div>

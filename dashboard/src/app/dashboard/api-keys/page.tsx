@@ -6,8 +6,7 @@ import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/com
 import { useToast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { HelpTooltip } from "@/components/ui/tooltip";
-import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useTranslations } from "next-intl";
 
 interface ApiKey {
   id: string;
@@ -71,13 +70,14 @@ export default function ApiKeysPage() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const { showToast } = useToast();
   const { copiedKey, copy } = useCopyToClipboard();
+  const t = useTranslations("apiKeys");
 
-  const fetchApiKeys = useCallback(async (signal?: AbortSignal) => {
+  const fetchApiKeys = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(API_ENDPOINTS.USER.API_KEYS, { signal });
+      const res = await fetch("/api/user/api-keys");
       if (!res.ok) {
-        showToast("Failed to load API keys", "error");
+        showToast(t("toastLoadFailed"), "error");
         setLoading(false);
         return;
       }
@@ -87,21 +87,18 @@ export default function ApiKeysPage() {
       setApiKeys(keys);
       setLoading(false);
     } catch {
-      if (signal?.aborted) return;
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
       setLoading(false);
     }
-  }, [showToast]);
+  }, [showToast, t]);
 
   useEffect(() => {
-    const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
-      void fetchApiKeys(controller.signal);
+      void fetchApiKeys();
     }, 0);
 
     return () => {
       window.clearTimeout(timeoutId);
-      controller.abort();
     };
   }, [fetchApiKeys]);
 
@@ -109,27 +106,27 @@ export default function ApiKeysPage() {
     setCreating(true);
 
     try {
-      const res = await fetch(API_ENDPOINTS.USER.API_KEYS, {
+      const res = await fetch("/api/user/api-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: keyNameInput.trim() || "Default" }),
       });
 
       if (!res.ok) {
-        showToast("Failed to create API key", "error");
+        showToast(t("toastCreateFailed"), "error");
         setCreating(false);
         return;
       }
 
       const newKey = await res.json();
-      showToast("API key created successfully", "success");
+      showToast(t("toastCreateSuccess"), "success");
       setNewKeyValue(newKey.key);
       setIsCreateModalOpen(false);
       setIsModalOpen(true);
       setCreating(false);
       await fetchApiKeys();
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
       setCreating(false);
     }
   };
@@ -145,21 +142,21 @@ export default function ApiKeysPage() {
 
     try {
       const res = await fetch(
-        `${API_ENDPOINTS.USER.API_KEYS}?id=${encodeURIComponent(id)}`,
+        `/api/user/api-keys?id=${encodeURIComponent(id)}`,
         {
         method: "DELETE",
         }
       );
 
       if (!res.ok) {
-        showToast("Failed to delete API key", "error");
+        showToast(t("toastDeleteFailed"), "error");
         return;
       }
 
-      showToast("API key deleted successfully", "success");
+      showToast(t("toastDeleteSuccess"), "success");
       setApiKeys((prev) => prev.filter((item) => item.id !== id));
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
     }
   };
 
@@ -200,7 +197,7 @@ export default function ApiKeysPage() {
               <p className="text-xs text-[var(--text-muted)]">Create your first API key to access the dashboard programmatically</p>
             </div>
             <Button onClick={() => { setKeyNameInput(""); setIsCreateModalOpen(true); }} disabled={creating} className="px-3 py-1.5 text-xs">
-              Create API Key
+              {t("createApiKeyButton")}
             </Button>
           </div>
         </div>
@@ -235,7 +232,7 @@ export default function ApiKeysPage() {
       {/* ── Create Key Modal ── */}
       <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)}>
         <ModalHeader>
-          <ModalTitle>Create API Key</ModalTitle>
+          <ModalTitle>{t("createModalTitle")}</ModalTitle>
         </ModalHeader>
         <ModalContent>
           <div className="space-y-4">
@@ -248,7 +245,7 @@ export default function ApiKeysPage() {
                 name="key-name-input"
                 value={keyNameInput}
                 onChange={setKeyNameInput}
-                placeholder="e.g. Development, Production, CLI"
+                placeholder={t("keyNamePlaceholder")}
                 disabled={creating}
               />
               <p className="mt-1.5 text-xs text-[var(--text-muted)]">Give your key a descriptive name for easy identification</p>
@@ -257,17 +254,17 @@ export default function ApiKeysPage() {
         </ModalContent>
         <ModalFooter>
           <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
-            Cancel
+            {t("cancelButton")}
           </Button>
           <Button onClick={handleCreateKey} disabled={creating}>
-            {creating ? "Creating..." : "Create Key"}
+            {creating ? t("creatingButton") : t("createButton")}
           </Button>
         </ModalFooter>
       </Modal>
 
       <Modal isOpen={isModalOpen && newKeyValue !== null} onClose={handleCloseModal}>
         <ModalHeader>
-          <ModalTitle>New API Key</ModalTitle>
+          <ModalTitle>{t("newKeyModalTitle")}</ModalTitle>
         </ModalHeader>
         <ModalContent>
           <div className="space-y-4">
@@ -282,7 +279,7 @@ export default function ApiKeysPage() {
                   onClick={() => {
                     if (newKeyValue) {
                       copy(newKeyValue, "modal");
-                      showToast("API key copied", "success");
+                      showToast(t("toastCopied"), "success");
                     }
                   }}
                   className="absolute right-2.5 top-2.5 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-muted)] p-1.5 text-[var(--text-muted)] transition-colors duration-200 hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
@@ -298,7 +295,7 @@ export default function ApiKeysPage() {
           </div>
         </ModalContent>
         <ModalFooter>
-          <Button onClick={handleCloseModal}>I have saved it</Button>
+          <Button onClick={handleCloseModal}>{t("savedButton")}</Button>
         </ModalFooter>
       </Modal>
 
@@ -309,10 +306,10 @@ export default function ApiKeysPage() {
           setPendingDeleteId(null);
         }}
         onConfirm={handleDeleteKey}
-        title="Delete API Key"
-        message="Are you sure you want to delete this API key?"
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t("deleteConfirmTitle")}
+        message={t("deleteConfirmMessage")}
+        confirmLabel={t("deleteConfirmButton")}
+        cancelLabel={t("deleteConfirmCancelButton")}
         variant="danger"
       />
     </div>

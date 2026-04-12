@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import useSWR from "swr";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { NotificationBell } from "@/components/header/notification-bell";
@@ -55,6 +56,8 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
 
   const status = hasExternalStatus ? externalStatus : (swrStatus ?? null);
   const isLoading = hasExternalStatus ? status === null : swrLoading;
+
+  const t = useTranslations("header");
 
   const initial = username ? username.charAt(0).toUpperCase() : "?";
 
@@ -113,7 +116,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
         <button
           type="button"
           onClick={onUserClick}
-          aria-label="User settings"
+          aria-label={t('userSettingsAriaLabel')}
           className="flex items-center gap-3 group transition-[color,box-shadow]"
         >
           <div className="hidden sm:flex flex-col items-end">

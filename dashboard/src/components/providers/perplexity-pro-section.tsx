@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useTranslations } from "next-intl";
 
 type ShowToast = ReturnType<typeof useToast>["showToast"];
 
@@ -22,6 +23,7 @@ interface PerplexityCookie {
 }
 
 export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
+  const t = useTranslations("providers");
   const [perplexityCookies, setPerplexityCookies] = useState<PerplexityCookie[]>([]);
   const [perplexityCookiesLoading, setPerplexityCookiesLoading] = useState(true);
   const [perplexityEnabled, setPerplexityEnabled] = useState<boolean | null>(null);
@@ -38,7 +40,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
     try {
       const res = await fetch(API_ENDPOINTS.PROVIDERS.PERPLEXITY_COOKIE);
       if (!res.ok) {
-        showToast("Failed to load Perplexity cookies", "error");
+        showToast(t("toastPerplexityLoadFailed"), "error");
         setPerplexityCookiesLoading(false);
         return;
       }
@@ -52,16 +54,16 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
       setPerplexityEnabled(true);
       setPerplexityCookies(Array.isArray(data.cookies) ? data.cookies : []);
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
     } finally {
       setPerplexityCookiesLoading(false);
     }
-  }, [showToast]);
+  }, [showToast, t]);
 
   const handlePerplexityCookieSave = async () => {
     const sessionToken = perplexitySessionToken.trim();
     if (!sessionToken) {
-      showToast("Session token is required", "error");
+      showToast(t("toastApiKeyRequired"), "error");
       return;
     }
     const csrfToken = perplexityCsrfToken.trim();
@@ -82,20 +84,20 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error?.message ?? data.error ?? "Failed to save cookie", "error");
+        showToast(data.error?.message ?? data.error ?? t("toastPerplexityCookieSaveFailed"), "error");
         return;
       }
       if (data.providerProvisioned) {
-        showToast("Cookie saved & Perplexity Pro provider auto-configured", "success");
+        showToast(t("toastPerplexitySavedProvisioned"), "success");
       } else {
-        showToast("Perplexity cookie saved", "success");
+        showToast(t("toastPerplexitySaved"), "success");
       }
       setPerplexitySessionToken("");
       setPerplexityCsrfToken("");
       setPerplexityCookieLabel("");
       void loadPerplexityCookies();
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
     } finally {
       setPerplexityCookieSaving(false);
     }
@@ -109,21 +111,21 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error?.message ?? data.error ?? "Failed to sync models", "error");
+        showToast(data.error?.message ?? data.error ?? t("toastPerplexityModelSyncFailed"), "error");
         return;
       }
       if (data.created) {
-        showToast(`Provider created with ${data.modelCount} models`, "success");
+        showToast(t("toastPerplexityProviderCreated", { count: data.modelCount }), "success");
       } else if (data.added?.length > 0 || data.removed?.length > 0) {
         const parts: string[] = [];
         if (data.added?.length > 0) parts.push(`${data.added.length} added`);
         if (data.removed?.length > 0) parts.push(`${data.removed.length} removed`);
-        showToast(`Models synced: ${parts.join(", ")}`, "success");
+        showToast(t("toastPerplexityModelsSynced", { parts: parts.join(", ") }), "success");
       } else {
-        showToast("Models already up to date", "success");
+        showToast(t("toastPerplexityModelsUpToDate"), "success");
       }
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
     } finally {
       setPerplexityModelSyncing(false);
     }
@@ -138,13 +140,13 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
       });
       if (!res.ok) {
         const data = await res.json();
-        showToast(data.error?.message ?? data.error ?? "Failed to delete cookie", "error");
+        showToast(data.error?.message ?? data.error ?? t("toastPerplexityCookieDeleteFailed"), "error");
         return;
       }
-      showToast("Perplexity cookie removed", "success");
+      showToast(t("toastPerplexityCookieRemoved"), "success");
       void loadPerplexityCookies();
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
     }
   };
 
@@ -174,9 +176,9 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
         <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-700">
           <strong className="text-amber-800">How to get your cookies:</strong>
           <ol className="mt-1.5 list-decimal space-y-1 pl-4">
-            <li>Go to <span className="font-mono text-amber-800">perplexity.ai</span> and sign in to your Pro account</li>
-            <li>Open DevTools (<span className="font-mono text-amber-800">F12</span>) → Application → Cookies → <span className="font-mono text-amber-800">https://www.perplexity.ai</span></li>
-            <li>Copy each cookie value and paste into the fields below</li>
+            <li>{t("perplexityStep1")}</li>
+            <li>{t("perplexityStep2")}</li>
+            <li>{t("perplexityStep3")}</li>
           </ol>
         </div>
 
@@ -207,13 +209,13 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
                         ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
                         : "border border-[var(--surface-border)]/70 bg-[var(--surface-muted)] text-[var(--text-muted)]"
                     )}>
-                      {cookie.isActive ? "Active" : "Inactive"}
+                      {cookie.isActive ? t("statusActive") : t("statusInactive")}
                     </span>
                   </div>
                   <p className="text-xs text-[var(--text-muted)]">
                     Added {new Date(cookie.createdAt).toLocaleDateString()}
                     {cookie.lastUsedAt && (
-                      <> · Last used {new Date(cookie.lastUsedAt).toLocaleDateString()}</>
+                      <>{t("perplexityLastUsed", { date: new Date(cookie.lastUsedAt).toLocaleDateString() })}</>
                     )}
                   </p>
                 </div>
@@ -222,7 +224,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
                   className="shrink-0 px-2.5 py-1 text-xs"
                   onClick={() => handlePerplexityCookieDelete(cookie.id)}
                 >
-                  Delete
+                  {t("perplexityDeleteButton")}
                 </Button>
               </div>
             ))}
@@ -240,7 +242,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
               onClick={handlePerplexityModelSync}
               disabled={perplexityModelSyncing}
             >
-              {perplexityModelSyncing ? "Syncing…" : "Sync Models"}
+              {perplexityModelSyncing ? t("perplexitySyncingButton") : t("perplexitySyncButton")}
             </Button>
           </div>
         )}
@@ -258,7 +260,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
               type="text"
               value={perplexityCookieLabel}
               onChange={(e) => setPerplexityCookieLabel(e.target.value)}
-              placeholder="My Perplexity Pro account"
+              placeholder={t("perplexityLabelPlaceholder")}
               disabled={perplexityCookieSaving}
               className="glass-input w-full rounded-md px-3 py-1.5 text-sm placeholder:text-[var(--text-muted)] focus:outline-none"
             />
@@ -274,7 +276,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
                 type={showPerplexitySessionToken ? "text" : "password"}
                 value={perplexitySessionToken}
                 onChange={(e) => setPerplexitySessionToken(e.target.value)}
-                placeholder="Paste session token value"
+                placeholder={t("perplexitySessionTokenPlaceholder")}
                 disabled={perplexityCookieSaving}
                 className="glass-input w-full rounded-md px-3 py-1.5 pr-10 font-mono text-xs placeholder:text-[var(--text-muted)] focus:outline-none"
               />
@@ -283,7 +285,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
                 onClick={() => setShowPerplexitySessionToken(!showPerplexitySessionToken)}
                 className="absolute inset-y-0 right-0 flex items-center px-2.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
                 tabIndex={-1}
-                aria-label={showPerplexitySessionToken ? "Hide session token" : "Show session token"}
+                aria-label={showPerplexitySessionToken ? t("perplexityHideSessionToken") : t("perplexityShowSessionToken")}
               >
                 {showPerplexitySessionToken ? (
                   <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -304,7 +306,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
                 type={showPerplexityCsrfToken ? "text" : "password"}
                 value={perplexityCsrfToken}
                 onChange={(e) => setPerplexityCsrfToken(e.target.value)}
-                placeholder="Paste CSRF token value"
+                placeholder={t("perplexityCsrfTokenPlaceholder")}
                 disabled={perplexityCookieSaving}
                 className="glass-input w-full rounded-md px-3 py-1.5 pr-10 font-mono text-xs placeholder:text-[var(--text-muted)] focus:outline-none"
               />
@@ -313,7 +315,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
                 onClick={() => setShowPerplexityCsrfToken(!showPerplexityCsrfToken)}
                 className="absolute inset-y-0 right-0 flex items-center px-2.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
                 tabIndex={-1}
-                aria-label={showPerplexityCsrfToken ? "Hide CSRF token" : "Show CSRF token"}
+                aria-label={showPerplexityCsrfToken ? t("perplexityHideCsrfToken") : t("perplexityShowCsrfToken")}
               >
                 {showPerplexityCsrfToken ? (
                   <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -328,7 +330,7 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
               onClick={handlePerplexityCookieSave}
               disabled={perplexityCookieSaving || !perplexitySessionToken.trim()}
             >
-              {perplexityCookieSaving ? "Saving…" : "Save Cookie"}
+              {perplexityCookieSaving ? t("perplexitySavingButton") : t("perplexitySaveButton")}
             </Button>
           </div>
         </div>

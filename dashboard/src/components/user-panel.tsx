@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 interface UserPanelProps {
   isOpen: boolean;
@@ -299,6 +300,9 @@ export function UserPanel({ isOpen, onClose, username, isAdmin }: UserPanelProps
             </svg>
             System Settings
           </button>
+
+          {/* Language Switcher */}
+          <LanguageSwitcher />
 
           {/* Spacer */}
           <div className="flex-1" />

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const router = useRouter();
+  const t = useTranslations("login");
 
   useEffect(() => {
     fetch(API_ENDPOINTS.SETUP.BASE)
@@ -43,7 +45,7 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error?.message ?? data.error ?? "Login failed");
+        setError(data.error?.message ?? data.error ?? t("loginFailed"));
         setLoading(false);
         return;
       }
@@ -51,7 +53,7 @@ export default function LoginPage() {
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Network error. Please try again.");
+      setError(t("networkError"));
       setLoading(false);
     }
   };
@@ -61,7 +63,7 @@ export default function LoginPage() {
       <main id="main-content" className="flex min-h-screen items-center justify-center px-4" aria-busy="true" aria-label="Loading">
         <PublicThemeToggle />
         <div className="w-full max-w-sm">
-          <span className="sr-only">Loading login page…</span>
+          <span className="sr-only">{t("loadingLoginPage")}</span>
           <div className="mb-6 text-center">
             <div className="mx-auto mb-3 h-12 w-12 rounded-xl bg-[var(--surface-muted)] animate-pulse" />
             <div className="mx-auto h-7 w-40 rounded bg-[var(--surface-muted)] animate-pulse" />
@@ -138,7 +140,7 @@ export default function LoginPage() {
             )}
 
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Signing in\u2026" : "Sign in"}
+              {loading ? t("signingIn") : t("signIn")}
             </Button>
           </form>
         </div>

@@ -1,5 +1,5 @@
 "use client";
-
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Toggle, Select, SectionHeader, ConfigField } from "@/components/config/config-fields";
 import type {
@@ -50,39 +50,40 @@ export default function AgentConfigEditor({
   addOAuthAliasEntry,
   removeOAuthAliasEntry,
 }: AgentConfigEditorProps) {
+  const t = useTranslations("agentConfig");
   return (
     <>
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <SectionHeader title="General Settings" />
         <div className="grid gap-4 sm:grid-cols-2">
-          <ConfigField label="Upstream Proxy" description="Optional SOCKS5/HTTP/HTTPS proxy for outbound requests. Use 'direct' or 'none' to bypass. Leave empty for direct connection.">
+          <ConfigField label={t("fieldProxyUrlLabel")} description={t("fieldProxyUrlDesc")}>
             <Input type="text" name="proxy-url" value={config["proxy-url"]} onChange={(value) => updateConfig("proxy-url", value)} placeholder="socks5://user:pass@host:port" className="font-mono" />
           </ConfigField>
-          <ConfigField label="Auth Directory" description="Directory where OAuth credential files are stored.">
+          <ConfigField label={t("fieldAuthDirLabel")} description={t("fieldAuthDirDesc")}>
             <Input type="text" name="auth-dir" value={config["auth-dir"]} onChange={(value) => updateConfig("auth-dir", value)} placeholder="~/.cli-proxy-api" className="font-mono" />
           </ConfigField>
-          <ConfigField label="Force Model Prefix" description="Require model names to include a provider prefix">
+          <ConfigField label={t("fieldForceModelPrefixLabel")} description={t("fieldForceModelPrefixDesc")}>
             <Toggle enabled={config["force-model-prefix"]} onChange={(value) => updateConfig("force-model-prefix", value)} />
           </ConfigField>
-          <ConfigField label="Debug Mode" description="Enable verbose debug logging">
+          <ConfigField label={t("fieldDebugLabel")} description={t("fieldDebugDesc")}>
             <Toggle enabled={config.debug} onChange={(value) => updateConfig("debug", value)} />
           </ConfigField>
-          <ConfigField label="Commercial Mode" description="Enable commercial features and licensing">
+          <ConfigField label={t("fieldCommercialModeLabel")} description={t("fieldCommercialModeDesc")}>
             <Toggle enabled={config["commercial-mode"]} onChange={(value) => updateConfig("commercial-mode", value)} />
           </ConfigField>
-          <ConfigField label="WebSocket Authentication" description="Require authentication for WebSocket connections">
+          <ConfigField label={t("fieldWsAuthLabel")} description={t("fieldWsAuthDesc")}>
             <Toggle enabled={config["ws-auth"]} onChange={(value) => updateConfig("ws-auth", value)} />
           </ConfigField>
-          <ConfigField label="Disable Cooling" description="Disable cooldown between retry attempts">
+          <ConfigField label={t("fieldDisableCoolingLabel")} description={t("fieldDisableCoolingDesc")}>
             <Toggle enabled={config["disable-cooling"] ?? false} onChange={(value) => updateConfig("disable-cooling", value)} />
           </ConfigField>
-          <ConfigField label="Request Log" description="Log all incoming requests">
+          <ConfigField label={t("fieldRequestLogLabel")} description={t("fieldRequestLogDesc")}>
             <Toggle enabled={config["request-log"] ?? false} onChange={(value) => updateConfig("request-log", value)} />
           </ConfigField>
-          <ConfigField label="Passthrough Headers" description="Forward client headers to upstream providers">
+          <ConfigField label={t("fieldPassthroughHeadersLabel")} description={t("fieldPassthroughHeadersDesc")}>
             <Toggle enabled={config["passthrough-headers"] ?? false} onChange={(value) => updateConfig("passthrough-headers", value)} />
           </ConfigField>
-          <ConfigField label="Incognito Browser" description="Use incognito mode for browser-based OAuth flows">
+          <ConfigField label={t("fieldIncognitoBrowserLabel")} description={t("fieldIncognitoBrowserDesc")}>
             <Toggle enabled={config["incognito-browser"] ?? false} onChange={(value) => updateConfig("incognito-browser", value)} />
           </ConfigField>
         </div>
@@ -91,13 +92,13 @@ export default function AgentConfigEditor({
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <SectionHeader title="Streaming" />
         <div className="grid gap-4 sm:grid-cols-2">
-          <ConfigField label="Keepalive Seconds" description="SSE keepalive interval in seconds">
+          <ConfigField label={t("fieldKeepaliveSecondsLabel")} description={t("fieldKeepaliveSecondsDesc")}>
             <Input type="number" name="keepalive-seconds" value={String(config.streaming["keepalive-seconds"])} onChange={(value) => updateStreamingConfig("keepalive-seconds", Number(value))} className="font-mono" />
           </ConfigField>
-          <ConfigField label="Bootstrap Retries" description="Number of bootstrap retry attempts">
+          <ConfigField label={t("fieldBootstrapRetriesLabel")} description={t("fieldBootstrapRetriesDesc")}>
             <Input type="number" name="bootstrap-retries" value={String(config.streaming["bootstrap-retries"])} onChange={(value) => updateStreamingConfig("bootstrap-retries", Number(value))} className="font-mono" />
           </ConfigField>
-          <ConfigField label="Non-Stream Keepalive Interval" description="Emit blank lines every N seconds for non-streaming responses to prevent idle timeouts (0 = disabled)">
+          <ConfigField label={t("fieldNonstreamKeepaliveLabel")} description={t("fieldNonstreamKeepaliveDesc")}>
             <Input type="number" name="nonstream-keepalive-interval" value={String(config.streaming["nonstream-keepalive-interval"] ?? 0)} onChange={(value) => updateStreamingConfig("nonstream-keepalive-interval", Number(value))} className="font-mono" />
           </ConfigField>
         </div>
@@ -106,22 +107,22 @@ export default function AgentConfigEditor({
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <SectionHeader title="Retry & Resilience" />
         <div className="grid gap-4 sm:grid-cols-2">
-          <ConfigField label="Request Retry Attempts" description="Maximum number of retry attempts for failed requests">
+          <ConfigField label={t("fieldRequestRetryLabel")} description={t("fieldRequestRetryDesc")}>
             <Input type="number" name="request-retry" value={String(config["request-retry"])} onChange={(value) => updateConfig("request-retry", Number(value))} className="font-mono" />
           </ConfigField>
-          <ConfigField label="Max Retry Interval (seconds)" description="Maximum interval between retry attempts">
+          <ConfigField label={t("fieldMaxRetryIntervalLabel")} description={t("fieldMaxRetryIntervalDesc")}>
             <Input type="number" name="max-retry-interval" value={String(config["max-retry-interval"])} onChange={(value) => updateConfig("max-retry-interval", Number(value))} className="font-mono" />
           </ConfigField>
-          <ConfigField label="Routing Strategy" description="Load balancing strategy for multiple providers">
-            <Select value={config.routing.strategy} onChange={(value) => updateRoutingConfig("strategy", value)} options={[{ value: "round-robin", label: "Round Robin" }, { value: "random", label: "Random" }, { value: "least-loaded", label: "Least Loaded" }]} />
+          <ConfigField label={t("fieldRoutingStrategyLabel")} description={t("fieldRoutingStrategyDesc")}>
+            <Select value={config.routing.strategy} onChange={(value) => updateRoutingConfig("strategy", value)} options={[{ value: "round-robin", label: t("routingRoundRobin") }, { value: "random", label: t("routingRandom") }, { value: "least-loaded", label: t("routingLeastLoaded") }]} />
           </ConfigField>
-          <ConfigField label="Switch Project on Quota Exceeded" description="Automatically switch to another project when quota is exceeded">
+          <ConfigField label={t("fieldSwitchProjectLabel")} description={t("fieldSwitchProjectDesc")}>
             <Toggle enabled={config["quota-exceeded"]["switch-project"]} onChange={(value) => updateQuotaConfig("switch-project", value)} />
           </ConfigField>
-          <ConfigField label="Switch Preview Model on Quota Exceeded" description="Fall back to preview models when quota is exceeded">
+          <ConfigField label={t("fieldSwitchPreviewModelLabel")} description={t("fieldSwitchPreviewModelDesc")}>
             <Toggle enabled={config["quota-exceeded"]["switch-preview-model"]} onChange={(value) => updateQuotaConfig("switch-preview-model", value)} />
           </ConfigField>
-          <ConfigField label="Max Retry Credentials" description="Maximum credential rotation retries (0 = disabled)">
+          <ConfigField label={t("fieldMaxRetryCredentialsLabel")} description={t("fieldMaxRetryCredentialsDesc")}>
             <Input type="number" name="max-retry-credentials" value={String(config["max-retry-credentials"] ?? 0)} onChange={(value) => updateConfig("max-retry-credentials", Number(value))} className="font-mono" />
           </ConfigField>
         </div>
@@ -130,16 +131,16 @@ export default function AgentConfigEditor({
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <SectionHeader title="Logging" />
         <div className="grid gap-4 sm:grid-cols-2">
-          <ConfigField label="Logging to File" description="Enable persistent file-based logging">
+          <ConfigField label={t("fieldLoggingToFileLabel")} description={t("fieldLoggingToFileDesc")}>
             <Toggle enabled={config["logging-to-file"]} onChange={(value) => updateConfig("logging-to-file", value)} />
           </ConfigField>
-          <ConfigField label="Usage Statistics" description="Collect anonymous usage statistics">
+          <ConfigField label={t("fieldUsageStatisticsLabel")} description={t("fieldUsageStatisticsDesc")}>
             <Toggle enabled={config["usage-statistics-enabled"]} onChange={(value) => updateConfig("usage-statistics-enabled", value)} />
           </ConfigField>
-          <ConfigField label="Max Total Log Size (MB)" description="Maximum total size of all log files (0 = unlimited)">
+          <ConfigField label={t("fieldLogsMaxSizeLabel")} description={t("fieldLogsMaxSizeDesc")}>
             <Input type="number" name="logs-max-total-size-mb" value={String(config["logs-max-total-size-mb"])} onChange={(value) => updateConfig("logs-max-total-size-mb", Number(value))} className="font-mono" />
           </ConfigField>
-          <ConfigField label="Max Error Log Files" description="Maximum number of error log files to retain">
+          <ConfigField label={t("fieldErrorLogsMaxFilesLabel")} description={t("fieldErrorLogsMaxFilesDesc")}>
             <Input type="number" name="error-logs-max-files" value={String(config["error-logs-max-files"])} onChange={(value) => updateConfig("error-logs-max-files", Number(value))} className="font-mono" />
           </ConfigField>
         </div>
@@ -151,13 +152,13 @@ export default function AgentConfigEditor({
           TLS is typically handled by Caddy reverse proxy. Only configure this for direct TLS termination.
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ConfigField label="Enable TLS" description="Enable TLS">
+          <ConfigField label={t("fieldEnableTlsLabel")} description={t("fieldEnableTlsDesc")}>
             <Toggle enabled={config.tls?.enable ?? false} onChange={(value) => updateTlsConfig("enable", value)} />
           </ConfigField>
-          <ConfigField label="Certificate Path" description="Path to TLS certificate file">
+          <ConfigField label={t("fieldTlsCertLabel")} description={t("fieldTlsCertDesc")}>
             <Input type="text" name="tls-cert" value={config.tls?.cert ?? ""} onChange={(value) => updateTlsConfig("cert", value)} placeholder="/path/to/cert.pem" className="font-mono" />
           </ConfigField>
-          <ConfigField label="Private Key Path" description="Path to TLS private key file">
+          <ConfigField label={t("fieldTlsKeyLabel")} description={t("fieldTlsKeyDesc")}>
             <Input type="text" name="tls-key" value={config.tls?.key ?? ""} onChange={(value) => updateTlsConfig("key", value)} placeholder="/path/to/key.pem" className="font-mono" />
           </ConfigField>
         </div>
@@ -166,7 +167,7 @@ export default function AgentConfigEditor({
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <SectionHeader title="Kiro" />
         <div className="grid gap-4 sm:grid-cols-2">
-          <ConfigField label="Preferred Endpoint" description="Preferred Kiro API endpoint URL">
+          <ConfigField label={t("fieldKiroEndpointLabel")} description={t("fieldKiroEndpointDesc")}>
             <Input type="text" name="kiro-preferred-endpoint" value={config["kiro-preferred-endpoint"] ?? ""} onChange={(value) => updateConfig("kiro-preferred-endpoint", value)} placeholder="https://..." className="font-mono" />
           </ConfigField>
         </div>
@@ -176,16 +177,16 @@ export default function AgentConfigEditor({
         <SectionHeader title="Claude Header Defaults" />
         <p className="text-xs text-[var(--text-muted)]">Custom headers sent with all Claude API requests</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ConfigField label="User-Agent" description="Custom User-Agent header">
+          <ConfigField label={t("fieldUserAgentLabel")} description={t("fieldUserAgentDesc")}>
             <Input type="text" name="claude-header-user-agent" value={config["claude-header-defaults"]?.["user-agent"] ?? ""} onChange={(value) => updateClaudeHeaderDefaults("user-agent", value)} className="font-mono" />
           </ConfigField>
-          <ConfigField label="Package Version" description="Package version header">
+          <ConfigField label={t("fieldPackageVersionLabel")} description={t("fieldPackageVersionDesc")}>
             <Input type="text" name="claude-header-package-version" value={config["claude-header-defaults"]?.["package-version"] ?? ""} onChange={(value) => updateClaudeHeaderDefaults("package-version", value)} className="font-mono" />
           </ConfigField>
-          <ConfigField label="Runtime Version" description="Runtime version header">
+          <ConfigField label={t("fieldRuntimeVersionLabel")} description={t("fieldRuntimeVersionDesc")}>
             <Input type="text" name="claude-header-runtime-version" value={config["claude-header-defaults"]?.["runtime-version"] ?? ""} onChange={(value) => updateClaudeHeaderDefaults("runtime-version", value)} className="font-mono" />
           </ConfigField>
-          <ConfigField label="Timeout" description="Request timeout header">
+          <ConfigField label={t("fieldTimeoutLabel")} description={t("fieldTimeoutDesc")}>
             <Input type="text" name="claude-header-timeout" value={config["claude-header-defaults"]?.["timeout"] ?? ""} onChange={(value) => updateClaudeHeaderDefaults("timeout", value)} className="font-mono" />
           </ConfigField>
         </div>
@@ -195,16 +196,16 @@ export default function AgentConfigEditor({
         <SectionHeader title="Amp Code" />
         <p className="text-xs text-[var(--text-muted)]">Configuration for Amp Code upstream integration</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ConfigField label="Upstream URL" description="Upstream Amp Code URL">
+          <ConfigField label={t("fieldAmpUpstreamUrlLabel")} description={t("fieldAmpUpstreamUrlDesc")}>
             <Input type="text" name="ampcode-upstream-url" value={config.ampcode?.["upstream-url"] ?? ""} onChange={(value) => updateAmpcodeConfig("upstream-url", value)} className="font-mono" />
           </ConfigField>
-          <ConfigField label="Upstream API Key" description="Upstream API key">
+          <ConfigField label={t("fieldAmpUpstreamApiKeyLabel")} description={t("fieldAmpUpstreamApiKeyDesc")}>
             <Input type="password" name="ampcode-upstream-api-key" value={config.ampcode?.["upstream-api-key"] ?? ""} onChange={(value) => updateAmpcodeConfig("upstream-api-key", value)} className="font-mono" />
           </ConfigField>
-          <ConfigField label="Restrict Management to Localhost" description="Restrict management API to localhost only">
+          <ConfigField label={t("fieldAmpRestrictLocalhostLabel")} description={t("fieldAmpRestrictLocalhostDesc")}>
             <Toggle enabled={config.ampcode?.["restrict-management-to-localhost"] ?? false} onChange={(value) => updateAmpcodeConfig("restrict-management-to-localhost", value)} />
           </ConfigField>
-          <ConfigField label="Force Model Mappings" description="Force model mappings">
+          <ConfigField label={t("fieldAmpForceModelMappingsLabel")} description={t("fieldAmpForceModelMappingsDesc")}>
             <Toggle enabled={config.ampcode?.["force-model-mappings"] ?? false} onChange={(value) => updateAmpcodeConfig("force-model-mappings", value)} />
           </ConfigField>
         </div>
@@ -216,10 +217,10 @@ export default function AgentConfigEditor({
           Go runtime profiling. Only enable for debugging.
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ConfigField label="Enable pprof" description="Enable pprof endpoint">
+          <ConfigField label={t("fieldEnablePprofLabel")} description={t("fieldEnablePprofDesc")}>
             <Toggle enabled={config.pprof?.enable ?? false} onChange={(value) => updatePprofConfig("enable", value)} />
           </ConfigField>
-          <ConfigField label="Listen Address" description="pprof listen address">
+          <ConfigField label={t("fieldPprofAddrLabel")} description={t("fieldPprofAddrDesc")}>
             <Input type="text" name="pprof-addr" value={config.pprof?.addr ?? ""} onChange={(value) => updatePprofConfig("addr", value)} placeholder="127.0.0.1:8316" className="font-mono" />
           </ConfigField>
         </div>
@@ -280,7 +281,7 @@ export default function AgentConfigEditor({
                     <svg viewBox="0 0 16 16" fill="currentColor" className="size-3">
                       <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z" />
                     </svg>
-                    Add entry
+                    {t("addEntry")}
                   </button>
                 </div>
               )}
@@ -298,11 +299,11 @@ export default function AgentConfigEditor({
               key={key}
               label={key}
               description={
-                key === "default" ? "Default payload fields merged into every request" :
-                key === "default-raw" ? "Raw default payload (overrides default)" :
-                key === "override" ? "Payload fields that override request values" :
-                key === "override-raw" ? "Raw override payload (overrides override)" :
-                "Fields to filter/remove from requests"
+                key === "default" ? t("payloadFieldDefault") :
+                key === "default-raw" ? t("payloadFieldDefaultRaw") :
+                key === "override" ? t("payloadFieldOverride") :
+                key === "override-raw" ? t("payloadFieldOverrideRaw") :
+                t("payloadFieldFilter")
               }
             >
               <textarea

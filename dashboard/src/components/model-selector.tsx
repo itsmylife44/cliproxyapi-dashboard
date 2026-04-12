@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useEffect, useRef } from "react";
 import {
   MODEL_PROVIDER_ORDER,
@@ -38,6 +39,7 @@ export function ModelSelector({
   onSelectionChange,
   isLocked = false,
 }: ModelSelectorProps) {
+  const t = useTranslations("modelSelector");
   const [excludedModels, setExcludedModels] = useState<Set<string>>(
     () => new Set(initialExcludedModels)
   );
@@ -214,7 +216,7 @@ export function ModelSelector({
               Model Selection <HelpTooltip content="Deselect models to exclude them from your config. Excluded models won't appear in opencode.json or be assigned to agents." />
             </span>
             {isLocked && (
-              <span className="text-amber-600" title="Locked by subscription">
+              <span className="text-amber-600" title={t("lockedBySubscription")}>
                 🔒
               </span>
             )}
@@ -227,7 +229,7 @@ export function ModelSelector({
 
         {isLocked ? (
           <span className="text-xs text-amber-600/80">
-            Publisher-controlled
+            {t("publisherControlled")}
           </span>
         ) : (
           <>
@@ -247,10 +249,10 @@ export function ModelSelector({
                   strokeLinejoin="round"
                   aria-label="Saved"
                 >
-                  <title>Saved</title>
+                  <title>{t("saved")}</title>
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                Saved
+                {t("saved")}
               </span>
             )}
           </>
@@ -263,7 +265,7 @@ export function ModelSelector({
             <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <span className="text-lg">🔒</span>
               <p className="text-sm text-amber-700">
-                Model selection is controlled by your publisher. Unsubscribe to regain control.
+                {t("lockedMessage")}
               </p>
             </div>
           )}
@@ -275,7 +277,7 @@ export function ModelSelector({
               className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isLocked}
             >
-              Select All
+              {t("selectAll")}
             </button>
             <span className="text-[var(--text-muted)]">|</span>
             <button
@@ -284,7 +286,7 @@ export function ModelSelector({
               className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isLocked}
             >
-              Deselect All
+              {t("deselectAll")}
             </button>
           </div>
 
@@ -332,7 +334,7 @@ export function ModelSelector({
                           className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={isLocked}
                         >
-                          Select all
+                          {t("selectAllGroup")}
                         </button>
                         <span className="text-[var(--text-muted)]">|</span>
                         <button
@@ -341,7 +343,7 @@ export function ModelSelector({
                           className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={isLocked}
                         >
-                          Deselect all
+                          {t("deselectAllGroup")}
                         </button>
                       </div>
                     )}

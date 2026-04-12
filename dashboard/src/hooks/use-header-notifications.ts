@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import useSWR from "swr";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { useHealthStatus } from "@/hooks/use-health-status";
@@ -10,6 +11,7 @@ import {
   type HealthStatus,
   type QuotaAccount,
   type UpdateCheckResult,
+  type TranslationFn,
 } from "@/hooks/notification-utils";
 import {
   getDismissedIds,
@@ -76,6 +78,7 @@ const silentFetcher = (url: string) =>
 
 export function useHeaderNotifications(isAdmin: boolean, userId: string) {
   const debug = isDebugMode();
+  const t = useTranslations("notifications");
 
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(() =>
     getDismissedIds(userId)
@@ -109,9 +112,9 @@ export function useHeaderNotifications(isAdmin: boolean, userId: string) {
   const notifications = useMemo<Notification[]>(() => {
     if (debug) return MOCK_NOTIFICATIONS;
 
-    const raw = buildNotifications(healthData, quotaData, proxyUpdateData, dashUpdateData);
+    const raw = buildNotifications(healthData, quotaData, proxyUpdateData, dashUpdateData, t as unknown as TranslationFn);
     return filterNotifications(raw, dismissedIds);
-  }, [debug, healthData, quotaData, proxyUpdateData, dashUpdateData, dismissedIds]);
+  }, [debug, t, healthData, quotaData, proxyUpdateData, dashUpdateData, dismissedIds]);
 
   const criticalCount = notifications.filter((n) => n.type === "critical").length;
   const totalCount = notifications.length;

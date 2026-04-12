@@ -10,6 +10,7 @@ import { GroupList } from "@/components/providers/group-list";
 import { UngroupedList } from "@/components/providers/ungrouped-list";
 import { extractApiError } from "@/lib/utils";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useTranslations } from "next-intl";
 
 type ShowToast = ReturnType<typeof useToast>["showToast"];
 
@@ -67,12 +68,14 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
     groupId: null,
   });
 
+  const t = useTranslations("providers");
+
   const loadProviderData = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(API_ENDPOINTS.PROVIDER_GROUPS.BASE);
       if (!res.ok) {
-        showToast("Failed to load custom providers", "error");
+        showToast(t("toastLoadCustomFailed"), "error");
         setLoading(false);
         return;
       }
@@ -93,7 +96,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
       setLoading(false);
     } catch {
       setLoading(false);
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
     }
   }, [onProviderCountChange, showToast]);
 
@@ -119,13 +122,13 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
       });
       if (!res.ok) {
         const data = await res.json();
-        showToast(extractApiError(data, "Failed to delete custom provider"), "error");
+        showToast(extractApiError(data, t("toastCustomDeleteFailed")), "error");
         return;
       }
-      showToast("Custom provider deleted", "success");
+      showToast(t("toastCustomDeleted"), "success");
       void loadProviderData();
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
     }
   };
 
@@ -166,13 +169,13 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
 
       if (!res.ok) {
         const data = await res.json();
-        showToast(extractApiError(data, "Failed to update group"), "error");
+        showToast(extractApiError(data, t("toastGroupUpdateFailed")), "error");
         return;
       }
 
       void loadProviderData();
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
     }
   };
 
@@ -187,15 +190,15 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
 
       if (!res.ok) {
         const data = await res.json();
-        showToast(extractApiError(data, "Failed to delete group"), "error");
+        showToast(extractApiError(data, t("toastGroupDeleteFailed")), "error");
         return;
       }
 
-      showToast("Group deleted", "success");
+      showToast(t("toastGroupDeleted"), "success");
       setDeleteGroupDialog({ isOpen: false, groupId: null });
       void loadProviderData();
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
     }
   };
 
@@ -215,11 +218,11 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
       });
 
       if (!res.ok) {
-        showToast("Failed to reorder groups", "error");
+        showToast(t("toastGroupReorderFailed"), "error");
         void loadProviderData();
       }
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
       void loadProviderData();
     }
   };
@@ -240,11 +243,11 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
       });
 
       if (!res.ok) {
-        showToast("Failed to reorder groups", "error");
+        showToast(t("toastGroupReorderFailed"), "error");
         void loadProviderData();
       }
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
       void loadProviderData();
     }
   };
@@ -274,11 +277,11 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
       });
 
       if (!res.ok) {
-        showToast("Failed to reorder providers", "error");
+        showToast(t("toastProviderReorderFailed"), "error");
         void loadProviderData();
       }
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
       void loadProviderData();
     }
   };
@@ -343,10 +346,10 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
           </div>
           <div className="flex items-center gap-2">
             <Button variant="secondary" onClick={() => setShowGroupModal(true)} className="px-2.5 py-1 text-xs">
-              Manage Groups
+              {t("manageGroupsButton")}
             </Button>
             <Button onClick={() => setShowCustomProviderModal(true)} className="px-2.5 py-1 text-xs">
-              Add Custom Provider
+              {t("addCustomProviderButton")}
             </Button>
           </div>
         </div>
@@ -372,7 +375,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
               <p className="text-xs text-[var(--text-muted)]">Add an OpenAI-compatible provider to extend your AI capabilities</p>
             </div>
             <Button onClick={() => setShowCustomProviderModal(true)} className="px-3 py-1.5 text-xs">
-              Add Custom Provider
+              {t("addCustomProviderButton")}
             </Button>
           </div>
         ) : (
@@ -421,9 +424,9 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
         isOpen={deleteGroupDialog.isOpen}
         onClose={() => setDeleteGroupDialog({ isOpen: false, groupId: null })}
         onConfirm={handleDeleteGroup}
-        title="Delete Provider Group"
-        message="Are you sure you want to delete this group? The providers inside will not be deleted, they will just become ungrouped. This action cannot be undone."
-        confirmLabel="Delete"
+        title={t("deleteGroupTitle")}
+        message={t("deleteGroupMessage")}
+        confirmLabel={t("deleteGroupButton")}
         variant="danger"
       />
     </>

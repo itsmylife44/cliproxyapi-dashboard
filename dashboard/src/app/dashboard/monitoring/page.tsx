@@ -12,6 +12,8 @@ import { LiveLogs } from "@/components/monitoring/live-logs";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { useProxyStatusProvider } from "@/components/dashboard-shell";
 
+import { useTranslations } from "next-intl";
+
 interface StatusResponse {
   running: boolean;
   containerName?: string;
@@ -91,6 +93,7 @@ function parseLogLine(line: string, index: number): LogLine {
 }
 
 export default function MonitoringPage() {
+  const t = useTranslations("monitoring");
   const { provide: provideProxyStatus, clear: clearProxyStatus } = useProxyStatusProvider();
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [usage, setUsage] = useState<UsageResponse | null>(null);

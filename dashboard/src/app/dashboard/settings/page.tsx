@@ -9,6 +9,7 @@ import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { TelegramSettings } from "@/components/settings/telegram-settings";
 import { ProviderSettings } from "@/components/settings/provider-settings";
 import { PasswordSettings } from "@/components/settings/password-settings";
+import { useTranslations } from 'next-intl';
 
 interface ProxyUpdateInfo {
   currentVersion: string;
@@ -71,6 +72,8 @@ export default function SettingsPage() {
   const [showConfirmRevokeSessions, setShowConfirmRevokeSessions] = useState(false);
 
   const { showToast } = useToast();
+  const t = useTranslations('settings');
+  const tc = useTranslations('common');
 
   const fetchProxyUpdateInfo = useCallback(async (signal?: AbortSignal) => {
     setProxyUpdateLoading(true);
@@ -168,7 +171,7 @@ export default function SettingsPage() {
       });
 
       if (res.ok) {
-        showToast(`Updated to ${version}. Service is restarting...`, "success");
+        showToast(t('toastProxyUpdated', { version }), 'success');
         setTimeout(() => {
           fetchProxyUpdateInfo();
         }, 10000);
@@ -177,7 +180,7 @@ export default function SettingsPage() {
         showToast(extractApiError(data, "Update failed"), "error");
       }
     } catch {
-      showToast("Network error during update", "error");
+      showToast(t('toastNetworkErrorUpdate'), 'error');
     } finally {
       setProxyUpdating(false);
     }
@@ -199,7 +202,7 @@ export default function SettingsPage() {
       const data = await res.json().catch(() => null);
 
       if (res.ok) {
-        const msg = typeof data?.message === "string" ? data.message : "Dashboard updated. Restarting...";
+        const msg = typeof data?.message === "string" ? data.message : t('toastDashboardUpdated');
         showToast(msg, "success");
         setTimeout(() => {
           fetchDashboardUpdateInfo();
@@ -209,7 +212,7 @@ export default function SettingsPage() {
         showToast(errMsg, "error");
       }
     } catch {
-      showToast("Network error during update", "error");
+      showToast(t('toastNetworkErrorUpdate'), 'error');
     } finally {
       setDashboardUpdating(false);
     }
@@ -232,11 +235,11 @@ export default function SettingsPage() {
 
       const data = await res.json();
       setGeneratedToken(data.token);
-      showToast("Token generated successfully", "success");
+      showToast(t('toastTokenGenerateSuccess'), 'success');
       fetchSyncTokens();
       setGeneratingToken(false);
     } catch {
-      showToast("Network error", "error");
+      showToast(tc('networkError'), 'error');
       setGeneratingToken(false);
     }
   };
@@ -261,10 +264,10 @@ export default function SettingsPage() {
         return;
       }
 
-      showToast("Token revoked successfully", "success");
+      showToast(t('toastTokenRevoked'), 'success');
       fetchSyncTokens();
     } catch {
-      showToast("Network error", "error");
+      showToast(tc('networkError'), 'error');
     }
   };
 
@@ -277,7 +280,7 @@ export default function SettingsPage() {
       });
 
       if (res.ok) {
-        showToast("API key updated for sync token", "success");
+        showToast(t('toastApiKeyUpdated'), 'success');
         const selectedKey = availableApiKeys.find((k) => k.id === apiKeyId);
         setSyncTokens((prev) =>
           prev.map((t) => (t.id === tokenId ? { ...t, syncApiKeyId: apiKeyId || null, syncApiKeyName: selectedKey?.name || null } : t))
@@ -287,16 +290,16 @@ export default function SettingsPage() {
         showToast(extractApiError(data, "Failed to update API key"), "error");
       }
     } catch {
-      showToast("Network error", "error");
+      showToast(tc('networkError'), 'error');
     }
   };
 
   const handleCopyToken = async (token: string) => {
     try {
       await navigator.clipboard.writeText(token);
-      showToast("Token copied to clipboard", "success");
+      showToast(t('toastTokenCopied'), 'success');
     } catch {
-      showToast("Failed to copy token", "error");
+      showToast(t('toastTokenCopyFailed'), 'error');
     }
   };
 
@@ -319,10 +322,10 @@ export default function SettingsPage() {
       }
 
       const data = await res.json();
-      showToast(data.message || "All sessions revoked", "success");
+      showToast(data.message || t('toastSessionsRevoked'), 'success');
       setRevokingSessions(false);
     } catch {
-      showToast("Network error", "error");
+      showToast(tc('networkError'), 'error');
       setRevokingSessions(false);
     }
   };
@@ -389,10 +392,10 @@ export default function SettingsPage() {
           setPendingProxyVersion("latest");
         }}
         onConfirm={handleProxyUpdate}
-        title="Update CLIProxyAPI"
-        message={`Update CLIProxyAPI to ${pendingProxyVersion}? The service will restart.`}
-        confirmLabel="Update"
-        cancelLabel="Cancel"
+        title={t('confirmProxyUpdate.title')}
+        message={t('confirmProxyUpdate.message', { version: pendingProxyVersion })}
+        confirmLabel={t('confirmProxyUpdate.confirmLabel')}
+        cancelLabel={tc('cancel')}
         variant="warning"
       />
 
@@ -400,10 +403,10 @@ export default function SettingsPage() {
         isOpen={showConfirmDashboardUpdate}
         onClose={() => setShowConfirmDashboardUpdate(false)}
         onConfirm={handleDashboardUpdate}
-        title="Update Dashboard"
-        message="Update Dashboard to latest version? The container will restart."
-        confirmLabel="Update"
-        cancelLabel="Cancel"
+        title={t('confirmDashboardUpdate.title')}
+        message={t('confirmDashboardUpdate.message')}
+        confirmLabel={t('confirmDashboardUpdate.confirmLabel')}
+        cancelLabel={tc('cancel')}
         variant="warning"
       />
 
@@ -414,10 +417,10 @@ export default function SettingsPage() {
           setPendingRevokeTokenId(null);
         }}
         onConfirm={handleRevokeToken}
-        title="Revoke Token"
-        message="Are you sure you want to revoke this token?"
-        confirmLabel="Revoke"
-        cancelLabel="Cancel"
+        title={t('confirmRevokeToken.title')}
+        message={t('confirmRevokeToken.message')}
+        confirmLabel={t('confirmRevokeToken.confirmLabel')}
+        cancelLabel={tc('cancel')}
         variant="danger"
       />
 
@@ -425,10 +428,10 @@ export default function SettingsPage() {
         isOpen={showConfirmRevokeSessions}
         onClose={() => setShowConfirmRevokeSessions(false)}
         onConfirm={handleRevokeAllSessions}
-        title="Force Logout All Users"
-        message="Force logout all users from all devices? This action cannot be undone."
-        confirmLabel="Force Logout"
-        cancelLabel="Cancel"
+        title={t('confirmRevokeSessions.title')}
+        message={t('confirmRevokeSessions.message')}
+        confirmLabel={t('confirmRevokeSessions.confirmLabel')}
+        cancelLabel={tc('cancel')}
         variant="danger"
       />
     </div>

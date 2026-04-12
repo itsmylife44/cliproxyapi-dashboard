@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
@@ -10,12 +11,7 @@ interface UpdateOverlayProps {
   variant: "dashboard" | "proxy";
 }
 
-const STEPS = [
-  { label: "Pulling new version", duration: 3000 },
-  { label: "Installing update", duration: 5000 },
-  { label: "Restarting container", duration: 4000 },
-  { label: "Waiting for server", duration: 0 },
-] as const;
+const STEP_DURATIONS = [3000, 5000, 4000, 0] as const;
 
 export function UpdateOverlay({
   isVisible,
@@ -27,7 +23,14 @@ export function UpdateOverlay({
   const [dots, setDots] = useState("");
 
   const isDashboard = variant === "dashboard";
-  const label = isDashboard ? "Dashboard" : "CLIProxyAPI";
+  const t = useTranslations('updateOverlay');
+  const stepLabels = [
+    t('stepPulling'),
+    t('stepInstalling'),
+    t('stepRestarting'),
+    t('stepWaiting'),
+  ];
+  const label = isDashboard ? t('labelDashboard') : t('labelProxy');
 
   // Reset state when overlay becomes visible
   useEffect(() => {
@@ -41,14 +44,14 @@ export function UpdateOverlay({
   // Progress through steps with timers
   useEffect(() => {
     if (!isVisible) return;
-    if (currentStep >= STEPS.length - 1) return;
+    if (currentStep >= STEP_DURATIONS.length - 1) return;
 
-    const step = STEPS[currentStep];
-    if (step.duration === 0) return;
+    const duration = STEP_DURATIONS[currentStep];
+    if (duration === 0) return;
 
     const timer = setTimeout(() => {
-      setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
-    }, step.duration);
+      setCurrentStep((prev) => Math.min(prev + 1, STEP_DURATIONS.length - 1));
+    }, duration);
 
     return () => clearTimeout(timer);
   }, [isVisible, currentStep]);
@@ -66,7 +69,7 @@ export function UpdateOverlay({
 
   // Poll server availability once we reach the last step
   useEffect(() => {
-    if (!isVisible || currentStep < STEPS.length - 1) return;
+    if (!isVisible || currentStep < STEP_DURATIONS.length - 1) return;
 
     let cancelled = false;
     let attempts = 0;
@@ -118,10 +121,10 @@ export function UpdateOverlay({
 
   const progress = serverReady
     ? 100
-    : Math.min(((currentStep + 1) / STEPS.length) * 90, 90);
+    : Math.min(((currentStep + 1) / STEP_DURATIONS.length) * 90, 90);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center" role="alertdialog" aria-modal="true" aria-label={serverReady ? "Update complete" : `Updating ${label}`}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center" role="alertdialog" aria-modal="true" aria-label={serverReady ? t('ariaComplete') : t('ariaUpdating', { label })}>
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/80 animate-modal-overlay" />
 
@@ -197,7 +200,7 @@ export function UpdateOverlay({
         {/* Title */}
         <div className="text-center">
           <h2 className="text-xl font-semibold text-white mb-1">
-            {serverReady ? "Update Complete!" : `Updating ${label}`}
+            {serverReady ? t('titleUpdateComplete') : t('titleUpdating', { label })}
           </h2>
           <p className="text-sm text-white/60 font-mono">{targetVersion}</p>
         </div>
@@ -221,12 +224,12 @@ export function UpdateOverlay({
 
         {/* Steps */}
         <div className="flex flex-col gap-2 w-72">
-          {STEPS.map((step, idx) => {
+          {STEP_DURATIONS.map((_, idx) => {
             const isActive = idx === currentStep && !serverReady;
             const isComplete = idx < currentStep || serverReady;
 
             return (
-              <div key={step.label} className="flex items-center gap-3">
+              <div key={idx} className="flex items-center gap-3">
                 {/* Step indicator */}
                 <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
                   {isComplete ? (
@@ -267,7 +270,7 @@ export function UpdateOverlay({
                     !isComplete && !isActive && "text-white/30"
                   )}
                 >
-                  {step.label}
+                  {stepLabels[idx]}
                   {isActive ? dots : ""}
                 </span>
               </div>
@@ -277,7 +280,7 @@ export function UpdateOverlay({
 
         {/* Footer hint */}
         <p className="text-xs text-white/40 text-center">
-          {serverReady ? "Reloading page..." : "Please don't close this page"}
+          {serverReady ? t('footerReloading') : t('footerDontClose')}
         </p>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { cn, extractApiError } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useTranslations } from "next-intl";
 
 interface ContainerInfo {
   name: string;
@@ -40,6 +41,7 @@ function formatUptime(seconds: number): string {
 }
 
 export default function ContainersPage() {
+  const t = useTranslations("containers");
   const [containers, setContainers] = useState<ContainerInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -130,7 +132,7 @@ export default function ContainersPage() {
         setFetchError(message);
       }
     } catch {
-      showToast("Network error", "error");
+      showToast(t("toastNetworkError"), "error");
     } finally {
       setActionLoading((prev) => ({ ...prev, [containerName]: false }));
     }

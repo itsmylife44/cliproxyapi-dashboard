@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -70,6 +71,7 @@ export function QuickStartConfigSection({
   const [excludedModels, setExcludedModels] = useState<string[]>(initialExcludedModels);
   const [omoVariant, setOmoVariant] = useState<OmoVariant>("normal");
 
+  const t = useTranslations("quickStartConfig");
   return (
     <>
       {availableModels.length > 0 && (
@@ -108,14 +110,14 @@ export function QuickStartConfigSection({
             {omoVariant === "slim" && (
               <div className="rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-red-600 shrink-0">First-time setup:</span>
+                  <span className="text-[11px] font-semibold text-red-600 shrink-0">{t("firstTimeSetup")}</span>
                   <code className="text-xs font-mono select-all truncate text-red-600">
                     bunx oh-my-opencode-slim@latest install --no-tui --skills=no
                   </code>
-                  <span className="text-[10px] text-red-600/70 shrink-0">(run once)</span>
+                  <span className="text-[10px] text-red-600/70 shrink-0">{t("runOnce")}</span>
                 </div>
                 <p className="text-[10px] text-red-600/50">
-                  Registers agents and hooks in OpenCode. Use <code className="text-red-600/60">--skills=yes</code> to also install recommended skills (simplify, cartography).
+                  {t("registersAgentsPrefix")} <code className="text-red-600/60">--skills=yes</code> {t("registersAgentsSuffix")}
                 </p>
               </div>
             )}

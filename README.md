@@ -206,6 +206,76 @@ Opens all routes as a fake admin user — useful for testing themes, layouts, an
 
 Release-Please auto-generates releases from commit messages.
 
+## Adding a Language
+
+The dashboard supports multi-language UI. Currently, we offer **English (en)** and **German (de)**. We welcome community contributions for additional languages!
+
+### How to contribute a new language
+
+1. **Copy the English template**:
+   ```bash
+   cp dashboard/messages/en.json dashboard/messages/{locale}.json
+   ```
+   Replace `{locale}` with the language code (e.g., `fr` for French, `es` for Spanish, `ja` for Japanese).
+
+2. **Translate all strings**:
+   - Open the new file in your editor
+   - Translate every value (keep all keys unchanged)
+   - Example:
+     ```json
+     {
+       "common": {
+         "loading": "Wird geladen...",  // Keep this structure
+         "cancel": "Abbrechen"
+       }
+     }
+     ```
+
+3. **Register the new locale**:
+   - Edit `dashboard/src/i18n/config.ts`
+   - Add your locale to the `supportedLocales` array:
+     ```ts
+     export const supportedLocales = ["en", "de", "fr"] as const;
+     ```
+   - Add the display name to `localeNames`:
+     ```ts
+     export const localeNames: Record<Locale, string> = {
+       en: "English",
+       de: "Deutsch",
+       fr: "Français",  // Add this
+     };
+     ```
+
+4. **Test locally**:
+   - Run `npm run dev` in `dashboard/`
+   - Log in to the dashboard
+   - Open the User Panel (top right)
+   - Select your language from the Language dropdown
+   - Verify all UI strings display correctly in your language
+
+5. **Submit a PR**:
+   - Title: `feat(i18n): add {language} translation`
+   - Include the three files: `messages/{locale}.json`, and changes to `src/i18n/config.ts`
+   - PR description: Link to any external translation resources or notes
+
+### Translation Quality Guidelines
+
+- Keep translations concise and match the tone of the English version
+- Use formal/business-appropriate language
+- Test that UI elements don't overflow or break with your translations
+- Plurals and gender (where applicable) should follow target language conventions
+- Date/time formatting handled by `next-intl` — no need to change
+- Currency codes are kept in English (e.g., `USD`, `EUR`)
+
+### Supported locales
+
+| Code | Language | Status |
+|------|----------|--------|
+| `en` | English | ✓ Complete |
+| `de` | German | ✓ Complete |
+
+Add more by following the steps above!
+
 ## Support
 
 - **[Discord](https://discord.gg/7SrXxNueGA)** — Community chat, installation help, announcements

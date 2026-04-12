@@ -17,6 +17,7 @@ import { UsageRequestEvents } from "@/components/usage/usage-request-events";
 import { UsageTable } from "@/components/usage/usage-table";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
+import { useTranslations } from "next-intl";
 interface KeyUsage {
   keyName: string;
   username?: string;
@@ -154,6 +155,7 @@ function formatLatencyValue(value: number): string {
 }
 
 export default function UsagePage() {
+  const t = useTranslations("usage");
   const [usageData, setUsageData] = useState<UsageData | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);

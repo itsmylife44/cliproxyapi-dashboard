@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button";
 
 interface DashboardUpdateInfo {
@@ -26,6 +27,7 @@ export function PasswordSettings({
   revokingSessions,
   onConfirmRevokeSessions,
 }: PasswordSettingsProps) {
+  const t = useTranslations('settings.password');
   return (
     <div className="space-y-3">
       <div>
@@ -39,7 +41,7 @@ export function PasswordSettings({
           Immediately revoke all active user sessions across all devices.
         </p>
         <Button variant="danger" onClick={onConfirmRevokeSessions} disabled={revokingSessions}>
-          {revokingSessions ? "Revoking..." : "Force Logout All Users"}
+          {revokingSessions ? t('buttonRevoking') : t('buttonForceLogout')}
         </Button>
       </div>
 
@@ -70,7 +72,7 @@ export function PasswordSettings({
             <div className="flex items-center justify-between text-[var(--text-secondary)]">
               <span>CLIProxyAPI:</span>
               <span className="font-mono">
-                {cliProxyLoading ? "Loading..." : cliProxyVersion || "Unknown"}
+                {cliProxyLoading ? t('cliProxyLoading') : cliProxyVersion || t('cliProxyUnknown')}
               </span>
             </div>
           </div>

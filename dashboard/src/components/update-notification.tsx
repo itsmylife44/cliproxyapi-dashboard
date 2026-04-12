@@ -6,6 +6,7 @@ import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/com
 import { Button } from "@/components/ui/button";
 import { useUpdateCheck } from "@/hooks/use-update-check";
 import { UpdateOverlay } from "@/components/update-overlay";
+import { useTranslations } from 'next-intl';
 
 export function UpdateNotification() {
   const {
@@ -18,6 +19,7 @@ export function UpdateNotification() {
     performUpdate,
   } = useUpdateCheck();
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
+  const t = useTranslations('updateNotification');
 
   const targetVersion = selectedVersion || updateInfo?.latestVersion || "latest";
 
@@ -56,7 +58,7 @@ export function UpdateNotification() {
                     />
                   </svg>
                 </span>
-                Dashboard Update Available
+                {t('dashboardTitle')}
               </span>
             </ModalTitle>
           </ModalHeader>
@@ -97,7 +99,7 @@ export function UpdateNotification() {
                     htmlFor="version-select"
                     className="block text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-2"
                   >
-                    Or select a specific version
+                    {t('selectVersion')}
                   </label>
                   <select
                     id="version-select"
@@ -162,10 +164,10 @@ export function UpdateNotification() {
 
           <ModalFooter>
             <Button variant="ghost" onClick={dismissUpdate} disabled={isUpdating}>
-              Later
+              {t('laterButton')}
             </Button>
             <Button variant="primary" onClick={handleUpdate} disabled={isUpdating}>
-              {isUpdating ? "Updating..." : `Update to ${targetVersion}`}
+              {isUpdating ? t('updatingButton') : t('updateToButton', { version: targetVersion })}
             </Button>
           </ModalFooter>
         </Modal>

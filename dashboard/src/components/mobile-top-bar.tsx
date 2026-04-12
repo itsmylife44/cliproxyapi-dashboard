@@ -1,9 +1,11 @@
 "use client";
 
 import { useMobileSidebar } from "@/components/mobile-sidebar-context";
+import { useTranslations } from "next-intl";
 
 export function MobileTopBar() {
   const { isOpen, toggle } = useMobileSidebar();
+  const t = useTranslations('mobile');
 
   return (
     <div className="fixed left-0 right-0 top-0 z-30 border-b border-[var(--surface-border)] glass-nav lg:hidden">
@@ -34,7 +36,7 @@ export function MobileTopBar() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/icon.png"
-            alt="CLIProxy Logo"
+            alt={t('logoAlt')}
             width={22}
             height={24}
             className="rounded-sm"

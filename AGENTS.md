@@ -49,6 +49,13 @@ cliproxyapi-dashboard/
 - API error responses should use `apiError`/`apiSuccess` style wrappers.
 - Prisma generation is wired into predev/prebuild/pretest scripts.
 - ESLint flat config (`eslint.config.mjs`); no Prettier config present.
+- **i18n**: All user-facing UI strings use `next-intl`:
+  - Client components: `import { useTranslations } from 'next-intl'` → `const t = useTranslations('namespace')`
+  - Server components: `import { getTranslations } from 'next-intl/server'` → `const t = await getTranslations('namespace')`
+  - Translation messages in `dashboard/messages/{locale}.json` (en.json is source of truth)
+  - Do not hardcode strings shown in UI; all text visible to users must be translatable
+  - Common labels go in `common` namespace; feature-specific in feature namespace (e.g., `apiKeys`, `providers`)
+  - Toast/notification messages use t() from appropriate namespace
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - Do not treat `providerMutex` as distributed lock; it is single-process only.

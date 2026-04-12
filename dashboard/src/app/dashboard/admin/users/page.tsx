@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { extractApiError } from "@/lib/utils";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useTranslations } from 'next-intl';
 
 interface User {
   id: string;
@@ -35,6 +36,9 @@ export default function AdminUsersPage() {
   const { showToast } = useToast();
   const router = useRouter();
 
+  const t = useTranslations('users');
+  const tc = useTranslations('common');
+
   const fetchUsers = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setFetchError(false);
@@ -47,7 +51,7 @@ export default function AdminUsersPage() {
       }
 
       if (res.status === 403) {
-        showToast("Admin access required", "error");
+        showToast(t('toastAdminRequired'), "error");
         router.push("/dashboard");
         return;
       }
@@ -83,17 +87,17 @@ export default function AdminUsersPage() {
 
   const handleCreateUser = async () => {
     if (password !== confirmPassword) {
-      showToast("Passwords do not match", "error");
+      showToast(t('toastPasswordMismatch'), "error");
       return;
     }
 
     if (password.length < 8) {
-      showToast("Password must be at least 8 characters", "error");
+      showToast(t('toastPasswordTooShort'), "error");
       return;
     }
 
     if (!username.trim()) {
-      showToast("Username is required", "error");
+      showToast(t('toastUsernameRequired'), "error");
       return;
     }
 
@@ -108,12 +112,12 @@ export default function AdminUsersPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        showToast(extractApiError(data, "Failed to create user"), "error");
+        showToast(extractApiError(data, t('toastCreateFailed')), "error");
         setCreating(false);
         return;
       }
 
-      showToast("User created successfully", "success");
+      showToast(t('toastCreateSuccess'), "success");
       setIsModalOpen(false);
       setUsername("");
       setPassword("");
@@ -122,7 +126,7 @@ export default function AdminUsersPage() {
       setCreating(false);
       fetchUsers();
     } catch {
-      showToast("Network error", "error");
+      showToast(t('toastNetworkError'), "error");
       setCreating(false);
     }
   };
@@ -156,7 +160,7 @@ export default function AdminUsersPage() {
             <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">User Management</h1>
             <p className="mt-1 text-xs text-[var(--text-muted)]">Manage dashboard users and roles.</p>
           </div>
-          <Button onClick={() => setIsModalOpen(true)} className="px-2.5 py-1 text-xs">Create User</Button>
+          <Button onClick={() => setIsModalOpen(true)} className="px-2.5 py-1 text-xs">{t('createUserButton')}</Button>
         </div>
       </section>
 
@@ -204,7 +208,7 @@ export default function AdminUsersPage() {
 
       <Modal isOpen={isModalOpen} onClose={handleCloseModal}>
         <ModalHeader>
-          <ModalTitle>Create New User</ModalTitle>
+          <ModalTitle>{t('createModalTitle')}</ModalTitle>
         </ModalHeader>
         <ModalContent>
           <div className="space-y-4">
@@ -219,7 +223,7 @@ export default function AdminUsersPage() {
                 onChange={setUsername}
                 required
                 autoComplete="username"
-                placeholder="Enter username"
+                placeholder={t('usernamePlaceholder')}
               />
             </div>
 
@@ -234,7 +238,7 @@ export default function AdminUsersPage() {
                 onChange={setPassword}
                 required
                 autoComplete="new-password"
-                placeholder="Minimum 8 characters"
+                placeholder={t('passwordPlaceholder')}
               />
             </div>
 
@@ -249,7 +253,7 @@ export default function AdminUsersPage() {
                 onChange={setConfirmPassword}
                 required
                 autoComplete="new-password"
-                placeholder="Re-enter password"
+                placeholder={t('confirmPasswordPlaceholder')}
               />
             </div>
 
@@ -273,10 +277,10 @@ export default function AdminUsersPage() {
         </ModalContent>
         <ModalFooter>
           <Button variant="secondary" onClick={handleCloseModal} disabled={creating}>
-            Cancel
+            {tc('cancel')}
           </Button>
           <Button onClick={handleCreateUser} disabled={creating}>
-            {creating ? "Creating..." : "Create User"}
+            {creating ? t('creating') : t('createUserButton')}
           </Button>
         </ModalFooter>
       </Modal>

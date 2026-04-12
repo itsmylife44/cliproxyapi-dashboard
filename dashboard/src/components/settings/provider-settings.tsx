@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
+
 import Markdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 
@@ -46,6 +48,8 @@ export function ProviderSettings({
   onRefreshProxyUpdate,
   onRefreshDashboardUpdate,
 }: ProviderSettingsProps) {
+  const t = useTranslations('settings.provider');
+
   return (
     <div className="space-y-3">
       <div>
@@ -92,10 +96,10 @@ export function ProviderSettings({
                 onClick={() => onConfirmProxyUpdate("latest")}
                 disabled={proxyUpdating || !proxyUpdateInfo.updateAvailable}
               >
-                {proxyUpdating ? "Updating..." : proxyUpdateInfo.updateAvailable ? "Update to Latest" : "Up to Date"}
+                {proxyUpdating ? t('buttonUpdating') : proxyUpdateInfo.updateAvailable ? t('buttonUpdateToLatest') : t('buttonUpToDate')}
               </Button>
               <Button variant="secondary" onClick={onRefreshProxyUpdate} disabled={proxyUpdateLoading}>
-                Refresh
+                {t('buttonRefresh')}
               </Button>
             </div>
 
@@ -152,7 +156,7 @@ export function ProviderSettings({
                   {dashboardUpdateInfo.releaseNotes && (
                     <details className="mt-2">
                       <summary className="cursor-pointer text-xs text-blue-600 hover:text-blue-600 transition-colors">
-                        View release notes
+                        {t('viewReleaseNotes')}
                       </summary>
                       <div className="mt-2 max-h-60 overflow-auto rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 text-xs text-[var(--text-secondary)] prose prose-xs max-w-none [&_h1]:text-sm [&_h1]:font-semibold [&_h1]:text-[var(--text-primary)] [&_h2]:text-xs [&_h2]:font-semibold [&_h2]:text-[var(--text-primary)] [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:text-[var(--text-secondary)] [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:my-0.5 [&_code]:bg-[var(--surface-muted)] [&_code]:px-1 [&_code]:rounded [&_a]:text-blue-600 [&_a]:underline [&_p]:my-1">
                         <Markdown>{dashboardUpdateInfo.releaseNotes}</Markdown>
@@ -167,10 +171,10 @@ export function ProviderSettings({
                   onClick={onConfirmDashboardUpdate}
                   disabled={dashboardUpdating || !dashboardUpdateInfo.updateAvailable}
                 >
-                  {dashboardUpdating ? "Updating..." : dashboardUpdateInfo.updateAvailable ? "Update to Latest" : "Up to Date"}
+                  {dashboardUpdating ? t('buttonUpdating') : dashboardUpdateInfo.updateAvailable ? t('buttonUpdateToLatest') : t('buttonUpToDate')}
                 </Button>
                 <Button variant="secondary" onClick={onRefreshDashboardUpdate} disabled={dashboardUpdateLoading}>
-                  Refresh
+                  {t('buttonRefresh')}
                 </Button>
               </div>
             </>

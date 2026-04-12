@@ -5,6 +5,7 @@ import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/com
 import { Button } from "@/components/ui/button";
 import { useProxyUpdateCheck } from "@/hooks/use-proxy-update-check";
 import { UpdateOverlay } from "@/components/update-overlay";
+import { useTranslations } from 'next-intl';
 
 export function ProxyUpdateNotification() {
   const {
@@ -17,6 +18,7 @@ export function ProxyUpdateNotification() {
     performUpdate,
   } = useProxyUpdateCheck();
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
+  const t = useTranslations('updateNotification');
 
   const targetVersion = selectedVersion || updateInfo?.latestVersion || "latest";
 
@@ -60,7 +62,7 @@ export function ProxyUpdateNotification() {
                     />
                   </svg>
                 </span>
-                Proxy Update Available
+                {t('proxyTitle')}
               </span>
             </ModalTitle>
           </ModalHeader>
@@ -92,7 +94,7 @@ export function ProxyUpdateNotification() {
                     htmlFor="proxy-version-select"
                     className="block text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-2"
                   >
-                    Or select a specific version
+                    {t('selectVersion')}
                   </label>
                   <select
                     id="proxy-version-select"
@@ -157,10 +159,10 @@ export function ProxyUpdateNotification() {
 
           <ModalFooter>
             <Button variant="ghost" onClick={dismissUpdate} disabled={isUpdating}>
-              Later
+              {t('laterButton')}
             </Button>
             <Button variant="primary" onClick={handleUpdate} disabled={isUpdating}>
-              {isUpdating ? "Updating..." : `Update to ${targetVersion}`}
+              {isUpdating ? t('updatingButton') : t('updateToButton', { version: targetVersion })}
             </Button>
           </ModalFooter>
         </Modal>

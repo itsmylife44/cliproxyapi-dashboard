@@ -11,6 +11,7 @@ const QuotaChart = dynamic(
 );
 import { QuotaDetails } from "@/components/quota/quota-details";
 import { QuotaAlerts } from "@/components/quota/quota-alerts";
+import { useTranslations } from "next-intl";
 
 interface QuotaModel {
   id: string;
@@ -207,6 +208,7 @@ function calcOverallCapacity(summaries: ProviderSummary[]): { value: number; lab
 }
 
 export default function QuotaPage() {
+  const t = useTranslations("quota");
   const [quotaData, setQuotaData] = useState<QuotaResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState<ProviderType>(PROVIDERS.ALL);

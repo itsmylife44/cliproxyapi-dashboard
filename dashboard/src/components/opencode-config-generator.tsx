@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { PluginSection } from "@/components/opencode/plugin-section";
@@ -72,6 +73,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   const envIdCounter = useRef(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingDataRef = useRef<{ mcps: McpEntry[]; plugins: string[]; defaultModel: string } | null>(null);
+  const t = useTranslations("openCodeConfig");
 
   useEffect(() => {
     async function loadConfig() {
@@ -137,7 +139,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           setSaveError(extractApiError(errorData, "Failed to save config"));
         }
       } catch {
-        setSaveError("Network error while saving config");
+        setSaveError(t("networkError"));
       }
     }, 300);
 
@@ -466,8 +468,8 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
                    : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:border-[var(--surface-border)]"
                }`}
              >
-                <div className="font-semibold">Oh My Open Agent</div>
-               <div className="mt-0.5 text-[10px] opacity-70">9 agents + categories</div>
+                <div className="font-semibold">{t("variantNormalTitle")}</div>
+               <div className="mt-0.5 text-[10px] opacity-70">{t("variantNormalSubtitle")}</div>
              </button>
              <button
                type="button"
@@ -478,8 +480,8 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
                    : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:border-[var(--surface-border)]"
                }`}
              >
-                <div className="font-semibold">Oh My OpenCode Slim</div>
-               <div className="mt-0.5 text-[10px] opacity-70">6 agents, less tokens</div>
+                <div className="font-semibold">{t("variantSlimTitle")}</div>
+               <div className="mt-0.5 text-[10px] opacity-70">{t("variantSlimSubtitle")}</div>
              </button>
            </div>
          </div>

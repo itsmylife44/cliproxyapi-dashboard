@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,8 @@ export function QuotaAlerts() {
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState<CheckAlertResult | null>(null);
 
+  const t = useTranslations("quotaAlerts");
+
   useEffect(() => {
     if (authLoading) return;
     if (!isAdmin) {
@@ -115,7 +118,7 @@ export function QuotaAlerts() {
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        showToast("Telegram settings saved", "success");
+        showToast(t("toastSettingsSaved"), "success");
         const refreshRes = await fetch(API_ENDPOINTS.ADMIN.TELEGRAM);
         if (refreshRes.ok) {
           const refreshData = await refreshRes.json();
@@ -136,7 +139,7 @@ export function QuotaAlerts() {
         showToast(msg, "error");
       }
     } catch {
-      showToast("Failed to save settings", "error");
+      showToast(t("toastFailedToSave"), "error");
     } finally {
       setSaving(false);
     }
@@ -151,14 +154,14 @@ export function QuotaAlerts() {
         body: JSON.stringify({}),
       });
       if (res.ok) {
-        showToast("Test message sent! Check your Telegram.", "success");
+        showToast(t("toastTestSent"), "success");
       } else {
         const errData = await res.json();
         const msg = errData?.error?.message ?? errData?.error ?? "Test failed";
         showToast(msg, "error");
       }
     } catch {
-      showToast("Failed to send test message", "error");
+      showToast(t("toastTestFailed"), "error");
     } finally {
       setTesting(false);
     }
@@ -182,14 +185,14 @@ export function QuotaAlerts() {
       const data = await res.json();
       setCheckResult(data);
       if (data.skipped) {
-        showToast(`Check skipped: ${data.reason}`, "info");
+        showToast(t("toastCheckSkipped", { reason: data.reason }), "info");
       } else if (data.breachedCount > 0) {
-        showToast(`Alert sent for ${data.breachedCount} account(s)`, "success");
+        showToast(t("toastAlertSent", { count: data.breachedCount }), "success");
       } else {
-        showToast("All accounts above threshold", "success");
+        showToast(t("toastAllAboveThreshold"), "success");
       }
     } catch {
-      showToast("Failed to check alerts", "error");
+      showToast(t("toastCheckFailed"), "error");
     } finally {
       setChecking(false);
     }
@@ -244,7 +247,7 @@ export function QuotaAlerts() {
               onClick={() => setShowToken((v) => !v)}
               className="shrink-0 px-2 text-xs"
             >
-              {showToken ? "Hide" : "Show"}
+              {showToken ? t("buttonHide") : t("buttonShow")}
             </Button>
           </div>
           <p className="text-[10px] text-[var(--text-muted)]">Create a bot via @BotFather on Telegram</p>
@@ -348,7 +351,7 @@ export function QuotaAlerts() {
 
         <div className="flex flex-wrap gap-2 pt-1">
           <Button onClick={handleSave} disabled={saving} className="text-xs">
-            {saving ? "Saving..." : "Save"}
+            {saving ? t("buttonSaving") : t("buttonSave")}
           </Button>
           <Button
             variant="secondary"
@@ -356,7 +359,7 @@ export function QuotaAlerts() {
             disabled={testing || !hasSavedConfig}
             className="text-xs"
           >
-            {testing ? "Sending..." : "Send Test"}
+            {testing ? t("buttonSending") : t("buttonSendTest")}
           </Button>
           <Button
             variant="secondary"
@@ -364,7 +367,7 @@ export function QuotaAlerts() {
             disabled={checking || !hasSavedConfig}
             className="text-xs"
           >
-            {checking ? "Checking..." : "Check Now"}
+            {checking ? t("buttonChecking") : t("buttonCheckNow")}
           </Button>
         </div>
 

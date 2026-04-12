@@ -1,5 +1,8 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 interface BreadcrumbItem {
   label: string;
@@ -32,6 +35,7 @@ function ChevronRight() {
 }
 
 export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
+  const t = useTranslations('common');
   return (
     <nav
       aria-label="Breadcrumb"

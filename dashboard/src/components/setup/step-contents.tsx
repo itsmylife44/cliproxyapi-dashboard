@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useTranslations } from "next-intl";
 
 interface CreatedKey {
   id: string;
@@ -39,6 +40,7 @@ function SpinnerIcon() {
 }
 
 export function Step1Content({ done }: { done: boolean }) {
+  const t = useTranslations("setupWizard");
   if (done) return null;
   return (
     <div className="mt-3 space-y-3">
@@ -52,7 +54,7 @@ export function Step1Content({ done }: { done: boolean }) {
         rel="noopener noreferrer"
         className="inline-block text-xs px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md border glass-button-primary"
       >
-        Open Providers
+        {t('step1OpenProviders')}
       </a>
     </div>
   );
@@ -66,6 +68,7 @@ interface Step2ContentProps {
 
 export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
   const { showToast } = useToast();
+  const t = useTranslations("setupWizard");
   const [keyName, setKeyName] = useState("default");
   const [submitting, setSubmitting] = useState(false);
   const [createdKey, setCreatedKey] = useState<CreatedKey | null>(null);
@@ -84,7 +87,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
       });
       if (!res.ok) {
         const body = (await res.json()) as { error?: string };
-        showToast(body.error ?? "Failed to create API key", "error");
+        showToast(body.error ?? t('step2ToastCreateFailed'), "error");
         return;
       }
       const body = (await res.json()) as {
@@ -98,9 +101,9 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
       const created: CreatedKey = { id: body.id, key: body.key, name: body.name };
       setCreatedKey(created);
       onCreated(created);
-      showToast("API key created successfully", "success");
+      showToast(t('step2ToastCreateSuccess'), "success");
     } catch {
-      showToast("Network error -- please try again", "error");
+      showToast(t('step2ToastNetworkError'), "error");
     } finally {
       setSubmitting(false);
     }
@@ -147,7 +150,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
             className="flex flex-shrink-0 items-center gap-1 rounded border border-[var(--surface-border)]/60 bg-[var(--surface-muted)]/70 px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]/80 hover:text-[var(--text-primary)]"
           >
             <CopyIcon />
-            {copied ? "Copied" : "Copy"}
+            {copied ? t('step2Copied') : t('step2Copy')}
           </button>
         </div>
         <p className="text-xs text-[var(--text-muted)]">
@@ -165,7 +168,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
             name="api-key-name"
             value={keyName}
             onChange={setKeyName}
-            placeholder="My API Key"
+            placeholder={t('step2PlaceholderName')}
             disabled={submitting}
           />
         </div>
@@ -175,7 +178,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
           disabled={submitting || !keyName.trim()}
           onClick={() => void handleCreate()}
         >
-          {submitting ? "Creating..." : "Create API Key"}
+          {submitting ? t('step2Creating') : t('step2CreateKey')}
         </Button>
       </div>
       <p className="text-xs text-[var(--text-muted)]">
@@ -193,6 +196,7 @@ interface Step3ContentProps {
 }
 
 export function Step3Content({ done, locked, modelCount, statusLoaded }: Step3ContentProps) {
+  const t = useTranslations("setupWizard");
   if (done) return null;
 
   if (locked) {
@@ -207,7 +211,7 @@ export function Step3Content({ done, locked, modelCount, statusLoaded }: Step3Co
     return (
       <div className="mt-3 flex items-center gap-2 text-sm text-[var(--text-muted)]">
         <SpinnerIcon />
-        Checking model catalog...
+        {t('step3CheckingCatalog')}
       </div>
     );
   }
@@ -216,7 +220,7 @@ export function Step3Content({ done, locked, modelCount, statusLoaded }: Step3Co
     return (
       <div className="mt-3 flex items-center gap-2 text-sm text-[var(--text-muted)]">
         <SpinnerIcon />
-        Waiting for models to become available...
+        {t('step3WaitingModels')}
       </div>
     );
   }

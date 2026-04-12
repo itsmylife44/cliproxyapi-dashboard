@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { createContext, useContext, type ReactNode, useEffect, useId, useRef } from "react";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { useTranslations } from "next-intl";
 
 const ModalTitleIdContext = createContext<string>("");
 
@@ -14,6 +15,7 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, children, className }: ModalProps) {
+  const t = useTranslations('common');
   const modalRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useFocusTrap(isOpen, modalRef as React.RefObject<HTMLElement | null>);
@@ -44,7 +46,7 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
           type="button"
           className="absolute inset-0"
           onClick={onClose}
-          aria-label="Close modal"
+          aria-label={t('closeModal')}
         />
         <div
           ref={modalRef}

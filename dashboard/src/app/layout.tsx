@@ -12,11 +12,13 @@ export const metadata: Metadata = {
   description: "Management dashboard for CLIProxyAPI",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -31,7 +33,7 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        {children}
+        <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
     </html>
   );

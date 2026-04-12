@@ -9,6 +9,7 @@ import { mergeConfigYaml } from "@/lib/config-yaml";
 import AgentConfigEditor from "@/components/config/agent-config-editor";
 import ConfigPreview from "@/components/config/config-preview";
 import yaml from "js-yaml";
+import { useTranslations } from 'next-intl';
 
 export interface StreamingConfig {
   "keepalive-seconds": number;
@@ -146,12 +147,13 @@ export default function ConfigPage() {
   const [showProxyWarning, setShowProxyWarning] = useState(false);
   const [resettingProxy, setResettingProxy] = useState(false);
   const { showToast } = useToast();
+  const t = useTranslations('config');
 
   const getErrorMessage = (error: unknown): string => {
     if (error instanceof Error && error.message.trim()) {
       return error.message;
     }
-    return "Unknown error";
+    return t('unknownError');
   };
 
   const hasUnsavedChanges = config && originalConfig && JSON.stringify(config) !== JSON.stringify(originalConfig);
@@ -166,7 +168,7 @@ export default function ConfigPage() {
             await new Promise((r) => setTimeout(r, delayMs * attempt));
             continue;
           }
-          showToast("Failed to load configuration", "error");
+          showToast(t('toastLoadFailed'), "error");
           setLoading(false);
           return;
         }
@@ -186,7 +188,7 @@ export default function ConfigPage() {
           await new Promise((r) => setTimeout(r, delayMs * attempt));
           continue;
         }
-        showToast("Network error", "error");
+        showToast(t('toastNetworkError'), "error");
         setLoading(false);
       }
     }
@@ -210,12 +212,12 @@ export default function ConfigPage() {
     if (!trimmed) return null;
     if (VALID_PROXY_KEYWORDS.includes(trimmed)) return null;
     if (!VALID_PROXY_SCHEMES.some((s) => trimmed.startsWith(s))) {
-      return `Proxy URL must start with socks5://, http://, or https:// (or use "direct"/"none" to bypass)`;
+      return t('proxyValidationScheme');
     }
     try {
       new URL(trimmed);
     } catch {
-      return "Invalid proxy URL format. Example: socks5://user:pass@host:port";
+      return t('proxyValidationFormat');
     }
     return null;
   };
@@ -369,7 +371,7 @@ export default function ConfigPage() {
         try {
           const rawYamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML);
           if (!rawYamlRes.ok) {
-            errors.push("Failed to fetch current config.yaml for YAML update");
+            errors.push(t('failedToFetchYaml'));
           } else {
             const rawYaml = await rawYamlRes.text();
             const mergedYaml = mergeConfigYaml(rawYaml, yamlChanges);
@@ -381,7 +383,7 @@ export default function ConfigPage() {
             });
 
             if (!yamlRes.ok) {
-              errors.push("Failed to save config.yaml");
+              errors.push(t('failedToSaveYaml'));
             } else {
               successCount += Object.keys(yamlChanges).length;
             }
@@ -392,11 +394,11 @@ export default function ConfigPage() {
       }
 
       if (errors.length > 0) {
-        showToast(`Some fields failed to save: ${errors.join(", ")}`, "error");
+        showToast(t('toastSomeFieldsFailed', { errors: errors.join(", ") }), "error");
       } else if (successCount === 0) {
-        showToast("No changes to save", "info");
+        showToast(t('toastNoChanges'), "info");
       } else {
-        showToast(`Configuration saved (${successCount} field${successCount > 1 ? "s" : ""} updated)`, "success");
+        showToast(t('toastSaved', { count: successCount }), "success");
       }
 
       // Only mark config as "clean" when every change was persisted
@@ -410,7 +412,7 @@ export default function ConfigPage() {
       // Re-fetch after a short delay to confirm changes
       setTimeout(() => { void fetchConfig(3, 1000); }, 1500);
     } catch (error) {
-      showToast(`Failed to save configuration: ${getErrorMessage(error)}`, "error");
+      showToast(t('toastSaveFailedWithError', { error: getErrorMessage(error) }), "error");
       setSaving(false);
     }
   };
@@ -419,7 +421,7 @@ export default function ConfigPage() {
     if (originalConfig) {
       setConfig(originalConfig);
       setRawJson(JSON.stringify(stripOAuthIds(originalConfig), null, 2));
-      showToast("Changes discarded", "info");
+      showToast(t('toastChangesDiscarded'), "info");
     }
   };
 
@@ -555,15 +557,15 @@ export default function ConfigPage() {
         });
 
         if (res.ok) {
-          showToast("Proxy URL cleared. Retrying config load...", "success");
+          showToast(t('toastProxyCleared'), "success");
           setTimeout(() => {
             void fetchConfig();
           }, 2000);
         } else {
-          showToast("Failed to reset proxy — the management API may be unreachable", "error");
+          showToast(t('toastResetProxyFailed'), "error");
         }
       } catch {
-        showToast("Network error — CLIProxyAPI may be completely unreachable through the proxy", "error");
+        showToast(t('toastNetworkErrorProxy'), "error");
       } finally {
         setResettingProxy(false);
       }
@@ -581,7 +583,7 @@ export default function ConfigPage() {
           </p>
           <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
             <Button onClick={fetchConfig} className="px-2.5 py-1 text-xs">
-              Retry
+              {t('retryButton')}
             </Button>
             <Button
               variant="danger"
@@ -589,7 +591,7 @@ export default function ConfigPage() {
               disabled={resettingProxy}
               className="px-2.5 py-1 text-xs"
             >
-              {resettingProxy ? "Resetting..." : "Emergency: Clear Proxy URL"}
+              {resettingProxy ? t('resetting') : t('emergencyClearProxy')}
             </Button>
           </div>
         </div>
@@ -612,15 +614,15 @@ export default function ConfigPage() {
             <>
               <span className="flex items-center gap-2 rounded-sm border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700">
                 <span className="size-1.5 rounded-full bg-amber-400"></span>
-                Unsaved changes
+                {t('unsavedChanges')}
               </span>
               <Button variant="ghost" onClick={handleDiscard} disabled={saving} className="px-2.5 py-1 text-xs">
-                Discard Changes
+                {t('discardChanges')}
               </Button>
             </>
           )}
           <Button onClick={handleSave} disabled={saving || !hasUnsavedChanges} className="px-2.5 py-1 text-xs">
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? t('saving') : t('saveChanges')}
           </Button>
           </div>
         </div>
@@ -629,7 +631,7 @@ export default function ConfigPage() {
       <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-700">
         <strong>Warning:</strong>{" "}
         <span>
-          Invalid configuration may prevent the service from starting. Review changes carefully before saving.
+          {t('warningText')}
         </span>
       </div>
 
@@ -665,10 +667,10 @@ export default function ConfigPage() {
           setShowProxyWarning(false);
           void executeSave();
         }}
-        title="Proxy URL Changed"
-        message={`Setting a proxy URL will route all CLIProxyAPI outbound traffic through "${config?.["proxy-url"]}". If the proxy is unreachable, you won't be able to load this configuration page anymore. Are you sure?`}
-        confirmLabel="Save Anyway"
-        cancelLabel="Cancel"
+        title={t('proxyChangedTitle')}
+        message={t('proxyChangedMessage', { url: config?.["proxy-url"] ?? "" })}
+        confirmLabel={t('saveAnywayButton')}
+        cancelLabel={t('cancelButton')}
         variant="warning"
       />
     </div>

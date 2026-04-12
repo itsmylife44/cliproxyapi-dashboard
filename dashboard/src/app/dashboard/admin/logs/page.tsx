@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -40,27 +41,27 @@ type LevelFilter = (typeof LEVEL_FILTERS)[number];
 const LOGS_PER_PAGE = 50;
 const EMPTY_LOGS: LogEntry[] = [];
 
-function formatRelativeTime(timestamp: number): string {
+function formatRelativeTime(timestamp: number, t: ReturnType<typeof useTranslations>): string {
   const now = Date.now();
   const diff = now - timestamp;
 
   if (diff < 60000) {
     const seconds = Math.floor(diff / 1000);
-    return seconds <= 1 ? "just now" : `${seconds}s ago`;
+    return seconds <= 1 ? t('justNow') : t('secondsAgo', { count: seconds });
   }
 
   if (diff < 3600000) {
     const minutes = Math.floor(diff / 60000);
-    return minutes === 1 ? "1 minute ago" : `${minutes} minutes ago`;
+    return minutes === 1 ? t('minuteAgo') : t('minutesAgo', { count: minutes });
   }
 
   if (diff < 86400000) {
     const hours = Math.floor(diff / 3600000);
-    return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+    return hours === 1 ? t('hourAgo') : t('hoursAgo', { count: hours });
   }
 
   const days = Math.floor(diff / 86400000);
-  return days === 1 ? "1 day ago" : `${days} days ago`;
+  return days === 1 ? t('dayAgo') : t('daysAgo', { count: days });
 }
 
 function formatTimestamp(timestamp: number): string {
@@ -82,6 +83,8 @@ export default function AdminLogsPage() {
 
   const { showToast } = useToast();
   const router = useRouter();
+  const t = useTranslations('logs');
+  const tc = useTranslations('common');
 
   const fetchLogs = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -99,13 +102,13 @@ export default function AdminLogsPage() {
       }
 
       if (res.status === 403) {
-        showToast("Admin access required", "error");
+        showToast(t('toastAdminRequired'), "error");
         router.push("/dashboard");
         return;
       }
 
       if (!res.ok) {
-        showToast("Failed to load logs", "error");
+        showToast(t('toastLoadFailed'), "error");
         setLoading(false);
         return;
       }
@@ -119,10 +122,10 @@ export default function AdminLogsPage() {
       setLoading(false);
     } catch {
       if (signal?.aborted) return;
-      showToast("Network error", "error");
+      showToast(t('toastNetworkError'), "error");
       setLoading(false);
     }
-  }, [levelFilter, router, showToast]);
+  }, [levelFilter, router, showToast, t]);
 
   const totalPages = Math.max(1, Math.ceil(logs.length / LOGS_PER_PAGE));
   const activePage = Math.min(currentPage, totalPages);
@@ -175,18 +178,18 @@ export default function AdminLogsPage() {
       const res = await fetch(API_ENDPOINTS.ADMIN.LOGS, { method: "DELETE" });
 
       if (!res.ok) {
-        showToast("Failed to clear logs", "error");
+        showToast(t('toastClearFailed'), "error");
         setClearing(false);
         return;
       }
 
-      showToast("Logs cleared", "success");
+      showToast(t('toastCleared'), "success");
       setLogs([]);
       setTotal(0);
       setStats(null);
       setClearing(false);
     } catch {
-      showToast("Network error", "error");
+      showToast(t('toastNetworkError'), "error");
       setClearing(false);
     }
   };
@@ -208,7 +211,7 @@ export default function AdminLogsPage() {
     }
     return Object.keys(details).length > 0
       ? JSON.stringify(details, null, 2)
-      : "No additional details";
+      : t('noAdditionalDetails');
   };
 
   return (
@@ -253,11 +256,11 @@ export default function AdminLogsPage() {
             </label>
 
             <Button onClick={() => void fetchLogs()} variant="secondary" className="px-2.5 py-1 text-xs">
-              Refresh
+              {t('refreshButton')}
             </Button>
 
             <Button onClick={confirmClear} variant="danger" disabled={clearing} className="px-2.5 py-1 text-xs">
-              {clearing ? "Clearing..." : "Clear Logs"}
+              {clearing ? t('clearing') : t('clearLogsButton')}
             </Button>
           </div>
         </div>
@@ -269,9 +272,9 @@ export default function AdminLogsPage() {
             <span className={`size-2 rounded-full ${stats.persistent ? "bg-green-500/100" : "bg-yellow-500/100"}`} />
             Persistent storage {stats.persistent ? "enabled" : "disabled"}
           </span>
-          <span>Memory: {stats.memoryCount} logs</span>
-          <span>File: {stats.fileCount} logs ({stats.fileSizeKB} KB)</span>
-          {stats.rotatedFiles > 0 && <span>Rotated files: {stats.rotatedFiles}</span>}
+          <span>{t('memoryLogs', { count: stats.memoryCount })}</span>
+          <span>{t('fileLogs', { count: stats.fileCount, sizeKB: stats.fileSizeKB })}</span>
+          {stats.rotatedFiles > 0 && <span>{t('rotatedFiles', { count: stats.rotatedFiles })}</span>}
         </div>
       )}
 
@@ -280,8 +283,8 @@ export default function AdminLogsPage() {
           <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Log Entries</span>
           <span className="text-xs text-[var(--text-muted)]">
             {logs.length > 0
-              ? `Showing ${(activePage - 1) * LOGS_PER_PAGE + 1}–${Math.min(activePage * LOGS_PER_PAGE, logs.length)} of ${logs.length} logs`
-              : `${total} logs`}
+              ? t('showingLogs', { start: (activePage - 1) * LOGS_PER_PAGE + 1, end: Math.min(activePage * LOGS_PER_PAGE, logs.length), total: logs.length })
+              : t('totalLogsCount', { total: total })}
           </span>
         </div>
 
@@ -346,7 +349,7 @@ export default function AdminLogsPage() {
                           type="button"
                           className="text-blue-600 hover:text-blue-800 text-xs underline"
                         >
-                          {expandedRow === globalIndex ? "Hide" : "Show"}
+                          {expandedRow === globalIndex ? t('hide') : t('show')}
                         </button>
                       </td>
                     </tr>
@@ -378,7 +381,7 @@ export default function AdminLogsPage() {
               disabled={activePage === 1}
               className="px-2.5 py-1 text-xs"
             >
-              Previous
+              {t('previous')}
             </Button>
             <span className="text-xs text-[var(--text-muted)]">
               Page {activePage} of {totalPages}
@@ -389,7 +392,7 @@ export default function AdminLogsPage() {
               disabled={activePage === totalPages}
               className="px-2.5 py-1 text-xs"
             >
-              Next
+              {t('next')}
             </Button>
           </div>
         )}
@@ -399,10 +402,10 @@ export default function AdminLogsPage() {
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
         onConfirm={handleClearLogs}
-        title="Clear All Logs"
-        message="Are you sure you want to clear all logs?"
-        confirmLabel="Clear"
-        cancelLabel="Cancel"
+        title={t('clearAllLogsTitle')}
+        message={t('clearAllLogsMessage')}
+        confirmLabel={t('clearButton')}
+        cancelLabel={tc('cancel')}
         variant="danger"
       />
     </div>

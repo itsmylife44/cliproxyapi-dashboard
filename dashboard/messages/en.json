@@ -373,7 +373,7 @@
     "toastFetchModelsInvalid": "Please enter a valid Base URL (http/https) and API Key first",
     "toastFetchModelsSuccess": "Found {count} models",
     "toastFetchModelsFailed": "Failed to fetch models",
-    "toastModelsAdded": "Added {count} model{s}",
+    "toastModelsAdded": "{count, plural, one {# model} other {# models}} added",
     "toastProviderCreated": "Custom provider created",
     "toastProviderUpdated": "Custom provider updated",
     "toastSaveFailed": "Failed to save provider",

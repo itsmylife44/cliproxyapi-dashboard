@@ -373,7 +373,7 @@
     "toastFetchModelsInvalid": "Bitte geben Sie zuerst eine gültige Basis-URL (http/https) und einen API-Schlüssel ein",
     "toastFetchModelsSuccess": "{count} Modelle gefunden",
     "toastFetchModelsFailed": "Fehler beim Abrufen von Modellen",
-    "toastModelsAdded": "{count} Modell{s} hinzugefügt",
+    "toastModelsAdded": "{count, plural, one {# Modell} other {# Modelle}} hinzugefügt",
     "toastProviderCreated": "Benutzerdefinierten Anbieter erstellt",
     "toastProviderUpdated": "Benutzerdefinierten Anbieter aktualisiert",
     "toastSaveFailed": "Fehler beim Speichern des Anbieters",

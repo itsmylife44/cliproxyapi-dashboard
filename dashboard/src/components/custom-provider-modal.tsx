@@ -340,7 +340,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
         const existing = prev.filter(m => m.upstreamName || m.alias);
         return [...existing, ...newModels];
       });
-      showToast(t("toastModelsAdded", { count: newModels.length, s: newModels.length !== 1 ? 's' : '' }), "success");
+      showToast(t("toastModelsAdded", { count: newModels.length }), "success");
     }
 
     setShowFetchedModels(false);

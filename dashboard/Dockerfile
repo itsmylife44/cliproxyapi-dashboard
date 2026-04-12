@@ -13,6 +13,7 @@ COPY package.json package-lock.json ./
 COPY next.config.ts tsconfig.json prisma.config.ts postcss.config.mjs ./
 COPY public ./public
 COPY src ./src
+COPY messages ./messages
 COPY prisma ./prisma
 
 # ARG is not persisted in image layers — safe for build-time placeholders
@@ -46,6 +47,7 @@ ENV DASHBOARD_VERSION=${DASHBOARD_VERSION}
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/messages ./messages
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/src/generated ./src/generated

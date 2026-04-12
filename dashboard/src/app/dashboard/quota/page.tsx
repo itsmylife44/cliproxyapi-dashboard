@@ -71,7 +71,7 @@ function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
       healthyAccounts: healthy.length,
       errorAccounts,
       windowCapacities: [],
-      modelFirstSummary: summarizeModelFirstProvider(accounts),
+      modelFirstSummary: summarizeModelFirstProvider(healthy),
     };
   }
 

@@ -53,17 +53,17 @@ export function isShortTermQuotaWindow(
   if (siblingResets.length >= 2) {
     const earliestReset = siblingResets[0] ?? 0;
     const latestReset = siblingResets[siblingResets.length - 1] ?? 0;
+    const hasDistinctClusters = latestReset - earliestReset >= SHORT_TERM_CLUSTER_MIN_SPREAD_MS;
 
-    // Antigravity exposes grouped model quotas without explicit window names.
-    // When there are distinct reset clusters, the earlier cluster behaves like
-    // the short-term window and the later cluster behaves like the long-term one.
-    if (
-      latestReset - earliestReset >= SHORT_TERM_CLUSTER_MIN_SPREAD_MS &&
-      groupReset - earliestReset <= SHORT_TERM_CLUSTER_WINDOW_MS
-    ) {
-      return true;
+    if (hasDistinctClusters) {
+      // Antigravity exposes grouped model quotas without explicit window names.
+      // When there are distinct reset clusters, the earlier cluster behaves like
+      // the short-term window and the later cluster behaves like the long-term one.
+      // Do NOT fall through to time-based fallback when clusters are distinct.
+      return groupReset - earliestReset <= SHORT_TERM_CLUSTER_WINDOW_MS;
     }
   }
 
+  // Time-based fallback for providers without distinct clusters (e.g., single window)
   return groupReset - Date.now() <= SHORT_TERM_RESET_FALLBACK_MS;
 }

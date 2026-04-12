@@ -216,17 +216,17 @@ export default function AdminLogsPage() {
 
   return (
     <div className="space-y-4">
-      <Breadcrumbs items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Admin" }, { label: "Application Logs" }]} />
+      <Breadcrumbs items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Admin" }, { label: t('breadcrumbLabel') }]} />
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Application Logs</h1>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">Dashboard application event log.</p>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('applicationLogsTitle')}</h1>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">{t('eventLogDescription')}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2">
               <label htmlFor="level-filter" className="text-xs text-[var(--text-muted)]">
-                Level:
+                {t('levelLabel')}
               </label>
               <select
                 id="level-filter"
@@ -252,7 +252,7 @@ export default function AdminLogsPage() {
                 onChange={(e) => setAutoRefresh(e.target.checked)}
                 className="size-4 rounded border-[var(--surface-border)]/70 bg-[var(--surface-base)] text-[var(--text-primary)] focus:ring-2 focus:ring-black/20 focus:ring-offset-0"
               />
-              <span className="text-xs text-[var(--text-muted)]">Auto-refresh (5s)</span>
+              <span className="text-xs text-[var(--text-muted)]">{t('autoRefresh')}</span>
             </label>
 
             <Button onClick={() => void fetchLogs()} variant="secondary" className="px-2.5 py-1 text-xs">
@@ -270,7 +270,7 @@ export default function AdminLogsPage() {
         <div className="flex flex-wrap gap-4 text-xs text-[var(--text-muted)]">
           <span className="flex items-center gap-1.5">
             <span className={`size-2 rounded-full ${stats.persistent ? "bg-green-500/100" : "bg-yellow-500/100"}`} />
-            Persistent storage {stats.persistent ? "enabled" : "disabled"}
+            {stats.persistent ? t('persistentStorageEnabled') : t('persistentStorageDisabled')}
           </span>
           <span>{t('memoryLogs', { count: stats.memoryCount })}</span>
           <span>{t('fileLogs', { count: stats.fileCount, sizeKB: stats.fileSizeKB })}</span>
@@ -280,7 +280,7 @@ export default function AdminLogsPage() {
 
       <section className="overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
         <div className="flex items-center justify-between border-b border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Log Entries</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('logEntriesHeader')}</span>
           <span className="text-xs text-[var(--text-muted)]">
             {logs.length > 0
               ? t('showingLogs', { start: (activePage - 1) * LOGS_PER_PAGE + 1, end: Math.min(activePage * LOGS_PER_PAGE, logs.length), total: logs.length })
@@ -289,11 +289,11 @@ export default function AdminLogsPage() {
         </div>
 
         {loading ? (
-          <div className="p-6 text-center text-sm text-[var(--text-muted)]">Loading...</div>
+          <div className="p-6 text-center text-sm text-[var(--text-muted)]">{t('loadingText')}</div>
         ) : logs.length === 0 ? (
           <div className="p-4">
             <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-sm text-[var(--text-muted)]">
-              No logs found. Logs will appear here when application events occur.
+              {t('emptyState')}
             </div>
           </div>
         ) : (
@@ -384,7 +384,7 @@ export default function AdminLogsPage() {
               {t('previous')}
             </Button>
             <span className="text-xs text-[var(--text-muted)]">
-              Page {activePage} of {totalPages}
+              {t('pageOf', { page: activePage, total: totalPages })}
             </span>
             <Button
               variant="ghost"

@@ -153,39 +153,39 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-4">
-      <Breadcrumbs items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Admin" }, { label: "Users" }]} />
+      <Breadcrumbs items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Admin" }, { label: t('breadcrumbLabel') }]} />
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">User Management</h1>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">Manage dashboard users and roles.</p>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('managementTitle')}</h1>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">{t('pageDescription')}</p>
           </div>
           <Button onClick={() => setIsModalOpen(true)} className="px-2.5 py-1 text-xs">{t('createUserButton')}</Button>
         </div>
       </section>
 
       {loading ? (
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">Loading...</div>
+        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">{t('loadingText')}</div>
       ) : fetchError ? (
         <div className="rounded-md border border-rose-500/20 bg-rose-500/100/10 p-4 text-center text-sm text-rose-700">
-          Failed to load users.
+          {t('errorLoadingUsers')}
           <button type="button" onClick={() => void fetchUsers()} className="ml-2 font-medium text-rose-800 underline underline-offset-2 hover:text-[var(--text-primary)]">
-            Retry
+            {t('retryButton')}
           </button>
         </div>
       ) : users.length === 0 ? (
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-sm text-[var(--text-muted)]">
-          No users found. Create one to get started.
+          {t('emptyState')}
         </div>
       ) : (
         <section className="overflow-x-auto rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
           <table className="min-w-[600px] w-full text-sm">
             <thead>
               <tr className="sticky top-0 z-10 border-b border-[var(--surface-border)] bg-[var(--surface-base)]/95">
-                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Username</th>
-                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Role</th>
-                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Created</th>
-                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">API Keys</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('tableHeaderUsername')}</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('tableHeaderRole')}</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('tableHeaderCreated')}</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('tableHeaderApiKeys')}</th>
               </tr>
             </thead>
             <tbody>
@@ -194,7 +194,7 @@ export default function AdminUsersPage() {
                   <td className="px-3 py-2 text-xs font-medium text-[var(--text-primary)]">{user.username}</td>
                   <td className="px-3 py-2">
                     <span className={`inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium ${user.isAdmin ? "border-blue-500/20 bg-blue-500/10 text-blue-700" : "border-[var(--surface-border)]/70 bg-[var(--surface-muted)] text-[var(--text-secondary)]"}`}>
-                      {user.isAdmin ? "Admin" : "User"}
+                      {user.isAdmin ? t('roleAdmin') : t('roleUser')}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-xs text-[var(--text-muted)]">{formatDate(user.createdAt)}</td>

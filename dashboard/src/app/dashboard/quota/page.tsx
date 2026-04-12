@@ -1,46 +1,31 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
+
+import { Button } from "@/components/ui/button";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
+import {
+  isModelFirstAccount,
+  isModelFirstProviderQuotaUnverified,
+  normalizeFraction,
+  summarizeModelFirstProvider,
+  type ModelFirstProviderSummary,
+  type QuotaAccount,
+  type QuotaMonitorMode,
+  type QuotaResponse,
+} from "@/lib/model-first-monitoring";
+import { formatRelativeTime } from "@/lib/format-relative-time";
+
 const QuotaChart = dynamic(
-  () => import("@/components/quota/quota-chart").then(mod => ({ default: mod.QuotaChart })),
+  () => import("@/components/quota/quota-chart").then((mod) => ({ default: mod.QuotaChart })),
   { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> }
 );
 import { QuotaDetails } from "@/components/quota/quota-details";
 import { QuotaAlerts } from "@/components/quota/quota-alerts";
-import { useTranslations } from "next-intl";
-
-interface QuotaModel {
-  id: string;
-  displayName: string;
-  remainingFraction?: number | null;
-  resetTime: string | null;
-}
-
-interface QuotaGroup {
-  id: string;
-  label: string;
-  remainingFraction?: number | null;
-  resetTime: string | null;
-  models: QuotaModel[];
-}
-
-interface QuotaAccount {
-  auth_index: string;
-  provider: string;
-  email?: string | null;
-  supported: boolean;
-  error?: string;
-  groups?: QuotaGroup[];
-  raw?: unknown;
-}
-
-interface QuotaResponse {
-  accounts: QuotaAccount[];
-}
 
 const PROVIDERS = {
   ALL: "all",
@@ -53,30 +38,6 @@ const PROVIDERS = {
 
 type ProviderType = (typeof PROVIDERS)[keyof typeof PROVIDERS];
 
-function normalizeFraction(value: unknown): number | null {
-  if (typeof value !== "number" || Number.isNaN(value) || !Number.isFinite(value)) {
-    return null;
-  }
-  if (value < 0) return 0;
-  if (value > 1) return 1;
-  return value;
-}
-
-function isShortTermGroup(group: QuotaGroup): boolean {
-  const id = group.id.toLowerCase();
-  const label = group.label.toLowerCase();
-  return (
-    id.includes("five-hour") ||
-    id.includes("primary") ||
-    id.includes("request") ||
-    id.includes("token") ||
-    label.includes("5h") ||
-    label.includes("5m") ||
-    label.includes("request") ||
-    label.includes("token")
-  );
-}
-
 interface WindowCapacity {
   id: string;
   label: string;
@@ -87,44 +48,60 @@ interface WindowCapacity {
 
 interface ProviderSummary {
   provider: string;
+  monitorMode: QuotaMonitorMode;
   totalAccounts: number;
   healthyAccounts: number;
   errorAccounts: number;
   windowCapacities: WindowCapacity[];
+  modelFirstSummary?: ModelFirstProviderSummary;
 }
-
 function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
   const totalAccounts = accounts.length;
   const healthy = accounts.filter(
-    (a) => a.supported && !a.error && a.groups && a.groups.length > 0
+    (account) => account.supported && !account.error && account.groups && account.groups.length > 0
   );
   const errorAccounts = totalAccounts - healthy.length;
+  const modelFirst = healthy.length > 0 && healthy.every((account) => isModelFirstAccount(account));
+
+  if (modelFirst) {
+    return {
+      provider: accounts[0]?.provider ?? "unknown",
+      monitorMode: "model-first",
+      totalAccounts,
+      healthyAccounts: healthy.length,
+      errorAccounts,
+      windowCapacities: [],
+      modelFirstSummary: summarizeModelFirstProvider(healthy),
+    };
+  }
 
   const allWindowIds = new Set<string>();
-  for (const a of healthy) {
-    for (const g of a.groups ?? []) {
-      if (g.id !== "extra-usage") allWindowIds.add(g.id);
+  for (const account of healthy) {
+    for (const group of account.groups ?? []) {
+      if (group.id !== "extra-usage") allWindowIds.add(group.id);
     }
   }
 
   const windowCapacities: WindowCapacity[] = [];
 
   for (const windowId of allWindowIds) {
-    const relevantAccounts = healthy.filter((a) =>
-      a.groups?.some((g) => g.id === windowId)
+    const relevantAccounts = healthy.filter((account) =>
+      account.groups?.some((group) => group.id === windowId)
     );
     if (relevantAccounts.length === 0) continue;
 
-    const scores = relevantAccounts.map((a) => {
-      const group = a.groups?.find((g) => g.id === windowId);
-      return normalizeFraction(group?.remainingFraction);
-    }).filter((score): score is number => score !== null);
+    const scores = relevantAccounts
+      .map((account) => {
+        const group = account.groups?.find((candidate) => candidate.id === windowId);
+        return normalizeFraction(group?.remainingFraction);
+      })
+      .filter((score): score is number => score !== null);
 
     if (scores.length === 0) {
       continue;
     }
 
-    const exhaustedProduct = scores.reduce((prod, score) => prod * (1 - score), 1);
+    const exhaustedProduct = scores.reduce((product, score) => product * (1 - score), 1);
     const capacity = 1 - exhaustedProduct;
 
     let earliestReset: string | null = null;
@@ -132,18 +109,18 @@ function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
     let label = "";
     let isShortTerm = false;
 
-    for (const a of relevantAccounts) {
-      const g = a.groups?.find((g) => g.id === windowId);
-      if (g) {
+    for (const account of relevantAccounts) {
+      const group = account.groups?.find((candidate) => candidate.id === windowId);
+      if (group) {
         if (!label) {
-          label = g.label;
-          isShortTerm = isShortTermGroup(g);
+          label = group.label;
+          isShortTerm = isShortTermQuotaWindow(group, account.groups ?? []);
         }
-        if (g.resetTime) {
-          const t = new Date(g.resetTime).getTime();
-          if (t < minResetTime) {
-            minResetTime = t;
-            earliestReset = g.resetTime;
+        if (group.resetTime) {
+          const timestamp = new Date(group.resetTime).getTime();
+          if (timestamp < minResetTime) {
+            minResetTime = timestamp;
+            earliestReset = group.resetTime;
           }
         }
       }
@@ -158,13 +135,14 @@ function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
     });
   }
 
-  windowCapacities.sort((a, b) => {
-    if (a.isShortTerm !== b.isShortTerm) return a.isShortTerm ? 1 : -1;
-    return a.label.localeCompare(b.label);
+  windowCapacities.sort((left, right) => {
+    if (left.isShortTerm !== right.isShortTerm) return left.isShortTerm ? 1 : -1;
+    return left.label.localeCompare(right.label);
   });
 
   return {
     provider: accounts[0]?.provider ?? "unknown",
+    monitorMode: "window-based",
     totalAccounts,
     healthyAccounts: healthy.length,
     errorAccounts,
@@ -172,8 +150,8 @@ function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
   };
 }
 
-function calcOverallCapacity(summaries: ProviderSummary[], t: (key: string) => string): { value: number; label: string; provider: string } {
-  if (summaries.length === 0) return { value: 0, label: t('noData'), provider: "" };
+function calcOverallCapacity(summaries: ProviderSummary[], noDataLabel: string, weightedLabel: string): { value: number; label: string; provider: string } {
+  if (summaries.length === 0) return { value: 0, label: noDataLabel, provider: "" };
 
   let weightedCapacity = 0;
   let weightedAccounts = 0;
@@ -183,26 +161,40 @@ function calcOverallCapacity(summaries: ProviderSummary[], t: (key: string) => s
       continue;
     }
 
-    const longTerm = summary.windowCapacities.filter((w) => !w.isShortTerm);
-    const shortTerm = summary.windowCapacities.filter((w) => w.isShortTerm);
+    if (summary.monitorMode === "model-first" && summary.modelFirstSummary) {
+      if (isModelFirstProviderQuotaUnverified(summary.modelFirstSummary)) {
+        continue;
+      }
+
+      const providerCapacity =
+        summary.modelFirstSummary.totalAccounts > 0
+          ? summary.modelFirstSummary.readyAccounts / summary.modelFirstSummary.totalAccounts
+          : 0;
+      weightedCapacity += providerCapacity * summary.healthyAccounts;
+      weightedAccounts += summary.healthyAccounts;
+      continue;
+    }
+
+    const longTerm = summary.windowCapacities.filter((window) => !window.isShortTerm);
+    const shortTerm = summary.windowCapacities.filter((window) => window.isShortTerm);
     const relevantWindows = longTerm.length > 0 ? longTerm : shortTerm;
 
     if (relevantWindows.length === 0) {
       continue;
     }
 
-    const providerCapacity = Math.min(...relevantWindows.map((w) => w.capacity));
+    const providerCapacity = Math.min(...relevantWindows.map((window) => window.capacity));
     weightedCapacity += providerCapacity * summary.healthyAccounts;
     weightedAccounts += summary.healthyAccounts;
   }
 
   if (weightedAccounts === 0) {
-    return { value: 0, label: t('noData'), provider: "" };
+    return { value: 0, label: noDataLabel, provider: "" };
   }
 
   return {
     value: weightedCapacity / weightedAccounts,
-    label: t('weightedCapacity'),
+    label: weightedLabel,
     provider: "all",
   };
 }
@@ -214,12 +206,13 @@ export default function QuotaPage() {
   const [selectedProvider, setSelectedProvider] = useState<ProviderType>(PROVIDERS.ALL);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
 
-  const fetchQuota = async (signal?: AbortSignal) => {
+  const fetchQuota = async (signal?: AbortSignal, bust = false) => {
     setLoading(true);
     try {
-      const res = await fetch(API_ENDPOINTS.QUOTA.BASE, { signal });
-      if (res.ok) {
-        const data = await res.json();
+      const url = bust ? `${API_ENDPOINTS.QUOTA.BASE}?bust=${Date.now()}` : API_ENDPOINTS.QUOTA.BASE;
+      const response = await fetch(url, { signal });
+      if (response.ok) {
+        const data = (await response.json()) as QuotaResponse;
         setQuotaData(data);
       }
     } catch {
@@ -239,13 +232,14 @@ export default function QuotaPage() {
     };
   }, []);
 
-  const filteredAccounts = quotaData?.accounts.filter((account) => {
-    if (selectedProvider === PROVIDERS.ALL) return true;
-    if (selectedProvider === PROVIDERS.COPILOT) {
-      return account.provider === "github" || account.provider === "github-copilot";
-    }
-    return account.provider === selectedProvider;
-  }) || [];
+  const filteredAccounts =
+    quotaData?.accounts.filter((account) => {
+      if (selectedProvider === PROVIDERS.ALL) return true;
+      if (selectedProvider === PROVIDERS.COPILOT) {
+        return account.provider === "github" || account.provider === "github-copilot";
+      }
+      return account.provider === selectedProvider;
+    }) ?? [];
 
   const activeAccounts = filteredAccounts.filter((account) => account.supported && !account.error).length;
 
@@ -258,26 +252,44 @@ export default function QuotaPage() {
 
   const providerSummaries = Array.from(providerGroups.entries())
     .map(([, accounts]) => calcProviderSummary(accounts))
-    .sort((a, b) => b.healthyAccounts - a.healthyAccounts);
+    .sort((left, right) => right.healthyAccounts - left.healthyAccounts);
 
-  const overallCapacity = calcOverallCapacity(providerSummaries, t);
+  const overallCapacity = calcOverallCapacity(providerSummaries, t("noData"), t("weightedCapacity"));
+  const isModelFirstOnlyView =
+    filteredAccounts.length > 0 && filteredAccounts.every((account) => isModelFirstAccount(account));
+  const modelFirstSummary = isModelFirstOnlyView ? summarizeModelFirstProvider(filteredAccounts) : null;
+  const modelFirstQuotaUnverified = isModelFirstProviderQuotaUnverified(modelFirstSummary);
+  const modelFirstWarnings = providerSummaries
+    .filter((summary) => summary.monitorMode === "model-first" && summary.modelFirstSummary)
+    .map((summary) => ({
+      provider: summary.provider,
+      summary: summary.modelFirstSummary!,
+    }))
+    .filter(({ summary }) => isModelFirstProviderQuotaUnverified(summary));
 
-  const lowCapacityCount = providerSummaries.filter(
-    (s) => s.windowCapacities.some((w) => w.capacity < 0.2) && s.totalAccounts > 0
-  ).length;
+  const lowCapacityCount = providerSummaries.filter((summary) => {
+    if (summary.monitorMode === "model-first") {
+      return (summary.modelFirstSummary?.minRemainingFraction ?? 1) < 0.2 && summary.totalAccounts > 0;
+    }
+    return summary.windowCapacities.some((window) => window.capacity < 0.2) && summary.totalAccounts > 0;
+  }).length;
 
   const providerFilters = [
-    { key: PROVIDERS.ALL, label: t('filterAll') },
-    { key: PROVIDERS.ANTIGRAVITY, label: t('filterAntigravity') },
-    { key: PROVIDERS.CLAUDE, label: t('filterClaude') },
-    { key: PROVIDERS.CODEX, label: t('filterCodex') },
-    { key: PROVIDERS.COPILOT, label: t('filterCopilot') },
-    { key: PROVIDERS.KIMI, label: t('filterKimi') },
+    { key: PROVIDERS.ALL, label: t("filterAll") },
+    { key: PROVIDERS.ANTIGRAVITY, label: t("filterAntigravity") },
+    { key: PROVIDERS.CLAUDE, label: t("filterClaude") },
+    { key: PROVIDERS.CODEX, label: t("filterCodex") },
+    { key: PROVIDERS.COPILOT, label: t("filterCopilot") },
+    { key: PROVIDERS.KIMI, label: t("filterKimi") },
   ];
 
   const toggleCard = (accountId: string) => {
-    setExpandedCards((prev) => ({ ...prev, [accountId]: !prev[accountId] }));
+    setExpandedCards((previous) => ({ ...previous, [accountId]: !previous[accountId] }));
   };
+
+  const freshSnapshotCount = modelFirstSummary
+    ? Math.max(0, modelFirstSummary.totalAccounts - modelFirstSummary.staleAccounts)
+    : 0;
 
   return (
     <div className="space-y-4">
@@ -285,7 +297,9 @@ export default function QuotaPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t("pageTitle")}</h1>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">{t("pageDescription")}</p>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              {isModelFirstOnlyView ? t("modelFirstDescription") : t("pageDescription")}
+            </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="flex flex-wrap gap-1">
@@ -297,7 +311,9 @@ export default function QuotaPage() {
                     setSelectedProvider(filter.key);
                     if (filter.key !== PROVIDERS.ALL) {
                       setTimeout(() => {
-                        document.getElementById("quota-accounts")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                        document
+                          .getElementById("quota-accounts")
+                          ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
                       }, 50);
                     }
                   }}
@@ -307,7 +323,7 @@ export default function QuotaPage() {
                 </Button>
               ))}
             </div>
-            <Button onClick={fetchQuota} disabled={loading} className="px-2.5 py-1 text-xs">
+            <Button onClick={() => fetchQuota(undefined, true)} disabled={loading} className="px-2.5 py-1 text-xs">
               {loading ? t("loadingText") : t("refreshButton")}
             </Button>
           </div>
@@ -320,32 +336,98 @@ export default function QuotaPage() {
         </div>
       ) : (
         <>
-          <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {modelFirstWarnings.length > 0 && (
+            <section className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+              {modelFirstWarnings.map(({ provider, summary }) => (
+                <p key={provider}>
+                  {t("modelFirstWarning", {
+                    provider: provider.charAt(0).toUpperCase() + provider.slice(1),
+                    count: summary.totalAccounts,
+                  })}
+                </p>
+              ))}
+            </section>
+          )}
+
+          <section className={`grid grid-cols-2 gap-2 ${isModelFirstOnlyView ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
             <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("activeAccountsLabel")}</p>
               <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{activeAccounts}</p>
             </div>
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("overallCapacityLabel")} <HelpTooltip content={t("overallCapacityTooltip")} /></p>
-              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{Math.round(overallCapacity.value * 100)}%</p>
-            </div>
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("lowCapacityLabel")} <HelpTooltip content={t("lowCapacityTooltip")} /></p>
-              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{lowCapacityCount}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("providersLabel")}</p>
-              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{providerSummaries.length}</p>
-            </div>
+            {isModelFirstOnlyView && modelFirstSummary ? (
+              <>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {modelFirstQuotaUnverified ? t("freshSnapshotsLabel") : t("readyAccountsLabel")}{" "}
+                    <HelpTooltip
+                      content={modelFirstQuotaUnverified ? t("freshSnapshotsTooltip") : t("readyAccountsTooltip")}
+                    />
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                    {modelFirstQuotaUnverified ? freshSnapshotCount : modelFirstSummary.readyAccounts}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {t("staleSnapshotsLabel")}{" "}
+                    <HelpTooltip content={t("staleSnapshotsTooltip")} />
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{modelFirstSummary.staleAccounts}</p>
+                </div>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {t("closestResetLabel")}{" "}
+                    <HelpTooltip content={t("closestResetTooltip")} />
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                    {formatRelativeTime(modelFirstSummary.nextWindowResetAt, t)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {t("modelFamiliesLabel")}{" "}
+                    <HelpTooltip content={t("modelFamiliesTooltip")} />
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{modelFirstSummary.groups.length}</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {t("overallCapacityLabel")}{" "}
+                    <HelpTooltip content={t("overallCapacityTooltip")} />
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{Math.round(overallCapacity.value * 100)}%</p>
+                </div>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {t("lowCapacityLabel")}{" "}
+                    <HelpTooltip content={t("lowCapacityTooltip")} />
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{lowCapacityCount}</p>
+                </div>
+                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("providersLabel")}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{providerSummaries.length}</p>
+                </div>
+              </>
+            )}
           </section>
 
-          <QuotaChart overallCapacity={overallCapacity} providerSummaries={providerSummaries} />
+          <QuotaChart
+            overallCapacity={overallCapacity}
+            providerSummaries={providerSummaries}
+            modelFirstSummary={modelFirstSummary}
+            modelFirstOnlyView={isModelFirstOnlyView}
+          />
 
           <QuotaDetails
             filteredAccounts={filteredAccounts}
             expandedCards={expandedCards}
             onToggleCard={toggleCard}
             loading={loading}
+            modelFirstOnlyView={isModelFirstOnlyView}
           />
         </>
       )}

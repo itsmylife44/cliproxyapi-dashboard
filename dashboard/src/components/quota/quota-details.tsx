@@ -1,41 +1,19 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
-interface QuotaModel {
-  id: string;
-  displayName: string;
-  remainingFraction?: number | null;
-  resetTime: string | null;
-}
-
-interface QuotaGroup {
-  id: string;
-  label: string;
-  remainingFraction?: number | null;
-  resetTime: string | null;
-  models: QuotaModel[];
-}
-
-interface QuotaAccount {
-  auth_index: string;
-  provider: string;
-  email?: string | null;
-  supported: boolean;
-  error?: string;
-  groups?: QuotaGroup[];
-  raw?: unknown;
-}
-
-function normalizeFraction(value: unknown): number | null {
-  if (typeof value !== "number" || Number.isNaN(value) || !Number.isFinite(value)) {
-    return null;
-  }
-  if (value < 0) return 0;
-  if (value > 1) return 1;
-  return value;
-}
+import { cn } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/format-relative-time";
+import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
+import {
+  enrichModelFirstGroup,
+  isModelFirstAccount,
+  isModelFirstAccountQuotaUnverified,
+  normalizeFraction,
+  summarizeModelFirstAccount,
+  type QuotaAccount,
+  type QuotaGroup,
+} from "@/lib/model-first-monitoring";
 
 function maskEmail(email: unknown, unknownLabel = "unknown"): string {
   if (typeof email !== "string") return unknownLabel;
@@ -52,49 +30,6 @@ function maskEmail(email: unknown, unknownLabel = "unknown"): string {
   const maskedLocal = local.length <= 3 ? `${local}***` : `${local.slice(0, 3)}***`;
   return `${maskedLocal}@${domain}`;
 }
-
-function formatRelativeTime(isoDate: string | null, unknownLabel = "Unknown"): string {
-  if (!isoDate) return unknownLabel;
-
-  try {
-    const resetDate = new Date(isoDate);
-    if (Number.isNaN(resetDate.getTime())) return unknownLabel;
-    const now = new Date();
-    const diffMs = resetDate.getTime() - now.getTime();
-
-    if (diffMs <= 0) return "Resetting...";
-
-    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (days > 0) {
-      return `Resets in ${days}d ${hours}h`;
-    }
-    if (hours > 0) {
-      return `Resets in ${hours}h ${minutes}m`;
-    }
-    return `Resets in ${minutes}m`;
-  } catch {
-    return unknownLabel;
-  }
-}
-
-function isShortTermGroup(group: QuotaGroup): boolean {
-  const id = group.id.toLowerCase();
-  const label = group.label.toLowerCase();
-  return (
-    id.includes("five-hour") ||
-    id.includes("primary") ||
-    id.includes("request") ||
-    id.includes("token") ||
-    label.includes("5h") ||
-    label.includes("5m") ||
-    label.includes("request") ||
-    label.includes("token")
-  );
-}
-
 function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: number; label: string; isShortTerm: boolean }> {
   const result: Record<string, { score: number; label: string; isShortTerm: boolean }> = {};
   for (const group of groups) {
@@ -104,16 +39,16 @@ function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: 
     result[group.id] = {
       score,
       label: group.label,
-      isShortTerm: isShortTermGroup(group),
+      isShortTerm: isShortTermQuotaWindow(group, groups),
     };
   }
   return result;
 }
 
 function getCapacityBarClass(value: number): string {
-  if (value > 0.6) return "bg-emerald-500/100/80";
-  if (value > 0.2) return "bg-amber-500/100";
-  return "bg-rose-500/100/80";
+  if (value > 0.6) return "bg-emerald-500/80";
+  if (value > 0.2) return "bg-amber-500";
+  return "bg-rose-500/80";
 }
 
 interface QuotaDetailsProps {
@@ -121,107 +56,277 @@ interface QuotaDetailsProps {
   expandedCards: Record<string, boolean>;
   onToggleCard: (accountId: string) => void;
   loading: boolean;
+  modelFirstOnlyView: boolean;
 }
 
-export function QuotaDetails({ filteredAccounts, expandedCards, onToggleCard, loading }: QuotaDetailsProps) {
+export function QuotaDetails({
+  filteredAccounts,
+  expandedCards,
+  onToggleCard,
+  loading,
+  modelFirstOnlyView,
+}: QuotaDetailsProps) {
   const t = useTranslations("quota");
+
+  const sections = (() => {
+    if (filteredAccounts.length === 0) {
+      return [];
+    }
+
+    const hasModelFirstAccounts = filteredAccounts.some((account) => isModelFirstAccount(account));
+    const hasWindowAccounts = filteredAccounts.some((account) => !isModelFirstAccount(account));
+
+    if (!hasModelFirstAccounts || !hasWindowAccounts) {
+      return [
+        {
+          key: "all",
+          title: null as string | null,
+          accounts: filteredAccounts,
+          modelFirstView: modelFirstOnlyView || hasModelFirstAccounts,
+        },
+      ];
+    }
+
+    const buckets = new Map<string, { key: string; title: string; accounts: QuotaAccount[]; modelFirstView: boolean }>();
+    for (const account of filteredAccounts) {
+      const sectionModelFirstView = isModelFirstAccount(account);
+      const providerTitle =
+        account.provider === "github-copilot"
+          ? "Copilot"
+          : account.provider.charAt(0).toUpperCase() + account.provider.slice(1);
+      const key = `${sectionModelFirstView ? "model-first" : "window-based"}:${account.provider}`;
+      const bucket = buckets.get(key) ?? {
+        key,
+        title: providerTitle,
+        accounts: [],
+        modelFirstView: sectionModelFirstView,
+      };
+      bucket.accounts.push(account);
+      buckets.set(key, bucket);
+    }
+
+    return Array.from(buckets.values()).sort((left, right) => {
+      if (left.modelFirstView !== right.modelFirstView) {
+        return left.modelFirstView ? -1 : 1;
+      }
+      return left.title.localeCompare(right.title);
+    });
+  })();
+
   return (
     <section id="quota-accounts" className="scroll-mt-24 space-y-2">
       <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("accountsTitle")}</h2>
-      <div className="overflow-x-auto rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
-        <div className="min-w-[650px]">
-        <div className="grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px] border-b border-[var(--surface-border)] bg-[var(--surface-base)]/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-          <span></span>
-          <span>{t("accountColumn")}</span>
-          <span>{t("providerColumn")}</span>
-          <span>{t("statusColumn")}</span>
-          <span>{t("longTermLabel")}</span>
-          <span>{t("shortTermLabel")}</span>
-        </div>
-
-        {filteredAccounts.map((account) => {
-          const isRowExpanded = expandedCards[account.auth_index];
-          const scores = account.groups ? Object.values(calcAccountWindowScores(account.groups)) : [];
-          const longScores = scores.filter((s) => !s.isShortTerm);
-          const shortScores = scores.filter((s) => s.isShortTerm);
-          const longMin = longScores.length > 0 ? Math.min(...longScores.map((s) => s.score)) : null;
-          const shortMin = shortScores.length > 0 ? Math.min(...shortScores.map((s) => s.score)) : null;
-          const statusLabel = account.supported ? (account.error ? "Error" : "Active") : "Unsupported";
-
-          return (
-            <div key={account.auth_index} className="border-b border-[var(--surface-border)] last:border-b-0">
-              <button
-                type="button"
-                onClick={() => onToggleCard(account.auth_index)}
-                 className="grid w-full grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px] items-center px-3 py-2 text-left transition-colors hover:bg-[var(--surface-hover)]"
-               >
-                 <span className={cn("text-xs text-[var(--text-muted)] transition-transform", isRowExpanded && "rotate-180")}>⌄</span>
-                 <span className="truncate text-xs text-[var(--text-primary)]">{maskEmail(account.email, t("unknown"))}</span>
-                 <span className="truncate text-xs capitalize text-[var(--text-secondary)]">{account.provider}</span>
-                <span className={cn("text-xs", account.error ? "text-rose-600" : account.supported ? "text-emerald-700" : "text-amber-700")}>{statusLabel}</span>
-                <span className="block pr-3">
-                  {longMin !== null ? (
-                    <>
-                      <span className="text-xs text-[var(--text-secondary)]">{Math.round(longMin * 100)}%</span>
-                      <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                        <span className={cn("block h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-[var(--text-muted)]">-</span>
+      <div className="space-y-3">
+        {sections.map((section) => (
+          <div key={section.key} className="space-y-1">
+            {section.title && sections.length > 1 && (
+              <h3 className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{section.title}</h3>
+            )}
+            <div className="overflow-x-auto rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
+              <div className="min-w-[650px]">
+                <div
+                  className={cn(
+                    "border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]",
+                    section.modelFirstView
+                      ? "grid grid-cols-[24px_minmax(0,1fr)_110px_110px_120px_120px]"
+                      : "grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px]"
                   )}
-                </span>
-                <span className="block pr-3">
-                  {shortMin !== null ? (
-                    <>
-                      <span className="text-xs text-[var(--text-secondary)]">{Math.round(shortMin * 100)}%</span>
-                      <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                        <span className={cn("block h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-[var(--text-muted)]">-</span>
-                  )}
-                </span>
-               </button>
+                >
+                  <span></span>
+                  <span>{t("accountColumn")}</span>
+                  <span>{t("providerColumn")}</span>
+                  <span>{t("statusColumn")}</span>
+                  <span>{section.modelFirstView ? t("readyColumnLabel") : t("longTermLabel")}</span>
+                  <span>{section.modelFirstView ? t("recoveryColumnLabel") : t("shortTermLabel")}</span>
+                </div>
 
-                {isRowExpanded && (
-                  <div className="border-t border-[var(--surface-border)] bg-[var(--surface-base)] px-4 py-3">
-                    {account.error && (
-                      <p className="mb-2 break-all text-xs text-rose-600">{account.error}</p>
-                    )}
-                    {!account.supported && !account.error && (
-                      <p className="mb-2 text-xs text-amber-700">{t("quotaNotAvailable")}</p>
-                    )}
+                {section.accounts.map((account) => {
+                  const isRowExpanded = expandedCards[account.auth_index];
+                  const scores = account.groups ? Object.values(calcAccountWindowScores(account.groups)) : [];
+                  const longScores = scores.filter((score) => !score.isShortTerm);
+                  const shortScores = scores.filter((score) => score.isShortTerm);
+                  const longMin = longScores.length > 0 ? Math.min(...longScores.map((score) => score.score)) : null;
+                  const shortMin = shortScores.length > 0 ? Math.min(...shortScores.map((score) => score.score)) : null;
+                  const statusLabel = account.supported ? (account.error ? t("errorStatus") : t("activeStatus")) : t("unsupportedStatus");
+                  const accountSummary = isModelFirstAccount(account) ? summarizeModelFirstAccount(account) : null;
+                  const accountQuotaUnverified =
+                    isModelFirstAccount(account) && accountSummary
+                      ? isModelFirstAccountQuotaUnverified(account, accountSummary)
+                      : false;
+                  const modelFirstStatus = account.error
+                    ? t("errorStatus")
+                    : !account.supported
+                      ? t("unsupportedStatus")
+                      : accountSummary?.staleSnapshot
+                        ? t("staleStatus")
+                        : accountQuotaUnverified
+                          ? t("snapshotStatus")
+                          : t("readyStatus");
 
-                    {account.groups && account.groups.length > 0 && (
-                      <div className="overflow-x-auto rounded-sm border border-[var(--surface-border)]">
-                        <div className="min-w-[400px]">
-                        {account.groups.map((group) => {
-                          const fraction = normalizeFraction(group.remainingFraction);
-                          const pct = fraction === null ? null : Math.round(fraction * 100);
-                          return (
-                            <div key={group.id} className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 last:border-b-0">
-                              <span className="truncate text-xs text-[var(--text-primary)]">{group.label}</span>
-                              <span className="text-xs text-[var(--text-secondary)]">{pct === null ? "-" : `${pct}%`}</span>
-                              <span className="truncate text-xs text-[var(--text-muted)]">{formatRelativeTime(group.resetTime, t("unknown"))}</span>
+                  return (
+                    <div key={account.auth_index} className="border-b border-[var(--surface-border)] last:border-b-0">
+                      <button
+                        type="button"
+                        onClick={() => onToggleCard(account.auth_index)}
+                        className={cn(
+                          "w-full items-center px-3 py-2 text-left transition-colors hover:bg-[var(--surface-hover)]",
+                          section.modelFirstView
+                            ? "grid grid-cols-[24px_minmax(0,1fr)_110px_110px_120px_120px]"
+                            : "grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px]"
+                        )}
+                      >
+                        <span className={cn("text-xs text-[var(--text-muted)] transition-transform", isRowExpanded && "rotate-180")}>⌄</span>
+                        <span className="truncate text-xs text-[var(--text-primary)]">{maskEmail(account.email, t("unknown"))}</span>
+                        <span className="truncate text-xs capitalize text-[var(--text-secondary)]">{account.provider}</span>
+                        <span
+                          className={cn(
+                            "text-xs",
+                            section.modelFirstView
+                              ? account.error
+                                ? "text-rose-600"
+                                : accountSummary?.staleSnapshot || accountQuotaUnverified
+                                  ? "text-amber-700"
+                                  : account.supported
+                                    ? "text-emerald-700"
+                                    : "text-amber-700"
+                              : account.error
+                                ? "text-rose-600"
+                                : account.supported
+                                  ? "text-emerald-700"
+                                  : "text-amber-700"
+                          )}
+                        >
+                          {section.modelFirstView ? modelFirstStatus : statusLabel}
+                        </span>
+                        {section.modelFirstView ? (
+                          <>
+                            <span className="text-xs text-[var(--text-secondary)]">
+                              {accountSummary
+                                ? accountQuotaUnverified
+                                  ? t("snapshotFullLabel")
+                                  : `${accountSummary.readyGroups}/${accountSummary.totalGroups}`
+                                : "-"}
+                            </span>
+                            <span className="text-xs text-[var(--text-muted)]">
+                              {accountSummary ? formatRelativeTime(accountSummary.nextRecoveryAt ?? accountSummary.nextWindowResetAt, t) : "-"}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="block pr-3">
+                              {longMin !== null ? (
+                                <>
+                                  <span className="text-xs text-[var(--text-secondary)]">{Math.round(longMin * 100)}%</span>
+                                  <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                                    <span className={cn("block h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-xs text-[var(--text-muted)]">-</span>
+                              )}
+                            </span>
+                            <span className="block pr-3">
+                              {shortMin !== null ? (
+                                <>
+                                  <span className="text-xs text-[var(--text-secondary)]">{Math.round(shortMin * 100)}%</span>
+                                  <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                                    <span className={cn("block h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-xs text-[var(--text-muted)]">-</span>
+                              )}
+                            </span>
+                          </>
+                        )}
+                      </button>
+
+                      {isRowExpanded && (
+                        <div className="border-t border-[var(--surface-border)] bg-[var(--surface-base)] px-4 py-3">
+                          {account.error && <p className="mb-2 break-all text-xs text-rose-600">{account.error}</p>}
+                          {!account.supported && !account.error && (
+                            <p className="mb-2 text-xs text-amber-700">{t("quotaNotAvailable")}</p>
+                          )}
+                          {section.modelFirstView && accountSummary && (
+                            <div className="mb-2 flex flex-wrap gap-3 text-[11px] text-[var(--text-muted)]">
+                              <span>{t("snapshotStatusLabel")}: {accountSummary.staleSnapshot ? t("staleLabel") : t("freshLabel")}</span>
+                              <span>{t("confidenceLabel")}: {accountQuotaUnverified ? t("snapshotOnlyLabel") : t("groupedReadyLabel")}</span>
+                              <span>{t("readyGroupsLabel")}: {accountSummary.readyGroups}</span>
                             </div>
-                          );
-                        })}
+                          )}
+
+                          {account.groups && account.groups.length > 0 && (
+                            <div className="overflow-x-auto rounded-sm border border-[var(--surface-border)]">
+                              {section.modelFirstView ? (
+                                <div className="min-w-[900px]">
+                                  <div className="grid grid-cols-[minmax(0,1fr)_90px_110px_140px_140px_140px_160px] border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                                    <span>{t("groupColumnLabel")}</span>
+                                    <span>{t("readyColumnLabel")}</span>
+                                    <span>{t("minP50ColumnLabel")}</span>
+                                    <span>{t("nextResetColumnLabel")}</span>
+                                    <span>{t("fullResetColumnLabel")}</span>
+                                    <span>{t("recoveryColumnLabel")}</span>
+                                    <span>{t("bottleneckColumnLabel")}</span>
+                                  </div>
+                                  {account.groups.map((group) => {
+                                    const enrichedGroup = group.monitorMode === "model-first" ? group : enrichModelFirstGroup(group);
+                                    const minPct = normalizeFraction(enrichedGroup.minRemainingFraction ?? enrichedGroup.remainingFraction);
+                                    const p50Pct = normalizeFraction(enrichedGroup.p50RemainingFraction);
+                                    return (
+                                      <div
+                                        key={group.id}
+                                        className="grid grid-cols-[minmax(0,1fr)_90px_110px_140px_140px_140px_160px] items-center border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 last:border-b-0"
+                                      >
+                                        <span className="truncate text-xs text-[var(--text-primary)]">{enrichedGroup.label}</span>
+                                        <span className="text-xs text-[var(--text-secondary)]">
+                                          {`${enrichedGroup.effectiveReadyModelCount ?? enrichedGroup.readyModelCount ?? 0}/${enrichedGroup.totalModelCount ?? enrichedGroup.models.length}`}
+                                        </span>
+                                        <span className="text-xs text-[var(--text-secondary)]">
+                                          {minPct === null ? "-" : `${Math.round(minPct * 100)}%`}
+                                          {p50Pct === null ? "" : ` / ${Math.round(p50Pct * 100)}%`}
+                                        </span>
+                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.nextWindowResetAt ?? enrichedGroup.resetTime, t)}</span>
+                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.fullWindowResetAt ?? enrichedGroup.resetTime, t)}</span>
+                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.nextRecoveryAt, t)}</span>
+                                        <span className="truncate text-xs text-[var(--text-muted)]">{enrichedGroup.bottleneckModel ?? "-"}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="min-w-[400px]">
+                                  {account.groups.map((group) => {
+                                    const fraction = normalizeFraction(group.remainingFraction);
+                                    const pct = fraction === null ? null : Math.round(fraction * 100);
+                                    return (
+                                      <div
+                                        key={group.id}
+                                        className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 last:border-b-0"
+                                      >
+                                        <span className="truncate text-xs text-[var(--text-primary)]">{group.label}</span>
+                                        <span className="text-xs text-[var(--text-secondary)]">{pct === null ? "-" : `${pct}%`}</span>
+                                        <span className="truncate text-xs text-[var(--text-muted)]">{formatRelativeTime(group.resetTime, t)}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-             </div>
-           );
-          })}
-        </div>
-        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {filteredAccounts.length === 0 && !loading && (
         <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
-          No accounts found for the selected filter.
+          {t("noAccountsFound")}
         </div>
       )}
     </section>

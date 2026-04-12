@@ -4,6 +4,14 @@ import { verifySession } from "@/lib/auth/session";
 import { logger } from "@/lib/logger";
 import { quotaCache, CACHE_TTL } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
+import {
+  ANTIGRAVITY_QUOTA_ENDPOINTS,
+  enrichModelFirstGroup,
+  isModelFirstProvider,
+  type QuotaAccount,
+  type QuotaGroup,
+  type QuotaResponse,
+} from "@/lib/model-first-monitoring";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -28,42 +36,15 @@ interface AuthFilesResponse {
 }
 
 interface AntigravityModel {
-  displayName: string;
+  displayName?: string;
   quotaInfo?: {
-    remainingFraction: number;
+    remainingFraction?: number | null;
     resetTime: string | null;
   };
 }
 
 interface AntigravityResponse {
   models: Record<string, AntigravityModel>;
-}
-
-interface QuotaGroup {
-  id: string;
-  label: string;
-  remainingFraction: number;
-  resetTime: string | null;
-  models: Array<{
-    id: string;
-    displayName: string;
-    remainingFraction: number;
-    resetTime: string | null;
-  }>;
-}
-
-interface QuotaAccount {
-  auth_index: string;
-  provider: string;
-  email: string;
-  supported: boolean;
-  error?: string;
-  groups?: QuotaGroup[];
-  raw?: unknown;
-}
-
-interface QuotaResponse {
-  accounts: QuotaAccount[];
 }
 
 function isMeaningfulDisplayValue(value: string | undefined): value is string {
@@ -165,6 +146,12 @@ function groupAntigravityModels(
   for (const [modelId, modelData] of Object.entries(models)) {
     if (!modelData.quotaInfo) continue;
 
+    const remainingFraction =
+      typeof modelData.quotaInfo.remainingFraction === "number" &&
+      Number.isFinite(modelData.quotaInfo.remainingFraction)
+        ? modelData.quotaInfo.remainingFraction
+        : 0;
+
     const groupName = categorizeModel(modelId);
     
     if (!groups[groupName]) {
@@ -177,35 +164,58 @@ function groupAntigravityModels(
 
     groups[groupName].models.push({
       id: modelId,
-      displayName: modelData.displayName,
-      remainingFraction: modelData.quotaInfo.remainingFraction,
+      displayName: modelData.displayName?.trim() || modelId,
+      remainingFraction,
       resetTime: modelData.quotaInfo.resetTime,
     });
   }
 
-  return Object.values(groups).map((group) => {
-    const remainingFraction = Math.min(
-      ...group.models.map((m) => m.remainingFraction)
-    );
-    
-    const resetTimes = group.models
-      .map((m) => m.resetTime)
-      .filter((rt): rt is string => rt !== null);
-    const resetTime = resetTimes.length > 0
-      ? resetTimes.sort()[0]
-      : null;
+  const groupOrder = Object.keys(MODEL_GROUPS);
 
-    return {
-      ...group,
-      remainingFraction,
-      resetTime,
-    };
-  });
+  return Object.values(groups)
+    .map((group) => {
+      const sortedModels = [...group.models].sort((left, right) => {
+        const resetLeft = left.resetTime ? Date.parse(left.resetTime) : Number.POSITIVE_INFINITY;
+        const resetRight = right.resetTime ? Date.parse(right.resetTime) : Number.POSITIVE_INFINITY;
+        if (resetLeft !== resetRight) return resetLeft - resetRight;
+        return left.displayName.localeCompare(right.displayName);
+      });
+
+      return enrichModelFirstGroup({
+        ...group,
+        remainingFraction: 1,
+        resetTime: null,
+        models: sortedModels,
+      });
+    })
+    .sort((left, right) => {
+      const orderLeft = groupOrder.indexOf(left.label);
+      const orderRight = groupOrder.indexOf(right.label);
+      const normalizedLeft = orderLeft === -1 ? Number.MAX_SAFE_INTEGER : orderLeft;
+      const normalizedRight = orderRight === -1 ? Number.MAX_SAFE_INTEGER : orderRight;
+      if (normalizedLeft !== normalizedRight) return normalizedLeft - normalizedRight;
+      return left.label.localeCompare(right.label);
+    });
 }
 
-async function fetchAntigravityQuota(
-  authIndex: string
-): Promise<QuotaGroup[] | { error: string }> {
+function parseAntigravityPayload(payload: unknown): Record<string, AntigravityModel> | null {
+  if (!payload || typeof payload !== "object") return null;
+  const typed = payload as AntigravityResponse;
+  if (!typed.models || typeof typed.models !== "object") return null;
+  return typed.models;
+}
+
+interface AntigravityLoadCodeAssistResponse {
+  cloudaicompanionProject?: string;
+}
+
+interface AntigravityQuotaSnapshot {
+  groups: QuotaGroup[];
+  snapshotFetchedAt: string;
+  snapshotSource: string;
+}
+
+async function fetchAntigravityProjectId(authIndex: string): Promise<string | null> {
   try {
     const response = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/api-call`, {
       method: "POST",
@@ -217,57 +227,134 @@ async function fetchAntigravityQuota(
       body: JSON.stringify({
         auth_index: authIndex,
         method: "POST",
-        url: "https://daily-cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels",
+        url: "https://daily-cloudcode-pa.sandbox.googleapis.com/v1internal:loadCodeAssist",
         header: {
           Authorization: "Bearer $TOKEN$",
           "Content-Type": "application/json",
           "User-Agent": "antigravity/1.11.5 windows/amd64",
         },
-        data: "{}",
+        data: JSON.stringify({
+          metadata: {
+            ideType: "ANTIGRAVITY",
+          },
+        }),
       }),
     });
 
     if (!response.ok) {
       await response.body?.cancel();
-      return { error: `API call failed: ${response.status}` };
+      return null;
     }
 
-    const apiCallResult = (await response.json()) as ApiCallResponse | AntigravityResponse;
+    const apiCallResult = (await response.json()) as ApiCallResponse | AntigravityLoadCodeAssistResponse;
+    let parsedBody: unknown = apiCallResult;
 
     if ("status_code" in apiCallResult || "statusCode" in apiCallResult) {
       const statusCode = Number(apiCallResult.status_code ?? apiCallResult.statusCode ?? 0);
       if (statusCode < 200 || statusCode >= 300) {
-        return { error: `Provider API failed: ${statusCode}` };
+        return null;
       }
 
-      let parsedBody: unknown = apiCallResult.body;
+      parsedBody = apiCallResult.body;
       if (typeof parsedBody === "string") {
         try {
           parsedBody = JSON.parse(parsedBody);
         } catch {
-          return { error: "Invalid provider response body" };
+          return null;
+        }
+      }
+    }
+
+    if (!parsedBody || typeof parsedBody !== "object") {
+      return null;
+    }
+
+    const payload = parsedBody as AntigravityLoadCodeAssistResponse;
+    return typeof payload.cloudaicompanionProject === "string" && payload.cloudaicompanionProject.trim().length > 0
+      ? payload.cloudaicompanionProject.trim()
+      : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function fetchAntigravityQuota(
+  authIndex: string
+): Promise<AntigravityQuotaSnapshot | { error: string }> {
+  const projectId = await fetchAntigravityProjectId(authIndex);
+  const payload = JSON.stringify(projectId ? { project: projectId } : {});
+  let lastError = "No Antigravity quota endpoints responded";
+
+  for (const endpoint of ANTIGRAVITY_QUOTA_ENDPOINTS) {
+    try {
+      const response = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/api-call`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        signal: AbortSignal.timeout(30_000),
+        body: JSON.stringify({
+          auth_index: authIndex,
+          method: "POST",
+          url: endpoint,
+          header: {
+            Authorization: "Bearer $TOKEN$",
+            "Content-Type": "application/json",
+            "User-Agent": "antigravity/1.11.5 windows/amd64",
+          },
+          data: payload,
+        }),
+      });
+
+      if (!response.ok) {
+        await response.body?.cancel();
+        lastError = `API call failed: ${response.status}`;
+        continue;
+      }
+
+      const apiCallResult = (await response.json()) as ApiCallResponse | AntigravityResponse;
+      let parsedPayload: unknown = apiCallResult;
+
+      if ("status_code" in apiCallResult || "statusCode" in apiCallResult) {
+        const statusCode = Number(apiCallResult.status_code ?? apiCallResult.statusCode ?? 0);
+        if (statusCode < 200 || statusCode >= 300) {
+          lastError = `Provider API failed: ${statusCode}`;
+          if (statusCode === 429 || statusCode >= 500) {
+            continue;
+          }
+          return { error: lastError };
+        }
+
+        parsedPayload = apiCallResult.body;
+        if (typeof parsedPayload === "string") {
+          try {
+            parsedPayload = JSON.parse(parsedPayload);
+          } catch {
+            lastError = "Invalid provider response body";
+            continue;
+          }
         }
       }
 
-      const data = parsedBody as AntigravityResponse;
-      if (!data.models || typeof data.models !== "object") {
-        return { error: "Invalid Antigravity quota payload" };
+      const models = parseAntigravityPayload(parsedPayload);
+      if (!models) {
+        lastError = "Invalid Antigravity quota payload";
+        continue;
       }
 
-      return groupAntigravityModels(data.models);
+      const snapshotFetchedAt = new Date().toISOString();
+      return {
+        groups: groupAntigravityModels(models),
+        snapshotFetchedAt,
+        snapshotSource: endpoint,
+      };
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : "Unknown error";
     }
-
-    const directData = apiCallResult as AntigravityResponse;
-    if (!directData.models || typeof directData.models !== "object") {
-      return { error: "Invalid Antigravity quota payload" };
-    }
-
-    return groupAntigravityModels(directData.models);
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
   }
+
+  return { error: lastError };
 }
 
 interface CodexRateWindow {
@@ -1068,7 +1155,7 @@ export async function GET(request: NextRequest) {
       (file) => !file.disabled && file.status !== "disabled"
     );
 
-    const quotaPromises = activeAccounts.map(async (account) => {
+    const quotaPromises: Promise<QuotaAccount>[] = activeAccounts.map(async (account): Promise<QuotaAccount> => {
       const authIndex = String(account.auth_index);
       const displayEmail =
         isMeaningfulDisplayValue(account.email)
@@ -1125,7 +1212,7 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      if (providerNorm === "antigravity" || providerNorm === "gemini-cli" || providerNorm === "gemini") {
+      if (isModelFirstProvider(providerNorm)) {
         const result = await fetchAntigravityQuota(authIndex);
         
         if ("error" in result) {
@@ -1143,7 +1230,10 @@ export async function GET(request: NextRequest) {
           provider: providerForResponse,
           email: displayEmail,
           supported: true,
-          groups: result,
+          monitorMode: "model-first",
+          snapshotFetchedAt: result.snapshotFetchedAt,
+          snapshotSource: result.snapshotSource,
+          groups: result.groups,
         };
       }
 
@@ -1240,7 +1330,10 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const response: QuotaResponse = { accounts };
+    const response: QuotaResponse = {
+      accounts,
+      generatedAt: new Date().toISOString(),
+    };
 
     quotaCache.set(CACHE_KEY, response, CACHE_TTL.QUOTA);
 

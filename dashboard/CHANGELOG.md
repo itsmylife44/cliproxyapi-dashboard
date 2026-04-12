@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.72](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.71...dashboard-v0.1.72) (2026-04-12)
+
+
+### Bug Fixes
+
+* **ci:** use correct all-contributors-auto-action ([86770ea](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/86770ea3b5c47830effbaefcb0e2463c86d0fcf4))
+
 ## [0.1.71](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.70...dashboard-v0.1.71) (2026-04-12)
 
 

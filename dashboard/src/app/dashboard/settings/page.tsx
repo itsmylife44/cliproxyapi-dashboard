@@ -36,7 +36,6 @@ interface SyncToken {
   syncApiKeyName: string | null;
   createdAt: string;
   lastUsedAt: string | null;
-  isRevoked: boolean;
 }
 
 interface AvailableApiKey {
@@ -67,8 +66,8 @@ export default function SettingsPage() {
   const [showConfirmProxyUpdate, setShowConfirmProxyUpdate] = useState(false);
   const [pendingProxyVersion, setPendingProxyVersion] = useState<string>("latest");
   const [showConfirmDashboardUpdate, setShowConfirmDashboardUpdate] = useState(false);
-  const [showConfirmRevokeToken, setShowConfirmRevokeToken] = useState(false);
-  const [pendingRevokeTokenId, setPendingRevokeTokenId] = useState<string | null>(null);
+  const [showConfirmDeleteToken, setShowConfirmDeleteToken] = useState(false);
+  const [pendingDeleteTokenId, setPendingDeleteTokenId] = useState<string | null>(null);
   const [showConfirmRevokeSessions, setShowConfirmRevokeSessions] = useState(false);
 
   const { showToast } = useToast();
@@ -244,14 +243,14 @@ export default function SettingsPage() {
     }
   };
 
-  const confirmRevokeToken = (id: string) => {
-    setPendingRevokeTokenId(id);
-    setShowConfirmRevokeToken(true);
+  const confirmDeleteToken = (id: string) => {
+    setPendingDeleteTokenId(id);
+    setShowConfirmDeleteToken(true);
   };
 
-  const handleRevokeToken = async () => {
-    if (!pendingRevokeTokenId) return;
-    const id = pendingRevokeTokenId;
+  const handleDeleteToken = async () => {
+    if (!pendingDeleteTokenId) return;
+    const id = pendingDeleteTokenId;
 
     try {
       const res = await fetch(`${API_ENDPOINTS.CONFIG_SYNC.TOKENS}/${id}`, {
@@ -260,11 +259,11 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        showToast(extractApiError(data, t('errorRevokeTokenFailed')), "error");
+        showToast(extractApiError(data, t('errorDeleteTokenFailed')), "error");
         return;
       }
 
-      showToast(t('toastTokenRevoked'), 'success');
+      showToast(t('toastTokenDeleted'), 'success');
       fetchSyncTokens();
     } catch {
       showToast(tc('networkError'), 'error');
@@ -350,7 +349,7 @@ export default function SettingsPage() {
             onClearGeneratedToken={() => setGeneratedToken(null)}
             onCopyToken={handleCopyToken}
             onToggleInstructions={() => setShowInstructions(!showInstructions)}
-            onConfirmRevokeToken={confirmRevokeToken}
+            onConfirmDeleteToken={confirmDeleteToken}
             onUpdateTokenApiKey={handleUpdateTokenApiKey}
           />
         </section>
@@ -411,15 +410,15 @@ export default function SettingsPage() {
       />
 
       <ConfirmDialog
-        isOpen={showConfirmRevokeToken}
+        isOpen={showConfirmDeleteToken}
         onClose={() => {
-          setShowConfirmRevokeToken(false);
-          setPendingRevokeTokenId(null);
+          setShowConfirmDeleteToken(false);
+          setPendingDeleteTokenId(null);
         }}
-        onConfirm={handleRevokeToken}
-        title={t('confirmRevokeToken.title')}
-        message={t('confirmRevokeToken.message')}
-        confirmLabel={t('confirmRevokeToken.confirmLabel')}
+        onConfirm={handleDeleteToken}
+        title={t('confirmDeleteToken.title')}
+        message={t('confirmDeleteToken.message')}
+        confirmLabel={t('confirmDeleteToken.confirmLabel')}
         cancelLabel={tc('cancel')}
         variant="danger"
       />

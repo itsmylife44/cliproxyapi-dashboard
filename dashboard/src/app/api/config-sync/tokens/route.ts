@@ -73,7 +73,6 @@ export async function GET() {
         syncApiKey: true,
         createdAt: true,
         lastUsedAt: true,
-        revokedAt: true,
       },
     });
 
@@ -96,7 +95,6 @@ export async function GET() {
       syncApiKeyName: token.syncApiKey ? keyNameMap.get(token.syncApiKey) || null : null,
       createdAt: token.createdAt.toISOString(),
       lastUsedAt: token.lastUsedAt?.toISOString() || null,
-      isRevoked: token.revokedAt !== null,
     }));
 
     // Fetch all user API keys for the dropdown

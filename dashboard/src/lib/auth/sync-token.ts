@@ -68,7 +68,6 @@ export async function validateSyncTokenFromHeader(
     const syncToken = await prisma.syncToken.findFirst({
       where: {
         tokenHash,
-        revokedAt: null,
       },
       select: {
         id: true,

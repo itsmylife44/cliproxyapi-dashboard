@@ -242,10 +242,9 @@
       "tokenOneTimeWarning": "Dieser Token wird nur einmal angezeigt. Kopieren Sie ihn jetzt.",
       "loadingTokens": "Tokens werden geladen...",
       "noTokensMessage": "Keine Sync-Tokens konfiguriert. Generieren Sie eines, um zu beginnen.",
-      "revokedBadge": "Widerrufen",
       "createdLabel": "Erstellt:",
       "lastUsedLabel": "Zuletzt verwendet:",
-      "buttonRevoke": "Widerrufen",
+      "buttonDelete": "Löschen",
       "syncApiKeyLabel": "Sync API-Schlüssel",
       "syncApiKeyAutoOption": "Automatisch (erstes verfügbares)",
       "syncApiKeyNoKeysOption": "Keine API-Schlüssel — erstellen Sie einen",
@@ -271,10 +270,10 @@
       "message": "Dashboard auf die neueste Version aktualisieren? Der Container wird neu gestartet.",
       "confirmLabel": "Aktualisieren"
     },
-    "confirmRevokeToken": {
-      "title": "Token widerrufen",
-      "message": "Möchten Sie diesen Token wirklich widerrufen?",
-      "confirmLabel": "Widerrufen"
+    "confirmDeleteToken": {
+      "title": "Token löschen",
+      "message": "Möchten Sie diesen Token wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "confirmLabel": "Löschen"
     },
     "confirmRevokeSessions": {
       "title": "Alle Benutzer abmelden",
@@ -286,8 +285,8 @@
     "toastDashboardUpdated": "Dashboard aktualisiert. Wird neu gestartet...",
     "toastTokenGenerateSuccess": "Token erfolgreich generiert",
     "toastTokenGenerateFailed": "Fehler beim Generieren des Tokens",
-    "toastTokenRevoked": "Token erfolgreich widerrufen",
-    "toastTokenRevokeFailed": "Fehler beim Widerrufen des Tokens",
+    "toastTokenDeleted": "Token erfolgreich gelöscht",
+    "toastTokenDeleteFailed": "Fehler beim Löschen des Tokens",
     "toastApiKeyUpdated": "API-Schlüssel für Sync-Token aktualisiert",
     "toastApiKeyUpdateFailed": "Fehler beim Aktualisieren des API-Schlüssels",
     "toastTokenCopied": "Token in Zwischenablage kopiert",
@@ -296,7 +295,7 @@
     "toastSessionsRevokeFailed": "Fehler beim Widerrufen der Sitzungen",
     "errorUpdateFailed": "Aktualisierung fehlgeschlagen",
     "errorGenerateTokenFailed": "Token konnte nicht generiert werden",
-    "errorRevokeTokenFailed": "Token konnte nicht widerrufen werden",
+    "errorDeleteTokenFailed": "Token konnte nicht gelöscht werden",
     "errorUpdateApiKeyFailed": "API-Schlüssel konnte nicht aktualisiert werden",
     "errorRevokeSessionsFailed": "Sitzungen konnten nicht widerrufen werden"
   },

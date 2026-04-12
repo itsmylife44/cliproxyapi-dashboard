@@ -77,7 +77,6 @@ async function migrate() {
        "tokenHash" TEXT NOT NULL,
        "syncApiKey" TEXT,
        "lastUsedAt" TIMESTAMP(3),
-       "revokedAt" TIMESTAMP(3),
        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
        CONSTRAINT "sync_tokens_pkey" PRIMARY KEY ("id")
      );
@@ -91,6 +90,9 @@ async function migrate() {
     DO $$ BEGIN
       ALTER TABLE "sync_tokens" ADD COLUMN "syncApiKey" TEXT;
     EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    -- Remove revokedAt column if present (migration from soft-delete to hard-delete)
+    DELETE FROM "sync_tokens" WHERE "revokedAt" IS NOT NULL;
+    ALTER TABLE "sync_tokens" DROP COLUMN IF EXISTS "revokedAt";
 
     -- Agent model overrides table (stores MCP servers & custom plugins in overrides JSONB)
     CREATE TABLE IF NOT EXISTS "agent_model_overrides" (

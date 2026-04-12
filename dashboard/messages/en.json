@@ -242,10 +242,9 @@
       "tokenOneTimeWarning": "This token will only be shown once. Copy it now.",
       "loadingTokens": "Loading tokens...",
       "noTokensMessage": "No sync tokens configured. Generate one to get started.",
-      "revokedBadge": "Revoked",
       "createdLabel": "Created:",
       "lastUsedLabel": "Last used:",
-      "buttonRevoke": "Revoke",
+      "buttonDelete": "Delete",
       "syncApiKeyLabel": "Sync API Key",
       "syncApiKeyAutoOption": "Auto (first available)",
       "syncApiKeyNoKeysOption": "No API keys â€” create one first",
@@ -271,10 +270,10 @@
       "message": "Update Dashboard to latest version? The container will restart.",
       "confirmLabel": "Update"
     },
-    "confirmRevokeToken": {
-      "title": "Revoke Token",
-      "message": "Are you sure you want to revoke this token?",
-      "confirmLabel": "Revoke"
+    "confirmDeleteToken": {
+      "title": "Delete Token",
+      "message": "Are you sure you want to delete this token? This action cannot be undone.",
+      "confirmLabel": "Delete"
     },
     "confirmRevokeSessions": {
       "title": "Force Logout All Users",
@@ -286,8 +285,8 @@
     "toastDashboardUpdated": "Dashboard updated. Restarting...",
     "toastTokenGenerateSuccess": "Token generated successfully",
     "toastTokenGenerateFailed": "Failed to generate token",
-    "toastTokenRevoked": "Token revoked successfully",
-    "toastTokenRevokeFailed": "Failed to revoke token",
+    "toastTokenDeleted": "Token deleted successfully",
+    "toastTokenDeleteFailed": "Failed to delete token",
     "toastApiKeyUpdated": "API key updated for sync token",
     "toastApiKeyUpdateFailed": "Failed to update API key",
     "toastTokenCopied": "Token copied to clipboard",
@@ -296,7 +295,7 @@
     "toastSessionsRevokeFailed": "Failed to revoke sessions",
     "errorUpdateFailed": "Update failed",
     "errorGenerateTokenFailed": "Failed to generate token",
-    "errorRevokeTokenFailed": "Failed to revoke token",
+    "errorDeleteTokenFailed": "Failed to delete token",
     "errorUpdateApiKeyFailed": "Failed to update API key",
     "errorRevokeSessionsFailed": "Failed to revoke sessions"
   },

@@ -68,7 +68,6 @@ model SyncToken {
   tokenHash  String
   syncApiKey String?
   lastUsedAt DateTime?
-  revokedAt  DateTime?
   createdAt  DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

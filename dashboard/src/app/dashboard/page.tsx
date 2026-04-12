@@ -119,7 +119,7 @@ export default async function QuickStartPage() {
         prisma.modelPreference.findUnique({ where: { userId: session.userId } }),
         prisma.agentModelOverride.findUnique({ where: { userId: session.userId } }),
         prisma.syncToken.findMany({
-          where: { userId: session.userId, revokedAt: null },
+          where: { userId: session.userId },
           select: { id: true },
         }),
         prisma.configTemplate.findUnique({ where: { userId: session.userId } }),

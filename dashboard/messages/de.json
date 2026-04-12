@@ -751,7 +751,12 @@
     "nextResetColumnLabel": "Nächster Reset",
     "fullResetColumnLabel": "Vollständiger Reset",
     "bottleneckColumnLabel": "Engpass",
-    "noAccountsFound": "Keine Konten für den ausgewählten Filter gefunden."
+    "noAccountsFound": "Keine Konten für den ausgewählten Filter gefunden.",
+    "resettingStatus": "Wird zurückgesetzt...",
+    "relativeTimeDaysHours": "{days}T {hours}Std",
+    "relativeTimeHoursMinutes": "{hours}Std {minutes}Min",
+    "relativeTimeMinutes": "{minutes}Min",
+    "resetsIn": "Reset in {time}"
   },
   "usage": {
     "pageTitle": "Nutzung",

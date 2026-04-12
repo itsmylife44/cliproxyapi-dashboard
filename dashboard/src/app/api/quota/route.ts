@@ -7,7 +7,6 @@ import { Errors } from "@/lib/errors";
 import {
   ANTIGRAVITY_QUOTA_ENDPOINTS,
   enrichModelFirstGroup,
-  isStaleSnapshot,
   type QuotaAccount,
   type QuotaGroup,
   type QuotaResponse,
@@ -213,7 +212,6 @@ interface AntigravityQuotaSnapshot {
   groups: QuotaGroup[];
   snapshotFetchedAt: string;
   snapshotSource: string;
-  snapshotStale: boolean;
 }
 
 async function fetchAntigravityProjectId(authIndex: string): Promise<string | null> {
@@ -349,7 +347,6 @@ async function fetchAntigravityQuota(
         groups: groupAntigravityModels(models),
         snapshotFetchedAt,
         snapshotSource: endpoint,
-        snapshotStale: isStaleSnapshot(snapshotFetchedAt),
       };
     } catch (error) {
       lastError = error instanceof Error ? error.message : "Unknown error";
@@ -1235,7 +1232,6 @@ export async function GET(request: NextRequest) {
           monitorMode: "model-first",
           snapshotFetchedAt: result.snapshotFetchedAt,
           snapshotSource: result.snapshotSource,
-          snapshotStale: result.snapshotStale,
           groups: result.groups,
         };
       }

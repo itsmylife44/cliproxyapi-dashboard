@@ -320,15 +320,15 @@ export function summarizeModelFirstProvider(accounts: QuotaAccount[]): ModelFirs
   const nextRecoveryTimes = accountSummaries
     .map((summary) => parseReset(summary.nextRecoveryAt))
     .filter((value): value is number => value !== null);
-  const groupFractions = groupSummaries
-    .flatMap((summary) => [summary.minRemainingFraction, summary.p50RemainingFraction])
+  const minFractions = groupSummaries
+    .map((summary) => summary.minRemainingFraction)
     .filter((value): value is number => value !== null);
 
   return {
     totalAccounts: modelFirstAccounts.length,
     readyAccounts: accountSummaries.filter((summary) => !summary.staleSnapshot && summary.readyGroups > 0).length,
     staleAccounts: accountSummaries.filter((summary) => summary.staleSnapshot).length,
-    minRemainingFraction: groupFractions.length > 0 ? Math.min(...groupFractions) : null,
+    minRemainingFraction: minFractions.length > 0 ? Math.min(...minFractions) : null,
     p50RemainingFraction: median(
       groupSummaries
         .map((summary) => summary.p50RemainingFraction)

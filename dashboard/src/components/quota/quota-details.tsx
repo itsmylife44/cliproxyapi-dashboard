@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/format-relative-time";
 import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
 import {
   enrichModelFirstGroup,
@@ -29,25 +30,6 @@ function maskEmail(email: unknown, unknownLabel = "unknown"): string {
   const maskedLocal = local.length <= 3 ? `${local}***` : `${local.slice(0, 3)}***`;
   return `${maskedLocal}@${domain}`;
 }
-
-function formatRelativeTime(isoDate: string | null | undefined, unknownLabel = "Unknown"): string {
-  if (!isoDate) return unknownLabel;
-
-  const resetDate = new Date(isoDate);
-  if (Number.isNaN(resetDate.getTime())) return unknownLabel;
-  const diffMs = resetDate.getTime() - Date.now();
-
-  if (diffMs <= 0) return "Resetting...";
-
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-  if (days > 0) return `Resets in ${days}d ${hours}h`;
-  if (hours > 0) return `Resets in ${hours}h ${minutes}m`;
-  return `Resets in ${minutes}m`;
-}
-
 function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: number; label: string; isShortTerm: boolean }> {
   const result: Record<string, { score: number; label: string; isShortTerm: boolean }> = {};
   for (const group of groups) {
@@ -226,7 +208,7 @@ export function QuotaDetails({
                                 : "-"}
                             </span>
                             <span className="text-xs text-[var(--text-muted)]">
-                              {accountSummary ? formatRelativeTime(accountSummary.nextRecoveryAt ?? accountSummary.nextWindowResetAt, t("unknown")) : "-"}
+                              {accountSummary ? formatRelativeTime(accountSummary.nextRecoveryAt ?? accountSummary.nextWindowResetAt, t) : "-"}
                             </span>
                           </>
                         ) : (
@@ -303,9 +285,9 @@ export function QuotaDetails({
                                           {minPct === null ? "-" : `${Math.round(minPct * 100)}%`}
                                           {p50Pct === null ? "" : ` / ${Math.round(p50Pct * 100)}%`}
                                         </span>
-                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.nextWindowResetAt ?? enrichedGroup.resetTime, t("unknown"))}</span>
-                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.fullWindowResetAt ?? enrichedGroup.resetTime, t("unknown"))}</span>
-                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.nextRecoveryAt, t("unknown"))}</span>
+                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.nextWindowResetAt ?? enrichedGroup.resetTime, t)}</span>
+                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.fullWindowResetAt ?? enrichedGroup.resetTime, t)}</span>
+                                        <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(enrichedGroup.nextRecoveryAt, t)}</span>
                                         <span className="truncate text-xs text-[var(--text-muted)]">{enrichedGroup.bottleneckModel ?? "-"}</span>
                                       </div>
                                     );
@@ -323,7 +305,7 @@ export function QuotaDetails({
                                       >
                                         <span className="truncate text-xs text-[var(--text-primary)]">{group.label}</span>
                                         <span className="text-xs text-[var(--text-secondary)]">{pct === null ? "-" : `${pct}%`}</span>
-                                        <span className="truncate text-xs text-[var(--text-muted)]">{formatRelativeTime(group.resetTime, t("unknown"))}</span>
+                                        <span className="truncate text-xs text-[var(--text-muted)]">{formatRelativeTime(group.resetTime, t)}</span>
                                       </div>
                                     );
                                   })}

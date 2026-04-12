@@ -4,8 +4,8 @@ import { Bar, BarChart, Legend, RadialBar, RadialBarChart, ResponsiveContainer, 
 import { useTranslations } from "next-intl";
 
 import { CHART_COLORS, ChartContainer, ChartEmpty, useChartTheme } from "@/components/ui/chart-theme";
+import { formatRelativeTime } from "@/lib/format-relative-time";
 import { isModelFirstProviderQuotaUnverified, type ModelFirstProviderSummary } from "@/lib/model-first-monitoring";
-
 interface WindowCapacity {
   id: string;
   label: string;
@@ -30,21 +30,6 @@ interface QuotaChartProps {
   modelFirstSummary: ModelFirstProviderSummary | null;
   modelFirstOnlyView: boolean;
 }
-
-function formatRelativeTime(isoDate: string | null | undefined, unknownLabel = "Unknown"): string {
-  if (!isoDate) return unknownLabel;
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return unknownLabel;
-  const diffMs = date.getTime() - Date.now();
-  if (diffMs <= 0) return "Resetting...";
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
-
 export function QuotaChart({
   overallCapacity,
   providerSummaries,
@@ -114,7 +99,7 @@ export function QuotaChart({
                     : t("readyAccountsCount", { ready: modelFirstSummary.readyAccounts, total: modelFirstSummary.totalAccounts })}
                 </span>
                 <span className="mt-1 text-[10px]" style={{ color: CHART_COLORS.text.muted }}>
-                  {t("nextResetShort")}: {formatRelativeTime(modelFirstSummary.nextWindowResetAt, t("unknown"))}
+                  {t("nextResetShort")}: {formatRelativeTime(modelFirstSummary.nextWindowResetAt, t)}
                 </span>
               </div>
             </div>
@@ -157,7 +142,7 @@ export function QuotaChart({
                         | { nextReset?: string | null; fullReset?: string | null; nextRecovery?: string | null; bottleneckModel?: string | null }
                         | undefined;
                       if (!item) return label;
-                      return `${label} | ${t("resetLabel")} ${formatRelativeTime(item.nextReset, t("unknown"))} | ${t("recoveryLabel")} ${formatRelativeTime(item.nextRecovery, t("unknown"))} | ${t("bottleneckLabel")} ${item.bottleneckModel ?? "-"}`;
+                      return `${label} | ${t("resetLabel")} ${formatRelativeTime(item.nextReset, t)} | ${t("recoveryLabel")} ${formatRelativeTime(item.nextRecovery, t)} | ${t("bottleneckLabel")} ${item.bottleneckModel ?? "-"}`;
                     }}
                   />
                   <Legend

@@ -751,7 +751,12 @@
     "nextResetColumnLabel": "Next Reset",
     "fullResetColumnLabel": "Full Reset",
     "bottleneckColumnLabel": "Bottleneck",
-    "noAccountsFound": "No accounts found for the selected filter."
+    "noAccountsFound": "No accounts found for the selected filter.",
+    "resettingStatus": "Resetting...",
+    "relativeTimeDaysHours": "{days}d {hours}h",
+    "relativeTimeHoursMinutes": "{hours}h {minutes}m",
+    "relativeTimeMinutes": "{minutes}m",
+    "resetsIn": "Resets in {time}"
   },
   "usage": {
     "pageTitle": "Usage",

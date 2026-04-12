@@ -18,6 +18,7 @@ import {
   type QuotaMonitorMode,
   type QuotaResponse,
 } from "@/lib/model-first-monitoring";
+import { formatRelativeTime } from "@/lib/format-relative-time";
 
 const QuotaChart = dynamic(
   () => import("@/components/quota/quota-chart").then((mod) => ({ default: mod.QuotaChart })),
@@ -54,25 +55,6 @@ interface ProviderSummary {
   windowCapacities: WindowCapacity[];
   modelFirstSummary?: ModelFirstProviderSummary;
 }
-
-function formatRelativeTime(isoDate: string | null | undefined, unknownLabel = "Unknown"): string {
-  if (!isoDate) return unknownLabel;
-
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return unknownLabel;
-
-  const diffMs = date.getTime() - Date.now();
-  if (diffMs <= 0) return "Resetting...";
-
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
-
 function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
   const totalAccounts = accounts.length;
   const healthy = accounts.filter(
@@ -398,7 +380,7 @@ export default function QuotaPage() {
                     <HelpTooltip content={t("closestResetTooltip")} />
                   </p>
                   <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
-                    {formatRelativeTime(modelFirstSummary.nextWindowResetAt, t("unknown"))}
+                    {formatRelativeTime(modelFirstSummary.nextWindowResetAt, t)}
                   </p>
                 </div>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">

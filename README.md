@@ -206,6 +206,30 @@ Opens all routes as a fake admin user — useful for testing themes, layouts, an
 
 Release-Please auto-generates releases from commit messages.
 
+## Contributors
+
+Thanks to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/itsmylife44"><img src="https://avatars.githubusercontent.com/u/34112129?v=4?s=80" width="80px;" alt="itsmylife44"/><br /><sub><b>itsmylife44</b></sub></a><br /><a href="#code-itsmylife44" title="Code">💻</a> <a href="#doc-itsmylife44" title="Documentation">📖</a> <a href="#maintenance-itsmylife44" title="Maintenance">🚧</a> <a href="#infra-itsmylife44" title="Infrastructure">🚇</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/38lunin021189-creator"><img src="https://avatars.githubusercontent.com/u/209580972?v=4?s=80" width="80px;" alt="Rizki Hidayat"/><br /><sub><b>Rizki Hidayat</b></sub></a><br /><a href="#code-38lunin021189-creator" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/dqphong0302"><img src="https://avatars.githubusercontent.com/u/86866408?v=4?s=80" width="80px;" alt="Đặng Quốc Phong"/><br /><sub><b>Đặng Quốc Phong</b></sub></a><br /><a href="#code-dqphong0302" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/smart-tinker"><img src="https://avatars.githubusercontent.com/u/219125940?v=4?s=80" width="80px;" alt="smart-tinker"/><br /><sub><b>smart-tinker</b></sub></a><br /><a href="#code-smart-tinker" title="Code">💻</a> <a href="#bug-smart-tinker" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/islee23520"><img src="https://avatars.githubusercontent.com/u/218665556?v=4?s=80" width="80px;" alt="islee"/><br /><sub><b>islee</b></sub></a><br /><a href="#code-islee23520" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/deftdawg"><img src="https://avatars.githubusercontent.com/u/1253316?v=4?s=80" width="80px;" alt="deftdawg"/><br /><sub><b>deftdawg</b></sub></a><br /><a href="#code-deftdawg" title="Code">💻</a> <a href="#bug-deftdawg" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/clcc2019"><img src="https://avatars.githubusercontent.com/u/46099295?v=4?s=80" width="80px;" alt="dslife2025"/><br /><sub><b>dslife2025</b></sub></a><br /><a href="#code-clcc2019" title="Code">💻</a></td>
+    </tr>
+  </tbody>
+</table>
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
 ## Adding a Language
 
 The dashboard supports multi-language UI. Currently, we offer **English (en)** and **German (de)**. We welcome community contributions for additional languages!

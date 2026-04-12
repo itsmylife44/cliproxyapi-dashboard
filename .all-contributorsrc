@@ -1,0 +1,62 @@
+{
+  "projectName": "cliproxyapi-dashboard",
+  "projectOwner": "itsmylife44",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": ["README.md"],
+  "imageSize": 80,
+  "commit": false,
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "itsmylife44",
+      "name": "itsmylife44",
+      "avatar_url": "https://avatars.githubusercontent.com/u/34112129?v=4",
+      "profile": "https://github.com/itsmylife44",
+      "contributions": ["code", "doc", "maintenance", "infra"]
+    },
+    {
+      "login": "38lunin021189-creator",
+      "name": "Rizki Hidayat",
+      "avatar_url": "https://avatars.githubusercontent.com/u/209580972?v=4",
+      "profile": "https://github.com/38lunin021189-creator",
+      "contributions": ["code"]
+    },
+    {
+      "login": "dqphong0302",
+      "name": "Đặng Quốc Phong",
+      "avatar_url": "https://avatars.githubusercontent.com/u/86866408?v=4",
+      "profile": "https://github.com/dqphong0302",
+      "contributions": ["code"]
+    },
+    {
+      "login": "smart-tinker",
+      "name": "smart-tinker",
+      "avatar_url": "https://avatars.githubusercontent.com/u/219125940?v=4",
+      "profile": "https://github.com/smart-tinker",
+      "contributions": ["code", "bug"]
+    },
+    {
+      "login": "islee23520",
+      "name": "islee",
+      "avatar_url": "https://avatars.githubusercontent.com/u/218665556?v=4",
+      "profile": "https://github.com/islee23520",
+      "contributions": ["code"]
+    },
+    {
+      "login": "deftdawg",
+      "name": "deftdawg",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1253316?v=4",
+      "profile": "https://github.com/deftdawg",
+      "contributions": ["code", "bug"]
+    },
+    {
+      "login": "clcc2019",
+      "name": "dslife2025",
+      "avatar_url": "https://avatars.githubusercontent.com/u/46099295?v=4",
+      "profile": "https://github.com/clcc2019",
+      "contributions": ["code"]
+    }
+  ],
+  "contributorsPerLine": 7
+}

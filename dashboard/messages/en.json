@@ -755,8 +755,7 @@
     "resettingStatus": "Resetting...",
     "relativeTimeDaysHours": "{days}d {hours}h",
     "relativeTimeHoursMinutes": "{hours}h {minutes}m",
-    "relativeTimeMinutes": "{minutes}m",
-    "resetsIn": "Resets in {time}"
+    "relativeTimeMinutes": "{minutes}m"
   },
   "usage": {
     "pageTitle": "Usage",

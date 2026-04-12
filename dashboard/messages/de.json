@@ -755,8 +755,7 @@
     "resettingStatus": "Wird zurückgesetzt...",
     "relativeTimeDaysHours": "{days}T {hours}Std",
     "relativeTimeHoursMinutes": "{hours}Std {minutes}Min",
-    "relativeTimeMinutes": "{minutes}Min",
-    "resetsIn": "Reset in {time}"
+    "relativeTimeMinutes": "{minutes}Min"
   },
   "usage": {
     "pageTitle": "Nutzung",

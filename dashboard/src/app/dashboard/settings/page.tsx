@@ -333,8 +333,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4">
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Settings</h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">Manage account, security, config sync, and system operations.</p>
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">{t('pageDescription')}</p>
       </section>
 
       <div className="flex flex-col lg:flex-row gap-6">

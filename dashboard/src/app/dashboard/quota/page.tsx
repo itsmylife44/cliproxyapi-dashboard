@@ -285,7 +285,7 @@ export default function QuotaPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Quota</h1>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">Monitor OAuth account quotas and usage windows.</p>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">{t("pageDescription")}</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="flex flex-wrap gap-1">
@@ -308,7 +308,7 @@ export default function QuotaPage() {
               ))}
             </div>
             <Button onClick={fetchQuota} disabled={loading} className="px-2.5 py-1 text-xs">
-              {loading ? "Loading..." : "Refresh"}
+              {loading ? t("loadingText") : "Refresh"}
             </Button>
           </div>
         </div>
@@ -316,7 +316,7 @@ export default function QuotaPage() {
 
       {loading && !quotaData ? (
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
-          Loading quota data...
+          {t("loadingText")}
         </div>
       ) : (
         <>

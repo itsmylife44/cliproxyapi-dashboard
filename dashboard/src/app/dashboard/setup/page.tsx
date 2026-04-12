@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { StepIndicator } from "@/components/setup/step-indicator";
@@ -22,6 +23,7 @@ interface CreatedKey {
 
 export default function SetupWizardPage() {
   const [status, setStatus] = useState<SetupStatus | null>(null);
+  const t = useTranslations("setupWizard");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [justCreatedKey, setJustCreatedKey] = useState<CreatedKey | null>(null);
@@ -84,7 +86,7 @@ export default function SetupWizardPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-              Setup Wizard
+              {t("title")}
             </h1>
             <p className="mt-1 text-sm text-[var(--text-muted)]">
               Complete these steps to get CLIProxyAPI up and running.

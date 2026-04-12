@@ -214,7 +214,7 @@ export default function AdminUsersPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="username" className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
-                Username
+                {t('usernameLabel')}
               </label>
               <Input
                 type="text"
@@ -229,7 +229,7 @@ export default function AdminUsersPage() {
 
             <div>
               <label htmlFor="password" className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
-                Password
+                {t('passwordLabel')}
               </label>
               <Input
                 type="password"
@@ -244,7 +244,7 @@ export default function AdminUsersPage() {
 
             <div>
               <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
-                Confirm Password
+                {t('confirmPasswordLabel')}
               </label>
               <Input
                 type="password"
@@ -266,11 +266,11 @@ export default function AdminUsersPage() {
                   className="size-4 shrink-0 cursor-pointer rounded border-[var(--surface-border)]/70 bg-[var(--surface-base)] text-[var(--text-primary)] focus:ring-2 focus:ring-black/20 focus:ring-offset-0"
                 />
                 <span className="text-sm font-medium text-[var(--text-primary)] group-hover:text-[var(--text-primary)] transition-colors">
-                  Grant admin privileges
+                  {t('grantAdminLabel')}
                 </span>
               </label>
               <p className="mt-1 ml-7 text-xs text-[var(--text-muted)]">
-                Admins can manage users and access all system features
+                {t('grantAdminDescription')}
               </p>
             </div>
           </div>

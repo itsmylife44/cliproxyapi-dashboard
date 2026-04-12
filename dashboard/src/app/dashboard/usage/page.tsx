@@ -266,7 +266,7 @@ export default function UsagePage() {
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Usage Statistics</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
             <div className="mt-1 flex items-center gap-2">
               <div className={`h-2 w-2 rounded-full ${collectorStatusColor}`}></div>
               <p className="text-xs text-[var(--text-muted)]">Last synced: {collectorTimeAgo}</p>
@@ -290,7 +290,7 @@ export default function UsagePage() {
 
       {loading ? (
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
-          Loading statistics...
+          {t('loadingText')}
         </div>
       ) : !usageData ? (
         <div className="rounded-md border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-700">

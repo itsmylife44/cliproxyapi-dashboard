@@ -75,12 +75,12 @@ export default function ContainersPage() {
           const message =
             typeof data.error === "string"
               ? data.error
-              : `Failed to load containers (${res.status})`;
+              : t("toastLoadFailed");
           setFetchError(message);
         }
       } catch {
         if (!controller.signal.aborted) {
-          setFetchError("Network error while loading containers.");
+          setFetchError(t("toastNetworkError"));
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -128,7 +128,7 @@ export default function ContainersPage() {
         const message =
           typeof data.error === "string"
             ? data.error
-            : `Failed to refresh containers (${refreshRes.status})`;
+            : t("toastLoadFailed");
         setFetchError(message);
       }
     } catch {
@@ -199,11 +199,11 @@ export default function ContainersPage() {
   return (
     <div className="space-y-4">
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Containers</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
       </section>
 
       {loading ? (
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">Loading containers...</div>
+        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">{t('loadingText')}</div>
       ) : (
         <>
           {fetchError && (

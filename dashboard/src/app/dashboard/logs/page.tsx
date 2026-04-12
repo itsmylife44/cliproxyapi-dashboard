@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -28,6 +29,7 @@ interface FetchLogsParams {
   setLatestTimestamp: (timestamp: number | null) => void;
   setLoading: (loading: boolean) => void;
   showToast: (message: string, type: "success" | "error" | "info") => void;
+  messages: { loadFailed: string; networkError: string };
   after?: number | null;
   append?: boolean;
   currentLogs?: string[];
@@ -39,6 +41,7 @@ async function fetchLogs({
   setLatestTimestamp,
   setLoading,
   showToast,
+  messages,
   after,
   append,
   currentLogs,
@@ -60,7 +63,7 @@ async function fetchLogs({
         setLoading(false);
         return;
       }
-      showToast("Failed to load logs", "error");
+      showToast(messages.loadFailed, "error");
       setLoading(false);
       return;
     }
@@ -73,7 +76,7 @@ async function fetchLogs({
     setLoading(false);
   } catch {
     if (signal?.aborted) return;
-    showToast("Network error", "error");
+    showToast(messages.networkError, "error");
     setLoading(false);
   }
 }
@@ -107,6 +110,7 @@ export default function LogsPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const { showToast } = useToast();
+  const t = useTranslations('logs');
   const logsRef = useRef<string[]>([]);
   const latestTimestampRef = useRef<number | null>(null);
   const loadingRef = useRef<boolean>(true);
@@ -119,7 +123,7 @@ export default function LogsPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetchLogs({ setLogs, setLatestTimestamp, setLoading, showToast, signal: controller.signal });
+    void fetchLogs({ setLogs, setLatestTimestamp, setLoading, showToast, messages: { loadFailed: t('toastLoadFailed'), networkError: t('toastNetworkError') }, signal: controller.signal });
     return () => controller.abort();
   }, [showToast]);
 
@@ -144,6 +148,7 @@ export default function LogsPage() {
         setLatestTimestamp,
         setLoading,
         showToast,
+        messages: { loadFailed: t('toastLoadFailed'), networkError: t('toastNetworkError') },
         after: latestTimestampRef.current,
         append: true,
         currentLogs: logsRef.current,
@@ -164,6 +169,7 @@ export default function LogsPage() {
       setLatestTimestamp,
       setLoading,
       showToast,
+      messages: { loadFailed: t('toastLoadFailed'), networkError: t('toastNetworkError') },
       after: latestTimestamp,
       append: true,
       currentLogs: logs,
@@ -179,7 +185,7 @@ export default function LogsPage() {
     try {
       const res = await fetch(API_ENDPOINTS.MANAGEMENT.LOGS, { method: "DELETE" });
       if (!res.ok) {
-        showToast("Failed to clear logs", "error");
+        showToast(t('toastClearFailed'), "error");
         setLoading(false);
         return;
       }
@@ -187,9 +193,9 @@ export default function LogsPage() {
       setLatestTimestamp(null);
       setCurrentPage(1);
       setLoading(false);
-      showToast("Logs cleared", "success");
+      showToast(t('toastCleared'), "success");
     } catch {
-      showToast("Network error", "error");
+      showToast(t('toastNetworkError'), "error");
       setLoading(false);
     }
   };
@@ -204,7 +210,7 @@ export default function LogsPage() {
             Refresh
           </Button>
           <Button onClick={confirmClear} disabled={loading} className="px-2.5 py-1 text-xs">
-            Clear Logs
+            {t('clearLogsButton')}
           </Button>
         </div>
       </div>
@@ -214,7 +220,7 @@ export default function LogsPage() {
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
         onConfirm={handleClearLogs}
-        title="Clear All Logs"
+        title={t('clearAllLogsTitle')}
         message="Clear all logs? This cannot be undone."
         confirmLabel="Clear"
         cancelLabel="Cancel"

@@ -214,7 +214,7 @@ export function DashboardNav() {
             <h1 className="truncate text-base font-semibold tracking-tight text-[var(--text-primary)]">
               CLIProxy
             </h1>
-            <p className="truncate text-xs text-[var(--text-muted)]">Management</p>
+            <p className="truncate text-xs text-[var(--text-muted)]">{t('appSubtitle')}</p>
           </div>
         </div>
 

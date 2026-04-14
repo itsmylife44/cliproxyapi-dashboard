@@ -97,6 +97,15 @@ interface UsageResponse {
   isAdmin: boolean;
 }
 
+interface CollectionStatus {
+  lastCollectedAt: string | null;
+  lastStatus: string;
+  errorMessage: string | null;
+  recordsStored: number;
+  isHealthy: boolean;
+  consecutiveFailures: number;
+}
+
 type DateFilter = "today" | "7d" | "30d" | "all" | "custom";
 
 function shouldPollDashboard(): boolean {
@@ -130,37 +139,18 @@ function getDateRange(period: DateFilter, customFrom?: string, customTo?: string
   }
 }
 
-
-function getStatusColor(isoString: string): string {
-  if (!isoString) return "bg-red-500/100";
-  const diff = Date.now() - new Date(isoString).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 10) return "bg-emerald-500/100";
-  if (minutes < 30) return "bg-yellow-500/100";
-  return "bg-red-500/100";
-}
-
 function formatLatencyValue(value: number): string {
   return `${value.toLocaleString()} ms`;
 }
 
 export default function UsagePage() {
   const t = useTranslations("usage");
-  const tc = useTranslations("common");
 
-  function getRelativeTime(isoString: string): string {
-    if (!isoString) return t('never');
-    const diff = Date.now() - new Date(isoString).getTime();
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return t("justNow");
-    if (minutes < 60) return t("minutesAgo", { count: minutes });
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return t("hoursAgo", { count: hours });
-    return t("daysAgo", { count: Math.floor(hours / 24) });
-  }
   const [usageData, setUsageData] = useState<UsageData | null>(null);
+  const [collectionStatus, setCollectionStatus] = useState<CollectionStatus | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [triggeringCollection, setTriggeringCollection] = useState(false);
   const [activeFilter, setActiveFilter] = useState<DateFilter>("7d");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
@@ -171,6 +161,22 @@ export default function UsagePage() {
   useEffect(() => {
     const abortController = new AbortController();
 
+    async function fetchCollectionStatus() {
+      try {
+        const res = await fetch(API_ENDPOINTS.USAGE.COLLECTION_STATUS, { 
+          signal: abortController.signal 
+        });
+        if (res.ok) {
+          const status: CollectionStatus = await res.json();
+          if (!abortController.signal.aborted) {
+            setCollectionStatus(status);
+          }
+        }
+      } catch {
+        // Silently ignore collection status errors
+      }
+    }
+
     async function collectAndFetch(showLoading: boolean) {
       if (showLoading) {
         setLoading(true);
@@ -178,15 +184,20 @@ export default function UsagePage() {
 
       try {
         const { from, to } = getDateRange(activeFilter, customFrom, customTo);
-        const res = await fetch(`/api/usage/history?from=${from}&to=${to}`, { signal: abortController.signal });
+        
+        // Fetch both usage data and collection status in parallel
+        const [usageRes] = await Promise.all([
+          fetch(`/api/usage/history?from=${from}&to=${to}`, { signal: abortController.signal }),
+          fetchCollectionStatus(),
+        ]);
 
-        if (!res.ok) {
+        if (!usageRes.ok) {
           showToast(t("toastLoadFailed"), "error");
           setLoading(false);
           return;
         }
 
-        const json: UsageResponse = await res.json();
+        const json: UsageResponse = await usageRes.json();
         if (abortController.signal.aborted) return;
         setUsageData(json.data);
         setIsAdmin(json.isAdmin);
@@ -214,7 +225,7 @@ export default function UsagePage() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [activeFilter, customFrom, customTo, showToast]);
+  }, [activeFilter, customFrom, customTo, showToast, t]);
 
   const handleFilterChange = (filter: DateFilter) => {
     setActiveFilter(filter);
@@ -224,6 +235,36 @@ export default function UsagePage() {
   const handleCustomDateChange = () => {
     if (customFrom && customTo) {
       handleFilterChange("custom");
+    }
+  };
+
+  const handleTriggerCollection = async () => {
+    if (!isAdmin || triggeringCollection) return;
+    
+    setTriggeringCollection(true);
+    try {
+      const res = await fetch(API_ENDPOINTS.USAGE.COLLECT, { method: "POST" });
+      if (res.ok) {
+        showToast(t("collectionTriggered"), "success");
+        // Refresh collection status after a short delay
+        setTimeout(async () => {
+          try {
+            const statusRes = await fetch(API_ENDPOINTS.USAGE.COLLECTION_STATUS);
+            if (statusRes.ok) {
+              const status: CollectionStatus = await statusRes.json();
+              setCollectionStatus(status);
+            }
+          } catch {
+            // Silently ignore
+          }
+        }, 2000);
+      } else {
+        showToast(t("collectionFailedToast"), "error");
+      }
+    } catch {
+      showToast(t("collectionFailedToast"), "error");
+    } finally {
+      setTriggeringCollection(false);
     }
   };
 
@@ -258,10 +299,40 @@ export default function UsagePage() {
     }
   };
 
+  function getCollectionStatusColor(status: CollectionStatus | null): string {
+    if (!status || !status.lastCollectedAt) return "bg-gray-500";
+    
+    if (status.consecutiveFailures > 0) return "bg-red-500";
+    
+    const diff = Date.now() - new Date(status.lastCollectedAt).getTime();
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 10) return "bg-emerald-500";
+    if (minutes < 30) return "bg-yellow-500";
+    return "bg-red-500";
+  }
+
+  function getCollectionStatusText(status: CollectionStatus | null): string {
+    if (!status || !status.lastCollectedAt) {
+      return t("collectionNeverRan");
+    }
+    
+    if (status.consecutiveFailures > 0) {
+      return t("collectionFailed");
+    }
+    
+    const diff = Date.now() - new Date(status.lastCollectedAt).getTime();
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return t("collectedJustNow");
+    if (minutes < 60) return t("collectedMinutesAgo", { count: minutes });
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return t("collectedHoursAgo", { count: hours });
+    return t("collectedDaysAgo", { count: Math.floor(hours / 24) });
+  }
+
   const hasInputOutputBreakdown = usageData && (usageData.totals.inputTokens > 0 || usageData.totals.outputTokens > 0);
   const hasLatencyBreakdown = (usageData?.latencySummary?.sampleCount ?? 0) > 0;
-  const collectorStatusColor = usageData ? getStatusColor(usageData.collectorStatus.lastCollectedAt) : "bg-gray-500";
-  const collectorTimeAgo = usageData ? getRelativeTime(usageData.collectorStatus.lastCollectedAt) : tc('unknown');
 
   return (
     <div className="space-y-4">
@@ -270,13 +341,31 @@ export default function UsagePage() {
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
             <div className="mt-1 flex items-center gap-2">
-              <div className={`h-2 w-2 rounded-full ${collectorStatusColor}`}></div>
-              <p className="text-xs text-[var(--text-muted)]">{t('lastSyncedLabel')} {collectorTimeAgo}</p>
+              <div className={`h-2 w-2 rounded-full ${getCollectionStatusColor(collectionStatus)}`}></div>
+              <p className="text-xs text-[var(--text-muted)]">
+                {t('collectionStatus')}: {getCollectionStatusText(collectionStatus)}
+              </p>
+              {collectionStatus?.errorMessage && (
+                <span className="text-xs text-rose-600" title={collectionStatus.errorMessage}>
+                  ⚠️
+                </span>
+              )}
             </div>
           </div>
-          <Button onClick={handleRefresh} disabled={loading}>
-            {t('refreshButton')}
-          </Button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button 
+                variant="secondary"
+                onClick={handleTriggerCollection} 
+                disabled={triggeringCollection || loading}
+              >
+                {triggeringCollection ? t("triggering") : t("triggerCollection")}
+              </Button>
+            )}
+            <Button onClick={handleRefresh} disabled={loading}>
+              {t('refreshButton')}
+            </Button>
+          </div>
         </div>
       </section>
 

@@ -843,7 +843,18 @@
     "inputTokens": "Eingabetoken",
     "outputTokens": "Ausgabetoken",
     "avgLatency": "Durchschn. Latenz",
-    "slowestRequest": "Langsamste Anfrage"
+    "slowestRequest": "Langsamste Anfrage",
+    "collectionStatus": "Sammelstatus",
+    "collectionNeverRan": "Noch nie gesammelt",
+    "collectedJustNow": "Gerade gesammelt",
+    "collectedMinutesAgo": "Vor {count}m gesammelt",
+    "collectedHoursAgo": "Vor {count}h gesammelt",
+    "collectedDaysAgo": "Vor {count}d gesammelt",
+    "collectionFailed": "Sammlung fehlgeschlagen",
+    "triggerCollection": "Jetzt sammeln",
+    "triggering": "Sammelt...",
+    "collectionTriggered": "Sammlung erfolgreich ausgelöst",
+    "collectionFailedToast": "Sammlung konnte nicht ausgelöst werden"
   },
   "monitoring": {
     "pageTitle": "Überwachung",

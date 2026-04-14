@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
   },
   USAGE: {
     COLLECT: "/api/usage/collect",
+    COLLECTION_STATUS: "/api/usage/collection-status",
   },
   USER: {
     API_KEYS: "/api/user/api-keys",

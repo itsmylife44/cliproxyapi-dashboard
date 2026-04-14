@@ -843,7 +843,18 @@
     "inputTokens": "Input Tokens",
     "outputTokens": "Output Tokens",
     "avgLatency": "Avg Latency",
-    "slowestRequest": "Slowest Request"
+    "slowestRequest": "Slowest Request",
+    "collectionStatus": "Collection status",
+    "collectionNeverRan": "Never collected",
+    "collectedJustNow": "Collected just now",
+    "collectedMinutesAgo": "Collected {count}m ago",
+    "collectedHoursAgo": "Collected {count}h ago", 
+    "collectedDaysAgo": "Collected {count}d ago",
+    "collectionFailed": "Collection failed",
+    "triggerCollection": "Collect Now",
+    "triggering": "Collecting...",
+    "collectionTriggered": "Collection triggered successfully",
+    "collectionFailedToast": "Failed to trigger collection"
   },
   "monitoring": {
     "pageTitle": "Monitoring",

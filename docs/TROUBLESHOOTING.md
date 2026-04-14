@@ -163,3 +163,81 @@ docker compose exec postgres psql -U cliproxyapi -d cliproxyapi -c "DELETE FROM 
 Then visit `/setup` again to create a new admin account.
 
 **If setup page is not accessible**, it means an admin account already exists. Use your credentials to log in at the main login page.
+
+## Usage Data Not Appearing
+
+If your Usage page shows "No usage data" or outdated information, the usage collection service may not be running properly.
+
+### Quick Diagnostics
+
+```bash
+# Check usage collector service status
+cd infrastructure
+docker compose ps usage-collector
+
+# Check recent logs
+docker compose logs --tail=20 usage-collector
+
+# Verify API key is set
+grep COLLECTOR_API_KEY .env
+```
+
+### Common Causes
+
+1. **Missing COLLECTOR_API_KEY**
+   ```bash
+   # Generate and add to .env
+   COLLECTOR_API_KEY=$(openssl rand -hex 32)
+   echo "COLLECTOR_API_KEY=${COLLECTOR_API_KEY}" >> infrastructure/.env
+   docker compose up -d
+   ```
+
+2. **Collector service not running**
+   ```bash
+   # Restart the usage collector
+   docker compose up -d usage-collector
+   ```
+
+3. **CLIProxyAPI unreachable**
+   ```bash
+   # Check CLIProxyAPI health
+   docker compose ps cliproxyapi
+   docker compose logs cliproxyapi
+   ```
+
+4. **Database connection issues**
+   ```bash
+   # Test database connection
+   docker compose exec postgres psql -U cliproxyapi -d cliproxyapi -c "SELECT COUNT(*) FROM usage_records;"
+   ```
+
+### Manual Collection Test
+
+```bash
+# Get API key from environment
+COLLECTOR_API_KEY=$(grep COLLECTOR_API_KEY infrastructure/.env | cut -d= -f2)
+
+# Test collection endpoint
+curl -X POST https://dashboard.yourdomain.com/api/usage/collect \
+  -H "Authorization: Bearer $COLLECTOR_API_KEY" \
+  -v
+```
+
+**Expected response:**
+```json
+{
+  "success": true,
+  "message": "Usage collection completed",
+  "recordsStored": 42
+}
+```
+
+### Admin Refresh Button
+
+As an admin user, you can manually trigger collection from the Usage page:
+
+1. Login to dashboard as admin
+2. Navigate to Usage page  
+3. Click "Refresh" button (only visible to admins)
+
+For comprehensive troubleshooting, see [infrastructure/docs/USAGE_COLLECTION.md](../infrastructure/docs/USAGE_COLLECTION.md).

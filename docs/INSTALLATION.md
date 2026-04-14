@@ -59,11 +59,12 @@ The installer will:
 1. Prompt for domain and subdomain configuration
 2. Install Docker and Docker Compose (if not already installed)
 3. Configure UFW firewall with required ports
-4. Generate secure secrets (JWT_SECRET, MANAGEMENT_API_KEY, POSTGRES_PASSWORD)
+4. Generate secure secrets (JWT_SECRET, MANAGEMENT_API_KEY, POSTGRES_PASSWORD, COLLECTOR_API_KEY)
 5. Pull the pre-built dashboard image from GHCR
 6. Create `infrastructure/.env` with all required configuration
 7. Create a systemd service for automatic startup on boot
-8. Optionally set up automated daily or weekly backups
+8. Set up automated usage collection service (cron-based)
+9. Optionally set up automated daily or weekly backups
 
 ### Post-Installation
 
@@ -76,9 +77,32 @@ cd infrastructure
 docker compose logs -f
 ```
 
+**Verify all services are running:**
+```bash
+# Check all containers are healthy
+docker compose ps
+
+# Should show 6 services: postgres, cliproxyapi, dashboard, caddy, docker-proxy, usage-collector
+# All should show "Up" status and "healthy" where applicable
+```
+
 Access the dashboard at:
 - **Dashboard**: `https://dashboard.yourdomain.com`
 - **API**: `https://api.yourdomain.com`
+
+### Verify Usage Collection
+
+After setup, verify that usage tracking is working:
+
+```bash
+# Check usage collector service
+docker compose ps usage-collector
+
+# View collector logs (should show cron entries every 5 minutes)
+docker compose logs usage-collector
+```
+
+The usage collector runs automatically and will begin tracking API requests to display in the Dashboard's Usage page.
 
 ### Initial Setup Flow
 
@@ -224,11 +248,13 @@ sudo ufw enable
 JWT_SECRET=$(openssl rand -base64 32)
 MANAGEMENT_API_KEY=$(openssl rand -hex 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 32)
+COLLECTOR_API_KEY=$(openssl rand -hex 32)
 
 # Display secrets (save these values)
 echo "JWT_SECRET=$JWT_SECRET"
 echo "MANAGEMENT_API_KEY=$MANAGEMENT_API_KEY"
 echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD"
+echo "COLLECTOR_API_KEY=$COLLECTOR_API_KEY"
 ```
 
 ### 4. Create Environment File
@@ -242,6 +268,7 @@ DATABASE_URL=postgresql://cliproxyapi:${POSTGRES_PASSWORD}@postgres:5432/cliprox
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 JWT_SECRET=${JWT_SECRET}
 MANAGEMENT_API_KEY=${MANAGEMENT_API_KEY}
+COLLECTOR_API_KEY=${COLLECTOR_API_KEY}
 CLIPROXYAPI_MANAGEMENT_URL=http://cliproxyapi:8317/v0/management
 INSTALL_DIR=$(pwd)
 TZ=UTC

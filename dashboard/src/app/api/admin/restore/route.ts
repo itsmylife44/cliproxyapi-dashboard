@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     // Parse and validate backup file
     let backupData: any;
     try {
-      backupData = parseBackupFile(buffer);
+      backupData = await parseBackupFile(buffer);
     } catch {
       return Errors.validation("Invalid backup file — could not decompress or parse");
     }
@@ -70,21 +70,8 @@ export async function POST(request: NextRequest) {
       return apiSuccess({ preview });
     }
 
-    // Full restore
-    const result = await restoreFromBackup(backupData);
-
-    logAuditAsync({
-      userId: authResult.userId,
-      action: AUDIT_ACTION.BACKUP_RESTORED,
-      target: backupData.metadata.timestamp,
-      metadata: {
-        backupVersion: backupData.metadata.version,
-        dashboardVersion: backupData.metadata.dashboardVersion,
-        preRestoreBackupId: result.preRestoreBackupId,
-        restoredCounts: result.restoredCounts,
-      },
-      ipAddress: extractIpAddress(request),
-    });
+    // Full restore (includes audit logging before users table restoration)
+    const result = await restoreFromBackup(backupData, authResult.userId, extractIpAddress(request));
 
     return apiSuccess({
       restored: true,

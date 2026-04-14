@@ -8,6 +8,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { BackupFileData } from "@/lib/validation/schemas";
 import type { Prisma } from "@/generated/prisma/client";
+import { AUDIT_ACTION, logAuditAsync } from "@/lib/audit";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -225,7 +226,7 @@ export async function createBackup(
         id: backupId,
         filename,
         trigger,
-        status: "running",
+        status: "in_progress",
         recordCounts: {},
       },
     });
@@ -256,8 +257,11 @@ export async function createBackup(
       cpapConfig,
     };
 
-    // Serialize and compress
+    // Serialize and compress (yield control periodically for large datasets)
+    await new Promise(resolve => setImmediate(resolve)); // Allow event loop to process other requests
     const jsonStr = JSON.stringify(backupData);
+    
+    await new Promise(resolve => setImmediate(resolve)); // Yield before compression
     const compressed = gzipSync(Buffer.from(jsonStr, "utf-8"), { level: 6 });
 
     // Write to disk
@@ -333,18 +337,42 @@ export async function listBackups(): Promise<BackupRecord[]> {
 }
 
 /**
- * Get the file path for a specific backup, for streaming download.
+ * Get backup file path and filename by ID for download.
+ * Returns null if backup not found or file doesn't exist.
  */
-export async function getBackupFilePath(
-  id: string
-): Promise<{ filePath: string; filename: string } | null> {
-  const backup = await prisma.backup.findUnique({ where: { id } });
-  if (!backup) return null;
+export async function getBackupFilePath(id: string): Promise<{ filePath: string; filename: string } | null> {
+  const backup = await prisma.backup.findUnique({
+    where: { id },
+    select: { filename: true, status: true },
+  });
+
+  if (!backup || backup.status !== "completed") {
+    return null;
+  }
 
   const filePath = getBackupPath(backup.filename);
-  if (!fs.existsSync(filePath)) return null;
+  
+  // Check if file actually exists on disk
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
 
   return { filePath, filename: backup.filename };
+}
+
+/**
+ * Parse a backup file from gzipped JSON bytes.
+ * Uses async decompression to avoid blocking the event loop.
+ */
+export async function parseBackupFile(buffer: Buffer): Promise<BackupFileData> {
+  // Yield control before expensive operations
+  await new Promise(resolve => setImmediate(resolve));
+  const decompressed = gunzipSync(buffer);
+  
+  await new Promise(resolve => setImmediate(resolve));
+  const jsonStr = decompressed.toString("utf-8");
+  const data = JSON.parse(jsonStr) as BackupFileData;
+  return data;
 }
 
 /**
@@ -367,17 +395,6 @@ export async function deleteBackup(id: string): Promise<boolean> {
 
   logger.info({ backupId: id, filename: backup.filename }, "Backup deleted");
   return true;
-}
-
-/**
- * Parse and validate an uploaded backup file.
- * Returns the parsed data for preview or restore.
- */
-export function parseBackupFile(buffer: Buffer): BackupFileData {
-  const decompressed = gunzipSync(buffer);
-  const jsonStr = decompressed.toString("utf-8");
-  const data = JSON.parse(jsonStr) as BackupFileData;
-  return data;
 }
 
 /**
@@ -410,7 +427,9 @@ export async function getRestorePreview(
  * 3. Truncates all tables in reverse FK order, then re-inserts in FK order
  */
 export async function restoreFromBackup(
-  backupData: BackupFileData
+  backupData: BackupFileData,
+  adminUserId?: string,
+  ipAddress?: string
 ): Promise<RestoreResult> {
   // 1. Create pre-restore safety backup
   logger.info("Creating pre-restore safety backup...");
@@ -425,6 +444,26 @@ export async function restoreFromBackup(
 
   try {
     const restoredCounts: Record<string, number> = {};
+
+    // Log audit entry BEFORE restoring users table (to avoid FK constraint issues)
+    if (adminUserId && ipAddress) {
+      try {
+        await logAuditAsync({
+          userId: adminUserId,
+          action: AUDIT_ACTION.BACKUP_RESTORED,
+          target: backupData.metadata.timestamp,
+          metadata: {
+            backupVersion: backupData.metadata.version,
+            dashboardVersion: backupData.metadata.dashboardVersion,
+            preRestoreBackupId,
+          },
+          ipAddress,
+        });
+      } catch (auditError) {
+        // Don't block restore on audit failure, but log the issue
+        logger.warn({ error: auditError }, "Failed to create pre-restore audit entry");
+      }
+    }
 
     // 3. Execute in transaction with extended timeout (5 minutes)
     await prisma.$transaction(

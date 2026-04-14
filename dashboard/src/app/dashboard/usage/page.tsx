@@ -214,10 +214,12 @@ export default function UsagePage() {
       isFirstLoadRef.current = false;
     }
 
+    // Poll every 60 seconds for fresh usage data
+    // This is much more responsive than the previous 5-minute interval
     intervalRef.current = setInterval(() => {
       if (!shouldPollDashboard()) return;
       void collectAndFetch(false);
-    }, 300000);
+    }, 60000);
 
     return () => {
       abortController.abort();

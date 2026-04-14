@@ -1620,6 +1620,14 @@
     "ultraworkLabel": "Ultrawork",
     "noModelsFound": "Keine Modelle gefunden",
     "searchModelsPlaceholder": "Modelle suchen...",
+    "councilSectionLabel": "Council",
+    "councilSectionTooltip": "Multi-LLM Konsens-System. Konfigurieren Sie den Council-Master, Councillors, Presets und Ausführungseinstellungen.",
+    "councilMasterModelLabel": "Master-Modell",
+    "councilMasterVariantLabel": "Master-Variante",
+    "councilExecModeLabel": "Ausführungsmodus",
+    "councilMasterTimeoutLabel": "Master-Zeitlimit (ms)",
+    "councilCouncillorsTimeoutLabel": "Councillors-Zeitlimit (ms)",
+    "councilRetriesLabel": "Wiederholungen",
     "configureTooltip": "Variante, Temperatur und mehr konfigurieren"
   },
   "ohMyOpenCodeSlim": {
@@ -1629,7 +1637,7 @@
     "noProvidersTitle": "Keine Anbieter konfiguriert",
     "noProvidersDesc": "Konfigurieren Sie mindestens einen KI-Anbieter, bevor Sie eine Slim-Konfiguration generieren. Gehen Sie zu",
     "noProvidersLink": "Anbieter",
-    "description": "Slim verwendet 6 spezialisierte Agenten (Orchestrator, Oracle, Designer, Explorer, Bibliothekar, Fixer) mit einem dedizierten Fallback-System. Änderungen werden automatisch gespeichert.",
+    "description": "Slim verwendet 7 spezialisierte Agenten (Orchestrator, Oracle, Council, Designer, Explorer, Bibliothekar, Fixer) mit einem dedizierten Fallback-System. Änderungen werden automatisch gespeichert.",
     "saving": "Wird gespeichert...",
     "showConfig": "Konfiguration anzeigen",
     "hideConfig": "Konfiguration ausblenden",

@@ -1620,6 +1620,14 @@
     "ultraworkLabel": "Ultrawork",
     "noModelsFound": "No models found",
     "searchModelsPlaceholder": "Search models...",
+    "councilSectionLabel": "Council",
+    "councilSectionTooltip": "Multi-LLM consensus system. Configure the council master, councillors, presets, and execution settings.",
+    "councilMasterModelLabel": "Master model",
+    "councilMasterVariantLabel": "Master variant",
+    "councilExecModeLabel": "Execution mode",
+    "councilMasterTimeoutLabel": "Master timeout (ms)",
+    "councilCouncillorsTimeoutLabel": "Councillors timeout (ms)",
+    "councilRetriesLabel": "Retries",
     "configureTooltip": "Configure variant, temperature, and more"
   },
   "ohMyOpenCodeSlim": {
@@ -1629,7 +1637,7 @@
     "noProvidersTitle": "No providers configured",
     "noProvidersDesc": "Configure at least one AI provider before generating a slim config. Head to",
     "noProvidersLink": "Providers",
-    "description": "Slim uses 6 specialized agents (orchestrator, oracle, designer, explorer, librarian, fixer) with a dedicated fallback system. Changes save automatically.",
+    "description": "Slim uses 7 specialized agents (orchestrator, oracle, council, designer, explorer, librarian, fixer) with a dedicated fallback system. Changes save automatically.",
     "saving": "Saving...",
     "showConfig": "Show config",
     "hideConfig": "Hide config",

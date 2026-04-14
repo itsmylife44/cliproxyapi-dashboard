@@ -6,7 +6,7 @@ import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { logger } from "@/lib/logger";
 import { FetchModelsSchema } from "@/lib/validation/schemas";
 import { lookup } from "dns/promises";
-import { Errors } from "@/lib/errors";
+import { apiError, Errors, ERROR_CODE } from "@/lib/errors";
 
 interface OpenAIModel {
   id: string;
@@ -87,6 +87,35 @@ function isIPv6Literal(hostname: string): boolean {
   // URL.hostname returns bracket-less IPv6 for valid URLs, keep bracket stripping for safety.
   // We only need a reliable literal detector to skip DNS lookup; private/public decision is handled elsewhere.
   return value.includes(":");
+}
+
+function getFetchNetworkErrorMessage(fetchError: Error, hostname: string): string {
+  const cause = "cause" in fetchError && fetchError.cause && typeof fetchError.cause === "object"
+    ? fetchError.cause as Record<string, unknown>
+    : null;
+
+  const code = typeof cause?.code === "string" ? cause.code : null;
+  const isIPv6Host = isIPv6Literal(hostname);
+
+  if (code === "ENETUNREACH") {
+    return isIPv6Host
+      ? "IPv6 network unreachable from the dashboard container"
+      : "Network unreachable from the dashboard container";
+  }
+
+  if (code === "EHOSTUNREACH") {
+    return "Host unreachable from the dashboard container";
+  }
+
+  if (code === "ECONNREFUSED") {
+    return "Connection refused by the provider endpoint";
+  }
+
+  if (code === "ETIMEDOUT") {
+    return "Connection to the provider timed out";
+  }
+
+  return "Network error: unable to reach the provider";
 }
 
 /**
@@ -231,7 +260,11 @@ export async function POST(request: NextRequest) {
         }
 
         logger.error({ err: fetchError, url: modelsEndpoint }, "Failed to fetch models from provider");
-        return Errors.serviceUnavailable("Network error: unable to reach the provider");
+        return apiError(
+          ERROR_CODE.UPSTREAM_ERROR,
+          getFetchNetworkErrorMessage(fetchError, parsedUrl.hostname),
+          503
+        );
       }
 
       return Errors.internal("Failed to fetch models from provider", fetchError);

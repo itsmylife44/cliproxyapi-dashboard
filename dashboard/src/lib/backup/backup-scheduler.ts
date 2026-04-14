@@ -45,14 +45,19 @@ export function startBackupScheduler(): void {
   };
 
   const scheduleNext = async () => {
-    await run();
     try {
       const schedule = await getBackupSchedule();
       const intervalMs = schedule.intervalHours * 60 * 60 * 1000;
-      scheduleTimeout(scheduleNext, intervalMs);
+      scheduleTimeout(async () => {
+        await run();
+        scheduleNext();
+      }, intervalMs);
     } catch {
       // Fallback to 24 hours if DB read fails
-      scheduleTimeout(scheduleNext, 24 * 60 * 60 * 1000);
+      scheduleTimeout(async () => {
+        await run();
+        scheduleNext();
+      }, 24 * 60 * 60 * 1000);
     }
   };
 

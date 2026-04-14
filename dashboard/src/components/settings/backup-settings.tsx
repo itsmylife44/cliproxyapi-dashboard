@@ -142,7 +142,7 @@ export function BackupSettings() {
     try {
       const res = await fetch(`${API_ENDPOINTS.ADMIN.BACKUP}/${id}`);
       if (!res.ok) {
-        showToast(t("backupDeleteFailed"), "error");
+        showToast(t("backupFailed"), "error");
         return;
       }
       

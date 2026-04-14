@@ -86,10 +86,11 @@ async function exportTable(tableName: TableName): Promise<{ rows: Record<string,
   let cursor: string | undefined;
 
   for (;;) {
-    const batch: Record<string, unknown>[] = await (prisma as unknown as Record<string, unknown>)[
-      toPrismaModelName(tableName)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ] && (prisma[toPrismaModelName(tableName) as keyof typeof prisma] as any).findMany({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const model = (prisma as unknown as Record<string, unknown>)[toPrismaModelName(tableName)] as any;
+    if (!model) break;
+
+    const batch: Record<string, unknown>[] = await model.findMany({
       take: BATCH_SIZE,
       ...(cursor
         ? { skip: 1, cursor: { id: cursor } }
@@ -191,7 +192,7 @@ export interface RestoreResult {
  * Exports all tables using cursor-based pagination to handle large datasets.
  */
 export async function createBackup(
-  trigger: "manual" | "scheduled" = "manual"
+  trigger: "manual" | "scheduled" | "pre_restore" = "manual"
 ): Promise<CreateBackupResult> {
   ensureBackupDir();
 
@@ -411,7 +412,7 @@ export async function restoreFromBackup(
 ): Promise<RestoreResult> {
   // 1. Create pre-restore safety backup
   logger.info("Creating pre-restore safety backup...");
-  const safetyBackup = await createBackup("manual");
+  const safetyBackup = await createBackup("pre_restore");
   const preRestoreBackupId = safetyBackup.backup.id;
 
   // 2. Acquire advisory lock

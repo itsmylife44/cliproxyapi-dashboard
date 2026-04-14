@@ -5,7 +5,9 @@ import { logger } from "@/lib/logger";
 import { usageCache } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
 
-const USAGE_HISTORY_CACHE_TTL_MS = 15_000;
+// Cache for 5 seconds to allow frequent polling without overwhelming the database
+// The frontend polls every 60 seconds, so 5s cache won't cause missed updates
+const USAGE_HISTORY_CACHE_TTL_MS = 5_000;
 const USAGE_RECORD_LIMIT = 25_000;
 const REQUEST_EVENT_LIMIT = 200;
 const LATENCY_SERIES_LIMIT = 120;

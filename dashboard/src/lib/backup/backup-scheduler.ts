@@ -24,12 +24,6 @@ export function startBackupScheduler(): void {
     isRunning = true;
 
     try {
-      const schedule = await getBackupSchedule();
-
-      if (!schedule.enabled) {
-        return; // Skip — scheduling disabled
-      }
-
       logger.info("Scheduled backup: starting...");
       const result = await createBackup("scheduled");
       logger.info(
@@ -44,9 +38,18 @@ export function startBackupScheduler(): void {
     }
   };
 
+  const DISABLED_POLL_MS = 60 * 60 * 1000; // 1 hour when disabled
+
   const scheduleNext = async () => {
     try {
       const schedule = await getBackupSchedule();
+
+      if (!schedule.enabled) {
+        // Poll infrequently when disabled — changes take effect within 1 hour
+        scheduleTimeout(scheduleNext, DISABLED_POLL_MS);
+        return;
+      }
+
       const intervalMs = schedule.intervalHours * 60 * 60 * 1000;
       scheduleTimeout(async () => {
         await run();

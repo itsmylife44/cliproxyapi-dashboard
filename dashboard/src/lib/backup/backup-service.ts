@@ -73,6 +73,7 @@ async function checkDiskSpace(): Promise<{ availableBytes: number; ok: boolean }
     return { availableBytes, ok: availableBytes >= MIN_DISK_SPACE_BYTES };
   } catch {
     // statfsSync may not be available on all platforms (e.g., Windows dev)
+    // Return ok: true so backups aren't blocked, but signal unknown space
     return { availableBytes: -1, ok: true };
   }
 }
@@ -535,7 +536,7 @@ export async function getDiskSpaceInfo(): Promise<{
     const totalBytes = Number(stats.blocks) * Number(stats.bsize);
     return { availableBytes, totalBytes, ok: availableBytes >= MIN_DISK_SPACE_BYTES };
   } catch {
-    return { availableBytes: -1, totalBytes: -1, ok: true };
+    return { availableBytes: -1, totalBytes: -1, ok: false };
   }
 }
 

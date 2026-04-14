@@ -416,7 +416,7 @@ async function migrate() {
       CONSTRAINT "backups_pkey" PRIMARY KEY ("id")
     );
     CREATE INDEX IF NOT EXISTS "backups_createdAt_idx" ON "backups"("createdAt");
-    \`);
+    `);
 
     console.log('[dashboard] Tables ready');
 

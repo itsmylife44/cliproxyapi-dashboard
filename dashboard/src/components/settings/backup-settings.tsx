@@ -362,7 +362,9 @@ export function BackupSettings() {
         
         {diskSpace && (
           <div className={`text-sm ${!diskSpace.ok ? "text-red-600" : "text-[var(--text-muted)]"}`}>
-            {diskSpace.ok ? (
+            {diskSpace.availableBytes < 0 ? (
+              t("diskSpaceUnknown")
+            ) : diskSpace.ok ? (
               t("diskSpaceAvailable", {
                 available: formatBytes(diskSpace.availableBytes),
                 total: formatBytes(diskSpace.totalBytes),

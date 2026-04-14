@@ -445,20 +445,19 @@ export async function restoreFromBackup(
             continue;
           }
 
-          // Insert in batches
+          // Insert in batches using createMany for performance
           for (let i = 0; i < rows.length; i += BATCH_SIZE) {
             const batch = rows.slice(i, i + BATCH_SIZE);
+            
+            // Process all rows in batch for date fields
+            const processedBatch = batch.map((row) => processRowForInsert(tableName, row));
 
-            for (const row of batch) {
-              // Handle date fields — convert ISO strings back to Date objects
-              const processedRow = processRowForInsert(tableName, row);
-
-              const modelName = toPrismaModelName(tableName as TableName);
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await (tx[modelName as keyof typeof tx] as any).create({
-                data: processedRow,
-              });
-            }
+            const modelName = toPrismaModelName(tableName as TableName);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (tx[modelName as keyof typeof tx] as any).createMany({
+              data: processedBatch,
+              skipDuplicates: false, // We've already truncated, so no duplicates expected
+            });
           }
 
           restoredCounts[tableName] = rows.length;

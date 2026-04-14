@@ -5,6 +5,7 @@ import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/com
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { extractApiError } from "@/lib/utils";
 import { BasicFields } from "@/components/custom-providers/basic-fields";
 import { HeadersSection } from "@/components/custom-providers/headers-section";
 import { ModelDiscovery } from "@/components/custom-providers/model-discovery";
@@ -216,8 +217,13 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
         onClose();
         resetForm();
       } else {
-        const error = await response.json();
-        showToast(error.error || t("toastSaveFailed"), "error");
+        let data: unknown = null;
+        try {
+          data = await response.json();
+        } catch {
+          data = null;
+        }
+        showToast(extractApiError(data, t("toastSaveFailed")), "error");
       }
     } catch {
       showToast(t("toastNetworkError"), "error");
@@ -300,8 +306,13 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
         setShowFetchedModels(true);
         showToast(t("toastFetchModelsSuccess", { count: fetchedList.length }), "success");
       } else {
-        const error = await response.json();
-        showToast(error.error || t("toastFetchModelsFailed"), "error");
+        let data: unknown = null;
+        try {
+          data = await response.json();
+        } catch {
+          data = null;
+        }
+        showToast(extractApiError(data, t("toastFetchModelsFailed")), "error");
       }
     } catch {
       showToast(t("toastNetworkError"), "error");

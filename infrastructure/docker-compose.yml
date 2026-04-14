@@ -198,6 +198,7 @@ services:
     mem_limit: 64m
     mem_reservation: 16m
     networks:
+      - frontend
       - backend
     environment:
       COLLECTOR_API_KEY: ${COLLECTOR_API_KEY:-}

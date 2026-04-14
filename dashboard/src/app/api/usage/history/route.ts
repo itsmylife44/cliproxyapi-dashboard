@@ -200,9 +200,9 @@ export async function GET(request: NextRequest) {
       usageRecords.pop();
     }
 
-    const collectorState = await prisma.collectorState.findFirst({
-      orderBy: { updatedAt: "desc" },
-    });
+  const collectorState = await prisma.collectorState.findUnique({
+    where: { id: "singleton" },
+  });
 
     const keyUsageMap: Record<string, KeyUsage> = {};
     const dailyMap: Record<string, { requests: number; tokens: number; inputTokens: number; outputTokens: number; success: number; failure: number }> = {};

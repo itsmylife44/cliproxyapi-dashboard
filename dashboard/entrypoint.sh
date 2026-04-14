@@ -91,8 +91,12 @@ async function migrate() {
       ALTER TABLE "sync_tokens" ADD COLUMN "syncApiKey" TEXT;
     EXCEPTION WHEN duplicate_column THEN NULL; END $$;
     -- Remove revokedAt column if present (migration from soft-delete to hard-delete)
-    DELETE FROM "sync_tokens" WHERE "revokedAt" IS NOT NULL;
-    ALTER TABLE "sync_tokens" DROP COLUMN IF EXISTS "revokedAt";
+    DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sync_tokens' AND column_name='revokedAt') THEN
+        DELETE FROM "sync_tokens" WHERE "revokedAt" IS NOT NULL;
+        ALTER TABLE "sync_tokens" DROP COLUMN "revokedAt";
+      END IF;
+    END $$;
 
     -- Agent model overrides table (stores MCP servers & custom plugins in overrides JSONB)
     CREATE TABLE IF NOT EXISTS "agent_model_overrides" (

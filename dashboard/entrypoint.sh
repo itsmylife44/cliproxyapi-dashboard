@@ -402,7 +402,21 @@ async function migrate() {
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "collector_state_pkey" PRIMARY KEY ("id")
     );
-    `);
+
+    -- Backups table (stores backup metadata)
+    CREATE TABLE IF NOT EXISTS "backups" (
+      "id" TEXT NOT NULL,
+      "filename" TEXT NOT NULL,
+      "sizeBytes" INTEGER NOT NULL DEFAULT 0,
+      "recordCounts" JSONB NOT NULL DEFAULT '{}',
+      "trigger" TEXT NOT NULL DEFAULT 'manual',
+      "status" TEXT NOT NULL DEFAULT 'completed',
+      "errorMessage" TEXT,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "backups_pkey" PRIMARY KEY ("id")
+    );
+    CREATE INDEX IF NOT EXISTS "backups_createdAt_idx" ON "backups"("createdAt");
+    \`);
 
     console.log('[dashboard] Tables ready');
 

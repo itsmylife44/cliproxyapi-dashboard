@@ -309,3 +309,17 @@ model CollectorState {
 
   @@map("collector_state")
 }
+
+model Backup {
+  id           String   @id @default(cuid())
+  filename     String
+  sizeBytes    Int      @default(0)
+  recordCounts Json     @default("{}")
+  trigger      String   @default("manual")
+  status       String   @default("completed")
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("backups")
+}

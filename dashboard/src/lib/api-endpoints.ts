@@ -16,6 +16,9 @@ export const API_ENDPOINTS = {
     LOGS: "/api/admin/logs",
     TELEGRAM: "/api/admin/telegram",
     REVOKE_SESSIONS: "/api/admin/revoke-sessions",
+    BACKUP: "/api/admin/backup",
+    BACKUP_SCHEDULE: "/api/admin/backup/schedule",
+    RESTORE: "/api/admin/restore",
   },
   UPDATE: {
     BASE: "/api/update",

@@ -6,6 +6,7 @@
 
 import { runAlertCheck, getCheckIntervalMs } from "@/lib/quota-alerts";
 import { resyncCustomProviders } from "@/lib/providers/resync";
+import { startBackupScheduler } from "@/lib/backup/backup-scheduler";
 import { logger } from "@/lib/logger";
 
 // Idempotency guard for HMR in dev — prevents duplicate intervals
@@ -35,6 +36,11 @@ export function registerNodeInstrumentation() {
       logger.error({ err }, "Startup custom provider resync failed");
     });
   }, 15_000);
+
+  // Start backup scheduler after other services are initialized
+  scheduleTimeout(() => {
+    startBackupScheduler();
+  }, 45_000);
 }
 
 function startQuotaAlertScheduler() {

@@ -131,6 +131,8 @@ services:
       DOCKER_HOST: tcp://docker-proxy:2375
       DASHBOARD_URL: http://localhost:3000
       API_URL: http://localhost:8317
+    volumes:
+      - dashboard_backups:/app/backups
     depends_on:
       postgres:
         condition: service_healthy
@@ -149,6 +151,7 @@ volumes:
   postgres_data:
   cliproxyapi_auths:
   cliproxyapi_logs:
+  dashboard_backups:
 
 networks:
   frontend:

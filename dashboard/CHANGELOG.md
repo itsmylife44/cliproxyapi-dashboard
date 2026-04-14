@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.74](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.73...dashboard-v0.1.74) (2026-04-14)
+
+
+### Features
+
+* add admin user management actions ([#186](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/186)) ([9bfb657](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/9bfb6571f63f1c5718693045c68d096832ce9361))
+* **settings:** delete sync tokens instead of soft-delete ([83b2821](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/83b28212093af2895d91670a5f8678d850ca3d56))
+
+
+### Bug Fixes
+
+* **i18n:** correct UTF-8 encoding issues in German translations ([cb2322f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/cb2322fb78df7389b361eecd1a5ff929ccb536e7))
+* **providers:** prevent custom provider error crash and support IPv6 literals ([fd3fd4a](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/fd3fd4a558dc9a2b6aec026f20c8e291e42e459a))
+* **quota:** improve error messages for all providers ([#185](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/185)) ([871d401](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/871d4018ab716502a0e33252990ae3c432add014))
+
 ## [0.1.73](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.72...dashboard-v0.1.73) (2026-04-12)
 
 

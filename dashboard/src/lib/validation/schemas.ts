@@ -187,6 +187,38 @@ const SlimBackgroundSchema = z.object({
   maxConcurrentStarts: z.number().min(1).max(50).optional(),
 });
 
+const SlimCouncillorEntrySchema = z.object({
+  model: z.string(),
+  variant: z.string().optional(),
+  prompt: z.string().optional(),
+});
+
+const SlimCouncilPresetMasterOverrideSchema = z.object({
+  model: z.string().optional(),
+  variant: z.string().optional(),
+  prompt: z.string().optional(),
+});
+
+const SlimCouncilPresetSchema = z.object({
+  councillors: z.record(z.string(), SlimCouncillorEntrySchema),
+  master: SlimCouncilPresetMasterOverrideSchema.optional(),
+});
+
+const SlimCouncilSchema = z.object({
+  master: z.object({
+    model: z.string(),
+    variant: z.string().optional(),
+    prompt: z.string().optional(),
+  }).optional(),
+  presets: z.record(z.string(), SlimCouncilPresetSchema).optional(),
+  master_timeout: z.number().min(0).optional(),
+  councillors_timeout: z.number().min(0).optional(),
+  default_preset: z.string().optional(),
+  master_fallback: z.array(z.string()).optional(),
+  councillor_execution_mode: z.enum(["parallel", "serial"]).optional(),
+  councillor_retries: z.number().int().min(0).max(5).optional(),
+});
+
 const SlimConfigOverridesSchema = z.object({
   preset: z.string().optional(),
   setDefaultAgent: z.boolean().optional(),
@@ -198,6 +230,7 @@ const SlimConfigOverridesSchema = z.object({
   tmux: SlimTmuxSchema.optional(),
   background: SlimBackgroundSchema.optional(),
   fallback: SlimFallbackSchema.optional(),
+  council: SlimCouncilSchema.optional(),
 });
 
 export const SlimAgentConfigSchema = z.object({

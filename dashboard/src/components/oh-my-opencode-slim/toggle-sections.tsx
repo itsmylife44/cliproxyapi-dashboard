@@ -6,8 +6,9 @@ import type {
   SlimTmuxConfig,
   SlimBackgroundConfig,
   SlimFallbackConfig,
+  SlimCouncilConfig,
 } from "@/lib/config-generators/oh-my-opencode-slim-types";
-import { SLIM_TMUX_LAYOUTS, SLIM_SCORING_VERSIONS } from "@/lib/config-generators/oh-my-opencode-slim-types";
+import { SLIM_TMUX_LAYOUTS, SLIM_SCORING_VERSIONS, SLIM_COUNCILLOR_EXECUTION_MODES } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { useTranslations } from 'next-intl';
 
@@ -60,6 +61,7 @@ interface SlimToggleSectionsProps {
   onTmuxChange: (tmux: SlimTmuxConfig | undefined) => void;
   onBackgroundChange: (bg: SlimBackgroundConfig | undefined) => void;
   onFallbackChange: (fb: SlimFallbackConfig | undefined) => void;
+  onCouncilChange: (council: SlimCouncilConfig | undefined) => void;
   onDisabledMcpAdd: (mcp: string) => boolean;
   onDisabledMcpRemove: (mcp: string) => void;
   onScalarChange: (field: string, value: unknown) => void;
@@ -74,6 +76,7 @@ export function SlimToggleSections({
   onTmuxChange,
   onBackgroundChange,
   onFallbackChange,
+  onCouncilChange,
   onDisabledMcpAdd,
   onDisabledMcpRemove,
   onScalarChange,
@@ -84,11 +87,13 @@ export function SlimToggleSections({
   const [showFallback, setShowFallback] = useState(false);
   const [showMcps, setShowMcps] = useState(false);
   const [showScoring, setShowScoring] = useState(false);
+  const [showCouncil, setShowCouncil] = useState(false);
   const [mcpInput, setMcpInput] = useState("");
 
   const tmux = overrides.tmux ?? {};
   const bg = overrides.background ?? {};
   const fb = overrides.fallback ?? {};
+  const council = overrides.council ?? {};
 
   return (
     <div className="border-t border-white/5 pt-4">
@@ -242,6 +247,132 @@ export function SlimToggleSections({
               >
                 {t("mcpAddButton")}
               </button>
+            </div>
+          </Section>
+
+          {/* Council */}
+          <Section label={t("councilSectionLabel")} isExpanded={showCouncil} onToggle={() => setShowCouncil(!showCouncil)} tooltip={t("councilSectionTooltip")}>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--text-muted)] w-20">{t("councilMasterModelLabel")}</span>
+              <input
+                type="text"
+                value={council.master?.model ?? ""}
+                onChange={(e) => {
+                  const model = e.target.value;
+                  const newCouncil = { ...council, master: { ...council.master, model } };
+                  const isEmpty = !model && !newCouncil.master?.variant && 
+                    !newCouncil.councillor_execution_mode && 
+                    !newCouncil.master_timeout && 
+                    !newCouncil.councillors_timeout &&
+                    !newCouncil.councillor_retries;
+                  onCouncilChange(isEmpty ? undefined : newCouncil);
+                }}
+                placeholder="gpt-4o"
+                className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)] placeholder:text-[var(--text-muted)]"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--text-muted)] w-20">{t("councilMasterVariantLabel")}</span>
+              <input
+                type="text"
+                value={council.master?.variant ?? ""}
+                onChange={(e) => {
+                  const variant = e.target.value;
+                  const newCouncil = { ...council };
+                  if (newCouncil.master?.model) {
+                    newCouncil.master = { ...newCouncil.master, variant: variant || undefined };
+                  } else if (variant) {
+                    newCouncil.master = { model: "", variant };
+                  }
+                  const isEmpty = !newCouncil.master?.model && !variant && 
+                    !newCouncil.councillor_execution_mode && 
+                    !newCouncil.master_timeout && 
+                    !newCouncil.councillors_timeout &&
+                    !newCouncil.councillor_retries;
+                  onCouncilChange(isEmpty ? undefined : newCouncil);
+                }}
+                placeholder="Optional"
+                className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)] placeholder:text-[var(--text-muted)]"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--text-muted)] w-20">{t("councilExecModeLabel")}</span>
+              <select
+                value={council.councillor_execution_mode ?? "parallel"}
+                onChange={(e) => {
+                  const mode = e.target.value;
+                  const newCouncil = { ...council, councillor_execution_mode: mode as SlimCouncilConfig["councillor_execution_mode"] };
+                  const isEmpty = !newCouncil.master?.model && !newCouncil.master?.variant && 
+                    mode === "parallel" && 
+                    !newCouncil.master_timeout && 
+                    !newCouncil.councillors_timeout &&
+                    !newCouncil.councillor_retries;
+                  onCouncilChange(isEmpty ? undefined : newCouncil);
+                }}
+                className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+              >
+                {SLIM_COUNCILLOR_EXECUTION_MODES.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--text-muted)] w-20">{t("councilMasterTimeoutLabel")}</span>
+              <input
+                type="number" min={0} max={600000}
+                value={council.master_timeout ?? ""}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  const timeout = isNaN(val) ? undefined : Math.min(600000, Math.max(0, val));
+                  const newCouncil = { ...council, master_timeout: timeout };
+                  const isEmpty = !newCouncil.master?.model && !newCouncil.master?.variant && 
+                    !newCouncil.councillor_execution_mode && 
+                    !timeout && 
+                    !newCouncil.councillors_timeout &&
+                    !newCouncil.councillor_retries;
+                  onCouncilChange(isEmpty ? undefined : newCouncil);
+                }}
+                placeholder="15000"
+                className="w-24 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--text-muted)] w-20">{t("councilCouncillorsTimeoutLabel")}</span>
+              <input
+                type="number" min={0} max={600000}
+                value={council.councillors_timeout ?? ""}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  const timeout = isNaN(val) ? undefined : Math.min(600000, Math.max(0, val));
+                  const newCouncil = { ...council, councillors_timeout: timeout };
+                  const isEmpty = !newCouncil.master?.model && !newCouncil.master?.variant && 
+                    !newCouncil.councillor_execution_mode && 
+                    !newCouncil.master_timeout && 
+                    !timeout &&
+                    !newCouncil.councillor_retries;
+                  onCouncilChange(isEmpty ? undefined : newCouncil);
+                }}
+                placeholder="30000"
+                className="w-24 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--text-muted)] w-20">{t("councilRetriesLabel")}</span>
+              <input
+                type="number" min={0} max={5}
+                value={council.councillor_retries ?? ""}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  const retries = isNaN(val) ? undefined : Math.min(5, Math.max(0, val));
+                  const newCouncil = { ...council, councillor_retries: retries };
+                  const isEmpty = !newCouncil.master?.model && !newCouncil.master?.variant && 
+                    !newCouncil.councillor_execution_mode && 
+                    !newCouncil.master_timeout && 
+                    !newCouncil.councillors_timeout &&
+                    !retries;
+                  onCouncilChange(isEmpty ? undefined : newCouncil);
+                }}
+                placeholder="2"
+                className="w-24 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+              />
             </div>
           </Section>
         </div>

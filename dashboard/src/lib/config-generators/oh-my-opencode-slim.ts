@@ -3,17 +3,18 @@ import {
   pickBestModel,
   type TierLevel,
 } from "./oh-my-opencode";
-import type { OhMyOpenCodeSlimFullConfig } from "./oh-my-opencode-slim-types";
+import type { OhMyOpenCodeSlimFullConfig, SlimCouncilConfig, SlimCouncilPreset } from "./oh-my-opencode-slim-types";
 
 export type { ConfigData, OAuthAccount } from "./shared";
 
 // ---------------------------------------------------------------------------
-// Slim agent roles — 6 agents mapped to the shared 4-tier system
+// Slim agent roles — 7 agents mapped to the shared 4-tier system
 // ---------------------------------------------------------------------------
 
 export const SLIM_AGENT_ROLES: Record<string, { tier: TierLevel; label: string }> = {
   orchestrator: { tier: 1, label: "Master delegator" },
   oracle:       { tier: 1, label: "Strategic advisor" },
+  council:      { tier: 1, label: "Multi-LLM consensus" },
   designer:     { tier: 4, label: "UI/UX implementation" },
   explorer:     { tier: 3, label: "Codebase reconnaissance" },
   librarian:    { tier: 2, label: "External knowledge" },
@@ -146,6 +147,70 @@ export function buildSlimConfig(
     }
 
     config.fallback = fallback;
+  }
+
+  // Council — prefix model IDs, validate availability
+  if (overrides?.council) {
+    const rawCouncil = overrides.council;
+    const council: Record<string, unknown> = {};
+
+    // Master
+    if (rawCouncil.master?.model) {
+      const masterModel = availableModels.includes(rawCouncil.master.model)
+        ? `cliproxyapi/${rawCouncil.master.model}`
+        : rawCouncil.master.model;
+      const master: Record<string, unknown> = { model: masterModel };
+      if (rawCouncil.master.variant) master.variant = rawCouncil.master.variant;
+      if (rawCouncil.master.prompt) master.prompt = rawCouncil.master.prompt;
+      council.master = master;
+    }
+
+    // Presets
+    if (rawCouncil.presets && Object.keys(rawCouncil.presets).length > 0) {
+      const presets: Record<string, Record<string, unknown>> = {};
+      for (const [presetName, preset] of Object.entries(rawCouncil.presets)) {
+        const presetOut: Record<string, unknown> = {};
+        for (const [cName, cConfig] of Object.entries(preset.councillors)) {
+          const cModel = availableModels.includes(cConfig.model)
+            ? `cliproxyapi/${cConfig.model}`
+            : cConfig.model;
+          const entry: Record<string, unknown> = { model: cModel };
+          if (cConfig.variant) entry.variant = cConfig.variant;
+          if (cConfig.prompt) entry.prompt = cConfig.prompt;
+          presetOut[cName] = entry;
+        }
+        if (preset.master) {
+          const mo: Record<string, unknown> = {};
+          if (preset.master.model) {
+            mo.model = availableModels.includes(preset.master.model)
+              ? `cliproxyapi/${preset.master.model}`
+              : preset.master.model;
+          }
+          if (preset.master.variant) mo.variant = preset.master.variant;
+          if (preset.master.prompt) mo.prompt = preset.master.prompt;
+          if (Object.keys(mo).length > 0) presetOut.master = mo;
+        }
+        if (Object.keys(presetOut).length > 0) presets[presetName] = presetOut;
+      }
+      if (Object.keys(presets).length > 0) council.presets = presets;
+    }
+
+    // Scalar council fields
+    if (rawCouncil.master_timeout !== undefined) council.master_timeout = rawCouncil.master_timeout;
+    if (rawCouncil.councillors_timeout !== undefined) council.councillors_timeout = rawCouncil.councillors_timeout;
+    if (rawCouncil.default_preset) council.default_preset = rawCouncil.default_preset;
+    if (rawCouncil.councillor_execution_mode) council.councillor_execution_mode = rawCouncil.councillor_execution_mode;
+    if (rawCouncil.councillor_retries !== undefined) council.councillor_retries = rawCouncil.councillor_retries;
+
+    // Master fallback — prefix with cliproxyapi/
+    if (rawCouncil.master_fallback?.length) {
+      const prefixed = rawCouncil.master_fallback
+        .filter((m) => availableModels.includes(m))
+        .map((m) => `cliproxyapi/${m}`);
+      if (prefixed.length > 0) council.master_fallback = prefixed;
+    }
+
+    if (Object.keys(council).length > 0) config.council = council;
   }
 
   return config;

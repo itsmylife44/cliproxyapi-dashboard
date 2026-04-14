@@ -24,6 +24,7 @@ import type {
   SlimBackgroundConfig,
   SlimFallbackConfig,
   SlimTmuxConfig,
+  SlimCouncilConfig,
 } from "@/lib/config-generators/oh-my-opencode-slim-types";
 
 interface OhMyOpenCodeSlimConfigGeneratorProps {
@@ -180,6 +181,12 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
     saveOverrides(newOverrides);
   };
 
+  const handleCouncilChange = (council: SlimCouncilConfig | undefined) => {
+    const newOverrides = { ...overrides, council };
+    setOverrides(newOverrides);
+    saveOverrides(newOverrides);
+  };
+
   const handleDisabledMcpAdd = (mcp: string) => {
     const trimmed = mcp.trim();
     if (!trimmed) return false;
@@ -326,6 +333,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
         onTmuxChange={handleTmuxChange}
         onBackgroundChange={handleBackgroundChange}
         onFallbackChange={handleFallbackChange}
+        onCouncilChange={handleCouncilChange}
         onDisabledMcpAdd={handleDisabledMcpAdd}
         onDisabledMcpRemove={handleDisabledMcpRemove}
         onScalarChange={handleScalarChange}

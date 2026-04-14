@@ -476,27 +476,8 @@ export function BackupSettings() {
 
         <div className="space-y-4">
           {/* File Drop Zone */}
-          <label
-            className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer block ${
-              isDragging
-                ? "border-blue-400 bg-blue-50/50"
-                : "border-[var(--surface-border)] hover:border-[var(--surface-border)]/80"
-            }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <input
-              type="file"
-              accept=".gz"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileSelect(file);
-              }}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-            />
-            
-            {selectedFile ? (
+          {selectedFile ? (
+            <div className="border-2 border-dashed rounded-lg p-8 text-center border-[var(--surface-border)]">
               <div className="space-y-2">
                 <p className="text-sm text-[var(--text-primary)]">
                   {t("selectedFile", { filename: selectedFile.name })}
@@ -511,12 +492,32 @@ export function BackupSettings() {
                   {tc('cancel')}
                 </Button>
               </div>
-            ) : (
+            </div>
+          ) : (
+            <label
+              className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer block ${
+                isDragging
+                  ? "border-blue-400 bg-blue-50/50"
+                  : "border-[var(--surface-border)] hover:border-[var(--surface-border)]/80"
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <input
+                type="file"
+                accept=".gz"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileSelect(file);
+                }}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
               <p className="text-[var(--text-muted)]">
                 {isDragging ? t("dropZoneActive") : t("dropZoneText")}
               </p>
-            )}
-          </label>
+            </label>
+          )}
 
           {/* Preview/Restore Actions */}
           {selectedFile && (

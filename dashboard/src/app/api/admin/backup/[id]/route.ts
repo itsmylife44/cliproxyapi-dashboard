@@ -40,14 +40,31 @@ export async function GET(
       return Errors.notFound("Backup");
     }
 
-    const fileBuffer = fs.readFileSync(result.filePath);
+    // Get file stats for content-length header
+    const stats = fs.statSync(result.filePath);
+    const readStream = fs.createReadStream(result.filePath);
 
-    return new NextResponse(fileBuffer, {
+    // Convert Node.js ReadableStream to Web ReadableStream
+    const webStream = new ReadableStream({
+      start(controller) {
+        readStream.on('data', (chunk: any) => {
+          controller.enqueue(chunk instanceof Buffer ? new Uint8Array(chunk) : new Uint8Array(Buffer.from(chunk)));
+        });
+        readStream.on('end', () => {
+          controller.close();
+        });
+        readStream.on('error', (error) => {
+          controller.error(error);
+        });
+      }
+    });
+
+    return new Response(webStream, {
       status: 200,
       headers: {
         "Content-Type": "application/gzip",
         "Content-Disposition": `attachment; filename="${result.filename}"`,
-        "Content-Length": String(fileBuffer.byteLength),
+        "Content-Length": String(stats.size),
       },
     });
   } catch (error) {

@@ -383,7 +383,7 @@ export type ImportOAuthCredentialInput = z.infer<typeof ImportOAuthCredentialSch
 
 export const BackupScheduleSchema = z.object({
   enabled: z.boolean(),
-  intervalHours: z.number().min(1).max(720).optional(),
+  intervalHours: z.number().min(1).max(168).optional(),
 });
 
 export type BackupScheduleInput = z.infer<typeof BackupScheduleSchema>;

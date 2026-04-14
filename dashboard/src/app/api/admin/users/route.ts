@@ -87,6 +87,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
+interface UpdateUserRequest {
+  userId?: string;
+  username?: string;
+  password?: string;
+  isAdmin?: boolean;
+}
+
 export async function POST(request: NextRequest) {
   const authResult = await requireAdmin();
   if (authResult instanceof NextResponse) {
@@ -179,6 +186,158 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     return Errors.internal("User creation error", error);
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const authResult = await requireAdmin();
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  const originError = validateOrigin(request);
+  if (originError) {
+    return originError;
+  }
+
+  const rateLimit = checkRateLimitWithPreset(request, "admin-users", "ADMIN_USERS");
+  if (!rateLimit.allowed) {
+    return Errors.rateLimited(rateLimit.retryAfterSeconds);
+  }
+
+  try {
+    const body = (await request.json()) as UpdateUserRequest;
+    const { userId, username, password, isAdmin } = body;
+
+    if (!userId || typeof userId !== "string") {
+      return Errors.missingFields(["userId"]);
+    }
+
+    if (username !== undefined && typeof username !== "string") {
+      return Errors.validation("username must be a string");
+    }
+
+    if (password !== undefined && typeof password !== "string") {
+      return Errors.validation("password must be a string");
+    }
+
+    if (isAdmin !== undefined && typeof isAdmin !== "boolean") {
+      return Errors.validation("isAdmin must be a boolean");
+    }
+
+    const nextUsername = username?.trim();
+    const nextPassword = password?.trim();
+
+    if (nextUsername !== undefined) {
+      if (
+        nextUsername.length < USERNAME_MIN_LENGTH ||
+        nextUsername.length > USERNAME_MAX_LENGTH ||
+        !isValidUsernameFormat(nextUsername)
+      ) {
+        return Errors.validation(
+          `Username must be ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} chars and contain only letters, numbers, _ or -`
+        );
+      }
+    }
+
+    if (nextPassword !== undefined && nextPassword.length > 0) {
+      if (
+        nextPassword.length < PASSWORD_MIN_LENGTH ||
+        nextPassword.length > PASSWORD_MAX_LENGTH
+      ) {
+        return Errors.validation(
+          `Password must be between ${PASSWORD_MIN_LENGTH} and ${PASSWORD_MAX_LENGTH} characters`
+        );
+      }
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        isAdmin: true,
+      },
+    });
+
+    if (!targetUser) {
+      return Errors.notFound("User");
+    }
+
+    if (targetUser.id === authResult.userId && isAdmin === false) {
+      return Errors.validation("Cannot remove your own admin access");
+    }
+
+    if (nextUsername && nextUsername !== targetUser.username) {
+      const existingUser = await prisma.user.findUnique({
+        where: { username: nextUsername },
+        select: { id: true },
+      });
+
+      if (existingUser && existingUser.id !== userId) {
+        return Errors.conflict("Username already exists");
+      }
+    }
+
+    const shouldUpdatePassword = Boolean(nextPassword);
+    const shouldUpdateUsername = Boolean(nextUsername && nextUsername !== targetUser.username);
+    const shouldUpdateAdmin = typeof isAdmin === "boolean" && isAdmin !== targetUser.isAdmin;
+
+    if (!shouldUpdatePassword && !shouldUpdateUsername && !shouldUpdateAdmin) {
+      return Errors.validation("No changes provided");
+    }
+
+    const passwordHash = shouldUpdatePassword ? await hashPassword(nextPassword as string) : undefined;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(shouldUpdateUsername ? { username: nextUsername } : {}),
+        ...(typeof isAdmin === "boolean" ? { isAdmin } : {}),
+        ...(passwordHash
+          ? {
+              passwordHash,
+              sessionVersion: {
+                increment: 1,
+              },
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        username: true,
+        isAdmin: true,
+        createdAt: true,
+      },
+    });
+
+    logAuditAsync({
+      userId: authResult.userId,
+      action: AUDIT_ACTION.USER_UPDATED,
+      target: updatedUser.username,
+      metadata: {
+        updatedUserId: updatedUser.id,
+        usernameChanged: shouldUpdateUsername,
+        passwordUpdated: shouldUpdatePassword,
+        adminChanged: shouldUpdateAdmin,
+        previousUsername: targetUser.username,
+        previousIsAdmin: targetUser.isAdmin,
+        nextIsAdmin: updatedUser.isAdmin,
+      },
+      ipAddress: extractIpAddress(request),
+    });
+
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        isAdmin: updatedUser.isAdmin,
+        createdAt: updatedUser.createdAt.toISOString(),
+      },
+    });
+  } catch (error) {
+    return Errors.internal("User update error", error);
   }
 }
 

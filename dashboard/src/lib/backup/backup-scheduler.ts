@@ -56,11 +56,9 @@ export function startBackupScheduler(): void {
         scheduleNext();
       }, intervalMs);
     } catch {
-      // Fallback to 24 hours if DB read fails
-      scheduleTimeout(async () => {
-        await run();
-        scheduleNext();
-      }, 24 * 60 * 60 * 1000);
+      // Fallback to 1 hour polling if DB read fails
+      // Do NOT run backup — we don't know if it's enabled
+      scheduleTimeout(scheduleNext, 60 * 60 * 1000);
     }
   };
 

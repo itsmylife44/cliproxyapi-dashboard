@@ -18,8 +18,11 @@ const BACKUP_VERSION = 1;
 const SCHEMA_VERSION = 1;
 const MAX_BACKUPS = 10;
 const BATCH_SIZE = 1000;
-const ADVISORY_LOCK_ID = 424243; // different from migration lock (424242)
 const MIN_DISK_SPACE_BYTES = 500 * 1024 * 1024; // 500MB
+
+// Simple in-memory mutex for backup/restore operations
+// More reliable than PostgreSQL advisory locks across connection pools
+let isBackupRestoreRunning = false;
 
 /**
  * Table export order — respects FK dependencies for correct restore ordering.
@@ -205,13 +208,11 @@ export async function createBackup(
     );
   }
 
-  // Acquire advisory lock
-  const lockResult = await prisma.$queryRaw<{ locked: boolean }[]>`
-    SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID}) as locked
-  `;
-  if (!lockResult[0]?.locked) {
+  // Check for concurrent operations (in-memory mutex)
+  if (isBackupRestoreRunning) {
     throw new Error("Another backup is already in progress");
   }
+  isBackupRestoreRunning = true;
 
   const backupId = createId();
   const timestamp = new Date();
@@ -312,8 +313,8 @@ export async function createBackup(
 
     throw error;
   } finally {
-    // Release advisory lock
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`.catch(() => {});
+    // Release mutex
+    isBackupRestoreRunning = false;
   }
 }
 
@@ -416,13 +417,11 @@ export async function restoreFromBackup(
   const safetyBackup = await createBackup("pre_restore");
   const preRestoreBackupId = safetyBackup.backup.id;
 
-  // 2. Acquire advisory lock
-  const lockResult = await prisma.$queryRaw<{ locked: boolean }[]>`
-    SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID}) as locked
-  `;
-  if (!lockResult[0]?.locked) {
+  // 2. Check for concurrent operations (in-memory mutex)
+  if (isBackupRestoreRunning) {
     throw new Error("Another backup/restore operation is in progress");
   }
+  isBackupRestoreRunning = true;
 
   try {
     const restoredCounts: Record<string, number> = {};
@@ -475,7 +474,8 @@ export async function restoreFromBackup(
 
     return { restoredCounts, preRestoreBackupId };
   } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`.catch(() => {});
+    // Release mutex
+    isBackupRestoreRunning = false;
   }
 }
 

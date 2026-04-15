@@ -89,6 +89,7 @@ export interface ExperimentalConfig {
 export interface OhMyOpenCodeFullConfig {
   agents?: Record<string, AgentConfigEntry>;
   categories?: Record<string, CategoryConfigEntry>;
+  defaultModel?: string;
   disabled_agents?: string[];
   disabled_skills?: string[];
   disabled_hooks?: string[];
@@ -321,6 +322,13 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
     }
     if (Object.keys(validatedAgents).length > 0) {
       result.agents = validatedAgents;
+    }
+  }
+
+  if (typeof obj.defaultModel === "string") {
+    const trimmedDefaultModel = obj.defaultModel.trim();
+    if (trimmedDefaultModel.length > 0) {
+      result.defaultModel = trimmedDefaultModel;
     }
   }
 

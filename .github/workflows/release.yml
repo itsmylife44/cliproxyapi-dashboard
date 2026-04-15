@@ -120,6 +120,8 @@ jobs:
        (github.event.inputs.action == 'build-existing-tag' && github.event.inputs.tag_name != ''))
     steps:
       - uses: actions/checkout@v6
+        with:
+          clean: true
 
       - name: Resolve version
         id: version
@@ -150,6 +152,7 @@ jobs:
           context: ./dashboard
           file: ./dashboard/Dockerfile
           platforms: ${{ matrix.platform }}
+          no-cache: true
           build-args: |
             DASHBOARD_VERSION=${{ steps.version.outputs.tag_name }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true

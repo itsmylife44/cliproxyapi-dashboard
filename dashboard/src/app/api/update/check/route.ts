@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { execFile } from "child_process";
@@ -28,10 +28,13 @@ interface GitHubRunsResponse {
   total_count?: number;
 }
 
-async function getDockerHubTags(): Promise<DockerHubTag[]> {
+async function getDockerHubTags(skipCache = false): Promise<DockerHubTag[]> {
   const cacheKey = "docker-hub-tags:eceasy/cli-proxy-api-plus";
-  const cached = updateCheckCache.get(cacheKey) as DockerHubTag[] | null;
-  if (cached) return cached;
+  
+  if (!skipCache) {
+    const cached = updateCheckCache.get(cacheKey) as DockerHubTag[] | null;
+    if (cached) return cached;
+  }
 
   const response = await fetch(
     "https://hub.docker.com/v2/repositories/eceasy/cli-proxy-api-plus/tags?page_size=20",
@@ -72,10 +75,13 @@ async function getCurrentImageDigest(): Promise<{ version: string; digest: strin
   }
 }
 
-async function checkGitHubBuildStatus(): Promise<boolean> {
+async function checkGitHubBuildStatus(skipCache = false): Promise<boolean> {
   const cacheKey = "github-build-status:router-for-me/CLIProxyAPI";
-  const cached = updateCheckCache.get(cacheKey) as boolean | null;
-  if (cached !== null) return cached;
+  
+  if (!skipCache) {
+    const cached = updateCheckCache.get(cacheKey) as boolean | null;
+    if (cached !== null) return cached;
+  }
 
   try {
     const headers = {
@@ -106,7 +112,7 @@ async function checkGitHubBuildStatus(): Promise<boolean> {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await verifySession();
 
   if (!session) {
@@ -128,11 +134,14 @@ export async function GET() {
     );
   }
 
+  // Check if refresh=true query param is present to skip cache
+  const skipCache = request.nextUrl.searchParams.get("refresh") === "true";
+
   try {
     const [tags, current, buildInProgress] = await Promise.all([
-      getDockerHubTags(),
+      getDockerHubTags(skipCache),
       getCurrentImageDigest(),
-      checkGitHubBuildStatus(),
+      checkGitHubBuildStatus(skipCache),
     ]);
 
     const latestTag = tags.find((t) => t.name === "latest");

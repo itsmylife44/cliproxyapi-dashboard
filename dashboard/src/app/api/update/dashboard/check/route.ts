@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -42,10 +42,13 @@ function isNewerVersion(current: string, latest: string): boolean {
   return false;
 }
 
-async function getRemoteVersion(): Promise<RemoteVersionData | null> {
+async function getRemoteVersion(skipCache = false): Promise<RemoteVersionData | null> {
   const cacheKey = `version-json:${GITHUB_REPO}`;
-  const cached = updateCheckCache.get(cacheKey) as RemoteVersionData | null;
-  if (cached) return cached;
+  
+  if (!skipCache) {
+    const cached = updateCheckCache.get(cacheKey) as RemoteVersionData | null;
+    if (cached) return cached;
+  }
 
   const response = await fetch(
     `https://raw.githubusercontent.com/${GITHUB_REPO}/main/version.json`,
@@ -67,7 +70,7 @@ async function getRemoteVersion(): Promise<RemoteVersionData | null> {
   return data;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await verifySession();
 
   if (!session) {
@@ -89,8 +92,11 @@ export async function GET() {
     );
   }
 
+  // Check if refresh=true query param is present to skip cache
+  const skipCache = request.nextUrl.searchParams.get("refresh") === "true";
+
   try {
-    const remote = await getRemoteVersion();
+    const remote = await getRemoteVersion(skipCache);
 
     const latestVersion = remote?.tag ?? DASHBOARD_VERSION;
 

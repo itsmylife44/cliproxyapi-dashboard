@@ -80,10 +80,13 @@ export default function SettingsPage() {
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
 
-  const fetchProxyUpdateInfo = useCallback(async (signal?: AbortSignal) => {
+  const fetchProxyUpdateInfo = useCallback(async (signal?: AbortSignal, forceRefresh = false) => {
     setProxyUpdateLoading(true);
     try {
-      const res = await fetch(API_ENDPOINTS.UPDATE.CHECK, { signal });
+      const url = forceRefresh 
+        ? `${API_ENDPOINTS.UPDATE.CHECK}?refresh=true`
+        : API_ENDPOINTS.UPDATE.CHECK;
+      const res = await fetch(url, { signal });
       if (res.ok) {
         const data = await res.json();
         setProxyUpdateInfo(data);
@@ -95,10 +98,13 @@ export default function SettingsPage() {
     }
   }, []);
 
-  const fetchDashboardUpdateInfo = useCallback(async (signal?: AbortSignal) => {
+  const fetchDashboardUpdateInfo = useCallback(async (signal?: AbortSignal, forceRefresh = false) => {
     setDashboardUpdateLoading(true);
     try {
-      const res = await fetch(API_ENDPOINTS.UPDATE.DASHBOARD_CHECK, { signal });
+      const url = forceRefresh 
+        ? `${API_ENDPOINTS.UPDATE.DASHBOARD_CHECK}?refresh=true`
+        : API_ENDPOINTS.UPDATE.DASHBOARD_CHECK;
+      const res = await fetch(url, { signal });
       if (res.ok) {
         const data = await res.json();
         setDashboardUpdateInfo(data);
@@ -164,6 +170,14 @@ export default function SettingsPage() {
     setPendingProxyVersion(version);
     setShowConfirmProxyUpdate(true);
   };
+
+  const handleRefreshDashboardUpdate = useCallback(() => {
+    fetchDashboardUpdateInfo(undefined, true);
+  }, [fetchDashboardUpdateInfo]);
+
+  const handleRefreshProxyUpdate = useCallback(() => {
+    fetchProxyUpdateInfo(undefined, true);
+  }, [fetchProxyUpdateInfo]);
 
   const handleProxyUpdate = async () => {
     const version = pendingProxyVersion;
@@ -409,8 +423,8 @@ export default function SettingsPage() {
           dashboardUpdating={dashboardUpdating}
           onConfirmProxyUpdate={confirmProxyUpdate}
           onConfirmDashboardUpdate={confirmDashboardUpdate}
-          onRefreshProxyUpdate={fetchProxyUpdateInfo}
-          onRefreshDashboardUpdate={fetchDashboardUpdateInfo}
+          onRefreshProxyUpdate={handleRefreshProxyUpdate}
+          onRefreshDashboardUpdate={handleRefreshDashboardUpdate}
         />
 
         <div className="border-t border-[var(--surface-border)]/70 pt-6">

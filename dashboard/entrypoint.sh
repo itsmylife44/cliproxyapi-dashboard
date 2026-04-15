@@ -403,20 +403,35 @@ async function migrate() {
       CONSTRAINT "collector_state_pkey" PRIMARY KEY ("id")
     );
 
-    -- Backups table (stores backup metadata)
-    CREATE TABLE IF NOT EXISTS "backups" (
+    -- Backup records table (stores backup metadata)
+    CREATE TABLE IF NOT EXISTS "backup_records" (
       "id" TEXT NOT NULL,
       "filename" TEXT NOT NULL,
-      "sizeBytes" INTEGER NOT NULL DEFAULT 0,
-      "recordCounts" JSONB NOT NULL DEFAULT '{}',
-      "trigger" TEXT NOT NULL DEFAULT 'manual',
-      "status" TEXT NOT NULL DEFAULT 'completed',
-      "errorMessage" TEXT,
+      "sizeBytes" BIGINT NOT NULL DEFAULT 0,
+      "status" TEXT NOT NULL DEFAULT 'PENDING',
+      "type" TEXT NOT NULL DEFAULT 'MANUAL',
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "backups_pkey" PRIMARY KEY ("id")
+      "completedAt" TIMESTAMP(3),
+      "createdById" TEXT NOT NULL,
+      "checksum" TEXT,
+      "metadata" JSONB,
+      CONSTRAINT "backup_records_pkey" PRIMARY KEY ("id")
     );
-    CREATE INDEX IF NOT EXISTS "backups_createdAt_idx" ON "backups"("createdAt");
-    `);
+    CREATE INDEX IF NOT EXISTS "backup_records_createdAt_idx" ON "backup_records"("createdAt");
+    CREATE INDEX IF NOT EXISTS "backup_records_createdById_idx" ON "backup_records"("createdById");
+
+    -- Backup schedule table (singleton for scheduled backup config)
+    CREATE TABLE IF NOT EXISTS "backup_schedule" (
+      "id" TEXT NOT NULL,
+      "enabled" BOOLEAN NOT NULL DEFAULT false,
+      "cronExpr" TEXT NOT NULL DEFAULT '0 3 * * *',
+      "retention" INTEGER NOT NULL DEFAULT 7,
+      "lastRun" TIMESTAMP(3),
+      "nextRun" TIMESTAMP(3),
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "backup_schedule_pkey" PRIMARY KEY ("id")
+    );
+    \`);
 
     console.log('[dashboard] Tables ready');
 

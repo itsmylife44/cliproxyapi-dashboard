@@ -9,6 +9,9 @@ import { RestorePreviewModal } from "./restore-preview-modal";
 interface RestorePreview {
   backupDate: string;
   dashboardVersion: string;
+  backupVersion?: number;
+  isCompatible?: boolean;
+  warnings?: string[];
   counts: {
     users: number;
     providerKeys: number;

@@ -249,7 +249,7 @@ export interface BackupCollectorState {
 export interface RestorePreview {
   backupVersion: string;
   dashboardVersion: string;
-  createdAt: string;
+  backupDate: string;
   counts: {
     users: number;
     providerKeys: number;

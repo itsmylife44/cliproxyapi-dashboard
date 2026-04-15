@@ -403,7 +403,7 @@ export function generateRestorePreview(backup: BackupData): RestorePreview {
   return {
     backupVersion: backup.version,
     dashboardVersion: backup.dashboard?.version || "unknown",
-    createdAt: backup.createdAt,
+    backupDate: backup.createdAt,
     counts: {
       users: backup.data.users.length,
       providerKeys: backup.data.providerKeyOwnerships.length,

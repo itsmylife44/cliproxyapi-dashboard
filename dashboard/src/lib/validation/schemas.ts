@@ -287,8 +287,6 @@ const SETTINGS_ALLOWLIST = new Set([
   "telegram_chat_id",
   "telegram_alerts_enabled",
   "telegram_alert_providers",
-  "backup_schedule_enabled",
-  "backup_schedule_interval_hours",
 ]);
 
 export const AdminSettingSchema = z.object({
@@ -381,25 +379,14 @@ export type ImportOAuthCredentialInput = z.infer<typeof ImportOAuthCredentialSch
 // BACKUP & RESTORE
 // ============================================================================
 
+// Note: Backup system uses dedicated types in lib/backup/types.ts
+// and its own API routes at /api/admin/backup/schedule - not the general settings API.
+// BackupScheduleSchema below is only used for basic input validation in the schedule API.
+
 export const BackupScheduleSchema = z.object({
   enabled: z.boolean(),
-  intervalHours: z.number().min(1).max(168).optional(),
+  cronExpr: z.string().min(9).max(100).optional(),
+  retention: z.number().min(1).max(365).optional(),
 });
 
 export type BackupScheduleInput = z.infer<typeof BackupScheduleSchema>;
-
-export const BackupFileMetadataSchema = z.object({
-  version: z.number().int().min(1),
-  timestamp: z.string(),
-  dashboardVersion: z.string(),
-  schemaVersion: z.number().int().min(1),
-  recordCounts: z.record(z.string(), z.number()),
-});
-
-export const BackupFileSchema = z.object({
-  metadata: BackupFileMetadataSchema,
-  tables: z.record(z.string(), z.array(z.record(z.string(), z.unknown()))),
-  cpapConfig: z.unknown().optional(),
-});
-
-export type BackupFileData = z.infer<typeof BackupFileSchema>;

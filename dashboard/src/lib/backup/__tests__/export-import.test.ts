@@ -335,7 +335,7 @@ describe("generateRestorePreview", () => {
     const preview = generateRestorePreview(backupData);
 
     expect(preview.backupVersion).toBe(BACKUP_VERSION);
-    expect(preview.createdAt).toBe("2024-01-15T10:30:00.000Z");
+    expect(preview.backupDate).toBe("2024-01-15T10:30:00.000Z");
     expect(preview.dashboardVersion).toBe("1.0.0");
   });
 

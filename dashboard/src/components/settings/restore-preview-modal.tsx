@@ -7,6 +7,9 @@ import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "@/com
 interface RestorePreview {
   backupDate: string;
   dashboardVersion: string;
+  backupVersion?: number;
+  isCompatible?: boolean;
+  warnings?: string[];
   counts: {
     users: number;
     providerKeys: number;

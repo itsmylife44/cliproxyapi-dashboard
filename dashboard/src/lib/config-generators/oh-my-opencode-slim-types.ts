@@ -22,6 +22,16 @@ export const SLIM_AGENTS = [
   "council",
 ] as const;
 
+/** Agents that can appear in manualPlan (excludes council per schema) */
+export const SLIM_MANUAL_PLAN_AGENTS = [
+  "orchestrator",
+  "oracle",
+  "designer",
+  "explorer",
+  "librarian",
+  "fixer",
+] as const;
+
 /** Internal agents used by the council system (not user-configurable in presets) */
 export const SLIM_INTERNAL_AGENTS = [
   "councillor",
@@ -29,6 +39,7 @@ export const SLIM_INTERNAL_AGENTS = [
 ] as const;
 
 export type SlimAgentName = (typeof SLIM_AGENTS)[number];
+export type SlimManualPlanAgentName = (typeof SLIM_MANUAL_PLAN_AGENTS)[number];
 export type SlimInternalAgentName = (typeof SLIM_INTERNAL_AGENTS)[number];
 
 export const SLIM_MULTIPLEXER_TYPES = ["auto", "tmux", "zellij", "none"] as const;
@@ -291,13 +302,15 @@ function validateAgentConfig(entryObj: Record<string, unknown>): SlimAgentConfig
   if (typeof entryObj.temperature === "number" && Number.isFinite(entryObj.temperature) && entryObj.temperature >= 0 && entryObj.temperature <= 2) {
     entry.temperature = entryObj.temperature;
   }
+  // Skills — preserve empty arrays to allow explicitly disabling defaults
   if (Array.isArray(entryObj.skills)) {
     const skills = entryObj.skills.slice(0, 50).filter((v: unknown): v is string => typeof v === "string" && v.length <= 256);
-    if (skills.length > 0) entry.skills = skills;
+    entry.skills = skills; // Preserve even if empty
   }
+  // MCPs — preserve empty arrays to allow explicitly disabling defaults
   if (Array.isArray(entryObj.mcps)) {
     const mcps = entryObj.mcps.slice(0, 50).filter((v: unknown): v is string => typeof v === "string" && v.length <= 256);
-    if (mcps.length > 0) entry.mcps = mcps;
+    entry.mcps = mcps; // Preserve even if empty
   }
   // Provider-specific options — pass through as-is (bounded depth check)
   if (entryObj.options && typeof entryObj.options === "object" && !Array.isArray(entryObj.options)) {
@@ -368,13 +381,13 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     result.balanceProviderUsage = obj.balanceProviderUsage;
   }
 
-  // manualPlan — restrict keys to known agents, bound string lengths
+  // manualPlan — restrict keys to manual plan agents (excludes council), bound string lengths
   if (obj.manualPlan && typeof obj.manualPlan === "object" && !Array.isArray(obj.manualPlan)) {
     const planObj = obj.manualPlan as Record<string, unknown>;
     const validatedPlan: Record<string, SlimManualPlanEntry> = {};
     const isValidModelStr = (v: unknown): v is string => typeof v === "string" && v.length <= 256;
     for (const [agent, value] of Object.entries(planObj)) {
-      if (!(SLIM_AGENTS as readonly string[]).includes(agent)) continue;
+      if (!(SLIM_MANUAL_PLAN_AGENTS as readonly string[]).includes(agent)) continue;
       if (typeof value === "object" && value !== null && !Array.isArray(value)) {
         const entry = value as Record<string, unknown>;
         if (
@@ -568,7 +581,7 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     if (typeof intObj.maxQuestions === "number" && Number.isInteger(intObj.maxQuestions)) {
       interview.maxQuestions = Math.max(1, Math.min(10, intObj.maxQuestions));
     }
-    if (typeof intObj.outputFolder === "string" && intObj.outputFolder.length <= 256) {
+    if (typeof intObj.outputFolder === "string" && intObj.outputFolder.length >= 1 && intObj.outputFolder.length <= 256) {
       interview.outputFolder = intObj.outputFolder;
     }
     if (typeof intObj.autoOpenBrowser === "boolean") {

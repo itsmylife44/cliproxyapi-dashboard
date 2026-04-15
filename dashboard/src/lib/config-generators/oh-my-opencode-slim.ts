@@ -17,6 +17,7 @@ import {
   SLIM_AGENTS,
   SLIM_DEFAULT_MCPS,
   SLIM_DEFAULT_SKILLS,
+  SLIM_MANUAL_PLAN_AGENTS,
   type OhMyOpenCodeSlimFullConfig,
   type SlimAgentConfig,
   type SlimModelConfig,
@@ -86,12 +87,13 @@ function processModelConfig(
  * 2. If no override → pick best model from availableModels based on tier
  * 
  * Supports both string and array model configurations.
+ * Returns null if no model can be resolved and no override is provided.
  */
 function buildAgentEntry(
   agent: string,
   availableModels: string[],
   override?: SlimAgentConfig,
-): SlimAgentConfig {
+): SlimAgentConfig | null {
   const role = SLIM_AGENT_ROLES[agent];
   const overrideModel = override?.model;
   
@@ -102,13 +104,17 @@ function buildAgentEntry(
   } else {
     // No override → pick best from available models
     const picked = pickBestModel(availableModels, role?.tier ?? 3);
-    model = picked ? `cliproxyapi/${picked}` : `cliproxyapi/unresolved-tier-${role?.tier ?? 3}`;
+    if (!picked) {
+      // No model available and no override — cannot build valid entry
+      return null;
+    }
+    model = `cliproxyapi/${picked}`;
   }
 
   const entry: SlimAgentConfig = { model };
 
-  // Apply variant — use override or default from role
-  if (override?.variant) {
+  // Apply variant — use override or default from role (use !== undefined for explicit empty)
+  if (override?.variant !== undefined) {
     entry.variant = override.variant;
   } else if (role?.defaultVariant) {
     entry.variant = role.defaultVariant;
@@ -117,18 +123,18 @@ function buildAgentEntry(
   // Apply other overrides
   if (override?.temperature !== undefined) entry.temperature = override.temperature;
   
-  // Skills — use override or defaults
-  if (override?.skills?.length) {
-    entry.skills = override.skills;
+  // Skills — use override if explicitly provided (even empty array), else defaults
+  if (override?.skills !== undefined) {
+    entry.skills = [...override.skills]; // Clone to prevent mutation
   } else if (SLIM_DEFAULT_SKILLS[agent as keyof typeof SLIM_DEFAULT_SKILLS]?.length) {
-    entry.skills = SLIM_DEFAULT_SKILLS[agent as keyof typeof SLIM_DEFAULT_SKILLS];
+    entry.skills = [...SLIM_DEFAULT_SKILLS[agent as keyof typeof SLIM_DEFAULT_SKILLS]];
   }
 
-  // MCPs — use override or defaults
-  if (override?.mcps?.length) {
-    entry.mcps = override.mcps;
+  // MCPs — use override if explicitly provided (even empty array), else defaults
+  if (override?.mcps !== undefined) {
+    entry.mcps = [...override.mcps]; // Clone to prevent mutation
   } else if (SLIM_DEFAULT_MCPS[agent as keyof typeof SLIM_DEFAULT_MCPS]?.length) {
-    entry.mcps = SLIM_DEFAULT_MCPS[agent as keyof typeof SLIM_DEFAULT_MCPS];
+    entry.mcps = [...SLIM_DEFAULT_MCPS[agent as keyof typeof SLIM_DEFAULT_MCPS]];
   }
 
   // Provider-specific options
@@ -155,6 +161,8 @@ export interface BuildSlimConfigOptions {
  *
  * By default, generates a presets-based config (the modern approach).
  * Set usePresets: false for legacy agents-only config.
+ * 
+ * Returns null if no valid config can be built (e.g., no available models).
  */
 export function buildSlimConfig(
   availableModels: string[],
@@ -164,16 +172,17 @@ export function buildSlimConfig(
   const { presetName = "cliproxyapi", usePresets = true } = options ?? {};
 
   // Build agent configs
-  const agentConfigs: Record<string, SlimAgentConfig> = {};
+  const agentConfigs: Record<string, SlimAgentConfig> = Object.create(null);
   for (const agent of SLIM_AGENTS) {
     // Check for preset overrides first, then legacy agents
     const presetOverride = overrides?.presets?.[presetName]?.[agent as keyof SlimPreset];
     const agentOverride = presetOverride ?? overrides?.agents?.[agent];
-    agentConfigs[agent] = buildAgentEntry(agent, availableModels, agentOverride);
-  }
-
-  if (Object.keys(agentConfigs).length === 0) {
-    return null;
+    const entry = buildAgentEntry(agent, availableModels, agentOverride);
+    if (entry === null) {
+      // Cannot build valid config without this agent's model
+      return null;
+    }
+    agentConfigs[agent] = entry;
   }
 
   // Build the config object
@@ -192,10 +201,13 @@ export function buildSlimConfig(
     if (overrides?.presets) {
       for (const [name, preset] of Object.entries(overrides.presets)) {
         if (name === presetName) continue; // Already handled
-        const presetOut: Record<string, SlimAgentConfig> = {};
+        const presetOut: Record<string, SlimAgentConfig> = Object.create(null);
         for (const [agentKey, agentConfig] of Object.entries(preset)) {
           if (!SLIM_AGENTS.includes(agentKey as typeof SLIM_AGENTS[number])) continue;
-          presetOut[agentKey] = buildAgentEntry(agentKey, availableModels, agentConfig);
+          const entry = buildAgentEntry(agentKey, availableModels, agentConfig);
+          if (entry !== null) {
+            presetOut[agentKey] = entry;
+          }
         }
         if (Object.keys(presetOut).length > 0) {
           (config.presets as Record<string, unknown>)[name] = presetOut;
@@ -213,13 +225,13 @@ export function buildSlimConfig(
   if (overrides?.scoringEngineVersion) config.scoringEngineVersion = overrides.scoringEngineVersion;
   if (overrides?.balanceProviderUsage !== undefined) config.balanceProviderUsage = overrides.balanceProviderUsage;
 
-  // Manual plan — skip entries with unavailable models, prefix valid ones
+  // Manual plan — passthrough external models, prefix available ones
+  // Only valid for the 6 manual plan agents (excludes council)
   if (overrides?.manualPlan && Object.keys(overrides.manualPlan).length > 0) {
     const filteredPlan: Record<string, { primary: string; fallback1: string; fallback2: string; fallback3: string }> = {};
     for (const [agent, entry] of Object.entries(overrides.manualPlan)) {
-      const allAvailable = [entry.primary, entry.fallback1, entry.fallback2, entry.fallback3]
-        .every((m) => availableModels.includes(m));
-      if (!allAvailable) continue;
+      // Only include valid manual plan agents (excludes council)
+      if (!(SLIM_MANUAL_PLAN_AGENTS as readonly string[]).includes(agent)) continue;
       filteredPlan[agent] = {
         primary: prefixModel(entry.primary, availableModels),
         fallback1: prefixModel(entry.fallback1, availableModels),
@@ -268,15 +280,13 @@ export function buildSlimConfig(
       ...fallbackRest,
     };
 
-    // Prefix chain models with cliproxyapi/ and drop chains with no available models
+    // Prefix chain models with cliproxyapi/ if available, passthrough external models
     if (rawChains) {
       const prefixedChains: Record<string, string[]> = {};
       for (const [agent, chain] of Object.entries(rawChains)) {
-        const available = chain
-          .filter((m) => availableModels.includes(m))
-          .map((m) => prefixModel(m, availableModels));
-        if (available.length > 0) {
-          prefixedChains[agent] = available;
+        const prefixed = chain.map((m) => prefixModel(m, availableModels));
+        if (prefixed.length > 0) {
+          prefixedChains[agent] = prefixed;
         }
       }
       if (Object.keys(prefixedChains).length > 0) {
@@ -290,38 +300,36 @@ export function buildSlimConfig(
   // Council — prefix model IDs, validate availability
   if (overrides?.council) {
     const rawCouncil = overrides.council;
-    const council: Record<string, unknown> = {};
+    const council: Record<string, unknown> = Object.create(null);
 
     // Master
     if (rawCouncil.master?.model) {
-      const master: Record<string, unknown> = {
-        model: prefixModel(rawCouncil.master.model, availableModels),
-      };
-      if (rawCouncil.master.variant) master.variant = rawCouncil.master.variant;
-      if (rawCouncil.master.prompt) master.prompt = rawCouncil.master.prompt;
+      const master: Record<string, unknown> = Object.create(null);
+      master.model = prefixModel(rawCouncil.master.model, availableModels);
+      if (rawCouncil.master.variant !== undefined) master.variant = rawCouncil.master.variant;
+      if (rawCouncil.master.prompt !== undefined) master.prompt = rawCouncil.master.prompt;
       council.master = master;
     }
 
     // Council presets
     if (rawCouncil.presets && Object.keys(rawCouncil.presets).length > 0) {
-      const presets: Record<string, Record<string, unknown>> = {};
+      const presets: Record<string, Record<string, unknown>> = Object.create(null);
       for (const [pName, preset] of Object.entries(rawCouncil.presets)) {
-        const presetOut: Record<string, unknown> = {};
+        const presetOut: Record<string, unknown> = Object.create(null);
         for (const [cName, cConfig] of Object.entries(preset.councillors)) {
-          const entry: Record<string, unknown> = {
-            model: prefixModel(cConfig.model, availableModels),
-          };
-          if (cConfig.variant) entry.variant = cConfig.variant;
-          if (cConfig.prompt) entry.prompt = cConfig.prompt;
+          const entry: Record<string, unknown> = Object.create(null);
+          entry.model = prefixModel(cConfig.model, availableModels);
+          if (cConfig.variant !== undefined) entry.variant = cConfig.variant;
+          if (cConfig.prompt !== undefined) entry.prompt = cConfig.prompt;
           presetOut[cName] = entry;
         }
         if (preset.master) {
-          const mo: Record<string, unknown> = {};
-          if (preset.master.model) {
+          const mo: Record<string, unknown> = Object.create(null);
+          if (preset.master.model !== undefined) {
             mo.model = prefixModel(preset.master.model, availableModels);
           }
-          if (preset.master.variant) mo.variant = preset.master.variant;
-          if (preset.master.prompt) mo.prompt = preset.master.prompt;
+          if (preset.master.variant !== undefined) mo.variant = preset.master.variant;
+          if (preset.master.prompt !== undefined) mo.prompt = preset.master.prompt;
           if (Object.keys(mo).length > 0) presetOut.master = mo;
         }
         if (Object.keys(presetOut).length > 0) presets[pName] = presetOut;
@@ -332,19 +340,20 @@ export function buildSlimConfig(
     // Scalar council fields
     if (rawCouncil.master_timeout !== undefined) council.master_timeout = rawCouncil.master_timeout;
     if (rawCouncil.councillors_timeout !== undefined) council.councillors_timeout = rawCouncil.councillors_timeout;
-    if (rawCouncil.default_preset) council.default_preset = rawCouncil.default_preset;
-    if (rawCouncil.councillor_execution_mode) council.councillor_execution_mode = rawCouncil.councillor_execution_mode;
+    if (rawCouncil.default_preset !== undefined) council.default_preset = rawCouncil.default_preset;
+    if (rawCouncil.councillor_execution_mode !== undefined) council.councillor_execution_mode = rawCouncil.councillor_execution_mode;
     if (rawCouncil.councillor_retries !== undefined) council.councillor_retries = rawCouncil.councillor_retries;
 
-    // Master fallback — prefix with cliproxyapi/
+    // Master fallback — prefix available models, passthrough external
     if (rawCouncil.master_fallback?.length) {
-      const prefixed = rawCouncil.master_fallback
-        .filter((m) => availableModels.includes(m))
-        .map((m) => prefixModel(m, availableModels));
+      const prefixed = rawCouncil.master_fallback.map((m) => prefixModel(m, availableModels));
       if (prefixed.length > 0) council.master_fallback = prefixed;
     }
 
-    if (Object.keys(council).length > 0) config.council = council;
+    // Only emit council if it has both master AND presets (schema requirement)
+    if (council.master && council.presets && Object.keys(council.presets).length > 0) {
+      config.council = council;
+    }
   }
 
   // Interview config

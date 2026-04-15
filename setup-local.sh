@@ -257,8 +257,8 @@ main() {
     generate_env_file
     generate_config_yaml
 
-    log_info "Starting local stack..."
-    docker compose -f "$COMPOSE_FILE" up -d
+    log_info "Starting local stack (with local dashboard build)..."
+    docker compose -f "$COMPOSE_FILE" up -d --build
 
     log_info "Waiting for services to become healthy..."
     wait_for_health

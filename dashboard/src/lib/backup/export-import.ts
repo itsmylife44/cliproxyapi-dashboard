@@ -429,19 +429,10 @@ export function generateRestorePreview(backup: BackupData): RestorePreview {
  * Import backup data into the database (replaces all existing data)
  */
 export async function importDatabase(backup: BackupData): Promise<void> {
-  // First, delete all backup FILES before deleting DB records to avoid orphans
+  // Collect existing backup filenames BEFORE the transaction for cleanup
   const existingBackups = await prisma.backupRecord.findMany({
     select: { filename: true },
   });
-  
-  for (const record of existingBackups) {
-    try {
-      const filePath = path.join(BACKUP_DIR, record.filename);
-      await fs.unlink(filePath);
-    } catch {
-      // File may not exist, ignore
-    }
-  }
 
   // Use a transaction to ensure atomicity
   await prisma.$transaction(async (tx) => {
@@ -742,6 +733,22 @@ export async function importDatabase(backup: BackupData): Promise<void> {
   }, {
     timeout: 300000, // 5 minute timeout for large restores
   });
+
+  // Transaction succeeded - now safely delete orphaned backup files
+  // These files are no longer referenced by any DB record
+  for (const record of existingBackups) {
+    try {
+      // Sanitize filename to prevent path traversal
+      const safeName = path.basename(record.filename);
+      if (safeName !== record.filename || safeName.includes("..")) {
+        continue; // Skip suspicious filenames
+      }
+      const filePath = path.join(BACKUP_DIR, safeName);
+      await fs.unlink(filePath);
+    } catch {
+      // File may not exist or be inaccessible, ignore
+    }
+  }
 }
 
 /**

@@ -125,41 +125,16 @@ export async function GET() {
 }
 
 /**
- * Deep merge for overrides objects.
- * - Objects are recursively merged
- * - Arrays are replaced (not merged)
- * - Primitives from source overwrite target
+ * Shallow merge for overrides objects.
+ * Top-level keys from source fully replace target keys.
+ * This preserves unrelated top-level keys (e.g., mcpServers from OpenCode UI)
+ * while allowing full replacement of keys being updated (e.g., agents).
  */
-function deepMergeOverrides(
+function shallowMergeOverrides(
   target: Record<string, unknown>,
   source: Record<string, unknown>
 ): Record<string, unknown> {
-  const result = { ...target };
-
-  for (const key of Object.keys(source)) {
-    const sourceVal = source[key];
-    const targetVal = result[key];
-
-    if (
-      sourceVal !== null &&
-      typeof sourceVal === "object" &&
-      !Array.isArray(sourceVal) &&
-      targetVal !== null &&
-      typeof targetVal === "object" &&
-      !Array.isArray(targetVal)
-    ) {
-      // Both are plain objects - recurse
-      result[key] = deepMergeOverrides(
-        targetVal as Record<string, unknown>,
-        sourceVal as Record<string, unknown>
-      );
-    } else {
-      // Arrays, primitives, or mismatched types - replace
-      result[key] = sourceVal;
-    }
-  }
-
-  return result;
+  return { ...target, ...source };
 }
 
 export async function PUT(request: NextRequest) {
@@ -186,8 +161,9 @@ export async function PUT(request: NextRequest) {
 
     const existingOverrides = (existing?.overrides as Record<string, unknown>) ?? {};
 
-    // Deep merge: preserve fields not being updated (e.g., mcpServers from OpenCode UI)
-    const mergedOverrides = deepMergeOverrides(
+    // Shallow merge: preserve unrelated top-level keys (e.g., mcpServers from OpenCode UI)
+    // while fully replacing keys being updated (e.g., agents)
+    const mergedOverrides = shallowMergeOverrides(
       existingOverrides,
       validated as unknown as Record<string, unknown>
     );

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "cicd-automation-workflow-automate": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "a07ca563087b947c4dc959f3d527ccc23e40b3173378a2877191a92810d2e1c0"
+    }
+  }
+}

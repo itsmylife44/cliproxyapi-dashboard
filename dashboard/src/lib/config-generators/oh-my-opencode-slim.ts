@@ -74,7 +74,7 @@ function processModelConfig(
     // Object with id and optional variant
     return {
       id: prefixModel(item.id, availableModels),
-      ...(item.variant && { variant: item.variant }),
+      ...(item.variant !== undefined && { variant: item.variant }),
     };
   });
 }

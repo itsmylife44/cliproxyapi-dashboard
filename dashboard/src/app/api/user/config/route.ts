@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
+import { atomicMergeOverrides } from "@/lib/db/optimistic-merge";
 import type { McpEntry } from "@/lib/config-generators/opencode";
-import { Errors, apiSuccess } from "@/lib/errors";
+import { Errors, apiSuccess, apiError, ERROR_CODE } from "@/lib/errors";
 
 interface UserConfigRequest {
   mcpServers?: McpEntry[];
@@ -119,39 +120,34 @@ export async function PUT(request: NextRequest) {
       return Errors.notFound("User");
     }
 
-    const existing = await prisma.agentModelOverride.findUnique({
-      where: { userId: session.userId },
-    });
-    
-    const existingOverrides = (existing?.overrides as Record<string, unknown>) ?? {};
-    
-    const updatedOverrides: Record<string, unknown> = { ...existingOverrides };
+    // Build updates object from validated config
+    const updates: Record<string, unknown> = {};
     
     if (validatedConfig.mcpServers !== undefined) {
-      updatedOverrides.mcpServers = validatedConfig.mcpServers;
+      updates.mcpServers = validatedConfig.mcpServers;
     }
     
     if (validatedConfig.customPlugins !== undefined) {
-      updatedOverrides.customPlugins = validatedConfig.customPlugins;
+      updates.customPlugins = validatedConfig.customPlugins;
     }
 
     if (validatedConfig.defaultModel !== undefined) {
-      updatedOverrides.defaultModel = validatedConfig.defaultModel;
+      updates.defaultModel = validatedConfig.defaultModel;
+    }
+
+    // Use optimistic concurrency control to prevent race condition data loss
+    const result = await atomicMergeOverrides(session.userId, updates);
+
+    if (!result.success) {
+      return apiError(
+        ERROR_CODE.RESOURCE_ALREADY_EXISTS,
+        "Config update conflict, please retry",
+        409
+      );
     }
     
-    const override = await prisma.agentModelOverride.upsert({
-      where: { userId: session.userId },
-      create: {
-        userId: session.userId,
-        overrides: JSON.parse(JSON.stringify(updatedOverrides)),
-      },
-      update: {
-        overrides: JSON.parse(JSON.stringify(updatedOverrides)),
-      },
-    });
-    
     return apiSuccess({
-      overrides: override.overrides as Record<string, unknown>,
+      overrides: result.overrides,
     });
   } catch (error) {
     return Errors.internal("Failed to update user config", error);

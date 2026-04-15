@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
+import { atomicMergeOverrides } from "@/lib/db/optimistic-merge";
 import {
   pickBestModel,
   AGENT_ROLES,
@@ -14,7 +15,7 @@ import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-openc
 import { validateFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { z } from "zod";
 import { AgentConfigSchema } from "@/lib/validation/schemas";
-import { Errors, apiSuccess } from "@/lib/errors";
+import { Errors, apiSuccess, apiError, ERROR_CODE } from "@/lib/errors";
 
 async function fetchManagementJson(path: string) {
   try {
@@ -124,19 +125,6 @@ export async function GET() {
   }
 }
 
-/**
- * Shallow merge for overrides objects.
- * Top-level keys from source fully replace target keys.
- * This preserves unrelated top-level keys (e.g., mcpServers from OpenCode UI)
- * while allowing full replacement of keys being updated (e.g., agents).
- */
-function shallowMergeOverrides(
-  target: Record<string, unknown>,
-  source: Record<string, unknown>
-): Record<string, unknown> {
-  return { ...target, ...source };
-}
-
 export async function PUT(request: NextRequest) {
   try {
     const session = await verifySession();
@@ -154,33 +142,22 @@ export async function PUT(request: NextRequest) {
 
     const validated = validateFullConfig(parsed.overrides);
 
-    // Fetch existing overrides to merge with
-    const existing = await prisma.agentModelOverride.findUnique({
-      where: { userId: session.userId },
-    });
-
-    const existingOverrides = (existing?.overrides as Record<string, unknown>) ?? {};
-
-    // Shallow merge: preserve unrelated top-level keys (e.g., mcpServers from OpenCode UI)
-    // while fully replacing keys being updated (e.g., agents)
-    const mergedOverrides = shallowMergeOverrides(
-      existingOverrides,
+    // Use optimistic concurrency control to prevent race condition data loss
+    const result = await atomicMergeOverrides(
+      session.userId,
       validated as unknown as Record<string, unknown>
     );
 
-    const agentOverride = await prisma.agentModelOverride.upsert({
-      where: { userId: session.userId },
-      create: {
-        userId: session.userId,
-        overrides: JSON.parse(JSON.stringify(mergedOverrides)),
-      },
-      update: {
-        overrides: JSON.parse(JSON.stringify(mergedOverrides)),
-      },
-    });
+    if (!result.success) {
+      return apiError(
+        ERROR_CODE.RESOURCE_ALREADY_EXISTS,
+        "Config update conflict, please retry",
+        409
+      );
+    }
 
     return apiSuccess({
-      overrides: agentOverride.overrides as Record<string, unknown>,
+      overrides: result.overrides,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -477,7 +477,12 @@ export default function SettingsPage() {
         </>
       )}
 
-      {activeTab === "backup" && <BackupSettings />}
+      {activeTab === "backup" && (
+        <BackupSettings
+          currentVersion={dashboardUpdateInfo?.currentVersion ?? "unknown"}
+          showToast={showToast}
+        />
+      )}
     </div>
   );
 }

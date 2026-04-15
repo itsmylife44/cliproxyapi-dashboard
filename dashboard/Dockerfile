@@ -62,6 +62,9 @@ RUN chmod +x entrypoint.sh
 # Create logs directory with correct ownership before switching to non-root user
 RUN mkdir -p /app/logs && chown nextjs:nodejs /app/logs
 
+# Create backups directory for backup storage
+RUN mkdir -p /app/backups && chown nextjs:nodejs /app/backups
+
 USER nextjs
 
 EXPOSE 3000

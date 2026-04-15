@@ -32,6 +32,7 @@ model User {
   perplexityCookies   PerplexityCookie[]
   auditLogs           AuditLog[]
   usageRecords        UsageRecord[]
+  backupRecords       BackupRecord[]
 
   @@map("users")
 }
@@ -308,4 +309,51 @@ model CollectorState {
   updatedAt       DateTime @updatedAt
 
   @@map("collector_state")
+}
+
+// ============================================================================
+// Backup & Restore System
+// ============================================================================
+
+model BackupRecord {
+  id          String       @id @default(cuid())
+  filename    String
+  sizeBytes   BigInt
+  status      BackupStatus @default(PENDING)
+  type        BackupType   @default(MANUAL)
+  createdAt   DateTime     @default(now())
+  completedAt DateTime?
+  createdById String
+  createdBy   User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  checksum    String?      // SHA-256 for integrity verification
+  metadata    Json?        // Additional info: DB version, model counts, dashboard version
+
+  @@index([createdAt])
+  @@index([createdById])
+  @@map("backup_records")
+}
+
+model BackupSchedule {
+  id        String    @id @default(cuid())
+  enabled   Boolean   @default(false)
+  cronExpr  String    @default("0 3 * * *") // Default: 3 AM daily
+  retention Int       @default(7)           // Days to keep backups
+  lastRun   DateTime?
+  nextRun   DateTime?
+  updatedAt DateTime  @updatedAt
+
+  @@map("backup_schedule")
+}
+
+enum BackupStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  RESTORING
+}
+
+enum BackupType {
+  MANUAL
+  SCHEDULED
 }

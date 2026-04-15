@@ -2,7 +2,10 @@
  * Oh-My-OpenCode-Slim Configuration Types
  *
  * TypeScript interfaces and constants for the oh-my-opencode-slim plugin schema.
- * Slim has 7 agents (incl. council), no categories, and a dedicated fallback system.
+ * Slim has 7 agents (incl. council), presets system, and dedicated fallback/council systems.
+ *
+ * Based on oh-my-opencode-slim v0.9.12
+ * @see https://github.com/alvinunreal/oh-my-opencode-slim
  */
 
 // ============================================================================
@@ -19,7 +22,16 @@ export const SLIM_AGENTS = [
   "council",
 ] as const;
 
+/** Internal agents used by the council system (not user-configurable in presets) */
+export const SLIM_INTERNAL_AGENTS = [
+  "councillor",
+  "council-master",
+] as const;
+
 export type SlimAgentName = (typeof SLIM_AGENTS)[number];
+export type SlimInternalAgentName = (typeof SLIM_INTERNAL_AGENTS)[number];
+
+export const SLIM_MULTIPLEXER_TYPES = ["auto", "tmux", "zellij", "none"] as const;
 
 export const SLIM_TMUX_LAYOUTS = [
   "main-horizontal",
@@ -33,16 +45,75 @@ export const SLIM_SCORING_VERSIONS = ["v1", "v2-shadow", "v2"] as const;
 
 export const SLIM_COUNCILLOR_EXECUTION_MODES = ["parallel", "serial"] as const;
 
+export const SLIM_WEBSEARCH_PROVIDERS = ["exa", "tavily"] as const;
+
+/** Default MCPs per agent (as per oh-my-opencode-slim docs) */
+export const SLIM_DEFAULT_MCPS: Record<SlimAgentName, string[]> = {
+  orchestrator: ["*"],
+  librarian: ["websearch", "context7", "grep_app"],
+  designer: [],
+  oracle: [],
+  explorer: [],
+  fixer: [],
+  council: [],
+};
+
+/** Default skills per agent (as per oh-my-opencode-slim docs) */
+export const SLIM_DEFAULT_SKILLS: Record<SlimAgentName, string[]> = {
+  orchestrator: ["cartography"],
+  oracle: ["simplify"],
+  designer: ["agent-browser"],
+  explorer: [],
+  librarian: [],
+  fixer: [],
+  council: [],
+};
+
 // ============================================================================
 // INTERFACES
 // ============================================================================
 
+/**
+ * Model entry for array-style model configuration.
+ * Allows specifying model variants inline.
+ */
+export interface SlimModelEntry {
+  id: string;
+  variant?: string;
+}
+
+/**
+ * Model can be a simple string or an array of model entries.
+ * Array format allows specifying multiple models with variants.
+ */
+export type SlimModelConfig = string | Array<string | SlimModelEntry>;
+
+/**
+ * Agent configuration within a preset.
+ * Each agent can have model, variant, temperature, skills, mcps, and provider-specific options.
+ */
 export interface SlimAgentConfig {
-  model?: string;
+  model?: SlimModelConfig;
   temperature?: number;
   variant?: string;
   skills?: string[];
   mcps?: string[];
+  /** Provider-specific options (e.g., OpenAI textVerbosity, Anthropic thinking budget) */
+  options?: Record<string, unknown>;
+}
+
+/**
+ * A named preset containing agent configurations.
+ * Presets allow switching between different model/config combinations.
+ */
+export interface SlimPreset {
+  orchestrator?: SlimAgentConfig;
+  oracle?: SlimAgentConfig;
+  designer?: SlimAgentConfig;
+  explorer?: SlimAgentConfig;
+  librarian?: SlimAgentConfig;
+  fixer?: SlimAgentConfig;
+  council?: SlimAgentConfig;
 }
 
 export interface SlimManualPlanEntry {
@@ -56,6 +127,8 @@ export interface SlimFallbackConfig {
   enabled?: boolean;
   timeoutMs?: number;
   retryDelayMs?: number;
+  /** Retry on silent empty provider responses (0 tokens) */
+  retry_on_empty?: boolean;
   chains?: Record<string, string[]>;
 }
 
@@ -91,24 +164,149 @@ export interface SlimCouncilConfig {
   councillor_retries?: number;
 }
 
+/** Legacy tmux-only config (still supported, converted to multiplexer internally) */
 export interface SlimTmuxConfig {
   enabled?: boolean;
   layout?: (typeof SLIM_TMUX_LAYOUTS)[number];
   main_pane_size?: number;
 }
 
+/** New unified multiplexer config (supports tmux + zellij) */
+export interface SlimMultiplexerConfig {
+  type?: (typeof SLIM_MULTIPLEXER_TYPES)[number];
+  layout?: (typeof SLIM_TMUX_LAYOUTS)[number];
+  main_pane_size?: number;
+}
+
+/** Interview feature config for browser-based Q&A flow */
+export interface SlimInterviewConfig {
+  /** Max questions per round (1-10, default 2) */
+  maxQuestions?: number;
+  /** Output folder for markdown files (default "interview") */
+  outputFolder?: string;
+  /** Auto-open browser UI (default true) */
+  autoOpenBrowser?: boolean;
+  /** Fixed port for interview UI server (0 = OS-assigned) */
+  port?: number;
+}
+
+/** Todo continuation / auto-continue config */
+export interface SlimTodoContinuationConfig {
+  /** Max consecutive auto-continuations (1-50, default 5) */
+  maxContinuations?: number;
+  /** Delay before auto-continue in ms (0-30000, default 3000) */
+  cooldownMs?: number;
+  /** Auto-enable when session has enough todos (default false) */
+  autoEnable?: boolean;
+  /** Number of todos to trigger auto-enable (1-50, default 4) */
+  autoEnableThreshold?: number;
+}
+
+/** Websearch configuration */
+export interface SlimWebsearchConfig {
+  /** Provider for web search (exa or tavily) */
+  provider?: (typeof SLIM_WEBSEARCH_PROVIDERS)[number];
+}
+
+/**
+ * Full oh-my-opencode-slim configuration.
+ * Matches the schema at https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json
+ */
 export interface OhMyOpenCodeSlimFullConfig {
+  /** Active preset name */
   preset?: string;
+  /** Named preset configurations */
+  presets?: Record<string, SlimPreset>;
+  /** Legacy: direct agent config (use presets instead) */
+  agents?: Record<string, SlimAgentConfig>;
+  
   setDefaultAgent?: boolean;
   scoringEngineVersion?: (typeof SLIM_SCORING_VERSIONS)[number];
   balanceProviderUsage?: boolean;
   manualPlan?: Record<string, SlimManualPlanEntry>;
-  agents?: Record<string, SlimAgentConfig>;
   disabled_mcps?: string[];
+  
+  /** Legacy tmux config (use multiplexer instead) */
   tmux?: SlimTmuxConfig;
+  /** Unified multiplexer config (tmux + zellij) */
+  multiplexer?: SlimMultiplexerConfig;
+  
   background?: SlimBackgroundConfig;
   fallback?: SlimFallbackConfig;
   council?: SlimCouncilConfig;
+  
+  /** Interview feature for browser-based Q&A */
+  interview?: SlimInterviewConfig;
+  /** Auto-continue when todos are incomplete */
+  todoContinuation?: SlimTodoContinuationConfig;
+  /** Websearch configuration */
+  websearch?: SlimWebsearchConfig;
+}
+
+// ============================================================================
+// VALIDATION HELPERS
+// ============================================================================
+
+/**
+ * Validate and normalize a model configuration.
+ * Model can be a string or an array of (string | {id, variant}).
+ */
+function validateModelConfig(value: unknown): SlimModelConfig | undefined {
+  // Simple string model
+  if (typeof value === "string" && value.length <= 256) {
+    return value;
+  }
+  
+  // Array of models
+  if (Array.isArray(value)) {
+    const result: Array<string | SlimModelEntry> = [];
+    for (const item of value.slice(0, 10)) { // Max 10 models
+      if (typeof item === "string" && item.length <= 256) {
+        result.push(item);
+      } else if (typeof item === "object" && item !== null && !Array.isArray(item)) {
+        const obj = item as Record<string, unknown>;
+        if (typeof obj.id === "string" && obj.id.length <= 256) {
+          const entry: SlimModelEntry = { id: obj.id };
+          if (typeof obj.variant === "string" && obj.variant.length <= 256) {
+            entry.variant = obj.variant;
+          }
+          result.push(entry);
+        }
+      }
+    }
+    if (result.length > 0) return result;
+  }
+  
+  return undefined;
+}
+
+function validateAgentConfig(entryObj: Record<string, unknown>): SlimAgentConfig {
+  const entry: SlimAgentConfig = {};
+  
+  // Model — can be string or array
+  const model = validateModelConfig(entryObj.model);
+  if (model !== undefined) entry.model = model;
+  
+  if (typeof entryObj.variant === "string" && entryObj.variant.length <= 256) entry.variant = entryObj.variant;
+  if (typeof entryObj.temperature === "number" && Number.isFinite(entryObj.temperature) && entryObj.temperature >= 0 && entryObj.temperature <= 2) {
+    entry.temperature = entryObj.temperature;
+  }
+  if (Array.isArray(entryObj.skills)) {
+    const skills = entryObj.skills.slice(0, 50).filter((v: unknown): v is string => typeof v === "string" && v.length <= 256);
+    if (skills.length > 0) entry.skills = skills;
+  }
+  if (Array.isArray(entryObj.mcps)) {
+    const mcps = entryObj.mcps.slice(0, 50).filter((v: unknown): v is string => typeof v === "string" && v.length <= 256);
+    if (mcps.length > 0) entry.mcps = mcps;
+  }
+  // Provider-specific options — pass through as-is (bounded depth check)
+  if (entryObj.options && typeof entryObj.options === "object" && !Array.isArray(entryObj.options)) {
+    const optStr = JSON.stringify(entryObj.options);
+    if (optStr.length <= 8192) {
+      entry.options = entryObj.options as Record<string, unknown>;
+    }
+  }
+  return entry;
 }
 
 // ============================================================================
@@ -126,6 +324,30 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
   // preset — length-bounded
   if (typeof obj.preset === "string" && obj.preset.length <= 128) {
     result.preset = obj.preset;
+  }
+
+  // presets — named preset configurations
+  if (obj.presets && typeof obj.presets === "object" && !Array.isArray(obj.presets)) {
+    const presetsObj = obj.presets as Record<string, unknown>;
+    const validatedPresets: Record<string, SlimPreset> = {};
+    for (const [presetName, presetVal] of Object.entries(presetsObj)) {
+      if (typeof presetName !== "string" || presetName.length > 128) continue;
+      if (typeof presetVal !== "object" || presetVal === null || Array.isArray(presetVal)) continue;
+      const pObj = presetVal as Record<string, unknown>;
+      const preset: SlimPreset = {};
+      for (const agent of SLIM_AGENTS) {
+        const agentVal = pObj[agent];
+        if (agentVal && typeof agentVal === "object" && !Array.isArray(agentVal)) {
+          preset[agent] = validateAgentConfig(agentVal as Record<string, unknown>);
+        }
+      }
+      if (Object.keys(preset).length > 0) {
+        validatedPresets[presetName] = preset;
+      }
+    }
+    if (Object.keys(validatedPresets).length > 0) {
+      result.presets = validatedPresets;
+    }
   }
 
   // setDefaultAgent
@@ -175,29 +397,14 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     }
   }
 
-  // agents — restrict keys to known agents, bound strings and arrays
+  // agents (legacy) — restrict keys to known agents, bound strings and arrays
   if (obj.agents && typeof obj.agents === "object" && !Array.isArray(obj.agents)) {
     const agentsObj = obj.agents as Record<string, unknown>;
     const validatedAgents: Record<string, SlimAgentConfig> = {};
     for (const [key, value] of Object.entries(agentsObj)) {
       if (!(SLIM_AGENTS as readonly string[]).includes(key)) continue;
       if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-        const entryObj = value as Record<string, unknown>;
-        const entry: SlimAgentConfig = {};
-        if (typeof entryObj.model === "string" && entryObj.model.length <= 256) entry.model = entryObj.model;
-        if (typeof entryObj.variant === "string" && entryObj.variant.length <= 256) entry.variant = entryObj.variant;
-        if (typeof entryObj.temperature === "number" && Number.isFinite(entryObj.temperature) && entryObj.temperature >= 0 && entryObj.temperature <= 2) {
-          entry.temperature = entryObj.temperature;
-        }
-        if (Array.isArray(entryObj.skills)) {
-          const skills = entryObj.skills.slice(0, 50).filter((v: unknown): v is string => typeof v === "string" && v.length <= 256);
-          if (skills.length > 0) entry.skills = skills;
-        }
-        if (Array.isArray(entryObj.mcps)) {
-          const mcps = entryObj.mcps.slice(0, 50).filter((v: unknown): v is string => typeof v === "string" && v.length <= 256);
-          if (mcps.length > 0) entry.mcps = mcps;
-        }
-        validatedAgents[key] = entry;
+        validatedAgents[key] = validateAgentConfig(value as Record<string, unknown>);
       } else if (typeof value === "string" && value.length <= 256) {
         validatedAgents[key] = { model: value };
       }
@@ -213,7 +420,7 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     if (items.length > 0) result.disabled_mcps = items;
   }
 
-  // tmux
+  // tmux (legacy)
   if (obj.tmux && typeof obj.tmux === "object" && !Array.isArray(obj.tmux)) {
     const tmuxObj = obj.tmux as Record<string, unknown>;
     const tmux: SlimTmuxConfig = {};
@@ -225,6 +432,22 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
       tmux.main_pane_size = Math.max(20, Math.min(80, tmuxObj.main_pane_size));
     }
     if (Object.keys(tmux).length > 0) result.tmux = tmux;
+  }
+
+  // multiplexer (new unified config)
+  if (obj.multiplexer && typeof obj.multiplexer === "object" && !Array.isArray(obj.multiplexer)) {
+    const muxObj = obj.multiplexer as Record<string, unknown>;
+    const mux: SlimMultiplexerConfig = {};
+    if (typeof muxObj.type === "string" && (SLIM_MULTIPLEXER_TYPES as readonly string[]).includes(muxObj.type)) {
+      mux.type = muxObj.type as SlimMultiplexerConfig["type"];
+    }
+    if (typeof muxObj.layout === "string" && (SLIM_TMUX_LAYOUTS as readonly string[]).includes(muxObj.layout)) {
+      mux.layout = muxObj.layout as SlimMultiplexerConfig["layout"];
+    }
+    if (typeof muxObj.main_pane_size === "number" && Number.isInteger(muxObj.main_pane_size)) {
+      mux.main_pane_size = Math.max(20, Math.min(80, muxObj.main_pane_size));
+    }
+    if (Object.keys(mux).length > 0) result.multiplexer = mux;
   }
 
   // background
@@ -244,6 +467,7 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     if (typeof fbObj.enabled === "boolean") fb.enabled = fbObj.enabled;
     if (typeof fbObj.timeoutMs === "number" && fbObj.timeoutMs >= 0 && fbObj.timeoutMs <= 60000) fb.timeoutMs = fbObj.timeoutMs;
     if (typeof fbObj.retryDelayMs === "number" && fbObj.retryDelayMs >= 0 && fbObj.retryDelayMs <= 10000) fb.retryDelayMs = fbObj.retryDelayMs;
+    if (typeof fbObj.retry_on_empty === "boolean") fb.retry_on_empty = fbObj.retry_on_empty;
     if (fbObj.chains && typeof fbObj.chains === "object" && !Array.isArray(fbObj.chains)) {
       const chainsObj = fbObj.chains as Record<string, unknown>;
       const validatedChains: Record<string, string[]> = {};
@@ -303,7 +527,8 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
             }
           }
         }
-        if (Object.keys(councillors).length > 0) {
+        // A council preset is valid if it has councillors OR a master override
+        if (Object.keys(councillors).length > 0 || masterOverride) {
           validatedPresets[presetName] = { councillors, master: masterOverride };
         }
       }
@@ -334,6 +559,55 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     }
 
     if (Object.keys(council).length > 0) result.council = council;
+  }
+
+  // interview
+  if (obj.interview && typeof obj.interview === "object" && !Array.isArray(obj.interview)) {
+    const intObj = obj.interview as Record<string, unknown>;
+    const interview: SlimInterviewConfig = {};
+    if (typeof intObj.maxQuestions === "number" && Number.isInteger(intObj.maxQuestions)) {
+      interview.maxQuestions = Math.max(1, Math.min(10, intObj.maxQuestions));
+    }
+    if (typeof intObj.outputFolder === "string" && intObj.outputFolder.length <= 256) {
+      interview.outputFolder = intObj.outputFolder;
+    }
+    if (typeof intObj.autoOpenBrowser === "boolean") {
+      interview.autoOpenBrowser = intObj.autoOpenBrowser;
+    }
+    if (typeof intObj.port === "number" && Number.isInteger(intObj.port) && intObj.port >= 0 && intObj.port <= 65535) {
+      interview.port = intObj.port;
+    }
+    if (Object.keys(interview).length > 0) result.interview = interview;
+  }
+
+  // todoContinuation
+  if (obj.todoContinuation && typeof obj.todoContinuation === "object" && !Array.isArray(obj.todoContinuation)) {
+    const tcObj = obj.todoContinuation as Record<string, unknown>;
+    const tc: SlimTodoContinuationConfig = {};
+    if (typeof tcObj.maxContinuations === "number" && Number.isInteger(tcObj.maxContinuations)) {
+      tc.maxContinuations = Math.max(1, Math.min(50, tcObj.maxContinuations));
+    }
+    if (typeof tcObj.cooldownMs === "number" && Number.isInteger(tcObj.cooldownMs)) {
+      tc.cooldownMs = Math.max(0, Math.min(30000, tcObj.cooldownMs));
+    }
+    if (typeof tcObj.autoEnable === "boolean") {
+      tc.autoEnable = tcObj.autoEnable;
+    }
+    if (typeof tcObj.autoEnableThreshold === "number" && Number.isInteger(tcObj.autoEnableThreshold)) {
+      tc.autoEnableThreshold = Math.max(1, Math.min(50, tcObj.autoEnableThreshold));
+    }
+    if (Object.keys(tc).length > 0) result.todoContinuation = tc;
+  }
+
+  // websearch
+  if (obj.websearch && typeof obj.websearch === "object" && !Array.isArray(obj.websearch)) {
+    const wsObj = obj.websearch as Record<string, unknown>;
+    const ws: SlimWebsearchConfig = {};
+    if (typeof wsObj.provider === "string" && 
+        (SLIM_WEBSEARCH_PROVIDERS as readonly string[]).includes(wsObj.provider)) {
+      ws.provider = wsObj.provider as SlimWebsearchConfig["provider"];
+    }
+    if (Object.keys(ws).length > 0) result.websearch = ws;
   }
 
   return result;

@@ -1,11 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { OwnerBadge, type CurrentUserLike } from "@/components/providers/api-key-section";
 
+interface OAuthQuotaGroupState {
+  authId: string;
+  groupId: string;
+  label: string;
+  effectiveStatus: string;
+  manualSuspended: boolean;
+  manualReason: string | null;
+  autoSuspendedUntil: string | null;
+  autoReason: string | null;
+  sourceModel: string | null;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
 interface OAuthAccountWithOwnership {
   id: string;
+  authId: string | null;
   accountName: string;
   accountEmail: string | null;
   provider: string;
@@ -15,6 +31,7 @@ interface OAuthAccountWithOwnership {
   status: "active" | "error" | "disabled" | string;
   statusMessage: string | null;
   unavailable: boolean;
+  quotaGroups?: OAuthQuotaGroupState[];
 }
 
 interface OAuthCredentialListProps {
@@ -23,9 +40,13 @@ interface OAuthCredentialListProps {
   currentUser: CurrentUserLike | null;
   togglingAccountId: string | null;
   claimingAccountName: string | null;
+  quotaActionKey: string | null;
   onToggle: (accountId: string, currentlyDisabled: boolean) => void;
   onDelete: (accountId: string) => void;
   onClaim: (accountName: string) => void;
+  onForceSuspend: (authId: string, groupId: string) => void;
+  onLiftManual: (authId: string, groupId: string) => void;
+  onClearCooldown: (authId: string, groupId: string) => void;
 }
 
 function parseStatusMessage(raw: string | null): string | null {
@@ -95,11 +116,20 @@ export function OAuthCredentialList({
   currentUser,
   togglingAccountId,
   claimingAccountName,
+  quotaActionKey,
   onToggle,
   onDelete,
   onClaim,
+  onForceSuspend,
+  onLiftManual,
+  onClearCooldown,
 }: OAuthCredentialListProps) {
   const t = useTranslations("providers");
+  const [expandedAccounts, setExpandedAccounts] = useState<Record<string, boolean>>({});
+
+  const toggleExpanded = (accountId: string) => {
+    setExpandedAccounts((current) => ({ ...current, [accountId]: !current[accountId] }));
+  };
 
   return (
     <>
@@ -135,6 +165,15 @@ export function OAuthCredentialList({
                     <p className="truncate text-xs text-[var(--text-secondary)]">{account.accountEmail}</p>
                   )}
                   <p className="truncate text-xs font-mono text-[var(--text-muted)]">{account.accountName}</p>
+                  {Array.isArray(account.quotaGroups) && account.quotaGroups.length > 0 && (
+                    <button
+                      type="button"
+                      className="text-xs text-blue-600 hover:text-blue-700"
+                      onClick={() => toggleExpanded(account.id)}
+                    >
+                      {expandedAccounts[account.id] ? "Hide quota groups" : `Show quota groups (${account.quotaGroups.length})`}
+                    </button>
+                  )}
                 </div>
                 {currentUser && (account.isOwn || currentUser.isAdmin) && (
                   <div className="flex shrink-0 items-center gap-2">
@@ -166,6 +205,78 @@ export function OAuthCredentialList({
                   </div>
                 )}
               </div>
+              {expandedAccounts[account.id] && Array.isArray(account.quotaGroups) && account.quotaGroups.length > 0 && (
+                <div className="mt-3 space-y-2 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/20 p-3">
+                  {account.quotaGroups.map((group) => {
+                    const actionBase = `${account.id}:${group.groupId}`;
+                    const isManual = group.manualSuspended;
+                    const hasAuto = Boolean(group.autoSuspendedUntil);
+                    return (
+                      <div
+                        key={`${account.id}:${group.groupId}`}
+                        className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-3"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-sm font-medium text-[var(--text-primary)]">{group.label}</span>
+                              <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                                {group.effectiveStatus.replaceAll("_", " ")}
+                              </span>
+                            </div>
+                            {group.manualReason && (
+                              <p className="text-xs text-[var(--text-secondary)]">Manual: {group.manualReason}</p>
+                            )}
+                            {group.autoSuspendedUntil && (
+                              <p className="text-xs text-[var(--text-secondary)]">
+                                Cooldown until {new Date(group.autoSuspendedUntil).toLocaleString()}
+                                {group.autoReason ? ` (${group.autoReason})` : ""}
+                              </p>
+                            )}
+                            {group.sourceModel && (
+                              <p className="truncate text-xs text-[var(--text-muted)]">Source model: {group.sourceModel}</p>
+                            )}
+                            {group.updatedAt && (
+                              <p className="text-[11px] text-[var(--text-muted)]">
+                                Updated {new Date(group.updatedAt).toLocaleString()}
+                                {group.updatedBy ? ` by ${group.updatedBy}` : ""}
+                              </p>
+                            )}
+                          </div>
+                          {currentUser?.isAdmin && account.authId && (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button
+                                variant="secondary"
+                                className="px-2.5 py-1 text-xs"
+                                disabled={quotaActionKey === `${actionBase}:manual-on` || isManual}
+                                onClick={() => onForceSuspend(account.authId as string, group.groupId)}
+                              >
+                                {quotaActionKey === `${actionBase}:manual-on` ? "..." : "Force suspend"}
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                className="px-2.5 py-1 text-xs"
+                                disabled={quotaActionKey === `${actionBase}:manual-off` || !isManual}
+                                onClick={() => onLiftManual(account.authId as string, group.groupId)}
+                              >
+                                {quotaActionKey === `${actionBase}:manual-off` ? "..." : "Lift manual"}
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                className="px-2.5 py-1 text-xs"
+                                disabled={quotaActionKey === `${actionBase}:auto-clear` || !hasAuto}
+                                onClick={() => onClearCooldown(account.authId as string, group.groupId)}
+                              >
+                                {quotaActionKey === `${actionBase}:auto-clear` ? "..." : "Clear cooldown"}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ))}
         </div>

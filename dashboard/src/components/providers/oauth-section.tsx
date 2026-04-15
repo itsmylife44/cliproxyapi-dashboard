@@ -222,6 +222,7 @@ export function OAuthSection({
   const [pendingOAuthDelete, setPendingOAuthDelete] = useState<{ accountId: string; accountName: string } | null>(null);
   const [togglingAccountId, setTogglingAccountId] = useState<string | null>(null);
   const [claimingAccountName, setClaimingAccountName] = useState<string | null>(null);
+  const [quotaActionKey, setQuotaActionKey] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importProviderId, setImportProviderId] = useState<OAuthProviderId | null>(null);
   const [importJsonContent, setImportJsonContent] = useState("");
@@ -312,6 +313,66 @@ export function OAuthSection({
       showToast(t("toastNetworkError"), "error");
     } finally {
       setClaimingAccountName(null);
+    }
+  };
+
+  const updateQuotaGroupManual = async (
+    authId: string,
+    groupId: string,
+    manualSuspended: boolean
+  ) => {
+    const actionKey = `${authId}:${groupId}:${manualSuspended ? "manual-on" : "manual-off"}`;
+    setQuotaActionKey(actionKey);
+    try {
+      const res = await fetch(API_ENDPOINTS.MANAGEMENT.AUTH_FILE_QUOTA_GROUPS_MANUAL, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          auth_id: authId,
+          group_id: groupId,
+          manual_suspended: manualSuspended,
+          reason: manualSuspended ? "dashboard_manual_suspend" : "",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(extractApiError(data, "Failed to update quota group"), "error");
+        return;
+      }
+      showToast(manualSuspended ? "Quota group suspended" : "Manual suspension lifted", "success");
+      await loadAccounts();
+      await refreshProviders();
+    } catch {
+      showToast(t("toastNetworkError"), "error");
+    } finally {
+      setQuotaActionKey(null);
+    }
+  };
+
+  const clearQuotaGroupCooldown = async (authId: string, groupId: string) => {
+    const actionKey = `${authId}:${groupId}:auto-clear`;
+    setQuotaActionKey(actionKey);
+    try {
+      const res = await fetch(API_ENDPOINTS.MANAGEMENT.AUTH_FILE_QUOTA_GROUPS_AUTO_CLEAR, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          auth_id: authId,
+          group_id: groupId,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(extractApiError(data, "Failed to clear quota cooldown"), "error");
+        return;
+      }
+      showToast("Quota cooldown cleared", "success");
+      await loadAccounts();
+      await refreshProviders();
+    } catch {
+      showToast(t("toastNetworkError"), "error");
+    } finally {
+      setQuotaActionKey(null);
     }
   };
 
@@ -796,9 +857,13 @@ export function OAuthSection({
             currentUser={currentUser}
             togglingAccountId={togglingAccountId}
             claimingAccountName={claimingAccountName}
+            quotaActionKey={quotaActionKey}
             onToggle={toggleOAuthAccount}
             onDelete={confirmDeleteOAuth}
             onClaim={claimOAuthAccount}
+            onForceSuspend={(authId, groupId) => void updateQuotaGroupManual(authId, groupId, true)}
+            onLiftManual={(authId, groupId) => void updateQuotaGroupManual(authId, groupId, false)}
+            onClearCooldown={(authId, groupId) => void clearQuotaGroupCooldown(authId, groupId)}
           />
 
           <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 text-xs text-[var(--text-muted)]">

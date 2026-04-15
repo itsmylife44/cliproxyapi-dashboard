@@ -36,7 +36,13 @@ function getDashboardVersion(): string {
 }
 
 /**
- * Export all database data to a backup structure
+ * Export all database data for backup.
+ * 
+ * NOTE: This export runs without an explicit transaction. For admin dashboard
+ * data with low write frequency, this is acceptable. The slight risk of
+ * inconsistency between tables during export is minimal compared to the
+ * complexity of wrapping 15+ findMany calls in an interactive transaction.
+ * If stronger consistency is needed, consider using Prisma's $transaction.
  */
 export async function exportDatabase(exportedBy: string): Promise<BackupData> {
   const modelCounts: Record<string, number> = {};

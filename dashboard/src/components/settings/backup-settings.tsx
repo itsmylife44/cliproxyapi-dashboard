@@ -63,7 +63,7 @@ export function BackupSettings({ currentVersion, showToast }: BackupSettingsProp
   // Local state for schedule form
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [cronExpression, setCronExpression] = useState("0 3 * * *");
-  const [retentionDays, setRetentionDays] = useState(30);
+  const [retentionDays, setRetentionDays] = useState(7); // Matches Prisma default
 
   const fetchBackups = useCallback(async () => {
     try {

@@ -403,13 +403,25 @@ async function migrate() {
       CONSTRAINT "collector_state_pkey" PRIMARY KEY ("id")
     );
 
+    -- Backup status enum (matches Prisma BackupStatus)
+    DO $$ BEGIN
+      CREATE TYPE "BackupStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'RESTORING');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+
+    -- Backup type enum (matches Prisma BackupType)  
+    DO $$ BEGIN
+      CREATE TYPE "BackupType" AS ENUM ('MANUAL', 'SCHEDULED');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+
     -- Backup records table (stores backup metadata)
     CREATE TABLE IF NOT EXISTS "backup_records" (
       "id" TEXT NOT NULL,
       "filename" TEXT NOT NULL,
       "sizeBytes" BIGINT NOT NULL DEFAULT 0,
-      "status" TEXT NOT NULL DEFAULT 'PENDING',
-      "type" TEXT NOT NULL DEFAULT 'MANUAL',
+      "status" "BackupStatus" NOT NULL DEFAULT 'PENDING',
+      "type" "BackupType" NOT NULL DEFAULT 'MANUAL',
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "completedAt" TIMESTAMP(3),
       "createdById" TEXT NOT NULL,

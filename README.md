@@ -48,6 +48,8 @@ cd cliproxyapi-dashboard
 # .\setup-local.ps1       # Windows
 ```
 
+The local setup scripts start Docker Compose with a local dashboard build (`--build`) so your current source changes are used.
+
 Open **http://localhost:3000** → create admin account → done.
 
 > **Server deployment**: See the full [Installation Guide](docs/INSTALLATION.md).

@@ -151,6 +151,9 @@ cd cliproxyapi-dashboard
 
 Dashboard runs on `localhost:3000`, CLIProxyAPIPlus proxy on `localhost:11451`.
 
+> Note: Local setup builds the dashboard from your checked-out source (`build: ./dashboard`).
+> If you pull updates, rerun setup (or run `docker compose -f docker-compose.local.yml up -d --build`) to ensure the latest local changes are baked into the container.
+
 ## Manual Installation
 
 If you prefer manual setup or need customization:

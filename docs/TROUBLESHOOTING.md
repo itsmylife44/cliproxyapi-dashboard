@@ -4,6 +4,34 @@
 
 ## Services Not Starting
 
+### Local build vs image behavior (important)
+
+For local development, `docker-compose.local.yml` builds the dashboard from your local source (`build: ./dashboard`).
+
+If you previously used a pulled image or changed local files, always rebuild explicitly:
+
+```bash
+docker compose -f docker-compose.local.yml down -v
+docker compose -f docker-compose.local.yml up -d --build
+```
+
+This avoids running stale dashboard images and ensures recent migration/entrypoint fixes are included.
+
+### Windows: `entrypoint.sh` "No such file or directory"
+
+If you see:
+
+```text
+[FATAL tini (7)] exec ./entrypoint.sh failed: No such file or directory
+```
+
+This is typically caused by Windows CRLF line endings in shell scripts. The Docker build now normalizes `entrypoint.sh` automatically, but if you still hit this after pulling updates, run a clean rebuild:
+
+```bash
+docker compose -f docker-compose.local.yml build --no-cache dashboard
+docker compose -f docker-compose.local.yml up -d
+```
+
 **Check systemd status:**
 ```bash
 sudo systemctl status cliproxyapi-stack

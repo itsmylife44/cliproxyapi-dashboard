@@ -57,7 +57,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_module
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/engines ./node_modules/@prisma/engines
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/adapter-pg ./node_modules/@prisma/adapter-pg
 COPY --chown=nextjs:nodejs entrypoint.sh ./entrypoint.sh
-RUN chmod +x entrypoint.sh
+# Normalize Windows CRLF to LF to avoid `/bin/sh\r` runtime failures
+RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh
 
 # Create logs directory with correct ownership before switching to non-root user
 RUN mkdir -p /app/logs && chown nextjs:nodejs /app/logs

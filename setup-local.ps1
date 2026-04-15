@@ -225,8 +225,8 @@ if ($Down) {
 Ensure-EnvFile
 Ensure-ConfigYaml
 
-Write-Info "Starting local stack..."
-docker compose -f $ComposeFile up -d 2>&1 | Write-Host
+Write-Info "Starting local stack (with local dashboard build)..."
+docker compose -f $ComposeFile up -d --build 2>&1 | Write-Host
 
 Write-Info "Waiting for services to become healthy..."
 Wait-ForHealth

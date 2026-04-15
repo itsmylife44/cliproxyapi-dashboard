@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.1.75](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.74...dashboard-v0.1.75) (2026-04-15)
+
+
+### Features
+
+* add missing Council agent to oh-my-opencode-slim config ([8975381](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/8975381952e1c2649e077f0ce78fda653abdd7df))
+* add workflow_dispatch trigger for manual all-contributors runs ([92eb13f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/92eb13ff1612b68a0bf768afbbb2ad7f3cd5aa3b))
+* **backup:** Complete backup/restore system for dashboard ([#191](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/191)) ([3605913](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/36059130c931ce702b33883a6b4699be6dcc54ec))
+* fix usage data persistence for Docker Compose deployments ([cbdbac0](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/cbdbac07eb33d97bd20b0ddc151e89a3ed9356b3))
+* **oauth:** Add quota group controls ([#192](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/192)) ([738a1d2](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/738a1d2ee4062e19e973bb45b0ad6f6eb33d356b))
+
+
+### Bug Fixes
+
+* add frontend network to usage-collector for package installation ([8c21ab0](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/8c21ab0662d1fd9af354085b71ef913aec9f7ffe))
+* guard Prisma migration DELETE against missing revokedAt column ([b9ccf60](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/b9ccf604f966f7122877d29554333b1976e607f4)), closes [#190](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/190)
+* guard revokedAt migration against missing column ([a5b7e3e](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a5b7e3e11a35f8477c047553f4df381300244e32))
+* improve usage page auto-refresh responsiveness ([77d4eee](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/77d4eeedc4aeed53693887a05a7e862ed93050b5))
+* pass GITHUB_TOKEN as env var for all-contributors-auto-action v0.5.0 ([3453ec0](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/3453ec0a7ec3d8b28d414f5f1b6eaccf40b2327e))
+* use consistent CollectorState query in usage history API ([9a600ed](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/9a600ed501b42511f37bfd0794074a9fd6cc5366))
+* use correct 'token' parameter for all-contributors-auto-action v0.5.0 ([90ac1ce](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/90ac1ce4d650646808bc2c9859a7798af80c5905))
+
 ## [0.1.74](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.73...dashboard-v0.1.74) (2026-04-14)
 
 

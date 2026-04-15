@@ -82,9 +82,13 @@ export const API_ENDPOINTS = {
     // OAuth
     OAUTH_EXCLUDED_MODELS: "/api/management/oauth-excluded-models",
     OAUTH_MODEL_ALIAS: "/api/management/oauth-model-alias",
+    OAUTH_QUOTA_GROUPS: "/api/management/oauth-quota-groups",
 
     // Auth files
     AUTH_FILES: "/api/management/auth-files",
+    AUTH_FILE_QUOTA_GROUPS: "/api/management/auth-files/quota-groups",
+    AUTH_FILE_QUOTA_GROUPS_MANUAL: "/api/management/auth-files/quota-groups/manual",
+    AUTH_FILE_QUOTA_GROUPS_AUTO_CLEAR: "/api/management/auth-files/quota-groups/auto/clear",
 
     // Providers
     OPENAI_COMPATIBILITY: "/api/management/openai-compatibility",

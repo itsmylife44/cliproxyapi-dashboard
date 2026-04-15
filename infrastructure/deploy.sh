@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Dashboard Deploy Script
 # Triggered by webhook from dashboard admin panel
 

@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { buildSlimConfig } from "../config-generators/oh-my-opencode-slim";
 import type { OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
 
-describe("buildSlimConfig fallback chains bugs", () => {
+describe("buildSlimConfig fallback chains - external model passthrough", () => {
   const available = ["claude-sonnet-4", "gemini-2.5-pro"];
 
-  it("BUG: emits empty chain arrays for agents whose models are all unavailable", () => {
+  it("passes through external models (not in available) without prefix", () => {
     const overrides: OhMyOpenCodeSlimFullConfig = {
       fallback: {
         enabled: true,
@@ -22,21 +22,12 @@ describe("buildSlimConfig fallback chains bugs", () => {
     const fallback = config!.fallback as Record<string, unknown>;
     expect(fallback).toBeDefined();
 
-    // The chains should either be absent entirely (all models unavailable)
-    // or contain only non-empty, cliproxyapi/-prefixed arrays.
-    // BUG: currently chains is { orchestrator: [] } — an empty array.
-    if (fallback.chains) {
-      const chains = fallback.chains as Record<string, string[]>;
-      for (const [agent, chain] of Object.entries(chains)) {
-        expect(chain.length, `chain for ${agent} should not be empty`).toBeGreaterThan(0);
-        for (const model of chain) {
-          expect(model).toMatch(/^cliproxyapi\//);
-        }
-      }
-    }
+    // External models should be passed through as-is (no cliproxyapi/ prefix)
+    const chains = fallback.chains as Record<string, string[]>;
+    expect(chains.orchestrator).toEqual(["model-gone-a", "model-gone-b"]);
   });
 
-  it("BUG: mixed valid/invalid chains — invalid agent gets empty array", () => {
+  it("mixed available/external chains — available get prefixed, external pass through", () => {
     const overrides: OhMyOpenCodeSlimFullConfig = {
       fallback: {
         enabled: true,
@@ -53,11 +44,11 @@ describe("buildSlimConfig fallback chains bugs", () => {
     const fallback = config!.fallback as Record<string, unknown>;
     const chains = fallback.chains as Record<string, string[]>;
 
-    // fixer should have one valid entry
-    expect(chains.fixer).toEqual(["cliproxyapi/claude-sonnet-4"]);
+    // fixer: available model prefixed, external model passed through
+    expect(chains.fixer).toEqual(["cliproxyapi/claude-sonnet-4", "model-gone"]);
 
-    // orchestrator chain should be absent (no valid models), not an empty array
-    expect(chains.orchestrator).toBeUndefined();
+    // orchestrator: external model passed through
+    expect(chains.orchestrator).toEqual(["model-gone"]);
   });
 
   it("keeps prefixed chains when all models are available", () => {

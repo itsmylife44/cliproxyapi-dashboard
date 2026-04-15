@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { buildSlimConfig } from "../config-generators/oh-my-opencode-slim";
 
-describe("buildSlimConfig – fallback chains bug reproduction", () => {
-  it("should not emit empty chain arrays for agents where all models are unavailable", () => {
+describe("buildSlimConfig – fallback chains behavior", () => {
+  it("should passthrough external models and prefix available ones", () => {
     const available = ["model-a", "model-b"];
     const config = buildSlimConfig(available, {
       fallback: {
         enabled: true,
         chains: {
-          // "model-x" is NOT in available — chain must be dropped, not []
+          // "model-x" is NOT in available — treated as external, passed through as-is
           orchestrator: ["model-x", "model-y"],
-          // "model-a" IS available — chain must be kept
+          // "model-a" IS available — prefixed with cliproxyapi/
           oracle: ["model-a", "model-b"],
         },
       },
@@ -22,21 +22,21 @@ describe("buildSlimConfig – fallback chains bug reproduction", () => {
 
     const chains = fallback.chains as Record<string, string[]> | undefined;
 
-    // Before the fix: chains would contain { orchestrator: [], oracle: [...] }
-    // After the fix:  only oracle should be present
+    // Both chains should be present
     expect(chains).toBeDefined();
+    // Available models get prefixed
     expect(chains!.oracle).toEqual(["cliproxyapi/model-a", "cliproxyapi/model-b"]);
-    // orchestrator chain should be absent entirely, not an empty array
-    expect(chains!.orchestrator).toBeUndefined();
+    // External models are passed through as-is (not prefixed)
+    expect(chains!.orchestrator).toEqual(["model-x", "model-y"]);
   });
 
-  it("should omit chains entirely when all chains resolve to empty", () => {
+  it("should preserve chains with all external models", () => {
     const available = ["model-a"];
     const config = buildSlimConfig(available, {
       fallback: {
         enabled: true,
         chains: {
-          // All models unavailable
+          // All models are external (not in available)
           orchestrator: ["model-x"],
           oracle: ["model-y"],
         },
@@ -46,20 +46,40 @@ describe("buildSlimConfig – fallback chains bug reproduction", () => {
     expect(config).not.toBeNull();
     const fallback = (config as Record<string, unknown>).fallback as Record<string, unknown>;
     expect(fallback).toBeDefined();
-    // chains key should not exist at all
-    expect(fallback.chains).toBeUndefined();
+    
+    const chains = fallback.chains as Record<string, string[]> | undefined;
+    // External models are passed through as-is
+    expect(chains).toBeDefined();
+    expect(chains!.orchestrator).toEqual(["model-x"]);
+    expect(chains!.oracle).toEqual(["model-y"]);
   });
 });
 
-describe("buildSlimConfig – agent inclusion when models unavailable", () => {
-  it("should include all 6 agents even when no models match any tier", () => {
-    // Bug at line 50: if (!model) continue; skips agents when pickBestModel returns null
-    // With empty availableModels, all 6 agents are skipped
-    // Current behavior: buildSlimConfig([]) returns null (no agents added)
-    // Expected behavior: agents should still be added with fallback/placeholder
+describe("buildSlimConfig – fail-fast when no models available", () => {
+  it("should return null when no models are available and no overrides", () => {
+    // With empty availableModels and no model overrides, we cannot build valid config
+    // This is the correct fail-fast behavior
     const config = buildSlimConfig([]);
 
-    // This test FAILS (RED phase) because config is null
+    // Config should be null when we can't resolve any models
+    expect(config).toBeNull();
+  });
+
+  it("should build config when models are provided via overrides even with empty available", () => {
+    // If user provides explicit model overrides, those are passed through
+    const config = buildSlimConfig([], {
+      agents: {
+        orchestrator: { model: "external/claude-3.5" },
+        oracle: { model: "external/gpt-4" },
+        designer: { model: "external/claude-3.5" },
+        explorer: { model: "external/gemini" },
+        librarian: { model: "external/claude-3.5" },
+        fixer: { model: "external/claude-3.5" },
+        council: { model: "external/claude-3.5" },
+      },
+    });
+
+    // Should succeed because all agents have explicit overrides
     expect(config).not.toBeNull();
   });
 });

@@ -1660,5 +1660,105 @@
   "copyBlock": {
     "copiedToClipboard": "Copied to clipboard",
     "copyToClipboard": "Copy to clipboard"
+  },
+  "backup": {
+    "tabGeneral": "General",
+    "tabBackup": "Backup",
+    "title": "Backup & Restore",
+    "description": "Create backups, restore from previous backups, and manage backup schedules.",
+    "createBackup": "Create Backup",
+    "createNow": "Create Now",
+    "creating": "Creating backup...",
+    "restore": "Restore from Backup",
+    "restorePreview": "Restore Preview",
+    "confirmRestore": "Confirm Restore",
+    "restoreWarning": "This will REPLACE all current data. This action cannot be undone.",
+    "restoring": "Restoring...",
+    "schedule": {
+      "title": "Scheduled Backups",
+      "enable": "Enable automatic backups",
+      "cron": "Schedule (Cron)",
+      "cronHint": "Default: 0 3 * * * (daily at 3 AM)",
+      "retention": "Retention",
+      "retentionDays": "{count, plural, one {# day} other {# days}}",
+      "nextRun": "Next backup",
+      "lastRun": "Last backup",
+      "never": "Never",
+      "save": "Save Schedule"
+    },
+    "history": {
+      "title": "Backup History",
+      "date": "Date",
+      "size": "Size",
+      "type": "Type",
+      "status": "Status",
+      "actions": "Actions",
+      "manual": "Manual",
+      "scheduled": "Scheduled",
+      "download": "Download",
+      "delete": "Delete",
+      "noBackups": "No backups yet. Create your first backup to get started.",
+      "pending": "Pending",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "storage": {
+      "title": "Storage",
+      "used": "{used} of {total} used",
+      "free": "{free} free",
+      "warning": "Storage almost full",
+      "unknown": "Unknown"
+    },
+    "upload": {
+      "title": "Upload Backup",
+      "dragDrop": "Drag & drop backup file here",
+      "orClick": "or click to select",
+      "selectFile": "Select file",
+      "selectedFile": "Selected: {filename}",
+      "invalidFile": "Invalid backup file. Must be a .json.gz file.",
+      "fileTooLarge": "File too large. Maximum size: {maxSize}",
+      "uploading": "Uploading..."
+    },
+    "preview": {
+      "title": "Restore Preview",
+      "backupFrom": "Backup from",
+      "version": "Dashboard Version",
+      "currentVersion": "Current Version",
+      "versionMismatch": "Version mismatch - restore may have compatibility issues",
+      "willRestore": "Will restore:",
+      "users": "{count, plural, one {# User} other {# Users}}",
+      "providerKeys": "{count, plural, one {# Provider Key} other {# Provider Keys}}",
+      "oauthAccounts": "{count, plural, one {# OAuth Account} other {# OAuth Accounts}}",
+      "customProviders": "{count, plural, one {# Custom Provider} other {# Custom Providers}}",
+      "usageRecords": "{count, plural, one {# Usage Record} other {# Usage Records}}",
+      "auditLogs": "{count, plural, one {# Audit Log} other {# Audit Logs}}",
+      "warning": "This will replace ALL existing data in the database.",
+      "cancel": "Cancel",
+      "confirmRestore": "Restore Backup"
+    },
+    "success": {
+      "created": "Backup created successfully",
+      "restored": "Backup restored successfully. Please log in again.",
+      "deleted": "Backup deleted",
+      "scheduled": "Backup schedule updated"
+    },
+    "error": {
+      "createFailed": "Failed to create backup",
+      "restoreFailed": "Failed to restore backup",
+      "downloadFailed": "Failed to download backup",
+      "deleteFailed": "Failed to delete backup",
+      "uploadFailed": "Failed to upload backup file",
+      "fetchFailed": "Failed to load backups",
+      "invalidBackup": "Invalid backup file format",
+      "scheduleFailed": "Failed to update backup schedule",
+      "adminRequired": "Admin access required"
+    },
+    "confirmDelete": {
+      "title": "Delete Backup",
+      "message": "Are you sure you want to delete this backup? This action cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    }
   }
 }

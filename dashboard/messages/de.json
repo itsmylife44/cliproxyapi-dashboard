@@ -1660,5 +1660,105 @@
   "copyBlock": {
     "copiedToClipboard": "In Zwischenablage kopiert",
     "copyToClipboard": "In Zwischenablage kopieren"
+  },
+  "backup": {
+    "tabGeneral": "Allgemein",
+    "tabBackup": "Backup",
+    "title": "Sicherung & Wiederherstellung",
+    "description": "Erstellen Sie Sicherungen, stellen Sie von vorherigen Sicherungen wieder her und verwalten Sie Sicherungszeitpläne.",
+    "createBackup": "Sicherung erstellen",
+    "createNow": "Jetzt erstellen",
+    "creating": "Sicherung wird erstellt...",
+    "restore": "Aus Sicherung wiederherstellen",
+    "restorePreview": "Wiederherstellungsvorschau",
+    "confirmRestore": "Wiederherstellung bestätigen",
+    "restoreWarning": "Dies wird ALLE aktuellen Daten ersetzen. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "restoring": "Wird wiederhergestellt...",
+    "schedule": {
+      "title": "Geplante Sicherungen",
+      "enable": "Automatische Sicherungen aktivieren",
+      "cron": "Zeitplan (Cron)",
+      "cronHint": "Standard: 0 3 * * * (täglich um 3 Uhr)",
+      "retention": "Aufbewahrung",
+      "retentionDays": "{count, plural, one {# Tag} other {# Tage}}",
+      "nextRun": "Nächste Sicherung",
+      "lastRun": "Letzte Sicherung",
+      "never": "Nie",
+      "save": "Zeitplan speichern"
+    },
+    "history": {
+      "title": "Sicherungsverlauf",
+      "date": "Datum",
+      "size": "Größe",
+      "type": "Typ",
+      "status": "Status",
+      "actions": "Aktionen",
+      "manual": "Manuell",
+      "scheduled": "Geplant",
+      "download": "Herunterladen",
+      "delete": "Löschen",
+      "noBackups": "Noch keine Sicherungen. Erstellen Sie Ihre erste Sicherung.",
+      "pending": "Ausstehend",
+      "inProgress": "In Bearbeitung",
+      "completed": "Abgeschlossen",
+      "failed": "Fehlgeschlagen"
+    },
+    "storage": {
+      "title": "Speicher",
+      "used": "{used} von {total} verwendet",
+      "free": "{free} frei",
+      "warning": "Speicher fast voll",
+      "unknown": "Unbekannt"
+    },
+    "upload": {
+      "title": "Sicherung hochladen",
+      "dragDrop": "Sicherungsdatei hierher ziehen",
+      "orClick": "oder klicken zum Auswählen",
+      "selectFile": "Datei auswählen",
+      "selectedFile": "Ausgewählt: {filename}",
+      "invalidFile": "Ungültige Sicherungsdatei. Muss eine .json.gz-Datei sein.",
+      "fileTooLarge": "Datei zu groß. Maximale Größe: {maxSize}",
+      "uploading": "Wird hochgeladen..."
+    },
+    "preview": {
+      "title": "Wiederherstellungsvorschau",
+      "backupFrom": "Sicherung vom",
+      "version": "Dashboard-Version",
+      "currentVersion": "Aktuelle Version",
+      "versionMismatch": "Versionskonflikt - Wiederherstellung kann Kompatibilitätsprobleme haben",
+      "willRestore": "Wird wiederhergestellt:",
+      "users": "{count, plural, one {# Benutzer} other {# Benutzer}}",
+      "providerKeys": "{count, plural, one {# Anbieterschlüssel} other {# Anbieterschlüssel}}",
+      "oauthAccounts": "{count, plural, one {# OAuth-Konto} other {# OAuth-Konten}}",
+      "customProviders": "{count, plural, one {# Benutzerdefinierter Anbieter} other {# Benutzerdefinierte Anbieter}}",
+      "usageRecords": "{count, plural, one {# Nutzungsdatensatz} other {# Nutzungsdatensätze}}",
+      "auditLogs": "{count, plural, one {# Audit-Protokoll} other {# Audit-Protokolle}}",
+      "warning": "Dies wird ALLE bestehenden Daten in der Datenbank ersetzen.",
+      "cancel": "Abbrechen",
+      "confirmRestore": "Sicherung wiederherstellen"
+    },
+    "success": {
+      "created": "Sicherung erfolgreich erstellt",
+      "restored": "Sicherung erfolgreich wiederhergestellt. Bitte melden Sie sich erneut an.",
+      "deleted": "Sicherung gelöscht",
+      "scheduled": "Sicherungszeitplan aktualisiert"
+    },
+    "error": {
+      "createFailed": "Sicherung konnte nicht erstellt werden",
+      "restoreFailed": "Sicherung konnte nicht wiederhergestellt werden",
+      "downloadFailed": "Sicherung konnte nicht heruntergeladen werden",
+      "deleteFailed": "Sicherung konnte nicht gelöscht werden",
+      "uploadFailed": "Sicherungsdatei konnte nicht hochgeladen werden",
+      "fetchFailed": "Backups konnten nicht geladen werden",
+      "invalidBackup": "Ungültiges Sicherungsdateiformat",
+      "scheduleFailed": "Sicherungszeitplan konnte nicht aktualisiert werden",
+      "adminRequired": "Administratorzugriff erforderlich"
+    },
+    "confirmDelete": {
+      "title": "Sicherung löschen",
+      "message": "Sind Sie sicher, dass Sie diese Sicherung löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "confirm": "Löschen",
+      "cancel": "Abbrechen"
+    }
   }
 }

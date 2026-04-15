@@ -9,7 +9,10 @@ import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { TelegramSettings } from "@/components/settings/telegram-settings";
 import { ProviderSettings } from "@/components/settings/provider-settings";
 import { PasswordSettings } from "@/components/settings/password-settings";
+import { BackupSettings } from "@/components/settings/backup-settings";
 import { useTranslations } from 'next-intl';
+
+type SettingsTab = "general" | "backup";
 
 interface ProxyUpdateInfo {
   currentVersion: string;
@@ -73,6 +76,9 @@ export default function SettingsPage() {
   const { showToast } = useToast();
   const t = useTranslations('settings');
   const tc = useTranslations('common');
+  const tb = useTranslations('backup');
+
+  const [activeTab, setActiveTab] = useState<SettingsTab>("general");
 
   const fetchProxyUpdateInfo = useCallback(async (signal?: AbortSignal) => {
     setProxyUpdateLoading(true);
@@ -336,9 +342,37 @@ export default function SettingsPage() {
         <p className="mt-1 text-sm text-[var(--text-muted)]">{t('pageDescription')}</p>
       </section>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6 flex flex-col gap-6 lg:flex-1 lg:min-w-0">
-          <TelegramSettings
+      {/* Tab Bar */}
+      <div className="flex gap-1 rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab("general")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === "general"
+              ? "bg-[var(--surface-muted)] text-[var(--text-primary)]"
+              : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          {tb('tabGeneral')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("backup")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === "backup"
+              ? "bg-[var(--surface-muted)] text-[var(--text-primary)]"
+              : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          {tb('tabBackup')}
+        </button>
+      </div>
+
+      {activeTab === "general" && (
+        <>
+          <div className="flex flex-col lg:flex-row gap-6">
+            <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6 flex flex-col gap-6 lg:flex-1 lg:min-w-0">
+              <TelegramSettings
             syncTokens={syncTokens}
             syncTokensLoading={syncTokensLoading}
             generatingToken={generatingToken}
@@ -433,6 +467,15 @@ export default function SettingsPage() {
         cancelLabel={tc('cancel')}
         variant="danger"
       />
+        </>
+      )}
+
+      {activeTab === "backup" && (
+        <BackupSettings
+          currentVersion={dashboardUpdateInfo?.currentVersion ?? "unknown"}
+          showToast={showToast}
+        />
+      )}
     </div>
   );
 }

@@ -124,6 +124,19 @@ export async function GET() {
   }
 }
 
+/**
+ * Shallow merge for overrides objects.
+ * Top-level keys from source fully replace target keys.
+ * This preserves unrelated top-level keys (e.g., mcpServers from OpenCode UI)
+ * while allowing full replacement of keys being updated (e.g., agents).
+ */
+function shallowMergeOverrides(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>
+): Record<string, unknown> {
+  return { ...target, ...source };
+}
+
 export async function PUT(request: NextRequest) {
   try {
     const session = await verifySession();
@@ -141,14 +154,28 @@ export async function PUT(request: NextRequest) {
 
     const validated = validateFullConfig(parsed.overrides);
 
+    // Fetch existing overrides to merge with
+    const existing = await prisma.agentModelOverride.findUnique({
+      where: { userId: session.userId },
+    });
+
+    const existingOverrides = (existing?.overrides as Record<string, unknown>) ?? {};
+
+    // Shallow merge: preserve unrelated top-level keys (e.g., mcpServers from OpenCode UI)
+    // while fully replacing keys being updated (e.g., agents)
+    const mergedOverrides = shallowMergeOverrides(
+      existingOverrides,
+      validated as unknown as Record<string, unknown>
+    );
+
     const agentOverride = await prisma.agentModelOverride.upsert({
       where: { userId: session.userId },
       create: {
         userId: session.userId,
-        overrides: JSON.parse(JSON.stringify(validated)),
+        overrides: JSON.parse(JSON.stringify(mergedOverrides)),
       },
       update: {
-        overrides: JSON.parse(JSON.stringify(validated)),
+        overrides: JSON.parse(JSON.stringify(mergedOverrides)),
       },
     });
 

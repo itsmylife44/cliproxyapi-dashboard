@@ -415,7 +415,14 @@ export async function updateScheduleConfig(
 }
 
 /**
- * Clean up old backups based on retention policy
+ * Clean up old backups based on retention policy.
+ * 
+ * NOTE: This function is exported for future use by a scheduled background task.
+ * Currently not called automatically - the backup scheduler (cron job) is not yet
+ * implemented. When a scheduler is added, it should call this function after
+ * creating scheduled backups to enforce the retention policy.
+ * 
+ * @returns Number of backups deleted
  */
 export async function cleanupOldBackups(): Promise<number> {
   const schedule = await prisma.backupSchedule.findFirst();

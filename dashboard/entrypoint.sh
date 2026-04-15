@@ -431,7 +431,7 @@ async function migrate() {
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "backup_schedule_pkey" PRIMARY KEY ("id")
     );
-    \`);
+    `);
 
     console.log('[dashboard] Tables ready');
 

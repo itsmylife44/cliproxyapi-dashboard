@@ -54,10 +54,12 @@ export async function POST(request: Request) {
       fileSize: file.size,
     }, "Backup restore started");
 
-    // Perform restore
+    // Perform restore (replaces all data including users in a transaction)
     await restoreFromBackup(buffer);
 
-    // Invalidate all sessions by incrementing session version for all users
+    // Invalidate all sessions by incrementing session version for all restored users.
+    // This forces everyone (including the admin who initiated the restore) to log in again.
+    // Note: This runs on the RESTORED user data, which is the intended behavior.
     await prisma.user.updateMany({
       data: { sessionVersion: { increment: 1 } },
     });

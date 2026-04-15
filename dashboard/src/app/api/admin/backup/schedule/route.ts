@@ -1,21 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
-import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
-import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { Errors, apiSuccess } from "@/lib/errors";
-import { BackupScheduleSchema } from "@/lib/validation/schemas";
-import {
-  getBackupSchedule,
-  updateBackupSchedule,
-} from "@/lib/backup/backup-service";
+import { getScheduleConfig, updateScheduleConfig } from "@/lib/backup";
 
-async function requireAdmin(): Promise<{ userId: string; username: string } | NextResponse> {
+/**
+ * Basic cron expression validation
+ * Format: minute hour day month weekday
+ */
+function isValidCronExpression(expr: string): boolean {
+  // Basic cron format: 5 space-separated fields
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length !== 5) return false;
+  
+  // Each field should be: number, *, or valid range/list
+  const fieldPattern = /^(\*|(\d+|\*)(-\d+)?(\/\d+)?(,(\d+|\*)(-\d+)?(\/\d+)?)*|\d+)$/;
+  return parts.every(part => fieldPattern.test(part));
+}
+
+/**
+ * GET /api/admin/backup/schedule - Get backup schedule configuration
+ */
+export async function GET() {
   const session = await verifySession();
   if (!session) {
     return Errors.unauthorized();
   }
 
+  // Check admin
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
     select: { isAdmin: true },
@@ -25,50 +36,56 @@ async function requireAdmin(): Promise<{ userId: string; username: string } | Ne
     return Errors.forbidden();
   }
 
-  return { userId: session.userId, username: session.username };
-}
-
-export async function GET() {
-  const authResult = await requireAdmin();
-  if (authResult instanceof NextResponse) return authResult;
-
   try {
-    const schedule = await getBackupSchedule();
+    const schedule = await getScheduleConfig();
     return apiSuccess({ schedule });
   } catch (error) {
-    return Errors.internal("get backup schedule", error);
+    return Errors.internal("Failed to get schedule", error);
   }
 }
 
-export async function PUT(request: NextRequest) {
-  const authResult = await requireAdmin();
-  if (authResult instanceof NextResponse) return authResult;
+/**
+ * PUT /api/admin/backup/schedule - Update backup schedule configuration
+ */
+export async function PUT(request: Request) {
+  const session = await verifySession();
+  if (!session) {
+    return Errors.unauthorized();
+  }
 
-  const originError = validateOrigin(request);
-  if (originError) return originError;
+  // Check admin
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { isAdmin: true },
+  });
+
+  if (!user?.isAdmin) {
+    return Errors.forbidden();
+  }
 
   try {
     const body = await request.json();
-    const result = BackupScheduleSchema.safeParse(body);
+    const { enabled, cronExpr, retention } = body;
 
-    if (!result.success) {
-      return Errors.zodValidation(result.error.issues);
+    // Basic validation
+    if (cronExpr !== undefined) {
+      if (typeof cronExpr !== "string" || !isValidCronExpression(cronExpr)) {
+        return Errors.validation("Invalid cron expression. Use format: minute hour day month weekday (e.g., '0 3 * * *')");
+      }
     }
 
-    const { enabled, intervalHours } = result.data;
+    if (retention !== undefined && (typeof retention !== "number" || retention < 1 || retention > 365)) {
+      return Errors.validation("Retention must be between 1 and 365 days");
+    }
 
-    await updateBackupSchedule(enabled, intervalHours);
-
-    logAuditAsync({
-      userId: authResult.userId,
-      action: AUDIT_ACTION.BACKUP_SCHEDULE_CHANGED,
-      target: "backup_schedule",
-      metadata: { enabled, intervalHours },
-      ipAddress: extractIpAddress(request),
+    const schedule = await updateScheduleConfig({
+      enabled,
+      cronExpr,
+      retention,
     });
 
-    return apiSuccess({ schedule: { enabled, intervalHours: intervalHours ?? 24 } });
+    return apiSuccess({ schedule });
   } catch (error) {
-    return Errors.internal("update backup schedule", error);
+    return Errors.internal("Failed to update schedule", error);
   }
 }

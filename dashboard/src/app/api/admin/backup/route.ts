@@ -1,17 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
-import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
-import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { Errors, apiSuccess } from "@/lib/errors";
-import { createBackup, listBackups, getDiskSpaceInfo } from "@/lib/backup/backup-service";
+import {
+  createBackup,
+  listBackups,
+  deleteBackup,
+} from "@/lib/backup";
 
-async function requireAdmin(): Promise<{ userId: string; username: string } | NextResponse> {
+/**
+ * GET /api/admin/backup - List all backups
+ */
+export async function GET() {
   const session = await verifySession();
   if (!session) {
     return Errors.unauthorized();
   }
 
+  // Check admin
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
     select: { isAdmin: true },
@@ -21,56 +27,84 @@ async function requireAdmin(): Promise<{ userId: string; username: string } | Ne
     return Errors.forbidden();
   }
 
-  return { userId: session.userId, username: session.username };
-}
-
-export async function GET() {
-  const authResult = await requireAdmin();
-  if (authResult instanceof NextResponse) return authResult;
-
   try {
-    const [backups, diskSpace] = await Promise.all([
-      listBackups(),
-      getDiskSpaceInfo(),
-    ]);
-
-    return apiSuccess({
-      backups,
-      diskSpace: {
-        availableBytes: diskSpace.availableBytes,
-        totalBytes: diskSpace.totalBytes,
-        ok: diskSpace.ok,
-      },
-    });
+    const backups = await listBackups();
+    return apiSuccess({ backups });
   } catch (error) {
-    return Errors.internal("list backups", error);
+    return Errors.internal("Failed to list backups", error);
   }
 }
 
-export async function POST(request: NextRequest) {
-  const authResult = await requireAdmin();
-  if (authResult instanceof NextResponse) return authResult;
+/**
+ * POST /api/admin/backup - Create a new backup
+ */
+export async function POST() {
+  const session = await verifySession();
+  if (!session) {
+    return Errors.unauthorized();
+  }
 
-  const originError = validateOrigin(request);
-  if (originError) return originError;
+  // Check admin
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { isAdmin: true },
+  });
+
+  if (!user?.isAdmin) {
+    return Errors.forbidden();
+  }
 
   try {
-    const result = await createBackup("manual");
-
-    logAuditAsync({
-      userId: authResult.userId,
-      action: AUDIT_ACTION.BACKUP_CREATED,
-      target: result.backup.filename,
-      metadata: {
-        backupId: result.backup.id,
-        sizeBytes: result.backup.sizeBytes,
-        trigger: "manual",
+    const backup = await createBackup(session.userId, "MANUAL");
+    return apiSuccess({
+      backup: {
+        id: backup.id,
+        filename: backup.filename,
+        sizeBytes: backup.sizeBytes.toString(),
+        status: backup.status,
+        type: backup.type,
+        createdAt: backup.createdAt.toISOString(),
+        completedAt: backup.completedAt?.toISOString() ?? null,
       },
-      ipAddress: extractIpAddress(request),
     });
-
-    return apiSuccess({ backup: result.backup }, 201);
   } catch (error) {
-    return Errors.internal("create backup", error);
+    return Errors.internal("Failed to create backup", error);
+  }
+}
+
+/**
+ * DELETE /api/admin/backup - Delete a backup
+ */
+export async function DELETE(request: Request) {
+  const session = await verifySession();
+  if (!session) {
+    return Errors.unauthorized();
+  }
+
+  // Check admin
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { isAdmin: true },
+  });
+
+  if (!user?.isAdmin) {
+    return Errors.forbidden();
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return Errors.validation("Backup ID is required");
+    }
+
+    await deleteBackup(id);
+    return apiSuccess({ deleted: true });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Backup not found") {
+      return Errors.notFound("Backup");
+    }
+    return Errors.internal("Failed to delete backup", error);
   }
 }

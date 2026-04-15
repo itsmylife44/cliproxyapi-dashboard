@@ -174,7 +174,7 @@ services:
       - ./.env
     volumes:
       - ${INSTALL_DIR:-.}/infrastructure:/opt/cliproxyapi/infrastructure:ro
-      - dashboard_backups:/app/backups
+      - backup_data:/app/backups
     depends_on:
       postgres:
         condition: service_healthy
@@ -273,9 +273,9 @@ volumes:
     driver: local
   caddy_config:
     driver: local
-
+  
   # Dashboard backup storage
-  dashboard_backups:
+  backup_data:
     driver: local
 
 # Network Definitions

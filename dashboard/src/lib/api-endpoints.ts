@@ -18,7 +18,9 @@ export const API_ENDPOINTS = {
     REVOKE_SESSIONS: "/api/admin/revoke-sessions",
     BACKUP: "/api/admin/backup",
     BACKUP_SCHEDULE: "/api/admin/backup/schedule",
-    RESTORE: "/api/admin/restore",
+    BACKUP_STORAGE: "/api/admin/backup/storage",
+    BACKUP_RESTORE: "/api/admin/backup/restore",
+    BACKUP_PREVIEW: "/api/admin/backup/preview",
   },
   UPDATE: {
     BASE: "/api/update",

@@ -250,6 +250,9 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
   if (frozenOverrides !== undefined || (hasActiveSubscription && publisherOverrides)) {
     agentOverrides = {
       ...baseOverrides,
+      ...(subscriberOverrides?.defaultModel
+        ? { defaultModel: subscriberOverrides.defaultModel }
+        : {}),
       mcpServers: [
         ...(baseOverrides?.mcpServers ?? []),
         ...(subscriberOverrides?.mcpServers ?? []),
@@ -327,7 +330,7 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
      Object.entries(allModels).filter(([modelId]) => !excludedModels.has(modelId))
    );
 
-   const modelEntries: Record<string, Record<string, unknown>> = {};
+    const modelEntries: Record<string, Record<string, unknown>> = {};
    const sortedFilteredIds = Object.keys(filteredModels).sort();
    for (const id of sortedFilteredIds) {
      const def = filteredModels[id];
@@ -343,10 +346,11 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
      modelEntries[id] = entry;
    }
 
-    const firstModelId = sortedFilteredIds[0] ?? null;
+    const fallbackModelId = sortedFilteredIds[0] ?? null;
 
-   const mcpEntries: McpEntry[] = agentOverrides?.mcpServers ?? [];
-   const customPlugins = agentOverrides?.customPlugins ?? [];
+    const mcpEntries: McpEntry[] = agentOverrides?.mcpServers ?? [];
+    const customPlugins = agentOverrides?.customPlugins ?? [];
+    const defaultModelOverride = agentOverrides?.defaultModel?.trim();
    
    // Use slim plugin if user's customPlugins include it, otherwise default to normal
    const hasSlimPlugin = customPlugins.includes("oh-my-opencode-slim@latest");
@@ -370,32 +374,45 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
      },
    };
 
-    const opencodeConfig: Record<string, unknown> = {
-      $schema: "https://opencode.ai/config.json",
-      plugin: plugins,
-      provider: providers,
-    };
-    if (firstModelId) {
-      opencodeConfig.model = `cliproxyapi/${firstModelId}`;
+     const opencodeConfig: Record<string, unknown> = {
+       $schema: "https://opencode.ai/config.json",
+       plugin: plugins,
+       provider: providers,
+     };
+
+    if (defaultModelOverride) {
+      opencodeConfig.model = defaultModelOverride.startsWith("cliproxyapi/")
+        ? defaultModelOverride
+        : `cliproxyapi/${defaultModelOverride}`;
+    } else if (fallbackModelId) {
+      opencodeConfig.model = `cliproxyapi/${fallbackModelId}`;
     }
 
-   if (mcpEntries.length > 0) {
-    const mcpServers: Record<string, Record<string, unknown>> = {};
-    for (const mcp of mcpEntries) {
-      if (mcp.type === "remote") {
-        mcpServers[mcp.name] = {
-          type: "remote",
-          url: mcp.url,
-        };
-      } else if (mcp.type === "local") {
-        mcpServers[mcp.name] = {
-          type: "local",
-          command: mcp.command,
-        };
-      }
-    }
-    opencodeConfig.mcp = mcpServers;
-  }
+    if (mcpEntries.length > 0) {
+     const mcpServers: Record<string, Record<string, unknown>> = {};
+     for (const mcp of mcpEntries) {
+       if (mcp.type === "remote") {
+         mcpServers[mcp.name] = {
+           type: "remote",
+           url: mcp.url,
+           ...(mcp.enabled !== undefined ? { enabled: mcp.enabled } : {}),
+           ...(mcp.environment && Object.keys(mcp.environment).length > 0
+             ? { environment: mcp.environment }
+             : {}),
+         };
+       } else if (mcp.type === "local") {
+         mcpServers[mcp.name] = {
+           type: "local",
+           command: mcp.command,
+           ...(mcp.enabled !== undefined ? { enabled: mcp.enabled } : {}),
+           ...(mcp.environment && Object.keys(mcp.environment).length > 0
+             ? { environment: mcp.environment }
+             : {}),
+         };
+       }
+     }
+     opencodeConfig.mcp = mcpServers;
+   }
 
    const ohMyOpencodeConfig = buildOhMyOpenCodeConfig(
      sortedFilteredIds,

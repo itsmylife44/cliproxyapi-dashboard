@@ -63,13 +63,16 @@ jobs:
   tag-contributors:
     runs-on: ubuntu-latest
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    if: >-
+      always() &&
+      (needs.release-please.outputs.release_created == 'true' ||
+       (github.event.inputs.action == 'build-existing-tag' && github.event.inputs.tag_name != ''))
     continue-on-error: true
     steps:
       - name: Add contributors to release notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+          TAG_NAME: ${{ needs.release-please.outputs.tag_name || github.event.inputs.tag_name }}
         run: |
           PREV_TAG=$(gh api "repos/${{ github.repository }}/releases" \
             --jq "[.[] | select(.tag_name != \"${TAG_NAME}\")] | first | .tag_name" 2>&1) || PREV_TAG=""

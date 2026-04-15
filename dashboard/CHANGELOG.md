@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.76](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.75...dashboard-v0.1.76) (2026-04-15)
+
+
+### Features
+
+* **slim:** Full oh-my-opencode-slim presets system + bug fixes ([#194](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/194)) ([3587ab4](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/3587ab46a754c0c5735f60d4104fec694faba9b9))
+
+
+### Bug Fixes
+
+* add missing oauth-import-normalization module ([c7e56fa](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c7e56fa09f75ea5b27073092cdd655b0eb569efb))
+* **api:** eliminate race condition with optimistic concurrency ([0a4ee97](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/0a4ee970f6be350ee011487c44c86e7e827081b1))
+* force clean checkout and no-cache on self-hosted runner ([f70d672](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/f70d672f79762d1eb8f48aeadf840491e1172ea1))
+* refresh buttons now bypass server cache for update checks ([6aa1c53](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6aa1c5338eb54274603b45cc9ca24e5c3f6434cb))
+* run tag-contributors for build-existing-tag action ([2cb998c](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/2cb998c2aa32b407fec1b8e6458e0067283ea2b7))
+* update version.json for build-existing-tag action ([b423665](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/b4236655b65063c49a1855270bbce3b82a1b0a90))
+
 ## [0.1.75](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.74...dashboard-v0.1.75) (2026-04-15)
 
 

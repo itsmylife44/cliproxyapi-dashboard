@@ -72,7 +72,7 @@ export function BackupSettings({ currentVersion, showToast }: BackupSettingsProp
       const data = await response.json();
       setBackups(data.backups || []);
     } catch {
-      showToast(tError("createFailed"), "error");
+      showToast(tError("fetchFailed"), "error");
     } finally {
       setBackupsLoading(false);
     }
@@ -100,7 +100,7 @@ export function BackupSettings({ currentVersion, showToast }: BackupSettingsProp
       const response = await fetch(API_ENDPOINTS.ADMIN.BACKUP_STORAGE);
       if (!response.ok) throw new Error("Failed to fetch storage");
       const data = await response.json();
-      setStorage(data);
+      setStorage(data.storage);
     } catch {
       // Storage info might not be available
     } finally {

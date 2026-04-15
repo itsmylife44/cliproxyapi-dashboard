@@ -1662,6 +1662,8 @@
     "copyToClipboard": "In Zwischenablage kopieren"
   },
   "backup": {
+    "tabGeneral": "Allgemein",
+    "tabBackup": "Backup",
     "title": "Sicherung & Wiederherstellung",
     "description": "Erstellen Sie Sicherungen, stellen Sie von vorherigen Sicherungen wieder her und verwalten Sie Sicherungszeitpläne.",
     "createBackup": "Sicherung erstellen",
@@ -1747,6 +1749,7 @@
       "downloadFailed": "Sicherung konnte nicht heruntergeladen werden",
       "deleteFailed": "Sicherung konnte nicht gelöscht werden",
       "uploadFailed": "Sicherungsdatei konnte nicht hochgeladen werden",
+      "fetchFailed": "Backups konnten nicht geladen werden",
       "invalidBackup": "Ungültiges Sicherungsdateiformat",
       "scheduleFailed": "Sicherungszeitplan konnte nicht aktualisiert werden",
       "adminRequired": "Administratorzugriff erforderlich"

@@ -68,8 +68,8 @@ export function BackupUpload({ currentVersion, onRestoreSuccess, onError }: Back
         throw new Error(data.error || tError("uploadFailed"));
       }
 
-      const previewData = await response.json();
-      setPreview(previewData);
+      const responseData = await response.json();
+      setPreview(responseData.preview);
       setShowPreviewModal(true);
     } catch (err) {
       onError(err instanceof Error ? err.message : tError("uploadFailed"));

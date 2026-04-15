@@ -418,13 +418,6 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6">
-        <BackupSettings
-          currentVersion={dashboardUpdateInfo?.currentVersion ?? "unknown"}
-          showToast={showToast}
-        />
-      </section>
-
       <ConfirmDialog
         isOpen={showConfirmProxyUpdate}
         onClose={() => {

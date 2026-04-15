@@ -17,5 +17,5 @@ jobs:
           ref: main
 
       - uses: JoshuaKGoldberg/all-contributors-auto-action@v0.5.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

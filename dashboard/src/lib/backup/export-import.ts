@@ -1,5 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import fs from "fs/promises";
+import path from "path";
 import type {
   BackupData,
   BackupMetadata,
@@ -23,7 +25,7 @@ import type {
   BackupCollectorState,
   RestorePreview,
 } from "./types";
-import { BACKUP_VERSION } from "./types";
+import { BACKUP_VERSION, BACKUP_DIR } from "./types";
 
 // Chunk size for cursor-based export (to handle large tables)
 const EXPORT_CHUNK_SIZE = 1000;
@@ -427,6 +429,20 @@ export function generateRestorePreview(backup: BackupData): RestorePreview {
  * Import backup data into the database (replaces all existing data)
  */
 export async function importDatabase(backup: BackupData): Promise<void> {
+  // First, delete all backup FILES before deleting DB records to avoid orphans
+  const existingBackups = await prisma.backupRecord.findMany({
+    select: { filename: true },
+  });
+  
+  for (const record of existingBackups) {
+    try {
+      const filePath = path.join(BACKUP_DIR, record.filename);
+      await fs.unlink(filePath);
+    } catch {
+      // File may not exist, ignore
+    }
+  }
+
   // Use a transaction to ensure atomicity
   await prisma.$transaction(async (tx) => {
     // Delete all existing data in reverse dependency order

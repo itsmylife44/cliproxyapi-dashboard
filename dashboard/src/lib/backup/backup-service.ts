@@ -8,7 +8,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { BackupFileData } from "@/lib/validation/schemas";
 import type { Prisma } from "@/generated/prisma/client";
-import { AUDIT_ACTION, logAuditAsync } from "@/lib/audit";
+import { AUDIT_ACTION, logAudit } from "@/lib/audit";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -445,26 +445,6 @@ export async function restoreFromBackup(
   try {
     const restoredCounts: Record<string, number> = {};
 
-    // Log audit entry BEFORE restoring users table (to avoid FK constraint issues)
-    if (adminUserId && ipAddress) {
-      try {
-        await logAuditAsync({
-          userId: adminUserId,
-          action: AUDIT_ACTION.BACKUP_RESTORED,
-          target: backupData.metadata.timestamp,
-          metadata: {
-            backupVersion: backupData.metadata.version,
-            dashboardVersion: backupData.metadata.dashboardVersion,
-            preRestoreBackupId,
-          },
-          ipAddress,
-        });
-      } catch (auditError) {
-        // Don't block restore on audit failure, but log the issue
-        logger.warn({ error: auditError }, "Failed to create pre-restore audit entry");
-      }
-    }
-
     // 3. Execute in transaction with extended timeout (5 minutes)
     await prisma.$transaction(
       async (tx) => {
@@ -507,6 +487,28 @@ export async function restoreFromBackup(
         timeout: 300_000, // 5 minutes
       }
     );
+
+    // Log audit entry AFTER the transaction so it isn't wiped by TRUNCATE.
+    // Uses awaitable logAudit (not fire-and-forget logAuditAsync) to guarantee
+    // the write completes before we return.
+    if (adminUserId && ipAddress) {
+      try {
+        await logAudit({
+          userId: adminUserId,
+          action: AUDIT_ACTION.BACKUP_RESTORED,
+          target: backupData.metadata.timestamp,
+          metadata: {
+            backupVersion: backupData.metadata.version,
+            dashboardVersion: backupData.metadata.dashboardVersion,
+            preRestoreBackupId,
+          },
+          ipAddress,
+        });
+      } catch (auditError) {
+        // Don't block restore on audit failure, but log the issue
+        logger.warn({ error: auditError }, "Failed to create post-restore audit entry");
+      }
+    }
 
     logger.info({ restoredCounts, preRestoreBackupId }, "Restore completed successfully");
 

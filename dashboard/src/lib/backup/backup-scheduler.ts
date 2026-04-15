@@ -52,7 +52,18 @@ export function startBackupScheduler(): void {
 
       const intervalMs = schedule.intervalHours * 60 * 60 * 1000;
       scheduleTimeout(async () => {
-        await run();
+        // Re-check enabled flag — admin may have disabled backups while timer was pending
+        try {
+          const current = await getBackupSchedule();
+          if (current.enabled) {
+            await run();
+          } else {
+            logger.info("Scheduled backup skipped — schedule was disabled while timer was pending");
+          }
+        } catch {
+          // If DB read fails, skip this cycle rather than running an unwanted backup
+          logger.warn("Scheduled backup skipped — could not verify schedule is still enabled");
+        }
         scheduleNext();
       }, intervalMs);
     } catch {

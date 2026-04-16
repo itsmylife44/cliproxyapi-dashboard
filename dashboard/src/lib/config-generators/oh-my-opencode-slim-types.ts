@@ -364,9 +364,8 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
         if (typeof agentVal !== "object" || agentVal === null || Array.isArray(agentVal)) continue;
         preset[agentName] = validateAgentConfig(agentVal as Record<string, unknown>);
       }
-      if (Object.keys(preset).length > 0) {
-        validatedPresets[presetName] = preset;
-      }
+      // Preserve empty presets so the UI can create/select a preset before any agents are configured.
+      validatedPresets[presetName] = preset;
     }
     if (Object.keys(validatedPresets).length > 0) {
       result.presets = validatedPresets;

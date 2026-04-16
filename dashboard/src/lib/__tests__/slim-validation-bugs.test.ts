@@ -25,6 +25,18 @@ describe("slim validation regressions", () => {
     });
   });
 
+  it("preserves empty presets so preset selection can round-trip", () => {
+    const result = validateSlimConfig({
+      preset: "review",
+      presets: {
+        review: {},
+      },
+    });
+
+    expect(result.preset).toBe("review");
+    expect(result.presets).toEqual({ review: {} });
+  });
+
   it("preserves council master variant and prompt without a model", () => {
     const result = validateSlimConfig({
       council: {

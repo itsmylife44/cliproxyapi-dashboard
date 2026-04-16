@@ -59,17 +59,20 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
 
   const t = useTranslations("ohMyOpenCodeSlim");
   const { showToast } = useToast();
+  const validatedInitialOverrides = useMemo(
+    () => validateSlimConfig(initialOverrides ?? {}),
+    [initialOverrides],
+  );
 
-  const [overrides, setOverrides] = useState<OhMyOpenCodeSlimFullConfig>(() => validateSlimConfig(initialOverrides ?? {}));
-  const [activePreset, setActivePreset] = useState<string>(() => validateSlimConfig(initialOverrides ?? {}).preset ?? DEFAULT_PRESET_NAME);
-  const latestSaveRef = useRef<OhMyOpenCodeSlimFullConfig>(validateSlimConfig(initialOverrides ?? {}));
+  const [overrides, setOverrides] = useState<OhMyOpenCodeSlimFullConfig>(validatedInitialOverrides);
+  const [activePreset, setActivePreset] = useState<string>(validatedInitialOverrides.preset ?? DEFAULT_PRESET_NAME);
+  const latestSaveRef = useRef<OhMyOpenCodeSlimFullConfig>(validatedInitialOverrides);
 
   useEffect(() => {
-    const nextOverrides = validateSlimConfig(initialOverrides ?? {});
-    latestSaveRef.current = nextOverrides;
-    setOverrides(nextOverrides);
-    setActivePreset(nextOverrides.preset ?? DEFAULT_PRESET_NAME);
-  }, [initialOverrides]);
+    latestSaveRef.current = validatedInitialOverrides;
+    setOverrides(validatedInitialOverrides);
+    setActivePreset(validatedInitialOverrides.preset ?? DEFAULT_PRESET_NAME);
+  }, [validatedInitialOverrides]);
 
   const saveOverrides = useCallback(
     async (newOverrides: OhMyOpenCodeSlimFullConfig) => {
@@ -122,9 +125,10 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
   const hasModels = availableModelIds.length > 0;
 
   const presetNames = useMemo(() => {
-    const names = Object.keys(overrides.presets ?? {}).filter((name) => name !== DEFAULT_PRESET_NAME);
+    const names = new Set(Object.keys(overrides.presets ?? {}).filter((name) => name !== DEFAULT_PRESET_NAME));
+    if (activePreset !== DEFAULT_PRESET_NAME) names.add(activePreset);
     return [DEFAULT_PRESET_NAME, ...names];
-  }, [overrides.presets]);
+  }, [activePreset, overrides.presets]);
 
   const currentEditableAgents = useMemo<Record<string, SlimAgentConfig>>(
     () => editingConfig === "preset"

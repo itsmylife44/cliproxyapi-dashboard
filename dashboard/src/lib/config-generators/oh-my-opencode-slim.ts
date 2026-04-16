@@ -365,12 +365,16 @@ export function buildSlimConfig(
     const council: Record<string, unknown> = Object.create(null);
 
     // Master
-    if (rawCouncil.master?.model) {
+    if (rawCouncil.master) {
       const master: Record<string, unknown> = Object.create(null);
-      master.model = prefixModel(rawCouncil.master.model, availableModels);
+      if (rawCouncil.master.model !== undefined) {
+        master.model = prefixModel(rawCouncil.master.model, availableModels);
+      }
       if (rawCouncil.master.variant !== undefined) master.variant = rawCouncil.master.variant;
       if (rawCouncil.master.prompt !== undefined) master.prompt = rawCouncil.master.prompt;
-      council.master = master;
+      if (Object.keys(master).length > 0) {
+        council.master = master;
+      }
     }
 
     // Council presets

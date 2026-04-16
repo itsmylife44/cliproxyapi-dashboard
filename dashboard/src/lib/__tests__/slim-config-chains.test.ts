@@ -142,6 +142,31 @@ describe("buildSlimConfig – preset and global override semantics", () => {
     expect(generated.agents?.oracle).toEqual({ variant: "high" });
   });
 
+  it("preserves council master overrides without a model", () => {
+    const config = buildSlimConfig(available, {
+      council: {
+        master: {
+          variant: "high-precision",
+          prompt: "Coordinate the council.",
+        },
+        presets: {
+          default: {
+            councillors: {
+              alpha: { model: "model-a" },
+            },
+          },
+        },
+      },
+    });
+
+    const generated = expectGeneratedConfig(config);
+    expect(generated.council).toBeDefined();
+    expect(generated.council?.master).toEqual({
+      variant: "high-precision",
+      prompt: "Coordinate the council.",
+    });
+  });
+
   it("should handle disabled_agents field", () => {
     const config = buildSlimConfig(available, {
       disabled_agents: ["observer", "councillor"],

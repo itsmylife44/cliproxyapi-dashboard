@@ -48,6 +48,18 @@ type EditingScope = "agents" | "preset";
 
 const DEFAULT_PRESET_NAME = "cliproxyapi";
 
+export function applySlimTerminalOverrides(
+  overrides: OhMyOpenCodeSlimFullConfig,
+  change: { tmux: SlimTmuxConfig | undefined } | { multiplexer: SlimMultiplexerConfig | undefined },
+): OhMyOpenCodeSlimFullConfig {
+  // Legacy tmux and canonical multiplexer are mutually exclusive editor surfaces.
+  if ("tmux" in change) {
+    return { ...overrides, tmux: change.tmux, multiplexer: undefined };
+  }
+
+  return { ...overrides, multiplexer: change.multiplexer, tmux: undefined };
+}
+
 export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGeneratorProps) {
   const { apiKeys, proxyModelIds, excludedModels, slimOverrides: initialOverrides, modelSourceMap } = props;
   const [isExpanded, setIsExpanded] = useState(false);
@@ -323,7 +335,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
   };
 
   const handleTmuxChange = (tmux: SlimTmuxConfig | undefined) => {
-    commitOverrides({ ...overrides, tmux });
+    commitOverrides(applySlimTerminalOverrides(overrides, { tmux }));
   };
 
   const handleBackgroundChange = (background: SlimBackgroundConfig | undefined) => {
@@ -353,7 +365,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
   };
 
   const handleMultiplexerChange = (multiplexer: SlimMultiplexerConfig | undefined) => {
-    commitOverrides({ ...overrides, multiplexer, tmux: undefined });
+    commitOverrides(applySlimTerminalOverrides(overrides, { multiplexer }));
   };
 
   const handleDisabledAgentAdd = (agent: string) => {
@@ -422,7 +434,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
         <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 text-sm rounded-r-xl">
           <p className="text-[var(--text-primary)] font-medium mb-1">{t("noProvidersTitle")}</p>
           <p className="text-[var(--text-muted)] text-xs">
-            {t("noProvidersDesc")} {" "}
+            {t("noProvidersDesc")}{" "}
             <Link
               href="/dashboard/providers"
               className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[var(--surface-border)]"

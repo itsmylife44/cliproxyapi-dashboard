@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { applySlimTerminalOverrides } from "../../components/oh-my-opencode-slim-config-generator";
 import { validateSlimConfig } from "../config-generators/oh-my-opencode-slim-types";
 import { SlimAgentConfigSchema } from "../validation/schemas";
 
@@ -36,6 +37,20 @@ describe("slim validation regressions", () => {
     expect(result.preset).toBe("review");
     expect(result.presets).toEqual({ review: {} });
   });
+
+  it("clears stale multiplexer config when legacy tmux is edited", () => {
+    const result = applySlimTerminalOverrides(
+      {
+        multiplexer: { type: "zellij" },
+        tmux: { enabled: false, layout: "main-vertical", main_pane_size: 60 },
+      },
+      { tmux: { enabled: true, layout: "main-horizontal", main_pane_size: 55 } },
+    );
+
+    expect(result.tmux).toEqual({ enabled: true, layout: "main-horizontal", main_pane_size: 55 });
+    expect(result.multiplexer).toBeUndefined();
+  });
+
 
   it("preserves council master variant and prompt without a model", () => {
     const result = validateSlimConfig({

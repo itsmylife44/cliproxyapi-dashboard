@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { buildSlimConfig } from "../config-generators/oh-my-opencode-slim";
 import type { OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
 
+function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfig>): OhMyOpenCodeSlimFullConfig {
+  expect(config).not.toBeNull();
+  return config as OhMyOpenCodeSlimFullConfig;
+}
+
 describe("buildSlimConfig fallback chains - external model passthrough", () => {
   const available = ["claude-sonnet-4", "gemini-2.5-pro"];
 
@@ -86,13 +91,11 @@ describe("buildSlimConfig - advanced field preservation", () => {
     };
 
     const config = buildSlimConfig(available, overrides);
-    expect(config).not.toBeNull();
-
-    const interview = config!.interview as any;
-    expect(interview).toBeDefined();
-    expect(interview.dashboard).toBe(true);
-    expect(interview.maxQuestions).toBe(3);
-    expect(interview.autoOpenBrowser).toBe(false);
+    const generated = expectGeneratedConfig(config);
+    expect(generated.interview).toBeDefined();
+    expect(generated.interview?.dashboard).toBe(true);
+    expect(generated.interview?.maxQuestions).toBe(3);
+    expect(generated.interview?.autoOpenBrowser).toBe(false);
   });
 
   it("should handle retry_on_empty in fallback config", () => {
@@ -105,12 +108,10 @@ describe("buildSlimConfig - advanced field preservation", () => {
     };
 
     const config = buildSlimConfig(available, overrides);
-    expect(config).not.toBeNull();
-
-    const fallback = config!.fallback as any;
-    expect(fallback.retry_on_empty).toBe(true);
-    expect(fallback.enabled).toBe(true);
-    expect(fallback.timeoutMs).toBe(5000);
+    const generated = expectGeneratedConfig(config);
+    expect(generated.fallback?.retry_on_empty).toBe(true);
+    expect(generated.fallback?.enabled).toBe(true);
+    expect(generated.fallback?.timeoutMs).toBe(5000);
   });
 
   it("should fail fast when no models available and no overrides", () => {

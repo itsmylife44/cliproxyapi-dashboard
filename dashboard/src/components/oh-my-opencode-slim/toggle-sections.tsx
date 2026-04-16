@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import type {
@@ -92,11 +92,6 @@ function JsonApplyEditor({
 }) {
   const [draft, setDraft] = useState(() => formatJson(value));
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setDraft(formatJson(value));
-    setError(null);
-  }, [value]);
 
   const handleApply = () => {
     try {
@@ -395,6 +390,7 @@ export function SlimToggleSections({
             <p className="text-[11px] font-medium text-[var(--text-muted)]">{t("fallbackChainsLabel")}</p>
             <p className="text-[11px] text-[var(--text-muted)]">{t("fallbackChainsHelp")}</p>
             <JsonApplyEditor
+            key={formatJson(fallback.chains ?? {})}
               value={fallback.chains ?? {}}
               placeholder={t("fallbackChainsPlaceholder")}
               invalidLabel={t("jsonInvalidLabel")}
@@ -562,6 +558,7 @@ export function SlimToggleSections({
             <p className="text-[11px] font-medium text-[var(--text-muted)]">{t("councilPresetsLabel")}</p>
             <p className="text-[11px] text-[var(--text-muted)]">{t("councilPresetsHelp")}</p>
             <JsonApplyEditor
+            key={formatJson(council.presets ?? {})}
               value={council.presets ?? {}}
               placeholder={t("councilPresetsPlaceholder")}
               invalidLabel={t("jsonInvalidLabel")}
@@ -773,6 +770,7 @@ export function SlimToggleSections({
         tooltip={t("manualPlanSectionTooltip")}
       >
         <JsonApplyEditor
+          key={formatJson(overrides.manualPlan ?? {})}
           value={overrides.manualPlan ?? {}}
           placeholder={t("manualPlanPlaceholder")}
           invalidLabel={t("jsonInvalidLabel")}
@@ -789,6 +787,7 @@ export function SlimToggleSections({
       >
         <p className="text-[11px] text-[var(--text-muted)]">{t("jsonEditorWarning")}</p>
         <JsonApplyEditor
+          key={formatJson(overrides)}
           value={overrides}
           placeholder={t("jsonEditorPlaceholder")}
           invalidLabel={t("jsonInvalidLabel")}

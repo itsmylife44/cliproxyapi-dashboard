@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { buildSlimConfig } from "../config-generators/oh-my-opencode-slim";
 import type { OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
 
+function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfig>): OhMyOpenCodeSlimFullConfig {
+  expect(config).not.toBeNull();
+  return config as OhMyOpenCodeSlimFullConfig;
+}
+
 describe("buildSlimConfig – fallback chains behavior", () => {
   it("should passthrough external models and prefix available ones", () => {
     const available = ["model-a", "model-b"];
@@ -72,16 +77,16 @@ describe("buildSlimConfig – preset and global override semantics", () => {
       },
     }, { presetName: "cliproxyapi" });
 
-    expect(config).not.toBeNull();
-    expect((config as any).preset).toBe("custom");
-    expect((config as any).presets.custom.orchestrator.model).toBe("cliproxyapi/model-a");
+    const generated = expectGeneratedConfig(config);
+    expect(generated.preset).toBe("custom");
+    expect(generated.presets?.custom?.orchestrator?.model).toBe("cliproxyapi/model-a");
   });
 
   it("should fall back to options.presetName when overrides.preset is missing", () => {
     const config = buildSlimConfig(available, {}, { presetName: "fallback" });
 
-    expect(config).not.toBeNull();
-    expect((config as any).preset).toBe("fallback");
+    const generated = expectGeneratedConfig(config);
+    expect(generated.preset).toBe("fallback");
   });
 
   it("should prioritize root agents over preset agents (upstream semantics)", () => {
@@ -97,14 +102,13 @@ describe("buildSlimConfig – preset and global override semantics", () => {
       },
     });
 
-    expect(config).not.toBeNull();
-    const generated = config as any;
+    const generated = expectGeneratedConfig(config);
     // Root agents should override presets at runtime and be emitted separately.
     expect(generated.agents).toBeDefined();
-    expect(generated.agents.orchestrator.model).toBe("cliproxyapi/model-b");
-    expect(generated.agents.orchestrator.variant).toBe("root");
-    expect(generated.presets.test.orchestrator.model).toBe("cliproxyapi/model-a");
-    expect(generated.presets.test.orchestrator.variant).toBe("preset");
+    expect(generated.agents?.orchestrator.model).toBe("cliproxyapi/model-b");
+    expect(generated.agents?.orchestrator.variant).toBe("root");
+    expect(generated.presets?.test?.orchestrator?.model).toBe("cliproxyapi/model-a");
+    expect(generated.presets?.test?.orchestrator?.variant).toBe("preset");
   });
 
   it("should preserve explicit advanced agent configs", () => {
@@ -115,10 +119,9 @@ describe("buildSlimConfig – preset and global override semantics", () => {
       },
     });
 
-    expect(config).not.toBeNull();
-    const generated = config as any;
-    expect(generated.agents.observer.model).toBe("external/observer-model");
-    expect(generated.agents.councillor.model).toBe("cliproxyapi/model-a");
+    const generated = expectGeneratedConfig(config);
+    expect(generated.agents?.observer.model).toBe("external/observer-model");
+    expect(generated.agents?.councillor.model).toBe("cliproxyapi/model-a");
   });
 
   it("preserves partial root overrides without inventing a new model", () => {
@@ -134,10 +137,9 @@ describe("buildSlimConfig – preset and global override semantics", () => {
       },
     });
 
-    expect(config).not.toBeNull();
-    const generated = config as any;
-    expect(generated.presets.test.oracle.model).toBe("cliproxyapi/model-a");
-    expect(generated.agents.oracle).toEqual({ variant: "high" });
+    const generated = expectGeneratedConfig(config);
+    expect(generated.presets?.test?.oracle?.model).toBe("cliproxyapi/model-a");
+    expect(generated.agents?.oracle).toEqual({ variant: "high" });
   });
 
   it("should handle disabled_agents field", () => {
@@ -145,7 +147,7 @@ describe("buildSlimConfig – preset and global override semantics", () => {
       disabled_agents: ["observer", "councillor"],
     });
 
-    expect(config).not.toBeNull();
-    expect((config as any).disabled_agents).toEqual(["observer", "councillor"]);
+    const generated = expectGeneratedConfig(config);
+    expect(generated.disabled_agents).toEqual(["observer", "councillor"]);
   });
 });

@@ -406,8 +406,7 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
           isValidModelStr(entry.fallback2) &&
           isValidModelStr(entry.fallback3)
         ) {
-          const unique = new Set([entry.primary, entry.fallback1, entry.fallback2, entry.fallback3]);
-          if (unique.size !== 4) continue;
+          // Repeated models are valid: users may intentionally retry the same model across slots.
           validatedPlan[agent] = {
             primary: entry.primary,
             fallback1: entry.fallback1,
@@ -522,10 +521,20 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     // master
     if (cObj.master && typeof cObj.master === "object" && !Array.isArray(cObj.master)) {
       const mObj = cObj.master as Record<string, unknown>;
+      const master: NonNullable<SlimCouncilConfig["master"]> = {};
+
+      // Preserve master overrides when any supported field is present.
       if (typeof mObj.model === "string" && mObj.model.length <= 256) {
-        const master: NonNullable<SlimCouncilConfig["master"]> = { model: mObj.model };
-        if (typeof mObj.variant === "string" && mObj.variant.length <= 256) master.variant = mObj.variant;
-        if (typeof mObj.prompt === "string" && mObj.prompt.length <= 4096) master.prompt = mObj.prompt;
+        master.model = mObj.model;
+      }
+      if (typeof mObj.variant === "string" && mObj.variant.length <= 256) {
+        master.variant = mObj.variant;
+      }
+      if (typeof mObj.prompt === "string" && mObj.prompt.length <= 4096) {
+        master.prompt = mObj.prompt;
+      }
+
+      if (Object.keys(master).length > 0) {
         council.master = master;
       }
     }

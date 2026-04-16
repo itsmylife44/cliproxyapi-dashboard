@@ -208,7 +208,10 @@ const SlimCouncilPresetMasterOverrideSchema = z.object({
   model: z.string().optional(),
   variant: z.string().optional(),
   prompt: z.string().optional(),
-});
+}).refine(
+  (value) => value.model !== undefined || value.variant !== undefined || value.prompt !== undefined,
+  "Council master override must include at least one of model, variant, or prompt",
+);
 
 const SlimCouncilPresetSchema = z.object({
   councillors: z.record(z.string(), SlimCouncillorEntrySchema),
@@ -216,11 +219,7 @@ const SlimCouncilPresetSchema = z.object({
 });
 
 const SlimCouncilSchema = z.object({
-  master: z.object({
-    model: z.string(),
-    variant: z.string().optional(),
-    prompt: z.string().optional(),
-  }).optional(),
+  master: SlimCouncilPresetMasterOverrideSchema.optional(),
   presets: z.record(z.string(), SlimCouncilPresetSchema).optional(),
   master_timeout: z.number().min(0).optional(),
   councillors_timeout: z.number().min(0).optional(),

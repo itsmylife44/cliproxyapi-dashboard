@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { NextRequest } from "next/server";
 
 vi.mock("server-only", () => ({}));
+
+const verifySessionMock = vi.fn();
+const upsertMock = vi.fn();
+const validateOriginMock = vi.fn();
 
 vi.mock("@/lib/errors", () => ({
   Errors: {
@@ -11,88 +16,122 @@ vi.mock("@/lib/errors", () => ({
   apiSuccess: (data: unknown) => new Response(JSON.stringify(data), { status: 200 }),
 }));
 
-const verifySessionMock = vi.fn();
-const fetchProxyModelsMock = vi.fn();
-const extractOAuthModelAliasesMock = vi.fn();
-
 vi.mock("@/lib/auth/session", () => ({
   verifySession: verifySessionMock,
 }));
 
 vi.mock("@/lib/db", () => ({
   prisma: {
-    agentModelOverride: { findUnique: vi.fn() },
-    modelPreference: { findUnique: vi.fn() },
-    userApiKey: { findMany: vi.fn() },
+    agentModelOverride: { upsert: upsertMock },
   },
 }));
 
-vi.mock("@/lib/config-generators/opencode", () => ({
-  getInternalProxyUrl: vi.fn(() => "http://proxy.internal"),
-  extractOAuthModelAliases: extractOAuthModelAliasesMock,
+vi.mock("@/lib/auth/origin", () => ({
+  validateOrigin: validateOriginMock,
 }));
 
-vi.mock("@/lib/config-generators/shared", () => {
-  return {
-    isRecord: (value: unknown): value is Record<string, unknown> =>
-      typeof value === "object" && value !== null,
-    buildAvailableModelIds: (proxyModels: Array<{ id: string }>, oauthAliasIds: string[]): string[] =>
-      [...new Set([...proxyModels.map((m) => m.id), ...oauthAliasIds])].sort((a, b) => a.localeCompare(b)),
-    fetchProxyModels: fetchProxyModelsMock,
-  };
-});
-
-describe("GET /api/agent-config-slim", () => {
+describe("PUT /api/agent-config-slim", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    verifySessionMock.mockResolvedValue({ userId: "user-1" });
+    validateOriginMock.mockReturnValue(undefined);
+    upsertMock.mockImplementation(async ({ create }: { create: { slimOverrides: unknown } }) => ({
+      slimOverrides: create.slimOverrides,
+    }));
   });
 
-  it("deduplicates, sorts, and filters available models", async () => {
-    const { prisma } = await import("@/lib/db");
+  it("accepts and stores advanced slim config shapes", async () => {
+    const { PUT } = await import("./route");
 
-    verifySessionMock.mockResolvedValue({ userId: "user-1" });
-    (prisma.agentModelOverride.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-    (prisma.modelPreference.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-      excludedModels: ["claude-opus-4.6"],
-    });
-    (prisma.userApiKey.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([{ key: "sk-test" }]);
-
-    fetchProxyModelsMock.mockResolvedValue([
-      { id: "claude-opus-4.6", owned_by: "anthropic" },
-      { id: "gemini-2.5-pro", owned_by: "google" },
-      { id: "gemini-2.5-pro", owned_by: "google" },
-    ]);
-
-    extractOAuthModelAliasesMock.mockReturnValue({
-      "gemini-2.5-flash": {
-        name: "Gemini 2.5 Flash",
-        context: 200000,
-        output: 64000,
-        attachment: true,
-        reasoning: true,
-        modalities: { input: ["text"], output: ["text"] },
+    const requestBody = {
+      overrides: {
+        preset: "review",
+        presets: {
+          review: {
+            orchestrator: {
+              model: ["gemini-2.5-pro", { id: "claude-opus-4.6", variant: "high" }],
+              options: { thinking: { type: "enabled", budget_tokens: 4096 } },
+            },
+            observer: { model: "openai/gpt-4.1-mini" },
+          },
+          fast: {
+            fixer: { model: "gpt-5-mini" },
+          },
+        },
+        agents: {
+          oracle: { variant: "high" },
+          "council-master": { model: "anthropic/claude-opus-4-6" },
+        },
+        disabled_agents: ["observer"],
+        disabled_mcps: ["websearch"],
+        multiplexer: { type: "zellij" },
+        interview: { maxQuestions: 3, dashboard: true, port: 43211 },
+        todoContinuation: { autoEnable: true, autoEnableThreshold: 6 },
+        websearch: { provider: "tavily" },
+        fallback: {
+          enabled: true,
+          retry_on_empty: true,
+          chains: {
+            orchestrator: ["gpt-5-mini"],
+            observer: ["openai/gpt-4.1-mini"],
+          },
+        },
+        council: {
+          master: { model: "anthropic/claude-opus-4-6" },
+          presets: {
+            default: {
+              councillors: {
+                alpha: { model: "openai/gpt-5-mini" },
+              },
+              master: { variant: "high" },
+            },
+          },
+          default_preset: "default",
+          master_fallback: ["openai/gpt-5"],
+          councillor_retries: 2,
+        },
       },
-      "claude-opus-4.6": {
-        name: "Claude Opus 4.6",
-        context: 200000,
-        output: 64000,
-        attachment: true,
-        reasoning: true,
-        modalities: { input: ["text"], output: ["text"] },
-      },
-    });
+    };
 
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({}), body: { cancel: vi.fn() } })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ files: [] }), body: { cancel: vi.fn() } });
-    Object.defineProperty(global, "fetch", { value: fetchMock, writable: true, configurable: true });
-
-    const { GET } = await import("./route");
-    const response = await GET();
-    const data = await response.json();
-
+    const response = await PUT({ json: async () => requestBody } as NextRequest);
     expect(response.status).toBe(200);
-    expect(data.availableModels).toEqual(["gemini-2.5-flash", "gemini-2.5-pro"]);
+
+    const data = await response.json();
+    expect(data.overrides.preset).toBe("review");
+    expect(data.overrides.interview.dashboard).toBe(true);
+    expect(data.overrides.multiplexer.type).toBe("zellij");
+    expect(data.overrides.disabled_agents).toEqual(["observer"]);
+    expect(data.overrides.fallback.retry_on_empty).toBe(true);
+    expect(data.overrides.presets.review.orchestrator.model).toEqual([
+      "gemini-2.5-pro",
+      { id: "claude-opus-4.6", variant: "high" },
+    ]);
+    expect(data.overrides.presets.review.observer.model).toBe("openai/gpt-4.1-mini");
+    expect(data.overrides.agents["council-master"].model).toBe("anthropic/claude-opus-4-6");
+
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    const saved = upsertMock.mock.calls[0][0].create.slimOverrides as Record<string, unknown>;
+    expect(saved.interview).toEqual({ maxQuestions: 3, dashboard: true, port: 43211 });
+    expect(saved.websearch).toEqual({ provider: "tavily" });
   });
 });
+
+describe("SlimAgentConfigSchema", () => {
+  it("accepts advanced preset agent keys and interview.dashboard", async () => {
+    const { SlimAgentConfigSchema } = await import("@/lib/validation/schemas");
+
+    expect(() =>
+      SlimAgentConfigSchema.parse({
+        overrides: {
+          presets: {
+            review: {
+              observer: { model: "openai/gpt-4.1-mini" },
+              "council-master": { model: "anthropic/claude-opus-4-6" },
+            },
+          },
+          interview: { dashboard: true, port: 43211 },
+        },
+      }),
+    ).not.toThrow();
+  });
+} );

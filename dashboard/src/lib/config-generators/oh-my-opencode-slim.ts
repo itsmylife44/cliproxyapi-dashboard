@@ -22,7 +22,6 @@ import {
   type SlimAgentConfig,
   type SlimModelConfig,
   type SlimModelEntry,
-  type SlimPreset,
 } from "./oh-my-opencode-slim-types";
 
 export type { ConfigData, OAuthAccount } from "./shared";
@@ -145,6 +144,28 @@ function buildAgentEntry(
   return entry;
 }
 
+function normalizeExplicitAgentConfig(
+  override: SlimAgentConfig | undefined,
+  availableModels: string[],
+): SlimAgentConfig | null {
+  if (!override) return null;
+
+  const entry: SlimAgentConfig = {};
+
+  if (override.model !== undefined) {
+    entry.model = processModelConfig(override.model, availableModels);
+  }
+  if (override.temperature !== undefined) entry.temperature = override.temperature;
+  if (override.variant !== undefined) entry.variant = override.variant;
+  if (override.skills !== undefined) entry.skills = [...override.skills];
+  if (override.mcps !== undefined) entry.mcps = [...override.mcps];
+  if (override.options && Object.keys(override.options).length > 0) {
+    entry.options = override.options;
+  }
+
+  return Object.keys(entry).length > 0 ? entry : null;
+}
+
 // ---------------------------------------------------------------------------
 // Main config builder
 // ---------------------------------------------------------------------------
@@ -169,54 +190,92 @@ export function buildSlimConfig(
   overrides?: OhMyOpenCodeSlimFullConfig,
   options?: BuildSlimConfigOptions,
 ): Record<string, unknown> | null {
-  const { presetName = "cliproxyapi", usePresets = true } = options ?? {};
+  const { presetName: optionsPresetName = "cliproxyapi", usePresets = true } = options ?? {};
 
-  // Build agent configs
-  const agentConfigs: Record<string, SlimAgentConfig> = Object.create(null);
-  for (const agent of SLIM_AGENTS) {
-    // Check for preset overrides first, then legacy agents
-    const presetOverride = overrides?.presets?.[presetName]?.[agent as keyof SlimPreset];
-    const agentOverride = presetOverride ?? overrides?.agents?.[agent];
-    const entry = buildAgentEntry(agent, availableModels, agentOverride);
-    if (entry === null) {
-      // Cannot build valid config without this agent's model
-      return null;
-    }
-    agentConfigs[agent] = entry;
-  }
+  // Active preset selection: overrides.preset first, then options.presetName, then "cliproxyapi"
+  const activePresetName = overrides?.preset ?? optionsPresetName;
 
   // Build the config object
   const config: Record<string, unknown> = {
     $schema: "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
   };
 
-  // Use presets structure (modern) or agents (legacy)
   if (usePresets) {
-    config.preset = presetName;
-    config.presets = {
-      [presetName]: agentConfigs,
-    };
+    const presets: Record<string, Record<string, SlimAgentConfig>> = Object.create(null);
+    const explicitPresets = overrides?.presets ?? {};
+    const presetNames = new Set<string>([activePresetName, ...Object.keys(explicitPresets)]);
 
-    // Include any additional presets from overrides (with model prefixing)
-    if (overrides?.presets) {
-      for (const [name, preset] of Object.entries(overrides.presets)) {
-        if (name === presetName) continue; // Already handled
-        const presetOut: Record<string, SlimAgentConfig> = Object.create(null);
-        for (const [agentKey, agentConfig] of Object.entries(preset)) {
-          if (!SLIM_AGENTS.includes(agentKey as typeof SLIM_AGENTS[number])) continue;
-          const entry = buildAgentEntry(agentKey, availableModels, agentConfig);
-          if (entry !== null) {
-            presetOut[agentKey] = entry;
-          }
+    for (const presetName of presetNames) {
+      const presetOverride = explicitPresets[presetName];
+      const presetOut: Record<string, SlimAgentConfig> = Object.create(null);
+
+      // Auto-assign the 7 primary agents for every dashboard-managed preset.
+      for (const agent of SLIM_AGENTS) {
+        const presetAgentOverride = presetOverride?.[agent];
+        const rootModelFallback =
+          availableModels.length === 0 && presetAgentOverride?.model === undefined
+            ? overrides?.agents?.[agent]
+            : undefined;
+        const entry = buildAgentEntry(
+          agent,
+          availableModels,
+          rootModelFallback ? { ...rootModelFallback, ...presetAgentOverride } : presetAgentOverride,
+        );
+        if (entry === null) {
+          return null;
         }
-        if (Object.keys(presetOut).length > 0) {
-          (config.presets as Record<string, unknown>)[name] = presetOut;
+        presetOut[agent] = entry;
+      }
+
+      // Preserve explicitly configured advanced agents without inventing defaults for them.
+      for (const [agentKey, agentConfig] of Object.entries(presetOverride ?? {})) {
+        if (SLIM_AGENTS.includes(agentKey as typeof SLIM_AGENTS[number])) continue;
+        const normalized = normalizeExplicitAgentConfig(agentConfig, availableModels);
+        if (normalized) {
+          presetOut[agentKey] = normalized;
         }
+      }
+
+      presets[presetName] = presetOut;
+    }
+
+    config.preset = activePresetName;
+    config.presets = presets;
+
+    // Emit root agents separately as global overrides (upstream loader merges these over presets).
+    if (overrides?.agents && Object.keys(overrides.agents).length > 0) {
+      const rootAgents: Record<string, SlimAgentConfig> = Object.create(null);
+      for (const [agentKey, agentConfig] of Object.entries(overrides.agents)) {
+        const normalized = normalizeExplicitAgentConfig(agentConfig, availableModels);
+        if (normalized) {
+          rootAgents[agentKey] = normalized;
+        }
+      }
+      if (Object.keys(rootAgents).length > 0) {
+        config.agents = rootAgents;
       }
     }
   } else {
-    // Legacy mode: use agents directly
-    config.agents = agentConfigs;
+    const explicitAgents = overrides?.agents ?? {};
+    const generatedAgents: Record<string, SlimAgentConfig> = Object.create(null);
+
+    for (const agent of SLIM_AGENTS) {
+      const entry = buildAgentEntry(agent, availableModels, explicitAgents[agent]);
+      if (entry === null) {
+        return null;
+      }
+      generatedAgents[agent] = entry;
+    }
+
+    for (const [agentKey, agentConfig] of Object.entries(explicitAgents)) {
+      if (SLIM_AGENTS.includes(agentKey as typeof SLIM_AGENTS[number])) continue;
+      const normalized = normalizeExplicitAgentConfig(agentConfig, availableModels);
+      if (normalized) {
+        generatedAgents[agentKey] = normalized;
+      }
+    }
+
+    config.agents = generatedAgents;
     if (overrides?.preset) config.preset = overrides.preset;
   }
 
@@ -246,6 +305,9 @@ export function buildSlimConfig(
 
   // Disabled MCPs
   if (overrides?.disabled_mcps?.length) config.disabled_mcps = overrides.disabled_mcps;
+
+  // Disabled agents
+  if (overrides?.disabled_agents?.length) config.disabled_agents = overrides.disabled_agents;
 
   // Multiplexer (new unified config) — takes precedence over tmux
   if (overrides?.multiplexer) {

@@ -72,3 +72,71 @@ describe("buildSlimConfig fallback chains - external model passthrough", () => {
     ]);
   });
 });
+
+describe("buildSlimConfig - advanced field preservation", () => {
+  const available = ["claude-sonnet-4"];
+
+  it("should preserve interview.dashboard field", () => {
+    const overrides: OhMyOpenCodeSlimFullConfig = {
+      interview: {
+        maxQuestions: 3,
+        dashboard: true,
+        autoOpenBrowser: false,
+      },
+    };
+
+    const config = buildSlimConfig(available, overrides);
+    expect(config).not.toBeNull();
+
+    const interview = config!.interview as any;
+    expect(interview).toBeDefined();
+    expect(interview.dashboard).toBe(true);
+    expect(interview.maxQuestions).toBe(3);
+    expect(interview.autoOpenBrowser).toBe(false);
+  });
+
+  it("should handle retry_on_empty in fallback config", () => {
+    const overrides: OhMyOpenCodeSlimFullConfig = {
+      fallback: {
+        enabled: true,
+        retry_on_empty: true,
+        timeoutMs: 5000,
+      },
+    };
+
+    const config = buildSlimConfig(available, overrides);
+    expect(config).not.toBeNull();
+
+    const fallback = config!.fallback as any;
+    expect(fallback.retry_on_empty).toBe(true);
+    expect(fallback.enabled).toBe(true);
+    expect(fallback.timeoutMs).toBe(5000);
+  });
+
+  it("should fail fast when no models available and no overrides", () => {
+    // With empty availableModels and no model overrides, we cannot build valid config
+    // This is the correct fail-fast behavior
+    const config = buildSlimConfig([]);
+
+    // Config should be null when we can't resolve any models
+    expect(config).toBeNull();
+  });
+
+  it("should build config when models provided via overrides even with empty available", () => {
+    // If user provides explicit model overrides, those are passed through
+    const config = buildSlimConfig([], {
+      agents: {
+        orchestrator: { model: "external/claude-3.5" },
+        oracle: { model: "external/gpt-4" },
+        designer: { model: "external/claude-3.5" },
+        explorer: { model: "external/gemini" },
+        librarian: { model: "external/claude-3.5" },
+        fixer: { model: "external/claude-3.5" },
+        council: { model: "external/claude-3.5" },
+      },
+    });
+
+    // Should succeed because all agents have explicit overrides
+    expect(config).not.toBeNull();
+  });
+});

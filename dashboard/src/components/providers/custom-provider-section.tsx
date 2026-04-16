@@ -98,7 +98,7 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
       setLoading(false);
       showToast(t("toastNetworkError"), "error");
     }
-  }, [onProviderCountChange, showToast]);
+  }, [onProviderCountChange, showToast, t]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {

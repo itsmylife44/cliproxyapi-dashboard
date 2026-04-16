@@ -178,7 +178,7 @@ export default function MonitoringPage() {
     };
 
     checkLoggingStatus();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (loggingState !== LOGGING_STATE.ENABLED) {
@@ -234,7 +234,7 @@ export default function MonitoringPage() {
         logsIntervalRef.current = null;
       }
     };
-  }, [loggingState]);
+  }, [loggingState, t]);
 
   const handleEnableLogging = async () => {
     setEnablingLogging(true);

@@ -23,13 +23,15 @@ function Write-ErrorMsg($Message) {
 
 function New-RandomHex([int]$LengthBytes) {
     $bytes = [byte[]]::new($LengthBytes)
-    [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+    $rng = [System.Security.Cryptography.RNGCryptoServiceProvider]::new()
+    $rng.GetBytes($bytes)
     return ($bytes | ForEach-Object { $_.ToString("x2") }) -join ""
 }
 
 function New-RandomBase64([int]$LengthBytes) {
     $bytes = [byte[]]::new($LengthBytes)
-    [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+    $rng = [System.Security.Cryptography.RNGCryptoServiceProvider]::new()
+    $rng.GetBytes($bytes)
     return [Convert]::ToBase64String($bytes)
 }
 
@@ -63,6 +65,13 @@ function Invoke-ComposeDown {
 function Invoke-ComposeReset {
     docker compose -f $ComposeFile down -v 2>&1 | Write-Host
     $configFile = Join-Path $ScriptDir "config.local.yaml"
+    
+    # Remove config directory if it exists (Docker may have created it)
+    if (Test-Path $configFile -PathType Container) {
+        Write-Info "Removing existing config directory at $configFile"
+        Remove-Item -Force -Recurse $configFile -ErrorAction SilentlyContinue
+    }
+    
     Remove-Item -Force $EnvFile -ErrorAction SilentlyContinue
     Remove-Item -Force $configFile -ErrorAction SilentlyContinue
 }
@@ -126,7 +135,15 @@ function Ensure-EnvFile {
 
 function Ensure-ConfigYaml {
     $configFile = Join-Path $ScriptDir "config.local.yaml"
-    if (Test-Path $configFile) {
+    
+    # Remove config directory if it exists (Docker may have created it)
+    if (Test-Path $configFile -PathType Container) {
+        Write-Info "Removing existing config directory at $configFile"
+        Remove-Item -Force -Recurse $configFile -ErrorAction SilentlyContinue
+    }
+    
+    # Check for actual config file (not directory)
+    if (Test-Path $configFile -PathType Leaf) {
         return
     }
 
@@ -157,6 +174,12 @@ quota-exceeded:
 routing:
   strategy: "round-robin"
 "@
+
+    # Ensure no directory exists before writing file
+    if (Test-Path $configFile -PathType Container) {
+        Write-Info "Removing config directory before writing file"
+        Remove-Item -Force -Recurse $configFile -ErrorAction SilentlyContinue
+    }
 
     [System.IO.File]::WriteAllText($configFile, $yaml, [System.Text.UTF8Encoding]::new($false))
     Write-Success "Created config.local.yaml (API key: $apiKey)"

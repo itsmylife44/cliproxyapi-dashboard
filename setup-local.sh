@@ -87,6 +87,7 @@ compose_down() {
 
 compose_reset() {
     docker compose -f "$COMPOSE_FILE" down -v
+    [ -d "${SCRIPT_DIR}/config.local.yaml" ] && rm -rf "${SCRIPT_DIR}/config.local.yaml"
     rm -f "$ENV_FILE" "${SCRIPT_DIR}/config.local.yaml"
 }
 
@@ -161,12 +162,17 @@ EOF
 
 generate_config_yaml() {
     local config_file="${SCRIPT_DIR}/config.local.yaml"
+    if [ -d "$config_file" ]; then
+        rm -rf "$config_file"
+    fi
     if [ -f "$config_file" ]; then
         return 0
     fi
 
     local api_key
     api_key="sk-local-$(openssl rand -hex 16)"
+
+    [ -d "$config_file" ] && rm -rf "$config_file"
 
     cat > "$config_file" <<EOF
 host: ""

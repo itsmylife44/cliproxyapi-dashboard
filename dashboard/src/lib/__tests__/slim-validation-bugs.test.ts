@@ -51,6 +51,30 @@ describe("slim validation regressions", () => {
     expect(result.multiplexer).toBeUndefined();
   });
 
+  it("preserves nested council preset councillor data", () => {
+    const result = validateSlimConfig({
+      council: {
+        presets: {
+          default: {
+            councillors: {
+              alpha: { model: "openai/gpt-5-mini", variant: "high" },
+            },
+            master: { variant: "balanced" },
+          },
+        },
+      },
+    });
+
+    expect(result.council?.presets).toEqual({
+      default: {
+        councillors: {
+          alpha: { model: "openai/gpt-5-mini", variant: "high" },
+        },
+        master: { variant: "balanced" },
+      },
+    });
+  });
+
 
   it("preserves council master variant and prompt without a model", () => {
     const result = validateSlimConfig({

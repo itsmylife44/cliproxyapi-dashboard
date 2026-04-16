@@ -548,25 +548,31 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
         const pObj = presetVal as Record<string, unknown>;
         const councillors: Record<string, SlimCouncillorConfig> = {};
         let masterOverride: SlimCouncilPresetMasterOverride | undefined;
-        for (const [key, val] of Object.entries(pObj)) {
-          if (typeof val !== "object" || val === null || Array.isArray(val)) continue;
-          const entry = val as Record<string, unknown>;
-          if (key === "master") {
-            const mo: SlimCouncilPresetMasterOverride = {};
-            if (typeof entry.model === "string" && entry.model.length <= 256) mo.model = entry.model;
-            if (typeof entry.variant === "string" && entry.variant.length <= 256) mo.variant = entry.variant;
-            if (typeof entry.prompt === "string" && entry.prompt.length <= 4096) mo.prompt = entry.prompt;
-            if (Object.keys(mo).length > 0) masterOverride = mo;
-          } else {
-            if (typeof entry.model === "string" && entry.model.length <= 256) {
-              const c: SlimCouncillorConfig = { model: entry.model };
-              if (typeof entry.variant === "string" && entry.variant.length <= 256) c.variant = entry.variant;
-              if (typeof entry.prompt === "string" && entry.prompt.length <= 4096) c.prompt = entry.prompt;
-              councillors[key] = c;
-            }
+
+        if (pObj.councillors && typeof pObj.councillors === "object" && !Array.isArray(pObj.councillors)) {
+          for (const [councillorName, councillorVal] of Object.entries(pObj.councillors as Record<string, unknown>)) {
+            if (typeof councillorName !== "string" || councillorName.length > 128) continue;
+            if (typeof councillorVal !== "object" || councillorVal === null || Array.isArray(councillorVal)) continue;
+            const entry = councillorVal as Record<string, unknown>;
+            if (typeof entry.model !== "string" || entry.model.length > 256) continue;
+
+            const councillor: SlimCouncillorConfig = { model: entry.model };
+            if (typeof entry.variant === "string" && entry.variant.length <= 256) councillor.variant = entry.variant;
+            if (typeof entry.prompt === "string" && entry.prompt.length <= 4096) councillor.prompt = entry.prompt;
+            councillors[councillorName] = councillor;
           }
         }
-        // A council preset is valid if it has councillors OR a master override
+
+        if (pObj.master && typeof pObj.master === "object" && !Array.isArray(pObj.master)) {
+          const entry = pObj.master as Record<string, unknown>;
+          const mo: SlimCouncilPresetMasterOverride = {};
+          if (typeof entry.model === "string" && entry.model.length <= 256) mo.model = entry.model;
+          if (typeof entry.variant === "string" && entry.variant.length <= 256) mo.variant = entry.variant;
+          if (typeof entry.prompt === "string" && entry.prompt.length <= 4096) mo.prompt = entry.prompt;
+          if (Object.keys(mo).length > 0) masterOverride = mo;
+        }
+
+        // A council preset is valid if it has nested councillors OR a master override.
         if (Object.keys(councillors).length > 0 || masterOverride) {
           validatedPresets[presetName] = { councillors, master: masterOverride };
         }

@@ -108,6 +108,8 @@ describe("PUT /api/agent-config-slim", () => {
     ]);
     expect(data.overrides.presets.review.observer.model).toBe("openai/gpt-4.1-mini");
     expect(data.overrides.agents["council-master"].model).toBe("anthropic/claude-opus-4-6");
+    expect(data.overrides.council.presets.default.councillors.alpha.model).toBe("openai/gpt-5-mini");
+    expect(data.overrides.council.presets.default.master.variant).toBe("high");
 
     expect(upsertMock).toHaveBeenCalledTimes(1);
     const saved = upsertMock.mock.calls[0][0].create.slimOverrides as Record<string, unknown>;

@@ -34,6 +34,43 @@ function isCloudMetadataIPv4(a: number, b: number, c: number, d: number): boolea
   return false;
 }
 
+/**
+ * Normalize an IPv6 literal to lowercase and expand `::` to explicit zero groups
+ * so we can do exact prefix/equality comparisons without worrying about the many
+ * textual forms the same address can take (e.g. `fd00:ec2::254` vs
+ * `fd00:ec2:0:0:0:0:0:254`).
+ * Returns null if the input is not a syntactically valid IPv6 literal.
+ */
+function expandIPv6(raw: string): string | null {
+  const value = raw.toLowerCase().replace(/^\[|\]$/g, "");
+  if (!value.includes(":")) return null;
+
+  // Split on the `::` shorthand (at most one occurrence).
+  const parts = value.split("::");
+  if (parts.length > 2) return null;
+
+  const head = parts[0] === "" ? [] : parts[0].split(":");
+  const tail = parts.length === 2 && parts[1] !== "" ? parts[1].split(":") : [];
+  const missing = 8 - head.length - tail.length;
+  if (missing < 0) return null;
+  if (parts.length === 1 && head.length !== 8) return null;
+  if (parts.length === 2 && missing < 1) return null;
+
+  const groups = [...head, ...Array(missing).fill("0"), ...tail];
+  if (groups.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return null;
+  return groups.map((g) => g.padStart(4, "0")).join(":");
+}
+
+/**
+ * IPv6 cloud instance-metadata endpoints. Always blocked regardless of
+ * ALLOW_LOCAL_PROVIDER_URLS.
+ */
+function isCloudMetadataIPv6(expanded: string): boolean {
+  // AWS EC2 IMDSv2 over IPv6: fd00:ec2::254
+  if (expanded === "fd00:0ec2:0000:0000:0000:0000:0000:0254") return true;
+  return false;
+}
+
 function isPrivateIPv4(a: number, b: number): boolean {
   if (a === 10) return true;                          // 10.0.0.0/8
   if (a === 172 && b >= 16 && b <= 31) return true;   // 172.16.0.0/12
@@ -83,6 +120,8 @@ function isPrivateHost(hostname: string, allowLocal: boolean): boolean {
 
   // IPv6 (strip brackets for URL-style [::1])
   const ipv6 = lower.replace(/^\[|\]$/g, "");
+  const expanded = expandIPv6(ipv6);
+  if (expanded && isCloudMetadataIPv6(expanded)) return true;
   if (ipv6 === "::1" || ipv6.startsWith("fe80:") || ipv6.startsWith("fc") || ipv6.startsWith("fd")) {
     return !allowLocal;
   }
@@ -169,6 +208,8 @@ function isPrivateResolvedIP(ip: string, allowLocal: boolean): boolean {
 
   // IPv6 loopback and private ranges
   const normalized = ip.toLowerCase();
+  const expanded = expandIPv6(normalized);
+  if (expanded && isCloudMetadataIPv6(expanded)) return true;
   if (normalized === "::1" || normalized.startsWith("fe80:") || normalized.startsWith("fc") || normalized.startsWith("fd")) {
     return !allowLocal;
   }

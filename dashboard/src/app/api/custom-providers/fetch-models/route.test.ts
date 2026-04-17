@@ -99,6 +99,22 @@ describe("POST /api/custom-providers/fetch-models (issue #197)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("still blocks AWS IPv6 instance metadata (fd00:ec2::254) when flag is on", async () => {
+    envMock.ALLOW_LOCAL_PROVIDER_URLS = true;
+    const { POST } = await import("./route");
+    const res = await POST(buildRequest({ baseUrl: "http://[fd00:ec2::254]/latest/meta-data", apiKey: "k" }));
+    expect(res.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("still blocks AWS IPv6 metadata in expanded form (fd00:ec2:0:0:0:0:0:254)", async () => {
+    envMock.ALLOW_LOCAL_PROVIDER_URLS = true;
+    const { POST } = await import("./route");
+    const res = await POST(buildRequest({ baseUrl: "http://[fd00:ec2:0:0:0:0:0:254]/latest/meta-data", apiKey: "k" }));
+    expect(res.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("omits Authorization header when apiKey is missing", async () => {
     envMock.ALLOW_LOCAL_PROVIDER_URLS = true;
     fetchMock.mockResolvedValueOnce({

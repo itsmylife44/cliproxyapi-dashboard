@@ -1609,7 +1609,6 @@
     "enableFallback": "Enable fallback",
     "timeoutLabel": "Timeout (ms)",
     "retryDelayLabel": "Retry delay",
-    "retryOnEmptyLabel": "Retry on empty responses",
     "mcpAddButton": "Add",
     "skillAllLabel": "All skills",
     "skillAllDesc": "Enable every available skill",

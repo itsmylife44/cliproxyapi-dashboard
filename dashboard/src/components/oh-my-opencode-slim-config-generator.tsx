@@ -108,11 +108,11 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
         }
         showToast(t("toastSaved"), "success");
       } catch {
-        if (latestSaveRef.current === newOverrides) {
-          latestSaveRef.current = previous;
-          setOverrides(previous);
-          setActivePreset(previous.preset ?? DEFAULT_PRESET_NAME);
-        }
+          if (latestSaveRef.current === newOverrides) {
+            latestSaveRef.current = previous;
+            setOverrides(previous);
+            setActivePreset(previous.preset ?? DEFAULT_PRESET_NAME);
+          }
         showToast(t("toastNetworkError"), "error");
       } finally {
         setSaving(false);

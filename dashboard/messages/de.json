@@ -1609,7 +1609,6 @@
     "enableFallback": "Fallback aktivieren",
     "timeoutLabel": "Zeitlimit (ms)",
     "retryDelayLabel": "Wiederholungsverzögerung",
-    "retryOnEmptyLabel": "Bei leeren Antworten wiederholen",
     "mcpAddButton": "Hinzufügen",
     "skillAllLabel": "Alle Skills",
     "skillAllDesc": "Jeden verfügbaren Skill aktivieren",

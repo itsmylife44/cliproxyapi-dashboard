@@ -4,5 +4,6 @@
   "devDependencies": {
     "@vtsls/language-server": "^0.3.0",
     "typescript": "^5.9.3"
-  }
+  },
+  "version": "0.1.77"
 }

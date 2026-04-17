@@ -286,14 +286,14 @@ export const SlimAgentConfigSchema = z.object({
 
 export const FetchModelsSchema = z.object({
   baseUrl: z.string().url("Base URL must be a valid URL (http:// or https://)"),
-  apiKey: z.string().min(1)
+  apiKey: z.string().optional()
 });
 
 export const CreateCustomProviderSchema = z.object({
   name: z.string().min(1).max(100),
   providerId: z.string().regex(/^[a-z0-9-]+$/, "Provider ID must be lowercase alphanumeric with hyphens"),
   baseUrl: z.string().url("Base URL must be a valid URL (http:// or https://)"),
-  apiKey: z.string().min(1),
+  apiKey: z.string().optional(),
   prefix: z.string().optional(),
   proxyUrl: z.string().optional(),
   headers: z.record(z.string(), z.string()).optional(),

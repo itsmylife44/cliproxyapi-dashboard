@@ -162,7 +162,7 @@ export interface BackupCustomProvider {
   name: string;
   providerId: string;
   baseUrl: string;
-  apiKeyHash: string;
+  apiKeyHash: string | null;
   apiKeyEncrypted: string | null;
   prefix: string | null;
   proxyUrl: string | null;

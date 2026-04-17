@@ -16,7 +16,6 @@ interface BasicFieldsProps {
     name: string;
     providerId: string;
     baseUrl: string;
-    apiKey: string;
   };
   onNameChange: (value: string) => void;
   onProviderIdChange: (value: string) => void;
@@ -99,7 +98,7 @@ export function BasicFields({
 
       <div>
         <label htmlFor="apiKey" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
-          {t("fieldApiKeyLabel")} {!isEdit && <span className="text-red-600">*</span>}
+          {t("fieldApiKeyLabel")}
         </label>
         <Input
           type="password"
@@ -107,11 +106,9 @@ export function BasicFields({
           value={apiKey}
           onChange={onApiKeyChange}
           placeholder={isEdit ? t("fieldApiKeyEditPlaceholder") : t("fieldApiKeyPlaceholder")}
-          required={!isEdit}
           disabled={saving}
         />
-        {errors.apiKey && <p className="mt-1.5 text-xs text-red-600">{errors.apiKey}</p>}
-        {!errors.apiKey && isEdit && <p className="mt-1.5 text-xs text-[var(--text-muted)]">{t("fieldApiKeyEditHint")}</p>}
+        <p className="mt-1.5 text-xs text-[var(--text-muted)]">{isEdit ? t("fieldApiKeyEditHint") : t("fieldApiKeyOptionalHint")}</p>
       </div>
 
       <div>

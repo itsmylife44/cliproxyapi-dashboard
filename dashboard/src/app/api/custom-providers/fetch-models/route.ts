@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 import { FetchModelsSchema } from "@/lib/validation/schemas";
 import { lookup } from "dns/promises";
 import { apiError, Errors, ERROR_CODE } from "@/lib/errors";
+import { env } from "@/lib/env";
 
 interface OpenAIModel {
   id: string;
@@ -21,15 +22,25 @@ interface OpenAIModelsResponse {
 }
 
 /**
- * Block SSRF: reject URLs that resolve to localhost, private, or link-local addresses.
+ * Cloud instance-metadata endpoints. Always blocked regardless of
+ * ALLOW_LOCAL_PROVIDER_URLS — unblocking these enables credential theft on
+ * AWS/GCP/Azure/Alibaba/Oracle.
  */
+function isCloudMetadataIPv4(a: number, b: number, c: number, d: number): boolean {
+  // 169.254.169.254 (AWS, GCP, Azure, OpenStack, DigitalOcean, Oracle)
+  if (a === 169 && b === 254 && c === 169 && d === 254) return true;
+  // 100.100.100.200 (Alibaba Cloud)
+  if (a === 100 && b === 100 && c === 100 && d === 200) return true;
+  return false;
+}
+
 function isPrivateIPv4(a: number, b: number): boolean {
   if (a === 10) return true;                          // 10.0.0.0/8
   if (a === 172 && b >= 16 && b <= 31) return true;   // 172.16.0.0/12
-  if (a === 192 && b === 168) return true;             // 192.168.0.0/16
-  if (a === 169 && b === 254) return true;             // 169.254.0.0/16 (link-local / cloud metadata)
-  if (a === 127) return true;                          // 127.0.0.0/8
-  if (a === 0) return true;                            // 0.0.0.0/8
+  if (a === 192 && b === 168) return true;            // 192.168.0.0/16
+  if (a === 169 && b === 254) return true;            // 169.254.0.0/16 (link-local / cloud metadata)
+  if (a === 127) return true;                         // 127.0.0.0/8
+  if (a === 0) return true;                           // 0.0.0.0/8
   return false;
 }
 
@@ -43,40 +54,61 @@ const ALLOWED_INTERNAL_HOSTS = new Set([
 ]);
 
 /**
- * Block SSRF: reject localhost, private, link-local, and IPv4-mapped IPv6 addresses.
+ * Block SSRF. Returns true when the hostname MUST be rejected.
+ * When `allowLocal` is set, localhost/RFC1918/link-local are permitted, but
+ * cloud-metadata addresses remain blocked unconditionally.
  */
-function isPrivateHost(hostname: string): boolean {
+function isPrivateHost(hostname: string, allowLocal: boolean): boolean {
   const lower = hostname.toLowerCase();
 
   if (ALLOWED_INTERNAL_HOSTS.has(lower)) {
     return false;
   }
 
-  if (lower === "localhost" || lower === "127.0.0.1" || lower === "[::1]" || lower === "0.0.0.0") {
-    return true;
-  }
-
   // IPv4 literal
   const ipv4Match = lower.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (ipv4Match) {
-    return isPrivateIPv4(Number(ipv4Match[1]), Number(ipv4Match[2]));
+    const a = Number(ipv4Match[1]);
+    const b = Number(ipv4Match[2]);
+    const c = Number(ipv4Match[3]);
+    const d = Number(ipv4Match[4]);
+    if (isCloudMetadataIPv4(a, b, c, d)) return true;
+    if (allowLocal) return false;
+    return isPrivateIPv4(a, b);
+  }
+
+  if (lower === "localhost" || lower === "127.0.0.1" || lower === "[::1]" || lower === "0.0.0.0") {
+    return !allowLocal;
   }
 
   // IPv6 (strip brackets for URL-style [::1])
   const ipv6 = lower.replace(/^\[|\]$/g, "");
   if (ipv6 === "::1" || ipv6.startsWith("fe80:") || ipv6.startsWith("fc") || ipv6.startsWith("fd")) {
-    return true;
+    return !allowLocal;
   }
 
   // IPv4-mapped IPv6: ::ffff:A.B.C.D (dotted) or ::ffff:AABB:CCDD (hex)
   const dottedMatch = ipv6.match(/^::ffff:(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (dottedMatch) {
-    return isPrivateIPv4(Number(dottedMatch[1]), Number(dottedMatch[2]));
+    const a = Number(dottedMatch[1]);
+    const b = Number(dottedMatch[2]);
+    const c = Number(dottedMatch[3]);
+    const d = Number(dottedMatch[4]);
+    if (isCloudMetadataIPv4(a, b, c, d)) return true;
+    if (allowLocal) return false;
+    return isPrivateIPv4(a, b);
   }
   const hexMatch = ipv6.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
   if (hexMatch) {
     const hi = parseInt(hexMatch[1], 16);
-    return isPrivateIPv4((hi >> 8) & 0xff, hi & 0xff);
+    const lo = parseInt(hexMatch[2], 16);
+    const a = (hi >> 8) & 0xff;
+    const b = hi & 0xff;
+    const c = (lo >> 8) & 0xff;
+    const d = lo & 0xff;
+    if (isCloudMetadataIPv4(a, b, c, d)) return true;
+    if (allowLocal) return false;
+    return isPrivateIPv4(a, b);
   }
 
   return false;
@@ -122,23 +154,35 @@ function getFetchNetworkErrorMessage(fetchError: Error, hostname: string): strin
  * Check if a resolved IP address is private/internal.
  * Used after DNS resolution to prevent DNS rebinding attacks.
  */
-function isPrivateResolvedIP(ip: string): boolean {
+function isPrivateResolvedIP(ip: string, allowLocal: boolean): boolean {
   // IPv4
   const ipv4Match = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (ipv4Match) {
-    return isPrivateIPv4(Number(ipv4Match[1]), Number(ipv4Match[2]));
+    const a = Number(ipv4Match[1]);
+    const b = Number(ipv4Match[2]);
+    const c = Number(ipv4Match[3]);
+    const d = Number(ipv4Match[4]);
+    if (isCloudMetadataIPv4(a, b, c, d)) return true;
+    if (allowLocal) return false;
+    return isPrivateIPv4(a, b);
   }
 
   // IPv6 loopback and private ranges
   const normalized = ip.toLowerCase();
   if (normalized === "::1" || normalized.startsWith("fe80:") || normalized.startsWith("fc") || normalized.startsWith("fd")) {
-    return true;
+    return !allowLocal;
   }
 
   // IPv4-mapped IPv6
   const mappedMatch = normalized.match(/^::ffff:(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (mappedMatch) {
-    return isPrivateIPv4(Number(mappedMatch[1]), Number(mappedMatch[2]));
+    const a = Number(mappedMatch[1]);
+    const b = Number(mappedMatch[2]);
+    const c = Number(mappedMatch[3]);
+    const d = Number(mappedMatch[4]);
+    if (isCloudMetadataIPv4(a, b, c, d)) return true;
+    if (allowLocal) return false;
+    return isPrivateIPv4(a, b);
   }
 
   return false;
@@ -172,7 +216,9 @@ export async function POST(request: NextRequest) {
       return Errors.validation("Invalid URL");
     }
 
-    if (isPrivateHost(parsedUrl.hostname)) {
+    const allowLocal = env.ALLOW_LOCAL_PROVIDER_URLS;
+
+    if (isPrivateHost(parsedUrl.hostname, allowLocal)) {
       logger.warn({ hostname: parsedUrl.hostname }, "Blocked SSRF attempt to private host");
       return Errors.validation("Cannot connect to private or localhost addresses");
     }
@@ -186,7 +232,7 @@ export async function POST(request: NextRequest) {
     if (!isIpLiteral && !ALLOWED_INTERNAL_HOSTS.has(parsedUrl.hostname.toLowerCase())) {
       try {
         const resolved = await lookup(parsedUrl.hostname);
-        if (isPrivateResolvedIP(resolved.address)) {
+        if (isPrivateResolvedIP(resolved.address, allowLocal)) {
           logger.warn(
             { hostname: parsedUrl.hostname, resolvedIp: resolved.address },
             "Blocked SSRF: hostname resolved to private IP (possible DNS rebinding)"
@@ -206,12 +252,16 @@ export async function POST(request: NextRequest) {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
+      const requestHeaders: Record<string, string> = {
+        "Content-Type": "application/json"
+      };
+      if (validated.apiKey && validated.apiKey.length > 0) {
+        requestHeaders["Authorization"] = `Bearer ${validated.apiKey}`;
+      }
+
       const response = await fetch(modelsEndpoint, {
         method: "GET",
-        headers: {
-          "Authorization": `Bearer ${validated.apiKey}`,
-          "Content-Type": "application/json"
-        },
+        headers: requestHeaders,
         signal: controller.signal,
         redirect: "error"
       });

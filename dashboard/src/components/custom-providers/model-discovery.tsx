@@ -10,7 +10,6 @@ interface FetchedModel {
 
 interface ModelDiscoveryProps {
   canFetchModels: boolean;
-  apiKey: string;
   fetchingModels: boolean;
   saving: boolean;
   fetchedModels: FetchedModel[];
@@ -23,7 +22,6 @@ interface ModelDiscoveryProps {
 
 export function ModelDiscovery({
   canFetchModels,
-  apiKey,
   fetchingModels,
   saving,
   fetchedModels,
@@ -42,7 +40,7 @@ export function ModelDiscovery({
         <Button
           variant="secondary"
           onClick={onFetchModels}
-          disabled={!canFetchModels || apiKey.length === 0 || fetchingModels || saving}
+          disabled={!canFetchModels || fetchingModels || saving}
           className="px-3 py-1.5 text-xs"
         >
           {fetchingModels ? (

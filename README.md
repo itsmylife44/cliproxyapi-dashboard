@@ -71,6 +71,16 @@ Open **http://localhost:3000** → create admin account → done.
 - **Container Management** — Start, stop, restart containers directly from the UI
 - **Automatic TLS** — Let's Encrypt certificates via Caddy, auto-renewed
 
+## Local Providers (Ollama / LM Studio / llama.cpp)
+
+Custom providers pointing at `localhost` or private networks are blocked by default to prevent SSRF from hosted installations. To enable them on self-hosted deployments:
+
+1. Set `ALLOW_LOCAL_PROVIDER_URLS=true` in `infrastructure/.env`.
+2. Restart the dashboard container (`docker compose up -d dashboard`).
+3. Create a custom provider with the local base URL (e.g. `http://host.docker.internal:11434/v1` for Ollama from within Docker, or `http://localhost:11434/v1` when running the dashboard outside a container). The API key field is optional — leave it empty if the provider doesn't require one.
+
+Cloud instance-metadata addresses (`169.254.169.254`, `100.100.100.200`) stay blocked regardless of this setting.
+
 ## Telegram Quota Alerts
 
 Get notified on Telegram when your OAuth provider quota is running low.

@@ -106,7 +106,7 @@ export function Step2Content({ done, locked, onCreated }: Step2ContentProps) {
     } finally {
       setSubmitting(false);
     }
-  }, [keyName, onCreated, showToast]);
+  }, [keyName, onCreated, showToast, t]);
 
   const handleCopy = useCallback(() => {
     if (!createdKey) return;

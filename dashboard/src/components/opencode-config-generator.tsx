@@ -148,7 +148,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [mcps, plugins, defaultModel, isLoading]);
+  }, [mcps, plugins, defaultModel, isLoading, t]);
 
   useEffect(() => {
     return () => {

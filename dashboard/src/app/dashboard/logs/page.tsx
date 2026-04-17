@@ -125,7 +125,7 @@ export default function LogsPage() {
     const controller = new AbortController();
     void fetchLogs({ setLogs, setLatestTimestamp, setLoading, showToast, messages: { loadFailed: t('toastLoadFailed'), networkError: t('toastNetworkError') }, signal: controller.signal });
     return () => controller.abort();
-  }, [showToast]);
+  }, [showToast, t]);
 
   useEffect(() => {
     logsRef.current = logs;
@@ -160,7 +160,7 @@ export default function LogsPage() {
       controller.abort();
       window.clearInterval(interval);
     };
-  }, [showToast]);
+  }, [showToast, t]);
 
   const handleRefresh = () => {
     setCurrentPage(1);

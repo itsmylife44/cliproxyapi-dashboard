@@ -95,7 +95,7 @@ export default function ContainersPage() {
       controller.abort();
       clearInterval(interval);
     };
-  }, []);
+  }, [t]);
 
   const confirmAction = (containerName: string, displayName: string, action: string) => {
     setPendingAction({ containerName, displayName, action });

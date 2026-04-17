@@ -30,9 +30,7 @@ interface BackupUploadProps {
 
 export function BackupUpload({ currentVersion, onRestoreSuccess, onError }: BackupUploadProps) {
   const t = useTranslations("backup.upload");
-  const tBackup = useTranslations("backup");
   const tError = useTranslations("backup.error");
-  const tSuccess = useTranslations("backup.success");
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);

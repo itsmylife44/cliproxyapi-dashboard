@@ -244,7 +244,6 @@ describe("backup-service", () => {
       };
 
       let callCount = 0;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(prisma.backupRecord.create).mockImplementation((async () => {
         callCount++;
         // Add a small delay to test mutex behavior

@@ -1,0 +1,8 @@
+{
+  "name": "cliproxyapi-dashboard-tooling",
+  "private": true,
+  "devDependencies": {
+    "@vtsls/language-server": "^0.3.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -114,7 +114,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     return () => {
       isMounted = false;
     };
-  }, [showToast]);
+  }, [showToast, t]);
 
   const latestSaveRef = useRef<OhMyOpenCodeFullConfig>(overrides);
 

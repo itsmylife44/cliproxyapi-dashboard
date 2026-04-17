@@ -23,6 +23,8 @@ interface SlimTierAssignmentsProps {
   onAgentModelChange: (agent: string, model: string | undefined) => void;
   onAgentFieldChange: (agent: string, field: string, value: string | number | string[] | undefined) => void;
   onAgentSkillsChange: (agent: string, skills: string[] | undefined) => void;
+  editingConfig: "agents" | "preset";
+  activePreset: string;
 }
 
 export function SlimTierAssignments({
@@ -32,17 +34,31 @@ export function SlimTierAssignments({
   onAgentModelChange,
   onAgentFieldChange,
   onAgentSkillsChange,
+  editingConfig,
+  activePreset,
 }: SlimTierAssignmentsProps) {
-  const t = useTranslations('ohMyOpenCode');
+  const t = useTranslations("ohMyOpenCodeSlim");
   const overrideCount = agentAssignments.filter((item) => item.isOverride).length;
 
   return (
     <div className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)] p-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t("slimAgentAssignments")} <HelpTooltip content={t("slimAgentAssignmentsTooltip")} /></p>
-        <p className="text-[11px] text-[var(--text-muted)]">
-          {overrideCount}/{agentAssignments.length} {t("custom")}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t("slimAgentAssignments")}</p>
+          <HelpTooltip content={t("slimAgentAssignmentsTooltip")} />
+        </div>
+        <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)]">
+          <span>
+            {editingConfig === "preset" ? (
+              activePreset === "cliproxyapi" ? t("editingDefaultPreset") : t("editingPreset", { preset: activePreset })
+            ) : (
+              t("editingGlobalOverrides")
+            )}
+          </span>
+          <span>
+            {overrideCount}/{agentAssignments.length} {t("custom")}
+          </span>
+        </div>
       </div>
       {[1, 2, 3, 4].map((tier) => {
         const tierAssignments = agentAssignments.filter((item) => item.tier === tier);

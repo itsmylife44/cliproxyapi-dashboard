@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildSlimConfig } from "../config-generators/oh-my-opencode-slim";
+import type { OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
+
+function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfig>): OhMyOpenCodeSlimFullConfig {
+  expect(config).not.toBeNull();
+  return config as OhMyOpenCodeSlimFullConfig;
+}
 
 describe("buildSlimConfig – fallback chains behavior", () => {
   it("should passthrough external models and prefix available ones", () => {
@@ -55,31 +61,118 @@ describe("buildSlimConfig – fallback chains behavior", () => {
   });
 });
 
-describe("buildSlimConfig – fail-fast when no models available", () => {
-  it("should return null when no models are available and no overrides", () => {
-    // With empty availableModels and no model overrides, we cannot build valid config
-    // This is the correct fail-fast behavior
-    const config = buildSlimConfig([]);
+describe("buildSlimConfig – preset and global override semantics", () => {
+  const available = ["model-a", "model-b"];
 
-    // Config should be null when we can't resolve any models
-    expect(config).toBeNull();
+  it("should use overrides.preset for active preset selection", () => {
+    const config = buildSlimConfig(available, {
+      preset: "custom",
+      presets: {
+        custom: {
+          orchestrator: { model: "model-a" },
+        },
+        cliproxyapi: {
+          orchestrator: { model: "model-b" },
+        },
+      },
+    }, { presetName: "cliproxyapi" });
+
+    const generated = expectGeneratedConfig(config);
+    expect(generated.preset).toBe("custom");
+    expect(generated.presets?.custom?.orchestrator?.model).toBe("cliproxyapi/model-a");
   });
 
-  it("should build config when models are provided via overrides even with empty available", () => {
-    // If user provides explicit model overrides, those are passed through
-    const config = buildSlimConfig([], {
+  it("should fall back to options.presetName when overrides.preset is missing", () => {
+    const config = buildSlimConfig(available, {}, { presetName: "fallback" });
+
+    const generated = expectGeneratedConfig(config);
+    expect(generated.preset).toBe("fallback");
+  });
+
+  it("should prioritize root agents over preset agents (upstream semantics)", () => {
+    const config = buildSlimConfig(available, {
+      preset: "test",
+      presets: {
+        test: {
+          orchestrator: { model: "model-a", variant: "preset" },
+        },
+      },
       agents: {
-        orchestrator: { model: "external/claude-3.5" },
-        oracle: { model: "external/gpt-4" },
-        designer: { model: "external/claude-3.5" },
-        explorer: { model: "external/gemini" },
-        librarian: { model: "external/claude-3.5" },
-        fixer: { model: "external/claude-3.5" },
-        council: { model: "external/claude-3.5" },
+        orchestrator: { model: "model-b", variant: "root" },
       },
     });
 
-    // Should succeed because all agents have explicit overrides
-    expect(config).not.toBeNull();
+    const generated = expectGeneratedConfig(config);
+    // Root agents should override presets at runtime and be emitted separately.
+    expect(generated.agents).toBeDefined();
+    expect(generated.agents?.orchestrator.model).toBe("cliproxyapi/model-b");
+    expect(generated.agents?.orchestrator.variant).toBe("root");
+    expect(generated.presets?.test?.orchestrator?.model).toBe("cliproxyapi/model-a");
+    expect(generated.presets?.test?.orchestrator?.variant).toBe("preset");
+  });
+
+  it("should preserve explicit advanced agent configs", () => {
+    const config = buildSlimConfig(available, {
+      agents: {
+        observer: { model: "external/observer-model" },
+        councillor: { model: "model-a" },
+      },
+    });
+
+    const generated = expectGeneratedConfig(config);
+    expect(generated.agents?.observer.model).toBe("external/observer-model");
+    expect(generated.agents?.councillor.model).toBe("cliproxyapi/model-a");
+  });
+
+  it("preserves partial root overrides without inventing a new model", () => {
+    const config = buildSlimConfig(available, {
+      preset: "test",
+      presets: {
+        test: {
+          oracle: { model: "model-a" },
+        },
+      },
+      agents: {
+        oracle: { variant: "high" },
+      },
+    });
+
+    const generated = expectGeneratedConfig(config);
+    expect(generated.presets?.test?.oracle?.model).toBe("cliproxyapi/model-a");
+    expect(generated.agents?.oracle).toEqual({ variant: "high" });
+  });
+
+  it("preserves council master overrides without a model", () => {
+    const config = buildSlimConfig(available, {
+      council: {
+        master: {
+          variant: "high-precision",
+          prompt: "Coordinate the council.",
+        },
+        presets: {
+          default: {
+            councillors: {
+              alpha: { model: "model-a" },
+            },
+          },
+        },
+      },
+    });
+
+    const generated = expectGeneratedConfig(config);
+    expect(generated.council).toBeDefined();
+    expect(generated.council?.master).toEqual({
+      variant: "high-precision",
+      prompt: "Coordinate the council.",
+    });
+  });
+
+  it("should handle disabled_agents field", () => {
+    const config = buildSlimConfig(available, {
+      disabled_agents: ["observer", "councillor"],
+    });
+
+    const generated = expectGeneratedConfig(config);
+    expect(generated.disabled_agents).toEqual(["observer", "councillor"]);
   });
 });

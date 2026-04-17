@@ -48,7 +48,7 @@ export default function SetupWizardPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const step1Done = status ? status.providers > 0 : false;
   const step2Done = status ? status.apiKeys > 0 : false;

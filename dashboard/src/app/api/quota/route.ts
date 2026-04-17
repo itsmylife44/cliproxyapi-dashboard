@@ -273,7 +273,7 @@ async function fetchAntigravityProjectId(authIndex: string): Promise<string | nu
     return typeof payload.cloudaicompanionProject === "string" && payload.cloudaicompanionProject.trim().length > 0
       ? payload.cloudaicompanionProject.trim()
       : null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

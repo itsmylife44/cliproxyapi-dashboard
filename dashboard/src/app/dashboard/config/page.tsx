@@ -192,7 +192,7 @@ export default function ConfigPage() {
         setLoading(false);
       }
     }
-  }, [showToast]);
+  }, [showToast, t]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {

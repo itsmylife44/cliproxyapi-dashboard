@@ -1,3 +1,5 @@
--- Make api_key_hash nullable so providers can be created without an API key
+-- Make apiKeyHash nullable so providers can be created without an API key
 -- (e.g. local Ollama / LM Studio / llama.cpp instances).
-ALTER TABLE "custom_providers" ALTER COLUMN "api_key_hash" DROP NOT NULL;
+-- Column is camelCase because CustomProvider.apiKeyHash has no @map directive;
+-- the original table (20260208_add_custom_providers) created it as "apiKeyHash".
+ALTER TABLE "custom_providers" ALTER COLUMN "apiKeyHash" DROP NOT NULL;

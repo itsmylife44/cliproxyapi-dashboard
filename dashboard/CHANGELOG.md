@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.77](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.76...dashboard-v0.1.77) (2026-04-17)
+
+
+### Bug Fixes
+
+* **config-sync:** keep bundled opencode config consistent with dashboard settings ([7683bf8](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/7683bf8572cb9a81b884e63fd90ff1804cd529e5))
+* **local-dev:** fix PowerShell 5.1 compatibility in setup-local.ps1 ([0927f80](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/0927f80cab6cee7bb412244775e37648dccd2398))
+* **local-dev:** harden cross-platform dashboard startup ([d27b6e9](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d27b6e91aaf1073047a6a5ccd37bb444bf2da751))
+* **providers:** support local/keyless custom providers (Ollama) — closes [#197](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/197) ([#198](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/198)) ([bce4c49](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/bce4c49005853d37fe4a54726725fe6197f0693f))
+* **slim:** align dashboard editor with upstream ([#196](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/196)) ([058d2ad](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/058d2ad1a8be6eedd34b541ee2e2d8a006eb350a))
+
 ## [0.1.76](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.75...dashboard-v0.1.76) (2026-04-15)
 
 

@@ -131,6 +131,7 @@ services:
       DOCKER_HOST: tcp://docker-proxy:2375
       DASHBOARD_URL: http://localhost:3000
       API_URL: http://localhost:8317
+      ALLOW_LOCAL_PROVIDER_URLS: ${ALLOW_LOCAL_PROVIDER_URLS:-false}
     volumes:
       - dashboard_backups:/app/backups
     depends_on:

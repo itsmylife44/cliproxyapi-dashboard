@@ -150,18 +150,26 @@ export async function PATCH(
       });
     });
 
-    let resolvedApiKey = validated.apiKey;
+    let resolvedApiKey: string | undefined = validated.apiKey;
+    let keyResolved = resolvedApiKey !== undefined;
     let prefetchedConfig: ManagementProviderEntry[] | undefined;
 
-    if (!resolvedApiKey) {
+    if (!keyResolved) {
       if (provider.apiKeyEncrypted) {
-        resolvedApiKey = decryptProviderKey(provider.apiKeyEncrypted) ?? undefined;
-        if (!resolvedApiKey) {
+        const decrypted = decryptProviderKey(provider.apiKeyEncrypted);
+        if (decrypted !== null) {
+          resolvedApiKey = decrypted;
+          keyResolved = true;
+        } else {
           logger.error({ providerId: provider.providerId }, "Failed to decrypt stored API key");
         }
+      } else if (provider.apiKeyHash === null) {
+        // Provider was intentionally created without an API key (e.g. Ollama).
+        resolvedApiKey = "";
+        keyResolved = true;
       }
 
-      if (!resolvedApiKey) {
+      if (!keyResolved) {
         const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
         const secretKey = env.MANAGEMENT_API_KEY;
 
@@ -186,6 +194,7 @@ export async function PATCH(
                 const firstEntry = apiKeyEntries[0];
                 if (firstEntry && typeof firstEntry["api-key"] === "string") {
                   resolvedApiKey = firstEntry["api-key"];
+                  keyResolved = true;
                 }
               }
             } else {
@@ -201,12 +210,12 @@ export async function PATCH(
     let syncStatus: "ok" | "failed" = "ok";
     let syncMessage: string | undefined;
 
-    if (resolvedApiKey) {
+    if (keyResolved) {
       const syncResult = await syncCustomProviderToProxy({
         providerId: provider.providerId,
         prefix: provider.prefix,
         baseUrl: provider.baseUrl,
-        apiKey: resolvedApiKey,
+        apiKey: resolvedApiKey ?? "",
         proxyUrl: provider.proxyUrl,
         headers: provider.headers as Record<string, string> | null,
         models: provider.models,

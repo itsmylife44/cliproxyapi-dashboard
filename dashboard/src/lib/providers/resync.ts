@@ -23,16 +23,28 @@ export async function resyncCustomProviders(userId?: string): Promise<ResyncResu
   const results: ResyncResult[] = [];
 
   for (const provider of providers) {
-    if (!provider.apiKeyEncrypted) {
-      results.push({ providerId: provider.providerId, name: provider.name, status: "skipped", reason: "no_encrypted_key" });
-      continue;
-    }
+    // Keyless providers (e.g. local Ollama): apiKeyHash is null by design.
+    // Sync them with an empty key — Management API payload shape stays stable
+    // and downstream consumers see a consistent "api-key-entries": [{ "api-key": "" }].
+    // See PATCH /api/custom-providers/[id] for the matching read-path logic.
+    const isKeyless = provider.apiKeyHash === null;
+    let apiKey = "";
 
-    const apiKey = decryptProviderKey(provider.apiKeyEncrypted);
-    if (!apiKey) {
-      results.push({ providerId: provider.providerId, name: provider.name, status: "failed", reason: "decrypt_failed" });
-      logger.error({ providerId: provider.providerId }, "Resync: failed to decrypt API key");
-      continue;
+    if (!isKeyless) {
+      if (!provider.apiKeyEncrypted) {
+        // Legacy row: hash was stored before encryption landed. Operator must
+        // re-enter the key once so we can encrypt it; skip for now.
+        results.push({ providerId: provider.providerId, name: provider.name, status: "skipped", reason: "no_encrypted_key" });
+        continue;
+      }
+
+      const decrypted = decryptProviderKey(provider.apiKeyEncrypted);
+      if (!decrypted) {
+        results.push({ providerId: provider.providerId, name: provider.name, status: "failed", reason: "decrypt_failed" });
+        logger.error({ providerId: provider.providerId }, "Resync: failed to decrypt API key");
+        continue;
+      }
+      apiKey = decrypted;
     }
 
     try {

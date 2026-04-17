@@ -102,7 +102,6 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     name: "",
     providerId: "",
     baseUrl: "",
-    apiKey: "",
     models: ""
   });
 
@@ -131,7 +130,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     setModels([{ _id: nextId(), upstreamName: "", alias: "" }]);
     setExcludedModels([]);
     excludedModelIds.current = [];
-    setErrors({ name: "", providerId: "", baseUrl: "", apiKey: "", models: "" });
+    setErrors({ name: "", providerId: "", baseUrl: "", models: "" });
     setFetchingModels(false);
     setFetchedModels([]);
     setShowFetchedModels(false);
@@ -169,7 +168,6 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
       name: name.length === 0 ? t("validationNameRequired") : name.length > 100 ? t("validationNameMaxLength") : "",
       providerId: !/^[a-z0-9-]+$/.test(providerId) ? t("validationProviderIdInvalid") : "",
       baseUrl: !isValidBaseUrl(baseUrl) ? t("validationBaseUrlInvalid") : "",
-      apiKey: !isEdit && apiKey.length === 0 ? t("validationApiKeyRequired") : "",
       models: models.filter(m => m.upstreamName && m.alias).length === 0 ? t("validationModelsRequired") : ""
     };
 
@@ -277,7 +275,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
   };
 
   const fetchModelsHandler = async () => {
-    if (!isValidBaseUrl(baseUrl) || apiKey.length === 0) {
+    if (!isValidBaseUrl(baseUrl)) {
       showToast(t("toastFetchModelsInvalid"), "error");
       return;
     }
@@ -290,7 +288,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
       const response = await fetch(API_ENDPOINTS.CUSTOM_PROVIDERS.FETCH_MODELS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ baseUrl, apiKey })
+        body: JSON.stringify(apiKey ? { baseUrl, apiKey } : { baseUrl })
       });
 
       if (response.ok) {
@@ -393,8 +391,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
           />
 
           <ModelDiscovery
-            canFetchModels={isValidBaseUrl(baseUrl) && apiKey.length > 0}
-            apiKey={apiKey}
+            canFetchModels={isValidBaseUrl(baseUrl)}
             fetchingModels={fetchingModels}
             saving={saving}
             fetchedModels={fetchedModels}

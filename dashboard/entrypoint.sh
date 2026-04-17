@@ -234,7 +234,7 @@ async function migrate() {
       "name" TEXT NOT NULL,
       "providerId" TEXT NOT NULL,
       "baseUrl" TEXT NOT NULL,
-      "apiKeyHash" TEXT NOT NULL,
+      "apiKeyHash" TEXT,
       "prefix" TEXT,
       "proxyUrl" TEXT,
       "headers" JSONB DEFAULT '{}',
@@ -254,6 +254,11 @@ async function migrate() {
     DO $$ BEGIN
       ALTER TABLE "custom_providers" ADD COLUMN "apiKeyEncrypted" TEXT;
     EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+    -- Drop NOT NULL from apiKeyHash (existing installs upgrading to support keyless providers, e.g. local Ollama)
+    DO $$ BEGIN
+      ALTER TABLE "custom_providers" ALTER COLUMN "apiKeyHash" DROP NOT NULL;
+    EXCEPTION WHEN others THEN NULL; END $$;
 
     -- Provider groups table (grouping + ordering for custom providers)
     CREATE TABLE IF NOT EXISTS "provider_groups" (

@@ -170,6 +170,7 @@ services:
       DASHBOARD_URL: ${DASHBOARD_URL}
       DOCKER_HOST: tcp://docker-proxy:2375
       GITHUB_REPO: ${GITHUB_REPO:-itsmylife44/cliproxyapi-dashboard}
+      ALLOW_LOCAL_PROVIDER_URLS: ${ALLOW_LOCAL_PROVIDER_URLS:-false}
     env_file:
       - ./.env
     volumes:

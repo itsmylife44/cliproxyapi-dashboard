@@ -72,6 +72,12 @@ const envSchema = z.object({
     .regex(/^[0-9a-fA-F]{64}$/, "PROVIDER_ENCRYPTION_KEY must be a valid hex string")
     .optional()
     .describe("AES-256-GCM key for encrypting custom provider API keys. Generate with: openssl rand -hex 32"),
+
+  ALLOW_LOCAL_PROVIDER_URLS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true")
+    .describe("Allow custom providers to target localhost and RFC1918 addresses (self-hosted only). Cloud-metadata addresses remain blocked."),
 });
 
 function parseEnv() {

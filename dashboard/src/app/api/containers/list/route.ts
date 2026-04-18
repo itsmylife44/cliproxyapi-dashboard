@@ -5,6 +5,8 @@ import { CONTAINER_CONFIG, getAllowedActions, type ContainerAction } from "@/lib
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { logger } from "@/lib/logger";
+import { Errors } from "@/lib/errors";
+
 
 const execFileAsync = promisify(execFile);
 const DOCKER_COMMAND_TIMEOUT_MS = 8000;
@@ -64,15 +66,31 @@ export async function GET() {
 
     const lines = stdout.trim().split("\n").filter(Boolean);
 
-    const results = await Promise.all(
-      lines.map(async (line) => {
-        const [name, status, state] = line.split("\t");
-        const config = CONTAINER_CONFIG[name];
+    const parsedContainers: Array<{
+      name: string;
+      status: string;
+      state: string;
+      config: (typeof CONTAINER_CONFIG)[string];
+    }> = [];
 
-        if (!config) {
-          return null;
-        }
+    for (const line of lines) {
+      const [name, status, state] = line.split("\t");
+      if (!name || !status || !state) {
+        logger.error({ line }, "Malformed docker ps output");
+        return Errors.internal("Failed to list containers");
+      }
 
+      const config = CONTAINER_CONFIG[name];
+      if (!config) {
+        logger.error({ containerName: name }, "Missing container configuration");
+        return Errors.internal("Failed to list containers");
+      }
+
+      parsedContainers.push({ name, status, state, config });
+    }
+
+    const containers = await Promise.all(
+      parsedContainers.map(async ({ name, status, state, config }): Promise<ContainerInfo> => {
         let uptime: number | null = null;
         let cpu: string | null = null;
         let memory: string | null = null;
@@ -124,8 +142,6 @@ export async function GET() {
         };
       })
     );
-
-    const containers = results.filter((c): c is ContainerInfo => c !== null);
 
     return NextResponse.json(containers);
   } catch (error) {

@@ -55,7 +55,8 @@ export async function fetchWithRetry(
       }
 
       // Wait before retry
-      await sleep(RETRY_DELAYS[i]);
+      const retryDelay = RETRY_DELAYS[i] ?? 0;
+      await sleep(retryDelay);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
 
@@ -65,7 +66,8 @@ export async function fetchWithRetry(
       }
 
       // Wait before retry
-      await sleep(RETRY_DELAYS[i]);
+      const retryDelay = RETRY_DELAYS[i] ?? 0;
+      await sleep(retryDelay);
     }
   }
 

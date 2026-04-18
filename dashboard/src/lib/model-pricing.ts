@@ -173,7 +173,9 @@ export function resolveModelPrice(model: string, customPricing?: Record<string, 
   // Prefix match: try progressively shorter prefixes
   const keys = Object.keys(merged).sort((a, b) => b.length - a.length);
   for (const key of keys) {
-    if (lowerModel.startsWith(key)) return merged[key];
+    const matchedPrice = merged[key];
+    if (!matchedPrice) continue;
+    if (lowerModel.startsWith(key)) return matchedPrice;
   }
 
   // Try matching without provider prefix (e.g. "cliproxyapi/sonar-pro" → "sonar-pro")
@@ -181,7 +183,9 @@ export function resolveModelPrice(model: string, customPricing?: Record<string, 
   if (withoutPrefix) {
     if (merged[withoutPrefix]) return merged[withoutPrefix];
     for (const key of keys) {
-      if (withoutPrefix.startsWith(key)) return merged[key];
+      const matchedPrice = merged[key];
+      if (!matchedPrice) continue;
+      if (withoutPrefix.startsWith(key)) return matchedPrice;
     }
   }
 

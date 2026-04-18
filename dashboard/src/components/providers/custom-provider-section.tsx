@@ -205,7 +205,10 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
   const handleMoveGroupUp = async (groupId: string, index: number) => {
     if (index === 0) return;
     const newGroups = [...groups];
-    [newGroups[index - 1], newGroups[index]] = [newGroups[index], newGroups[index - 1]];
+    const currentGroup = newGroups[index];
+    const previousGroup = newGroups[index - 1];
+    if (!currentGroup || !previousGroup) return;
+    [newGroups[index - 1], newGroups[index]] = [currentGroup, previousGroup];
 
     setGroups(newGroups);
 
@@ -230,7 +233,10 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
   const handleMoveGroupDown = async (groupId: string, index: number) => {
     if (index === groups.length - 1) return;
     const newGroups = [...groups];
-    [newGroups[index], newGroups[index + 1]] = [newGroups[index + 1], newGroups[index]];
+    const currentGroup = newGroups[index];
+    const nextGroup = newGroups[index + 1];
+    if (!currentGroup || !nextGroup) return;
+    [newGroups[index], newGroups[index + 1]] = [nextGroup, currentGroup];
 
     setGroups(newGroups);
 
@@ -255,9 +261,15 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
   const moveProviderInList = (list: CustomProvider[], index: number, direction: 'up' | 'down') => {
     const newList = [...list];
     if (direction === 'up' && index > 0) {
-      [newList[index - 1], newList[index]] = [newList[index], newList[index - 1]];
+      const currentProvider = newList[index];
+      const previousProvider = newList[index - 1];
+      if (!currentProvider || !previousProvider) return newList;
+      [newList[index - 1], newList[index]] = [currentProvider, previousProvider];
     } else if (direction === 'down' && index < newList.length - 1) {
-      [newList[index], newList[index + 1]] = [newList[index + 1], newList[index]];
+      const currentProvider = newList[index];
+      const nextProvider = newList[index + 1];
+      if (!currentProvider || !nextProvider) return newList;
+      [newList[index], newList[index + 1]] = [nextProvider, currentProvider];
     }
     return newList;
   };
@@ -295,9 +307,11 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
     if (groupId) {
       const groupIndex = newGroups.findIndex(g => g.id === groupId);
       if (groupIndex !== -1) {
+        const group = newGroups[groupIndex];
+        if (!group) return;
         newGroups[groupIndex] = {
-          ...newGroups[groupIndex],
-          providers: moveProviderInList(newGroups[groupIndex].providers, index, 'up')
+          ...group,
+          providers: moveProviderInList(group.providers, index, 'up')
         };
         setGroups(newGroups);
       }
@@ -322,9 +336,11 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
     if (groupId) {
       const groupIndex = newGroups.findIndex(g => g.id === groupId);
       if (groupIndex !== -1) {
+        const group = newGroups[groupIndex];
+        if (!group) return;
         newGroups[groupIndex] = {
-          ...newGroups[groupIndex],
-          providers: moveProviderInList(newGroups[groupIndex].providers, index, 'down')
+          ...group,
+          providers: moveProviderInList(group.providers, index, 'down')
         };
         setGroups(newGroups);
       }

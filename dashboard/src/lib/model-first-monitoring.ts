@@ -134,7 +134,10 @@ function median(values: number[]): number | null {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   if (sorted.length % 2 === 0) {
-    return (sorted[mid - 1] + sorted[mid]) / 2;
+    const lower = sorted[mid - 1];
+    const upper = sorted[mid];
+    if (lower === undefined || upper === undefined) return null;
+    return (lower + upper) / 2;
   }
   return sorted[mid] ?? null;
 }

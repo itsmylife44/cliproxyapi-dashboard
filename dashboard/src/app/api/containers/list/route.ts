@@ -5,7 +5,6 @@ import { CONTAINER_CONFIG, getAllowedActions, type ContainerAction } from "@/lib
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { logger } from "@/lib/logger";
-import { Errors } from "@/lib/errors";
 
 
 const execFileAsync = promisify(execFile);
@@ -76,14 +75,14 @@ export async function GET() {
     for (const line of lines) {
       const [name, status, state] = line.split("\t");
       if (!name || !status || !state) {
-        logger.error({ line }, "Malformed docker ps output");
-        return Errors.internal("Failed to list containers");
+        logger.warn({ line }, "Skipping malformed docker ps line");
+        continue;
       }
 
       const config = CONTAINER_CONFIG[name];
       if (!config) {
-        logger.error({ containerName: name }, "Missing container configuration");
-        return Errors.internal("Failed to list containers");
+        logger.warn({ containerName: name }, "Skipping container without configuration");
+        continue;
       }
 
       parsedContainers.push({ name, status, state, config });

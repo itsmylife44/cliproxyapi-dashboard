@@ -141,7 +141,7 @@ function isPrivateHost(hostname: string, allowLocal: boolean): boolean {
   const hexMatch = ipv6.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
   if (hexMatch) {
     const [, hiPart, loPart] = hexMatch;
-    if (!hiPart || !loPart) return false;
+    if (!hiPart || !loPart) return true; // fail closed: unparseable mapped IPv6 is treated as private
     const hi = parseInt(hiPart, 16);
     const lo = parseInt(loPart, 16);
     const a = (hi >> 8) & 0xff;

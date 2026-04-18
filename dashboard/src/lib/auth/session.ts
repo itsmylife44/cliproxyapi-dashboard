@@ -13,6 +13,7 @@ function parseExpiry(expiresIn: string): number {
   const [, valueText, unit] = match;
   if (!valueText || !unit) return DEFAULT_EXPIRY_MS;
   const value = parseInt(valueText, 10);
+  if (!Number.isFinite(value) || value <= 0) return DEFAULT_EXPIRY_MS;
   switch (unit) {
     case "s": return value * 1000;
     case "m": return value * 60 * 1000;

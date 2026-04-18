@@ -329,10 +329,12 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     newValue: string | number,
   ) => {
     const newRows = [...providerConcurrencyRows];
+    const row = newRows[index];
+    if (!row) return;
     if (field === "key") {
-      newRows[index].key = newValue as string;
+      row.key = newValue as string;
     } else {
-      newRows[index].value = newValue as number;
+      row.value = newValue as number;
     }
     setProviderConcurrencyRows(newRows);
     const providerConcurrency = Object.fromEntries(newRows.map((row) => [row.key, row.value]));
@@ -358,10 +360,12 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
 
   const handleModelConcurrencyChange = (index: number, field: "key" | "value", newValue: string | number) => {
     const newRows = [...modelConcurrencyRows];
+    const row = newRows[index];
+    if (!row) return;
     if (field === "key") {
-      newRows[index].key = newValue as string;
+      row.key = newValue as string;
     } else {
-      newRows[index].value = newValue as number;
+      row.value = newValue as number;
     }
     setModelConcurrencyRows(newRows);
     const modelConcurrency = Object.fromEntries(newRows.map((row) => [row.key, row.value]));
@@ -556,9 +560,13 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
           label: AGENT_ROLES[agent] ?? agent,
         });
       } else {
+        const model = overrideModel ?? chain[0];
+        if (model === undefined) {
+          continue;
+        }
         agentAssignments.push({
           name: agent,
-          model: overrideModel ?? chain[0],
+          model,
           isOverride: !!overrideModel,
           isUnresolved: true,
           config: agentConfig,
@@ -610,9 +618,13 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
           label: CATEGORY_ROLES[category] ?? category,
         });
       } else {
+        const model = overrideModel ?? chain[0];
+        if (model === undefined) {
+          continue;
+        }
         categoryAssignments.push({
           name: category,
-          model: overrideModel ?? chain[0],
+          model,
           isOverride: !!overrideModel,
           isUnresolved: true,
           config: categoryConfig,

@@ -96,12 +96,14 @@ function aggregateByProvider(entries: ModelCostEntry[]): ProviderCostEntry[] {
   const providerMap: Record<string, ProviderCostEntry> = {};
   for (const entry of entries) {
     if (!entry.priced) continue;
-    if (!providerMap[entry.provider]) {
-      providerMap[entry.provider] = { provider: entry.provider, estimatedCost: 0, models: 0, requests: 0 };
+    let provider = providerMap[entry.provider];
+    if (!provider) {
+      provider = { provider: entry.provider, estimatedCost: 0, models: 0, requests: 0 };
+      providerMap[entry.provider] = provider;
     }
-    providerMap[entry.provider].estimatedCost += entry.estimatedCost;
-    providerMap[entry.provider].models += 1;
-    providerMap[entry.provider].requests += entry.requests;
+    provider.estimatedCost += entry.estimatedCost;
+    provider.models += 1;
+    provider.requests += entry.requests;
   }
   return Object.values(providerMap).sort((a, b) => b.estimatedCost - a.estimatedCost);
 }

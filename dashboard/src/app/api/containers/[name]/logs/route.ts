@@ -62,6 +62,9 @@ export async function GET(
 
     const logLines = allOutput ? allOutput.split("\n") : [];
     const config = CONTAINER_CONFIG[name];
+    if (!config) {
+      return Errors.notFound("Container");
+    }
 
     return apiSuccess({
       lines: logLines,

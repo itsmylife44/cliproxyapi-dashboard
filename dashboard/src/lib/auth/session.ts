@@ -10,9 +10,9 @@ const DEFAULT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 function parseExpiry(expiresIn: string): number {
   const match = expiresIn.match(/^(\d+)([smhd])$/);
   if (!match) return DEFAULT_EXPIRY_MS;
-  const value = parseInt(match[1], 10);
-  if (!Number.isFinite(value) || value <= 0) return DEFAULT_EXPIRY_MS;
-  const unit = match[2];
+  const [, valueText, unit] = match;
+  if (!valueText || !unit) return DEFAULT_EXPIRY_MS;
+  const value = parseInt(valueText, 10);
   switch (unit) {
     case "s": return value * 1000;
     case "m": return value * 60 * 1000;

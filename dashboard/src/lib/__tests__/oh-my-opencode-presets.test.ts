@@ -28,11 +28,13 @@ describe("oh-my-opencode presets", () => {
     ]);
 
     expect(presets).toHaveLength(1);
-    expect(presets[0].config.agents?.hephaestus?.permission).toEqual({
+    const [preset] = presets;
+    expect(preset).toBeDefined();
+    expect(preset!.config.agents?.hephaestus?.permission).toEqual({
       edit: "allow",
       bash: { git: "allow", test: "allow" },
     });
-    expect(presets[0].config.agents?.oracle?.thinking).toEqual({
+    expect(preset!.config.agents?.oracle?.thinking).toEqual({
       type: "enabled",
       budgetTokens: 120000,
     });
@@ -86,7 +88,9 @@ describe("oh-my-opencode presets", () => {
     ] as unknown[]);
 
     expect(presets).toHaveLength(1);
-    expect(presets[0].name).toBe("valid");
+    const [preset] = presets;
+    expect(preset).toBeDefined();
+    expect(preset!.name).toBe("valid");
   });
 
   it("returns bundled presets with valid structure", () => {
@@ -121,7 +125,9 @@ describe("oh-my-opencode presets", () => {
     ]);
 
     expect(presets).toHaveLength(1);
-    expect(presets[0].config.agents?.sisyphus?.temperature).toBe(0.5);
-    expect("unknownField" in (presets[0].config.agents?.sisyphus ?? {})).toBe(false);
+    const [preset] = presets;
+    expect(preset).toBeDefined();
+    expect(preset!.config.agents?.sisyphus?.temperature).toBe(0.5);
+    expect("unknownField" in (preset!.config.agents?.sisyphus ?? {})).toBe(false);
   });
 });

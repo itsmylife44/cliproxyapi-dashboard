@@ -505,18 +505,33 @@ export default function ConfigPage() {
     const entries = [...(aliases[provider] ?? [])];
     const entry = entries[index];
     if (!entry) return;
-    if (field === "fork") {
-      if (typeof value !== "boolean") return;
-      entries[index] = { ...entry, fork: value };
-    } else if (field === "name") {
-      if (typeof value !== "string") return;
-      entries[index] = { ...entry, name: value };
-    } else if (field === "alias") {
-      if (typeof value !== "string") return;
-      entries[index] = { ...entry, alias: value };
-    } else {
-      if (typeof value !== "string") return;
-      entries[index] = { ...entry, _id: value };
+    switch (field) {
+      case "fork": {
+        if (typeof value !== "boolean") return;
+        entries[index] = { ...entry, fork: value };
+        break;
+      }
+      case "name": {
+        if (typeof value !== "string") return;
+        entries[index] = { ...entry, name: value };
+        break;
+      }
+      case "alias": {
+        if (typeof value !== "string") return;
+        entries[index] = { ...entry, alias: value };
+        break;
+      }
+      case "_id": {
+        if (typeof value !== "string") return;
+        entries[index] = { ...entry, _id: value };
+        break;
+      }
+      default: {
+        // Exhaustiveness: adding a new field to OAuthModelAliasEntry must add a case here.
+        const _exhaustive: never = field;
+        void _exhaustive;
+        return;
+      }
     }
     setConfig({
       ...config,

@@ -112,7 +112,10 @@ describe("PUT /api/agent-config-slim", () => {
     expect(data.overrides.council.presets.default.master.variant).toBe("high");
 
     expect(upsertMock).toHaveBeenCalledTimes(1);
-    const saved = upsertMock.mock.calls[0][0].create.slimOverrides as Record<string, unknown>;
+    const upsertCall = upsertMock.mock.calls[0];
+    expect(upsertCall).toBeDefined();
+    const [upsertArgs] = upsertCall!;
+    const saved = upsertArgs.create.slimOverrides as Record<string, unknown>;
     expect(saved.interview).toEqual({ maxQuestions: 3, dashboard: true, port: 43211 });
     expect(saved.websearch).toEqual({ provider: "tavily" });
   });

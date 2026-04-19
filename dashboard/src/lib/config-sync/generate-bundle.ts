@@ -288,7 +288,8 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
       resolvedSyncApiKey = syncKeyRecord.key;
     }
 
-   const apiKey = resolvedSyncApiKey || userApiKey?.key || (apiKeyStrings.length > 0 ? apiKeyStrings[0] : "no-api-key-create-one-in-dashboard");
+   const [firstApiKey] = apiKeyStrings;
+   const apiKey = resolvedSyncApiKey || userApiKey?.key || (firstApiKey !== undefined ? firstApiKey : "no-api-key-create-one-in-dashboard");
 
    const usedApiKeyId = resolvedSyncApiKey ? syncApiKey : userApiKey?.id;
    if (usedApiKeyId) {
@@ -334,6 +335,7 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
    const sortedFilteredIds = Object.keys(filteredModels).sort();
    for (const id of sortedFilteredIds) {
      const def = filteredModels[id];
+     if (!def) continue;
      const entry: Record<string, unknown> = {
        name: def.name,
        attachment: def.attachment,

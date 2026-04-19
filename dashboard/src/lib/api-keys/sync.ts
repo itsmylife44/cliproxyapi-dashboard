@@ -87,10 +87,10 @@ export async function syncKeysToCliProxyApi(): Promise<SyncResult> {
     const payload = keyList;
 
     let lastError: Error | null = null;
-    const maxRetries = 3;
-    const delays = [1000, 2000, 4000];
+    const delays = [1000, 2000, 4000] as const;
+    const maxRetries = delays.length;
 
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
+    for (const [attempt, delayMs] of delays.entries()) {
       try {
         const response = await fetch(`${MANAGEMENT_BASE_URL}/api-keys`, {
           method: "PUT",
@@ -113,7 +113,6 @@ export async function syncKeysToCliProxyApi(): Promise<SyncResult> {
         lastError = error instanceof Error ? error : new Error(String(error));
 
         if (attempt < maxRetries - 1) {
-          const delayMs = delays[attempt];
           logger.warn(
             { attempt: attempt + 1, delayMs, error: lastError.message },
             "Sync attempt failed, retrying"

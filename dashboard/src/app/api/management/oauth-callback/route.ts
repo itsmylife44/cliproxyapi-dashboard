@@ -332,10 +332,11 @@ export async function POST(request: NextRequest) {
 
       if (runUnclaimed) {
         const unclaimedCandidates = await findUnclaimedAuthFiles(afterAuthFiles, provider);
-        if (unclaimedCandidates.length === 1) {
+        const [unclaimedCandidate] = unclaimedCandidates;
+        if (unclaimedCandidates.length === 1 && unclaimedCandidate) {
           candidateFiles = unclaimedCandidates;
           logger.info(
-            { provider, strategy: "unclaimed-single", name: unclaimedCandidates[0].name },
+            { provider, strategy: "unclaimed-single", name: unclaimedCandidate.name },
             "OAuth callback: matched single unclaimed auth file for provider"
           );
           break;
@@ -345,10 +346,11 @@ export async function POST(request: NextRequest) {
           const newAndUnclaimed = unclaimedCandidates.filter(
             (f) => !preCallbackNames.has(f.name)
           );
-          if (newAndUnclaimed.length === 1) {
+          const [newUnclaimedCandidate] = newAndUnclaimed;
+          if (newAndUnclaimed.length === 1 && newUnclaimedCandidate) {
             candidateFiles = newAndUnclaimed;
             logger.info(
-              { provider, strategy: "unclaimed-new", name: newAndUnclaimed[0].name },
+              { provider, strategy: "unclaimed-new", name: newUnclaimedCandidate.name },
               "OAuth callback: matched single new unclaimed auth file"
             );
             break;

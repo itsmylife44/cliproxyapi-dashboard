@@ -301,10 +301,12 @@ export default function ConfigPage() {
       for (const key of Object.keys(FIELD_ENDPOINTS) as (keyof Config)[]) {
         const oldVal = originalConfig[key];
         const newVal = config[key];
-        if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
-          const success = await updateField(FIELD_ENDPOINTS[key], newVal);
-          if (success) successCount++;
+        const endpoint = FIELD_ENDPOINTS[key];
+        if (!endpoint || JSON.stringify(oldVal) === JSON.stringify(newVal)) {
+          continue;
         }
+        const success = await updateField(endpoint, newVal);
+        if (success) successCount++;
       }
 
       // Check nested fields (quota-exceeded)
@@ -501,7 +503,36 @@ export default function ConfigPage() {
     if (!config) return;
     const aliases = config["oauth-model-alias"] ?? {};
     const entries = [...(aliases[provider] ?? [])];
-    entries[index] = { ...entries[index], [field]: value };
+    const entry = entries[index];
+    if (!entry) return;
+    switch (field) {
+      case "fork": {
+        if (typeof value !== "boolean") return;
+        entries[index] = { ...entry, fork: value };
+        break;
+      }
+      case "name": {
+        if (typeof value !== "string") return;
+        entries[index] = { ...entry, name: value };
+        break;
+      }
+      case "alias": {
+        if (typeof value !== "string") return;
+        entries[index] = { ...entry, alias: value };
+        break;
+      }
+      case "_id": {
+        if (typeof value !== "string") return;
+        entries[index] = { ...entry, _id: value };
+        break;
+      }
+      default: {
+        // Exhaustiveness: adding a new field to OAuthModelAliasEntry must add a case here.
+        const _exhaustive: never = field;
+        void _exhaustive;
+        return;
+      }
+    }
     setConfig({
       ...config,
       "oauth-model-alias": { ...aliases, [provider]: entries },

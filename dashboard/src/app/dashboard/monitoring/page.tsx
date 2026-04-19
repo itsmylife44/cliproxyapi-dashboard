@@ -74,13 +74,16 @@ function parseLogLine(line: string, index: number): LogLine {
   const match = line.match(logRegex);
 
   if (match) {
-    return {
-      id: `${match[1]}-${index}`,
-      timestamp: match[1],
-      level: match[2].toLowerCase(),
-      message: match[3],
-      raw: line,
-    };
+    const [, timestamp, level, message] = match;
+    if (timestamp && level && message) {
+      return {
+        id: `${timestamp}-${index}`,
+        timestamp,
+        level: level.toLowerCase(),
+        message,
+        raw: line,
+      };
+    }
   }
 
   return {

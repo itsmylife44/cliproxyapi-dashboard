@@ -245,7 +245,9 @@ export async function exportDatabase(exportedBy: string): Promise<BackupData> {
         createdAt: al.createdAt.toISOString(),
       });
     }
-    auditCursor = chunk[chunk.length - 1].id;
+    const lastAuditLog = chunk[chunk.length - 1];
+    if (!lastAuditLog) break;
+    auditCursor = lastAuditLog.id;
     if (chunk.length < EXPORT_CHUNK_SIZE) break;
   }
   modelCounts.auditLogs = backupAuditLogs.length;
@@ -279,7 +281,9 @@ export async function exportDatabase(exportedBy: string): Promise<BackupData> {
         collectedAt: ur.collectedAt.toISOString(),
       });
     }
-    usageCursor = chunk[chunk.length - 1].id;
+    const lastUsageRecord = chunk[chunk.length - 1];
+    if (!lastUsageRecord) break;
+    usageCursor = lastUsageRecord.id;
     if (chunk.length < EXPORT_CHUNK_SIZE) break;
   }
   modelCounts.usageRecords = backupUsageRecords.length;

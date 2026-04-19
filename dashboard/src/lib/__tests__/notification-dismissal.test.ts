@@ -59,8 +59,9 @@ describe("addDismissedId", () => {
       `${DISMISSED_KEY_PREFIX}userId123`,
       expect.any(String)
     );
-    const callArgs = localStorageMock.setItem.mock.calls[0];
-    expect(callArgs[0]).toBe("header_notifications_dismissed_userId123");
+    const [callArgs] = localStorageMock.setItem.mock.calls;
+    expect(callArgs).toBeDefined();
+    expect(callArgs![0]).toBe("header_notifications_dismissed_userId123");
   });
 
   it("caps at MAX_DISMISSED entries, evicts oldest", () => {
@@ -91,7 +92,9 @@ describe("filterNotifications", () => {
     const dismissedIds = new Set(["health-db", "health-proxy"]);
     const result = filterNotifications(notifications, dismissedIds);
     expect(result.length).toBe(1);
-    expect(result[0].id).toBe("update-dashboard");
+    const [notification] = result;
+    expect(notification).toBeDefined();
+    expect(notification!.id).toBe("update-dashboard");
   });
 
   it("returns all notifications when dismissed set is empty", () => {

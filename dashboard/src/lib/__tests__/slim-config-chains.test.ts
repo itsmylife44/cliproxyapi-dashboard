@@ -103,10 +103,13 @@ describe("buildSlimConfig – preset and global override semantics", () => {
     });
 
     const generated = expectGeneratedConfig(config);
+    const agents = generated.agents;
     // Root agents should override presets at runtime and be emitted separately.
-    expect(generated.agents).toBeDefined();
-    expect(generated.agents?.orchestrator.model).toBe("cliproxyapi/model-b");
-    expect(generated.agents?.orchestrator.variant).toBe("root");
+    expect(agents).toBeDefined();
+    const orchestrator = agents!.orchestrator;
+    expect(orchestrator).toBeDefined();
+    expect(orchestrator!.model).toBe("cliproxyapi/model-b");
+    expect(orchestrator!.variant).toBe("root");
     expect(generated.presets?.test?.orchestrator?.model).toBe("cliproxyapi/model-a");
     expect(generated.presets?.test?.orchestrator?.variant).toBe("preset");
   });
@@ -120,8 +123,14 @@ describe("buildSlimConfig – preset and global override semantics", () => {
     });
 
     const generated = expectGeneratedConfig(config);
-    expect(generated.agents?.observer.model).toBe("external/observer-model");
-    expect(generated.agents?.councillor.model).toBe("cliproxyapi/model-a");
+    const agents = generated.agents;
+    expect(agents).toBeDefined();
+    const observer = agents!.observer;
+    const councillor = agents!.councillor;
+    expect(observer).toBeDefined();
+    expect(councillor).toBeDefined();
+    expect(observer!.model).toBe("external/observer-model");
+    expect(councillor!.model).toBe("cliproxyapi/model-a");
   });
 
   it("preserves partial root overrides without inventing a new model", () => {

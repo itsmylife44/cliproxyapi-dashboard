@@ -49,6 +49,9 @@ export async function POST(
 
     const typedAction: ActionValue = validated.action;
     const config = CONTAINER_CONFIG[name];
+    if (!config) {
+      return Errors.notFound("Container");
+    }
 
     const permissionKey = `allow${typedAction.charAt(0).toUpperCase()}${typedAction.slice(1)}` as
       | "allowStart"

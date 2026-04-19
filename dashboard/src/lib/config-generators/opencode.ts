@@ -193,6 +193,7 @@ function deduplicateProxyModels(proxyModels: ProxyModel[]): ProxyModel[] {
     const dateMatch = id.match(/^(.+)-\d{8}$/);
     if (dateMatch) {
       const base = dateMatch[1];
+      if (base === undefined) return true;
       if (idSet.has(base)) return false;
       // Also check if dot-notation of the base exists
       // e.g. claude-opus-4-1-20250805 -> base claude-opus-4-1 -> check claude-opus-4.1

@@ -198,7 +198,8 @@ export default async function QuickStartPage() {
 
   const providerCount = configProviderCount + activeOAuthProviders.size;
 
-  const apiKeyForProxy = userApiKeys.length > 0 ? userApiKeys[0].key : "";
+  const [firstUserApiKey] = userApiKeys;
+  const apiKeyForProxy = firstUserApiKey?.key ?? "";
   const [proxyModels, modelsDevLimits, customProviders] = await Promise.all([
     apiKeyForProxy ? fetchProxyModels(getInternalProxyUrl(), apiKeyForProxy) : Promise.resolve([]),
     fetchModelsDevLimits(),

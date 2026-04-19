@@ -62,7 +62,11 @@ async function getCurrentImageDigest(): Promise<{ version: string; digest: strin
     ]);
     
     const [image, fullDigest] = stdout.trim().split(" ");
-    const tagVersion = image.includes(":") ? image.split(":")[1] : "latest";
+    if (!image || !fullDigest) {
+      return { version: "unknown", digest: "unknown", fullDigest: "unknown" };
+    }
+    const [, imageTag] = image.split(":");
+    const tagVersion = imageTag ?? "latest";
     const cleanDigest = fullDigest.replace("sha256:", "");
     
     return { 
@@ -95,7 +99,7 @@ async function checkGitHubBuildStatus(skipCache = false): Promise<boolean> {
       fetch(`${base}&status=queued`, { cache: "no-store", headers }),
     ]);
 
-    const [inProgressData, queuedData]: GitHubRunsResponse[] = await Promise.all([
+    const [inProgressData, queuedData]: [GitHubRunsResponse, GitHubRunsResponse] = await Promise.all([
       inProgressRes.ok
         ? inProgressRes.json()
         : inProgressRes.body?.cancel().then(() => ({})) ?? Promise.resolve({}),

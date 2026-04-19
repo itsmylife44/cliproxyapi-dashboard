@@ -117,9 +117,9 @@ function loadLogsFromFile(): void {
     const lines = content.trim().split("\n").filter(Boolean);
 
     const startIndex = Math.max(0, lines.length - MAX_MEMORY_LOGS);
-    for (let i = startIndex; i < lines.length; i++) {
+    for (const line of lines.slice(startIndex)) {
       try {
-        const entry = JSON.parse(lines[i]) as LogEntry;
+        const entry = JSON.parse(line) as LogEntry;
         if (!entry.levelLabel && entry.level) {
           entry.levelLabel = LEVEL_LABELS[entry.level] ?? "unknown";
         }

@@ -125,7 +125,9 @@ describe("POST /api/custom-providers/fetch-models (issue #197)", () => {
     const { POST } = await import("./route");
     const res = await POST(buildRequest({ baseUrl: "http://localhost:11434/v1" }));
     expect(res.status).toBe(200);
-    const [, init] = fetchMock.mock.calls[0];
+    const fetchCall = fetchMock.mock.calls[0];
+    expect(fetchCall).toBeDefined();
+    const [, init] = fetchCall!;
     expect(init.headers).not.toHaveProperty("Authorization");
   });
 
@@ -139,7 +141,9 @@ describe("POST /api/custom-providers/fetch-models (issue #197)", () => {
     const { POST } = await import("./route");
     const res = await POST(buildRequest({ baseUrl: "http://localhost:11434/v1", apiKey: "secret" }));
     expect(res.status).toBe(200);
-    const [, init] = fetchMock.mock.calls[0];
+    const fetchCall = fetchMock.mock.calls[0];
+    expect(fetchCall).toBeDefined();
+    const [, init] = fetchCall!;
     expect(init.headers.Authorization).toBe("Bearer secret");
   });
 });

@@ -26,13 +26,16 @@ interface LogStats {
   persistent: boolean;
 }
 
+const DEFAULT_LEVEL_BADGE_CLASS =
+  "text-[var(--text-muted)] bg-[var(--surface-muted)] border-[var(--surface-border)]";
+
 const LEVEL_COLORS: Record<string, string> = {
   error: "text-red-600 bg-red-500/100/10 border-red-500/20",
   fatal: "text-red-600 bg-red-500/100/10 border-red-500/20",
   warn: "text-yellow-700 bg-yellow-500/100/10 border-yellow-500/20",
   info: "text-blue-600 bg-blue-500/100/10 border-blue-500/20",
-  debug: "text-[var(--text-muted)] bg-[var(--surface-muted)] border-[var(--surface-border)]",
-  trace: "text-[var(--text-muted)] bg-[var(--surface-muted)] border-[var(--surface-border)]",
+  debug: DEFAULT_LEVEL_BADGE_CLASS,
+  trace: DEFAULT_LEVEL_BADGE_CLASS,
 };
 
 const LEVEL_FILTERS = ["all", "error", "warn", "info", "debug"] as const;
@@ -199,7 +202,7 @@ export default function AdminLogsPage() {
   };
 
   const getLevelBadgeClass = (level: string): string => {
-    return LEVEL_COLORS[level] ?? LEVEL_COLORS.debug;
+    return LEVEL_COLORS[level] ?? DEFAULT_LEVEL_BADGE_CLASS;
   };
 
   const renderLogDetails = (log: LogEntry): string => {

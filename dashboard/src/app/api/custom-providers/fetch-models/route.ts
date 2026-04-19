@@ -49,8 +49,9 @@ function expandIPv6(raw: string): string | null {
   const parts = value.split("::");
   if (parts.length > 2) return null;
 
-  const head = parts[0] === "" ? [] : parts[0].split(":");
-  const tail = parts.length === 2 && parts[1] !== "" ? parts[1].split(":") : [];
+  const [headPart = "", tailPart = ""] = parts;
+  const head = headPart === "" ? [] : headPart.split(":");
+  const tail = parts.length === 2 && tailPart !== "" ? tailPart.split(":") : [];
   const missing = 8 - head.length - tail.length;
   if (missing < 0) return null;
   if (parts.length === 1 && head.length !== 8) return null;
@@ -139,8 +140,10 @@ function isPrivateHost(hostname: string, allowLocal: boolean): boolean {
   }
   const hexMatch = ipv6.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
   if (hexMatch) {
-    const hi = parseInt(hexMatch[1], 16);
-    const lo = parseInt(hexMatch[2], 16);
+    const [, hiPart, loPart] = hexMatch;
+    if (!hiPart || !loPart) return true; // fail closed: unparseable mapped IPv6 is treated as private
+    const hi = parseInt(hiPart, 16);
+    const lo = parseInt(loPart, 16);
     const a = (hi >> 8) & 0xff;
     const b = hi & 0xff;
     const c = (lo >> 8) & 0xff;

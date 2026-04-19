@@ -189,7 +189,7 @@ export async function importOAuthCredential(
           return fileProvider === provider.toLowerCase();
         });
         if (providerMatches.length === 1) {
-          fallbackFile = providerMatches[0];
+          fallbackFile = providerMatches[0] ?? null;
         }
       }
 

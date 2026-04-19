@@ -30,8 +30,8 @@ export function generateShareCode(): string {
   crypto.getRandomValues(bytes);
 
   let code = "";
-  for (let i = 0; i < 8; i++) {
-    const index = bytes[i] % SHARE_CODE_ALPHABET.length;
+  for (const byte of bytes) {
+    const index = byte % SHARE_CODE_ALPHABET.length;
     code += SHARE_CODE_ALPHABET[index];
   }
 

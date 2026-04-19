@@ -240,7 +240,9 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
 
   const updateModelMapping = (index: number, field: 'upstreamName' | 'alias', value: string) => {
     const updated = [...models];
-    updated[index][field] = value;
+    const model = updated[index];
+    if (!model) return;
+    model[field] = value;
     setModels(updated);
   };
 
@@ -254,7 +256,9 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
 
   const updateHeader = (index: number, field: 'key' | 'value', value: string) => {
     const updated = [...headers];
-    updated[index][field] = value;
+    const header = updated[index];
+    if (!header) return;
+    header[field] = value;
     setHeaders(updated);
   };
 

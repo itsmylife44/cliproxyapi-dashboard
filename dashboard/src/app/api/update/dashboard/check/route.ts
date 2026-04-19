@@ -24,7 +24,7 @@ interface VersionInfo {
   releaseNotes: string | null;
 }
 
-function parseVersion(tag: string): number[] | null {
+function parseVersion(tag: string): [number, number, number] | null {
   const match = tag.replace(/^.*v/, "").match(/^(\d+)\.(\d+)\.(\d+)/);
   if (!match) return null;
   return [Number(match[1]), Number(match[2]), Number(match[3])];
@@ -35,11 +35,14 @@ function isNewerVersion(current: string, latest: string): boolean {
   const lat = parseVersion(latest);
   if (!cur || !lat) return false;
 
-  for (let i = 0; i < 3; i++) {
-    if (lat[i] > cur[i]) return true;
-    if (lat[i] < cur[i]) return false;
-  }
-  return false;
+  const [curMajor, curMinor, curPatch] = cur;
+  const [latMajor, latMinor, latPatch] = lat;
+
+  if (latMajor > curMajor) return true;
+  if (latMajor < curMajor) return false;
+  if (latMinor > curMinor) return true;
+  if (latMinor < curMinor) return false;
+  return latPatch > curPatch;
 }
 
 async function getRemoteVersion(skipCache = false): Promise<RemoteVersionData | null> {

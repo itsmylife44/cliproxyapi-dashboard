@@ -114,8 +114,10 @@ describe("oh-my-opencode config", () => {
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
     const agents = typedConfig.agents as Record<string, { ultrawork?: { model?: string; variant?: string } }>;
+    const sisyphus = agents.sisyphus;
 
-    expect(agents.sisyphus.ultrawork).toEqual({
+    expect(sisyphus).toBeDefined();
+    expect(sisyphus!.ultrawork).toEqual({
       model: "cliproxyapi/claude-opus-4.6",
       variant: "max",
     });
@@ -134,18 +136,26 @@ describe("oh-my-opencode config", () => {
     const categories = typedConfig.categories as Record<string, { model: string; fallback_models?: string[] }>;
 
     // explore chain: grok-code-fast-1 → minimax-m2.7-highspeed → minimax-m2.7 → claude-haiku-4.5 → gpt-5-nano
-    expect(agents.explore.model).toBe("cliproxyapi/claude-haiku-4.5");
-    expect(agents.explore.fallback_models).toContain("cliproxyapi/gpt-5-nano");
+    const explore = agents.explore;
+    expect(explore).toBeDefined();
+    expect(explore!.model).toBe("cliproxyapi/claude-haiku-4.5");
+    expect(explore!.fallback_models).toContain("cliproxyapi/gpt-5-nano");
 
     // librarian chain: minimax-m2.7 → minimax-m2.7-highspeed → claude-haiku-4.5 → gpt-5-nano
-    expect(agents.librarian.model).toBe("cliproxyapi/claude-haiku-4.5");
+    const librarian = agents.librarian;
+    expect(librarian).toBeDefined();
+    expect(librarian!.model).toBe("cliproxyapi/claude-haiku-4.5");
 
     // quick category: gpt-5.4-mini → claude-haiku-4.5 → gemini-3-flash → minimax-m2.7 → gpt-5-nano
-    expect(categories.quick.model).toBe("cliproxyapi/claude-haiku-4.5");
-    expect(categories.quick.fallback_models).toContain("cliproxyapi/gemini-3-flash");
+    const quick = categories.quick;
+    expect(quick).toBeDefined();
+    expect(quick!.model).toBe("cliproxyapi/claude-haiku-4.5");
+    expect(quick!.fallback_models).toContain("cliproxyapi/gemini-3-flash");
 
     // writing category: gemini-3-flash → kimi-k2.5 → claude-sonnet-4.6 → minimax-m2.7
-    expect(categories.writing.model).toBe("cliproxyapi/gemini-3-flash");
+    const writing = categories.writing;
+    expect(writing).toBeDefined();
+    expect(writing!.model).toBe("cliproxyapi/gemini-3-flash");
   });
 
   it("auto-generates fallback_models from chain when no override", () => {
@@ -153,12 +163,15 @@ describe("oh-my-opencode config", () => {
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
     const agents = typedConfig.agents as Record<string, { model: string; fallback_models?: string[] }>;
+    const sisyphus = agents.sisyphus;
 
     // sisyphus chain: claude-opus-4.6 → kimi-k2.5 → k2p5 → gpt-5.4 → glm-5 → big-pickle
-    expect(agents.sisyphus.model).toBe("cliproxyapi/claude-opus-4.6");
-    expect(agents.sisyphus.fallback_models).toContain("cliproxyapi/k2p5");
-    expect(agents.sisyphus.fallback_models).toContain("cliproxyapi/gpt-5.4");
-    expect(agents.sisyphus.fallback_models).toContain("cliproxyapi/glm-5");
+    expect(sisyphus).toBeDefined();
+    expect(sisyphus!.model).toBe("cliproxyapi/claude-opus-4.6");
+    expect(sisyphus!.fallback_models).toContain("cliproxyapi/k2p5");
+    expect(sisyphus!.fallback_models).toContain("cliproxyapi/gpt-5.4");
+    expect(sisyphus!.fallback_models).toContain("cliproxyapi/glm-5");
+
   });
 
   it("returns null when no models available", () => {
@@ -174,12 +187,14 @@ describe("oh-my-opencode config", () => {
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
     const agents = typedConfig.agents as Record<string, { model: string; fallback_models?: string[] }>;
+    const sisyphus = agents.sisyphus;
 
-    expect(agents.sisyphus.model).toBe("cliproxyapi/k2p5");
-    expect(agents.sisyphus.fallback_models).toContain("cliproxyapi/gpt-5.4");
-    expect(agents.sisyphus.fallback_models).toContain("cliproxyapi/glm-5");
-    expect(agents.sisyphus.fallback_models).not.toContain("cliproxyapi/claude-opus-4.6");
-    expect(agents.sisyphus.fallback_models).not.toContain("cliproxyapi/k2p5");
+    expect(sisyphus).toBeDefined();
+    expect(sisyphus!.model).toBe("cliproxyapi/k2p5");
+    expect(sisyphus!.fallback_models).toContain("cliproxyapi/gpt-5.4");
+    expect(sisyphus!.fallback_models).toContain("cliproxyapi/glm-5");
+    expect(sisyphus!.fallback_models).not.toContain("cliproxyapi/claude-opus-4.6");
+    expect(sisyphus!.fallback_models).not.toContain("cliproxyapi/k2p5");
   });
 
   it("computes category override fallback from override position", () => {
@@ -190,11 +205,13 @@ describe("oh-my-opencode config", () => {
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
     const categories = typedConfig.categories as Record<string, { model: string; fallback_models?: string[] }>;
+    const visualEngineering = categories["visual-engineering"];
 
-    expect(categories["visual-engineering"].model).toBe("cliproxyapi/glm-5");
-    expect(categories["visual-engineering"].fallback_models).toContain("cliproxyapi/claude-opus-4.6");
-    expect(categories["visual-engineering"].fallback_models).toContain("cliproxyapi/k2p5");
-    expect(categories["visual-engineering"].fallback_models).not.toContain("cliproxyapi/gemini-3.1-pro");
+    expect(visualEngineering).toBeDefined();
+    expect(visualEngineering!.model).toBe("cliproxyapi/glm-5");
+    expect(visualEngineering!.fallback_models).toContain("cliproxyapi/claude-opus-4.6");
+    expect(visualEngineering!.fallback_models).toContain("cliproxyapi/k2p5");
+    expect(visualEngineering!.fallback_models).not.toContain("cliproxyapi/gemini-3.1-pro");
   });
 
   it("uses no fallbacks when override model is not in chain", () => {
@@ -205,9 +222,11 @@ describe("oh-my-opencode config", () => {
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
     const agents = typedConfig.agents as Record<string, { model: string; fallback_models?: string[] }>;
+    const sisyphus = agents.sisyphus;
 
-    expect(agents.sisyphus.model).toBe("cliproxyapi/big-pickle");
-    expect(agents.sisyphus.fallback_models).toBeUndefined();
+    expect(sisyphus).toBeDefined();
+    expect(sisyphus!.model).toBe("cliproxyapi/big-pickle");
+    expect(sisyphus!.fallback_models).toBeUndefined();
   });
 
   it("drops ultrawork.model when ultrawork model is not available", () => {
@@ -223,10 +242,13 @@ describe("oh-my-opencode config", () => {
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
     const agents = typedConfig.agents as Record<string, { ultrawork?: { model?: string; variant?: string } }>;
+    const sisyphus = agents.sisyphus;
+    const ultrawork = sisyphus?.ultrawork;
 
-    expect(agents.sisyphus.ultrawork).toBeDefined();
-    expect(agents.sisyphus.ultrawork?.model).toBeUndefined();
-    expect(agents.sisyphus.ultrawork?.variant).toBe("max");
+    expect(sisyphus).toBeDefined();
+    expect(ultrawork).toBeDefined();
+    expect(ultrawork!.model).toBeUndefined();
+    expect(ultrawork!.variant).toBe("max");
   });
 
   it("prefixes ultrawork.model when ultrawork model is available", () => {
@@ -242,9 +264,13 @@ describe("oh-my-opencode config", () => {
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
     const agents = typedConfig.agents as Record<string, { ultrawork?: { model?: string; variant?: string } }>;
+    const sisyphus = agents.sisyphus;
+    const ultrawork = sisyphus?.ultrawork;
 
-    expect(agents.sisyphus.ultrawork?.model).toBe("cliproxyapi/gpt-5.4");
-    expect(agents.sisyphus.ultrawork?.variant).toBe("max");
+    expect(sisyphus).toBeDefined();
+    expect(ultrawork).toBeDefined();
+    expect(ultrawork!.model).toBe("cliproxyapi/gpt-5.4");
+    expect(ultrawork!.variant).toBe("max");
   });
 
   it("applyPreset does not create empty concurrency objects", () => {
@@ -342,7 +368,9 @@ describe("oh-my-opencode config", () => {
       expect(config).not.toBeNull();
       const typedConfig = config as Record<string, unknown>;
       const agents = typedConfig.agents as Record<string, { model: string }>;
-      expect(agents.sisyphus.model).toBe("cliproxyapi/k2p5");
+      const sisyphus = agents.sisyphus;
+      expect(sisyphus).toBeDefined();
+      expect(sisyphus!.model).toBe("cliproxyapi/k2p5");
     });
   });
 
@@ -410,7 +438,9 @@ describe("oh-my-opencode config", () => {
       const result = getMissingPresetModels(preset, []);
       // Only sisyphus.model is "missing", prometheus has no model to check
       expect(result).toHaveLength(1);
-      expect(result[0].model).toBe("claude-opus-4.6");
+      const [missingModel] = result;
+      expect(missingModel).toBeDefined();
+      expect(missingModel!.model).toBe("claude-opus-4.6");
     });
   });
 });

@@ -287,7 +287,9 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
 
   const handleUpdateEnvRow = (index: number, field: "key" | "value", value: string) => {
     const newRows = [...envRows];
-    newRows[index][field] = value;
+    const row = newRows[index];
+    if (!row) return;
+    row[field] = value;
     setEnvRows(newRows);
   };
 
@@ -396,7 +398,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             <span>
-              {t("usingApiKeyPrefix")} <strong className="text-[var(--text-secondary)]">{apiKeys[0].name || t("unnamedKey")}</strong>
+              {t("usingApiKeyPrefix")} <strong className="text-[var(--text-secondary)]">{selectedEntry?.name || t("unnamedKey")}</strong>
             </span>
           </div>
         )

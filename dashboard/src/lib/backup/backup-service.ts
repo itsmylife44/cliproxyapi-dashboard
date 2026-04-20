@@ -4,6 +4,7 @@ import { gzipSync, createGunzip } from "zlib";
 import { promises as fs } from "fs";
 import path from "path";
 import { prisma } from "@/lib/db";
+import { CronExpressionParser } from "cron-parser";
 import { exportDatabase, importDatabase, parseBackupData, generateRestorePreview } from "./export-import";
 import type { BackupRecord, BackupListItem, StorageInfo, RestorePreview, ScheduleConfig } from "./types";
 import { BACKUP_DIR, BACKUP_EXTENSION, MAX_BACKUP_SIZE } from "./types";
@@ -353,6 +354,30 @@ export async function getStorageInfo(): Promise<StorageInfo> {
 }
 
 /**
+ * Compute next run time from cron expression, relative to a base date.
+ * Uses `process.env.TZ` when set, falling back to UTC if that timezone is
+ * rejected by the parser (bad IANA name). Returns null only when the cron
+ * expression itself is invalid.
+ */
+export function computeNextRun(cronExpr: string, from: Date = new Date()): Date | null {
+  const configuredTz = process.env.TZ;
+  const tryParse = (tz: string) => {
+    const it = CronExpressionParser.parse(cronExpr, { currentDate: from, tz });
+    return it.next().toDate();
+  };
+  try {
+    return tryParse(configuredTz || "UTC");
+  } catch {
+    if (!configuredTz) return null;
+    try {
+      return tryParse("UTC");
+    } catch {
+      return null;
+    }
+  }
+}
+
+/**
  * Get backup schedule configuration
  */
 export async function getScheduleConfig(): Promise<ScheduleConfig> {
@@ -379,19 +404,36 @@ export async function getScheduleConfig(): Promise<ScheduleConfig> {
 }
 
 /**
- * Update backup schedule configuration
+ * Update backup schedule configuration.
+ *
+ * Recomputes nextRun whenever enabled transitions to true or cronExpr changes.
+ * Clears nextRun when disabled.
  */
 export async function updateScheduleConfig(
   config: Partial<Pick<ScheduleConfig, "enabled" | "cronExpr" | "retention">>
 ): Promise<ScheduleConfig> {
   let schedule = await prisma.backupSchedule.findFirst();
 
+  const resolvedCron = config.cronExpr ?? schedule?.cronExpr ?? "0 3 * * *";
+  const resolvedEnabled = config.enabled ?? schedule?.enabled ?? false;
+  const cronChanged = config.cronExpr !== undefined && config.cronExpr !== schedule?.cronExpr;
+  const enabledToggledOn = config.enabled === true && schedule?.enabled !== true;
+  const shouldRecomputeNext = resolvedEnabled && (cronChanged || enabledToggledOn || !schedule?.nextRun);
+
+  let nextRunValue: Date | null | undefined;
+  if (!resolvedEnabled) {
+    nextRunValue = null;
+  } else if (shouldRecomputeNext) {
+    nextRunValue = computeNextRun(resolvedCron);
+  }
+
   if (!schedule) {
     schedule = await prisma.backupSchedule.create({
       data: {
-        enabled: config.enabled ?? false,
-        cronExpr: config.cronExpr ?? "0 3 * * *",
+        enabled: resolvedEnabled,
+        cronExpr: resolvedCron,
         retention: config.retention ?? 7,
+        nextRun: nextRunValue ?? null,
       },
     });
   } else {
@@ -401,6 +443,7 @@ export async function updateScheduleConfig(
         ...(config.enabled !== undefined && { enabled: config.enabled }),
         ...(config.cronExpr !== undefined && { cronExpr: config.cronExpr }),
         ...(config.retention !== undefined && { retention: config.retention }),
+        ...(nextRunValue !== undefined && { nextRun: nextRunValue }),
       },
     });
   }
@@ -416,12 +459,9 @@ export async function updateScheduleConfig(
 
 /**
  * Clean up old backups based on retention policy.
- * 
- * NOTE: This function is exported for future use by a scheduled background task.
- * Currently not called automatically - the backup scheduler (cron job) is not yet
- * implemented. When a scheduler is added, it should call this function after
- * creating scheduled backups to enforce the retention policy.
- * 
+ *
+ * Called by runScheduledBackupIfDue after each successful scheduled backup.
+ *
  * @returns Number of backups deleted
  */
 export async function cleanupOldBackups(): Promise<number> {
@@ -454,3 +494,81 @@ export async function cleanupOldBackups(): Promise<number> {
 
   return deleted;
 }
+
+export type ScheduledBackupOutcome =
+  | { status: "disabled" }
+  | { status: "not-due"; nextRun: string }
+  | { status: "no-admin" }
+  | { status: "invalid-cron"; cronExpr: string }
+  | { status: "ran"; backupId: string; deleted: number; nextRun: string | null };
+
+/**
+ * Tick entry point for external cron. Idempotent: returns `not-due` when
+ * current time has not reached `nextRun`, so a caller can safely poll every
+ * N minutes without over-triggering.
+ *
+ * Picks the oldest admin user as `createdById` (no session context available).
+ * Returns a structured outcome for logging/observability.
+ */
+export async function runScheduledBackupIfDue(now: Date = new Date()): Promise<ScheduledBackupOutcome> {
+  const schedule = await prisma.backupSchedule.findFirst();
+  if (!schedule || !schedule.enabled) {
+    return { status: "disabled" };
+  }
+
+  // Ensure nextRun is populated (first tick after enable may race with updateScheduleConfig)
+  const nextRun = schedule.nextRun;
+  if (!nextRun) {
+    const computed = computeNextRun(schedule.cronExpr, now);
+    if (!computed) {
+      return { status: "invalid-cron", cronExpr: schedule.cronExpr };
+    }
+    await prisma.backupSchedule.update({
+      where: { id: schedule.id },
+      data: { nextRun: computed },
+    });
+    return { status: "not-due", nextRun: computed.toISOString() };
+  }
+
+  if (now < nextRun) {
+    return { status: "not-due", nextRun: nextRun.toISOString() };
+  }
+
+  const admin = await prisma.user.findFirst({
+    where: { isAdmin: true },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  if (!admin) {
+    return { status: "no-admin" };
+  }
+
+  // Atomic claim: advance nextRun before running the backup so concurrent
+  // ticks or a retried poll cannot trigger a second run for the same slot.
+  // `lastRun` is only recorded on success (below) so UI and observers never
+  // see a lastRun newer than any completed scheduled backup.
+  const newNext = computeNextRun(schedule.cronExpr, now);
+  const claim = await prisma.backupSchedule.updateMany({
+    where: { id: schedule.id, nextRun: nextRun },
+    data: { nextRun: newNext ?? null },
+  });
+  if (claim.count === 0) {
+    // Another tick already advanced nextRun; treat as not-due.
+    return { status: "not-due", nextRun: nextRun.toISOString() };
+  }
+
+  const backup = await createBackup(admin.id, "SCHEDULED");
+  const deleted = await cleanupOldBackups();
+  await prisma.backupSchedule.update({
+    where: { id: schedule.id },
+    data: { lastRun: now },
+  });
+
+  return {
+    status: "ran",
+    backupId: backup.id,
+    deleted,
+    nextRun: newNext ? newNext.toISOString() : null,
+  };
+}
+

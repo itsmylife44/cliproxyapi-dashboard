@@ -511,6 +511,7 @@ JWT_SECRET=$(openssl rand -base64 32)
 MANAGEMENT_API_KEY=$(openssl rand -hex 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 32)
 COLLECTOR_API_KEY=$(openssl rand -hex 32)
+BACKUP_SCHEDULER_KEY=$(openssl rand -hex 32)
 PROVIDER_ENCRYPTION_KEY=$(openssl rand -hex 32)
 
 if [ $PERPLEXITY_ENABLED -eq 1 ]; then
@@ -563,6 +564,7 @@ POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 JWT_SECRET=$JWT_SECRET
 MANAGEMENT_API_KEY=$MANAGEMENT_API_KEY
 COLLECTOR_API_KEY=$COLLECTOR_API_KEY
+BACKUP_SCHEDULER_KEY=$BACKUP_SCHEDULER_KEY
 PROVIDER_ENCRYPTION_KEY=$PROVIDER_ENCRYPTION_KEY
 
 # Management API URL
@@ -628,7 +630,7 @@ if [ $SKIP_SERVICE -eq 0 ]; then
     # line Docker Compose does NOT auto-start profiled services from COMPOSE_PROFILES,
     # so perplexity-sidecar must also be listed here when it is enabled.
     if [ $EXTERNAL_PROXY -eq 1 ]; then
-        COMPOSE_SERVICES="postgres cliproxyapi docker-proxy dashboard"
+        COMPOSE_SERVICES="postgres cliproxyapi docker-proxy dashboard backup-scheduler"
         if [ $PERPLEXITY_ENABLED -eq 1 ]; then
             COMPOSE_SERVICES="$COMPOSE_SERVICES perplexity-sidecar"
         fi

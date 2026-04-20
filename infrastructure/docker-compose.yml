@@ -224,6 +224,39 @@ services:
       retries: 3
       start_period: 10s
 
+  # Backup Scheduler Cron Service — ticks every 5 minutes; endpoint decides if backup is due
+  backup-scheduler:
+    image: alpine:3.19
+    container_name: cliproxyapi-backup-scheduler
+    restart: unless-stopped
+    cpus: 0.1
+    mem_limit: 64m
+    mem_reservation: 16m
+    networks:
+      - frontend
+      - backend
+    environment:
+      BACKUP_SCHEDULER_KEY: ${BACKUP_SCHEDULER_KEY:-}
+      TZ: ${TZ}
+    env_file:
+      - ./.env
+    command: >
+      sh -c "
+        apk add --no-cache curl dcron &&
+        echo '*/5 * * * * curl -sf -X POST http://dashboard:3000/api/admin/backup/scheduled -H \"Authorization: Bearer $$BACKUP_SCHEDULER_KEY\" > /dev/null 2>&1' > /tmp/crontab &&
+        crontab /tmp/crontab &&
+        crond -f -d 8
+      "
+    depends_on:
+      dashboard:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep crond > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   # Caddy Reverse Proxy
   caddy:
     image: caddy:2-alpine

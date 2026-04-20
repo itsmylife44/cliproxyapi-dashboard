@@ -23,6 +23,7 @@
     "@prisma/client": "^7.4.2",
     "bcrypt": "^6.0.0",
     "clsx": "^2.1.1",
+    "cron-parser": "^5.5.0",
     "geist": "^1.7.0",
     "jose": "^6.2.0",
     "js-yaml": "^4.1.1",

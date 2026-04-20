@@ -10,7 +10,7 @@ Before installing, ensure you have:
 
 **For server deployment:**
 
-- **Operating System**: Ubuntu 20.04+ or Debian 11+ (other Linux distributions should work with minor adjustments)
+- **Operating System**: Ubuntu 20.04+ or Debian 11+ (Ubuntu/Debian derivatives like Zorin OS, Linux Mint, Pop!_OS, elementary, Raspbian, and LMDE are auto-detected via `ID_LIKE`)
 - **Root Access**: Required for Docker and firewall configuration
 - **Domain Name**: A registered domain with DNS control
 - **Server**: VPS or dedicated server with public IP address

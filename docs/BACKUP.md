@@ -52,3 +52,9 @@ sudo crontab -l
 ```bash
 tail -f backups/backup.log
 ```
+
+## Dashboard Scheduled Backups
+
+The dashboard itself also supports scheduled database snapshots, separate from the host-level backups above. They are managed from **Settings → Backup** and run via the `backup-scheduler` container.
+
+See [CONFIGURATION.md → Scheduled Backups](./CONFIGURATION.md#scheduled-backups) for setup, the required `BACKUP_SCHEDULER_KEY`, and the upgrade path for existing deployments.

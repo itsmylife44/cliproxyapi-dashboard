@@ -59,7 +59,7 @@ The installer will:
 1. Prompt for domain and subdomain configuration
 2. Install Docker and Docker Compose (if not already installed)
 3. Configure UFW firewall with required ports
-4. Generate secure secrets (JWT_SECRET, MANAGEMENT_API_KEY, POSTGRES_PASSWORD, COLLECTOR_API_KEY)
+4. Generate secure secrets (JWT_SECRET, MANAGEMENT_API_KEY, POSTGRES_PASSWORD, COLLECTOR_API_KEY, BACKUP_SCHEDULER_KEY)
 5. Pull the pre-built dashboard image from GHCR
 6. Create `infrastructure/.env` with all required configuration
 7. Create a systemd service for automatic startup on boot
@@ -252,12 +252,14 @@ JWT_SECRET=$(openssl rand -base64 32)
 MANAGEMENT_API_KEY=$(openssl rand -hex 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 32)
 COLLECTOR_API_KEY=$(openssl rand -hex 32)
+BACKUP_SCHEDULER_KEY=$(openssl rand -hex 32)
 
 # Display secrets (save these values)
 echo "JWT_SECRET=$JWT_SECRET"
 echo "MANAGEMENT_API_KEY=$MANAGEMENT_API_KEY"
 echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD"
 echo "COLLECTOR_API_KEY=$COLLECTOR_API_KEY"
+echo "BACKUP_SCHEDULER_KEY=$BACKUP_SCHEDULER_KEY"
 ```
 
 ### 4. Create Environment File
@@ -272,6 +274,7 @@ POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 JWT_SECRET=${JWT_SECRET}
 MANAGEMENT_API_KEY=${MANAGEMENT_API_KEY}
 COLLECTOR_API_KEY=${COLLECTOR_API_KEY}
+BACKUP_SCHEDULER_KEY=${BACKUP_SCHEDULER_KEY}
 CLIPROXYAPI_MANAGEMENT_URL=http://cliproxyapi:8317/v0/management
 INSTALL_DIR=$(pwd)
 TZ=UTC

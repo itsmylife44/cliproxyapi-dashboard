@@ -239,6 +239,40 @@ grep COLLECTOR_API_KEY .env
    docker compose exec postgres psql -U cliproxyapi -d cliproxyapi -c "SELECT COUNT(*) FROM usage_records;"
    ```
 
+## Scheduled Backups Not Running
+
+If the Settings → Backup page shows the schedule as enabled but `lastRun` never updates, the backup scheduler container is likely missing or unauthenticated. This is the usual case when upgrading an install that predates the scheduler.
+
+### Quick Diagnostics
+
+```bash
+cd infrastructure
+docker compose ps backup-scheduler
+docker compose logs --tail=20 backup-scheduler
+grep BACKUP_SCHEDULER_KEY .env
+```
+
+### Common Causes
+
+1. **Missing `BACKUP_SCHEDULER_KEY` after upgrade**
+   ```bash
+   grep -q '^BACKUP_SCHEDULER_KEY=' infrastructure/.env || \
+     echo "BACKUP_SCHEDULER_KEY=$(openssl rand -hex 32)" >> infrastructure/.env
+   docker compose up -d backup-scheduler
+   ```
+
+2. **Scheduler container never started**
+   ```bash
+   docker compose up -d backup-scheduler
+   ```
+
+3. **No admin user** — scheduled backups are attributed to the oldest admin. Create one via the dashboard before enabling the schedule.
+
+4. **Verify tick in dashboard logs**
+   ```bash
+   docker compose logs dashboard | grep BACKUP_SCHEDULED_TICK
+   ```
+
 ### Manual Collection Test
 
 ```bash

@@ -31,6 +31,7 @@ const OAUTH_PROVIDERS = [
     description: "Anthropic Claude (Pro/Max subscription)",
     authEndpoint: "/api/management/anthropic-auth-url?is_webui=true",
     requiresCallback: true,
+    preConnect: null,
   },
   {
     id: "gemini-cli" as const,
@@ -38,6 +39,7 @@ const OAUTH_PROVIDERS = [
     description: "Google Gemini (via Google OAuth)",
     authEndpoint: "/api/management/gemini-cli-auth-url?project_id=ALL&is_webui=true",
     requiresCallback: true,
+    preConnect: null,
   },
   {
     id: "codex" as const,
@@ -45,6 +47,7 @@ const OAUTH_PROVIDERS = [
     description: "OpenAI Codex (Plus/Pro subscription)",
     authEndpoint: "/api/management/codex-auth-url?is_webui=true",
     requiresCallback: true,
+    preConnect: null,
   },
   {
     id: "antigravity" as const,
@@ -52,6 +55,7 @@ const OAUTH_PROVIDERS = [
     description: "Google Antigravity (via Google OAuth)",
     authEndpoint: "/api/management/antigravity-auth-url?is_webui=true",
     requiresCallback: true,
+    preConnect: null,
   },
   {
     id: "iflow" as const,
@@ -59,6 +63,7 @@ const OAUTH_PROVIDERS = [
     description: "iFlytek iFlow (via OAuth)",
     authEndpoint: "/api/management/iflow-auth-url?is_webui=true",
     requiresCallback: true,
+    preConnect: null,
   },
   {
     id: "kimi" as const,
@@ -66,13 +71,7 @@ const OAUTH_PROVIDERS = [
     description: "Moonshot AI Kimi (device OAuth)",
     authEndpoint: "/api/management/kimi-auth-url?is_webui=true",
     requiresCallback: false,
-  },
-  {
-    id: "qwen" as const,
-    name: "Qwen Code",
-    description: "Alibaba Qwen Code (device OAuth)",
-    authEndpoint: "/api/management/qwen-auth-url?is_webui=true",
-    requiresCallback: false,
+    preConnect: null,
   },
   {
     id: "copilot" as const,
@@ -80,6 +79,7 @@ const OAUTH_PROVIDERS = [
     description: "GitHub Copilot (via GitHub device OAuth)",
     authEndpoint: "/api/management/github-auth-url?is_webui=true",
     requiresCallback: false,
+    preConnect: null,
   },
   {
     id: "kiro" as const,
@@ -87,6 +87,7 @@ const OAUTH_PROVIDERS = [
     description: "AWS CodeWhisperer / Kiro (device OAuth)",
     authEndpoint: "/api/management/kiro-auth-url?is_webui=true",
     requiresCallback: false,
+    preConnect: null,
   },
   {
     id: "cursor" as const,
@@ -94,13 +95,23 @@ const OAUTH_PROVIDERS = [
     description: "Cursor IDE (via PKCE OAuth)",
     authEndpoint: "/api/management/cursor-auth-url?is_webui=true",
     requiresCallback: false,
+    preConnect: null,
   },
   {
-    id: "codebuddy" as const,
-    name: "CodeBuddy",
-    description: "Tencent CodeBuddy (via browser OAuth)",
-    authEndpoint: "/api/management/codebuddy-auth-url?is_webui=true",
+    id: "kilo" as const,
+    name: "Kilo Code",
+    description: "Kilo Code (device OAuth)",
+    authEndpoint: "/api/management/kilo-auth-url?is_webui=true",
     requiresCallback: false,
+    preConnect: null,
+  },
+  {
+    id: "gitlab" as const,
+    name: "GitLab Duo",
+    description: "GitLab Duo (OAuth app or Personal Access Token)",
+    authEndpoint: "",
+    requiresCallback: true,
+    preConnect: "gitlab" as const,
   },
 ] as const;
 
@@ -229,6 +240,14 @@ export function OAuthSection({
   const [importFileName, setImportFileName] = useState("");
   const [importStatus, setImportStatus] = useState<"idle" | "validating" | "uploading" | "success" | "error">("idle");
   const [importErrorMessage, setImportErrorMessage] = useState<string | null>(null);
+  const [isGitLabPreConnectOpen, setIsGitLabPreConnectOpen] = useState(false);
+  const [gitLabMode, setGitLabMode] = useState<"oauth" | "pat">("oauth");
+  const [gitLabClientId, setGitLabClientId] = useState("");
+  const [gitLabClientSecret, setGitLabClientSecret] = useState("");
+  const [gitLabBaseUrl, setGitLabBaseUrl] = useState("");
+  const [gitLabPat, setGitLabPat] = useState("");
+  const [gitLabSubmitting, setGitLabSubmitting] = useState(false);
+  const [gitLabError, setGitLabError] = useState<string | null>(null);
 
   const selectedOAuthProvider = getOAuthProviderById(selectedOAuthProviderId);
   const selectedOAuthProviderRequiresCallback = selectedOAuthProvider?.requiresCallback ?? true;
@@ -523,9 +542,23 @@ export function OAuthSection({
     }
   }
 
-  const handleOAuthConnect = async (providerId: OAuthProviderId) => {
+  const handleOAuthConnect = async (
+    providerId: OAuthProviderId,
+    endpointOverride?: string,
+    requestInitOverride?: RequestInit
+  ): Promise<{ ok: boolean; errorMessage?: string }> => {
     const provider = getOAuthProviderById(providerId);
-    if (!provider) return;
+    if (!provider) return { ok: false };
+
+    if (provider.preConnect === "gitlab" && !endpointOverride) {
+      openGitLabPreConnect();
+      return { ok: false };
+    }
+
+    const authEndpoint = endpointOverride ?? provider.authEndpoint;
+    if (!authEndpoint) {
+      return { ok: false };
+    }
 
     selectedOAuthProviderIdRef.current = providerId;
     setSelectedOAuthProviderId(providerId);
@@ -537,22 +570,24 @@ export function OAuthSection({
     setCallbackMessage(t("callbackMsgEmpty"));
     setAuthLaunchUrl(null);
 
+    const fail = (message: string) => {
+      setOauthModalStatus(MODAL_STATUS.ERROR);
+      setOauthErrorMessage(message);
+      return { ok: false, errorMessage: message };
+    };
+
     try {
-      const res = await fetch(provider.authEndpoint);
+      const res = await fetch(authEndpoint, requestInitOverride);
       if (!res.ok) {
         const errorData: unknown = await res.json().catch(() => null);
-        setOauthModalStatus(MODAL_STATUS.ERROR);
-        setOauthErrorMessage(
+        return fail(
           extractApiError(errorData, `Failed to start OAuth flow (HTTP ${res.status}).`)
         );
-        return;
       }
 
       const data: AuthUrlResponse = await res.json();
       if (!data.state) {
-        setOauthModalStatus(MODAL_STATUS.ERROR);
-        setOauthErrorMessage(t("errorOAuthMissingState"));
-        return;
+        return fail(t("errorOAuthMissingState"));
       }
 
       if (!data.url && data.method === "device_code") {
@@ -564,13 +599,11 @@ export function OAuthSection({
         pollAuthStatus(data.state);
         stopNoCallbackClaimPolling();
         void claimOAuthWithoutCallback(provider.id, data.state);
-        return;
+        return { ok: true };
       }
 
       if (!data.url) {
-        setOauthModalStatus(MODAL_STATUS.ERROR);
-        setOauthErrorMessage(t("errorOAuthMissingUrl"));
-        return;
+        return fail(t("errorOAuthMissingUrl"));
       }
       setAuthLaunchUrl(data.url);
 
@@ -578,9 +611,7 @@ export function OAuthSection({
       if (shouldOpenPopup) {
         const popupOpened = openAuthPopup(data.url);
         if (!popupOpened) {
-          setOauthModalStatus(MODAL_STATUS.ERROR);
-          setOauthErrorMessage(t("errorOAuthPopupBlocked"));
-          return;
+          return fail(t("errorOAuthPopupBlocked"));
         }
       }
       authStateRef.current = data.state;
@@ -606,11 +637,106 @@ export function OAuthSection({
       }
 
       pollAuthStatus(data.state);
+      return { ok: true };
     } catch {
-      setOauthModalStatus(MODAL_STATUS.ERROR);
-      setOauthErrorMessage(t("errorOAuthStartNetwork"));
+      return fail(t("errorOAuthStartNetwork"));
     }
   };
+
+  const openGitLabPreConnect = () => {
+    setIsGitLabPreConnectOpen(true);
+    setGitLabError(null);
+    setGitLabSubmitting(false);
+  };
+
+  const closeGitLabPreConnect = () => {
+    if (gitLabSubmitting) return;
+    setIsGitLabPreConnectOpen(false);
+    setGitLabError(null);
+  };
+
+  const resetGitLabPreConnectFields = () => {
+    setGitLabMode("oauth");
+    setGitLabClientId("");
+    setGitLabClientSecret("");
+    setGitLabBaseUrl("");
+    setGitLabPat("");
+  };
+
+  const submitGitLabPreConnect = async () => {
+    setGitLabError(null);
+    const baseUrl = gitLabBaseUrl.trim();
+
+    if (gitLabMode === "oauth") {
+      const clientId = gitLabClientId.trim();
+      const clientSecret = gitLabClientSecret.trim();
+      if (!clientId) {
+        setGitLabError(t("gitlabClientIdRequired"));
+        return;
+      }
+
+      const requestInit: RequestInit = {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: clientId,
+          ...(clientSecret ? { client_secret: clientSecret } : {}),
+          ...(baseUrl ? { base_url: baseUrl } : {}),
+        }),
+      };
+      const endpoint = "/api/management/gitlab-auth-url";
+
+      setGitLabSubmitting(true);
+      try {
+        const result = await handleOAuthConnect("gitlab", endpoint, requestInit);
+        if (result.ok) {
+          setIsGitLabPreConnectOpen(false);
+          resetGitLabPreConnectFields();
+        } else {
+          // Bootstrap failed — close the secondary OAuth modal and surface the
+          // error inside the GitLab modal so the user can retry with the same inputs.
+          setIsOAuthModalOpen(false);
+          setGitLabError(result.errorMessage ?? t("errorOAuthStartNetwork"));
+        }
+      } finally {
+        setGitLabSubmitting(false);
+      }
+      return;
+    }
+
+    const pat = gitLabPat.trim();
+    if (!pat) {
+      setGitLabError(t("gitlabPatRequired"));
+      return;
+    }
+
+    setGitLabSubmitting(true);
+    try {
+      const res = await fetch("/api/management/gitlab-auth-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          personal_access_token: pat,
+          base_url: baseUrl || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.status === "error") {
+        setGitLabError(extractApiError(data, t("gitlabPatFailed")));
+        return;
+      }
+      setIsGitLabPreConnectOpen(false);
+      resetGitLabPreConnectFields();
+      showToast(t("toastOAuthConnected"), "success");
+      await refreshProviders();
+      void loadAccounts();
+    } catch {
+      setGitLabError(t("toastNetworkError"));
+    } finally {
+      setGitLabSubmitting(false);
+    }
+  };
+
 
   const handleCallbackChange = (value: string) => {
     setCallbackUrl(value);
@@ -1075,6 +1201,121 @@ export function OAuthSection({
           )}
         </ModalFooter>
       </Modal>
+
+      <Modal isOpen={isGitLabPreConnectOpen} onClose={closeGitLabPreConnect}>
+        <ModalHeader>
+          <ModalTitle>{t("gitlabConnectTitle")}</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-4">
+            <div className="rounded-xl border-l-4 border-[var(--surface-border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
+              {t("gitlabIntro")}
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant={gitLabMode === "oauth" ? "secondary" : "ghost"}
+                onClick={() => setGitLabMode("oauth")}
+                disabled={gitLabSubmitting}
+              >
+                {t("gitlabModeOAuth")}
+              </Button>
+              <Button
+                variant={gitLabMode === "pat" ? "secondary" : "ghost"}
+                onClick={() => setGitLabMode("pat")}
+                disabled={gitLabSubmitting}
+              >
+                {t("gitlabModePat")}
+              </Button>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-[var(--text-primary)]">
+                {t("gitlabBaseUrlLabel")}
+              </label>
+              <Input
+                type="text"
+                name="gitlab_base_url"
+                value={gitLabBaseUrl}
+                onChange={setGitLabBaseUrl}
+                placeholder="https://gitlab.com"
+                disabled={gitLabSubmitting}
+              />
+              <p className="mt-1 text-xs text-[var(--text-muted)]">{t("gitlabBaseUrlHint")}</p>
+            </div>
+
+            {gitLabMode === "oauth" ? (
+              <>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-[var(--text-primary)]">
+                    {t("gitlabClientIdLabel")}
+                  </label>
+                  <Input
+                    type="text"
+                    name="gitlab_client_id"
+                    value={gitLabClientId}
+                    onChange={setGitLabClientId}
+                    placeholder="abc123..."
+                    disabled={gitLabSubmitting}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-[var(--text-primary)]">
+                    {t("gitlabClientSecretLabel")}
+                  </label>
+                  <Input
+                    type="password"
+                    name="gitlab_client_secret"
+                    value={gitLabClientSecret}
+                    onChange={setGitLabClientSecret}
+                    placeholder={t("gitlabClientSecretPlaceholder")}
+                    disabled={gitLabSubmitting}
+                  />
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">{t("gitlabClientSecretHint")}</p>
+                </div>
+              </>
+            ) : (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-[var(--text-primary)]">
+                  {t("gitlabPatLabel")}
+                </label>
+                <Input
+                  type="password"
+                  name="gitlab_pat"
+                  value={gitLabPat}
+                  onChange={setGitLabPat}
+                  placeholder="glpat-..."
+                  disabled={gitLabSubmitting}
+                />
+                <p className="mt-1 text-xs text-[var(--text-muted)]">{t("gitlabPatHint")}</p>
+              </div>
+            )}
+
+            {gitLabError && (
+              <div className="rounded-xl border-l-4 border-red-300 bg-red-500/10 p-3 text-xs text-red-700">
+                {gitLabError}
+              </div>
+            )}
+          </div>
+        </ModalContent>
+        <ModalFooter>
+          <Button variant="ghost" onClick={closeGitLabPreConnect} disabled={gitLabSubmitting}>
+            {t("oauthCloseButton")}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={submitGitLabPreConnect}
+            disabled={gitLabSubmitting}
+          >
+            {gitLabSubmitting
+              ? t("oauthSubmittingButton")
+              : gitLabMode === "oauth"
+                ? t("gitlabContinueOAuth")
+                : t("gitlabSavePat")}
+          </Button>
+        </ModalFooter>
+      </Modal>
+
 
       <ConfirmDialog
         isOpen={showConfirmOAuthDelete}

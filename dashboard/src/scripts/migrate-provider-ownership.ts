@@ -37,7 +37,6 @@ const OAUTH_PROVIDER_ALIASES: Record<string, string> = {
   gemini: OAUTH_PROVIDER.GEMINI_CLI,
   codex: OAUTH_PROVIDER.CODEX,
   antigravity: OAUTH_PROVIDER.ANTIGRAVITY,
-  qwen: OAUTH_PROVIDER.QWEN,
   iflow: OAUTH_PROVIDER.IFLOW,
   kimi: OAUTH_PROVIDER.KIMI,
   copilot: OAUTH_PROVIDER.COPILOT,
@@ -45,7 +44,8 @@ const OAUTH_PROVIDER_ALIASES: Record<string, string> = {
   github: OAUTH_PROVIDER.COPILOT,
   kiro: OAUTH_PROVIDER.KIRO,
   cursor: OAUTH_PROVIDER.CURSOR,
-  codebuddy: OAUTH_PROVIDER.CODEBUDDY,
+  kilo: OAUTH_PROVIDER.KILO,
+  gitlab: OAUTH_PROVIDER.GITLAB,
 };
 
 function hashProviderKey(apiKey: string): string {

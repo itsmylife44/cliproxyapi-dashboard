@@ -28,11 +28,11 @@ const NON_ADMIN_OAUTH_PATHS = new Set<string>([
   "antigravity-auth-url",
   "iflow-auth-url",
   "kimi-auth-url",
-  "qwen-auth-url",
   "github-auth-url",
   "kiro-auth-url",
   "cursor-auth-url",
-  "codebuddy-auth-url",
+  "kilo-auth-url",
+  "gitlab-auth-url",
   "get-auth-status",
 ]);
 
@@ -175,7 +175,14 @@ function normalizeAndValidateManagementPath(rawPath: string): string | null {
 }
 
 function isNonAdminAllowedManagementRequest(method: string, path: string): boolean {
-  return method === "GET" && NON_ADMIN_OAUTH_PATHS.has(path);
+  if (method === "GET" && NON_ADMIN_OAUTH_PATHS.has(path)) {
+    return true;
+  }
+  // GitLab PAT submission requires POST to the same auth-url endpoint.
+  if (method === "POST" && path === "gitlab-auth-url") {
+    return true;
+  }
+  return false;
 }
 
 async function proxyRequest(
@@ -285,6 +292,7 @@ async function proxyRequest(
     }
 
     let body: BodyInit | undefined = undefined;
+    let effectiveMethod = method;
     if (method !== "GET" && method !== "HEAD") {
       const rawBody = await request.text();
       if (rawBody) {
@@ -297,17 +305,51 @@ async function proxyRequest(
         }
         body = rawBody;
       }
+
+      // GitLab OAuth bootstrap: upstream expects GET with query params (client_id,
+      // client_secret, base_url). Accept POST from the UI so the secret is not
+      // placed in a URL, then translate to an upstream GET here.
+      if (
+        method === "POST" &&
+        normalizedPath === "gitlab-auth-url" &&
+        typeof rawBody === "string" &&
+        rawBody.length > 0
+      ) {
+        try {
+          const parsed = JSON.parse(rawBody) as Record<string, unknown>;
+          const isPatRequest =
+            typeof parsed.personal_access_token === "string" ||
+            typeof parsed.token === "string";
+          if (!isPatRequest && typeof parsed.client_id === "string") {
+            const params = new URLSearchParams();
+            params.set("is_webui", "true");
+            params.set("client_id", String(parsed.client_id));
+            if (typeof parsed.client_secret === "string" && parsed.client_secret) {
+              params.set("client_secret", String(parsed.client_secret));
+            }
+            if (typeof parsed.base_url === "string" && parsed.base_url) {
+              params.set("base_url", String(parsed.base_url));
+            }
+            targetUrl.search = `?${params.toString()}`;
+            effectiveMethod = "GET";
+            body = undefined;
+            delete (headers as Record<string, string>)["Content-Type"];
+          }
+        } catch {
+          // Not JSON — let the upstream reject.
+        }
+      }
     }
 
     let response: Response;
     try {
       response = await fetchWithRetry(targetUrl.toString(), {
-        method,
+        method: effectiveMethod,
         headers,
         body,
         cache: "no-store",
         timeout: FETCH_TIMEOUT_MS,
-        disableRetry: method !== "GET" && method !== "PUT",
+        disableRetry: effectiveMethod !== "GET" && effectiveMethod !== "PUT",
       });
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {

@@ -13,12 +13,12 @@ const PROVIDERS = {
   CODEX: "codex",
   ANTIGRAVITY: "antigravity",
   IFLOW: "iflow",
-  QWEN: "qwen",
   KIMI: "kimi",
   COPILOT: "copilot",
   KIRO: "kiro",
   CURSOR: "cursor",
-  CODEBUDDY: "codebuddy",
+  KILO: "kilo",
+  GITLAB: "gitlab",
 } as const;
 
 type Provider = (typeof PROVIDERS)[keyof typeof PROVIDERS];
@@ -29,6 +29,7 @@ const PROVIDERS_WITH_CALLBACK = new Set<Provider>([
   PROVIDERS.CODEX,
   PROVIDERS.ANTIGRAVITY,
   PROVIDERS.IFLOW,
+  PROVIDERS.GITLAB,
 ]);
 
 const PROVIDER_MATCH_ALIASES: Record<Provider, readonly string[]> = {
@@ -37,12 +38,12 @@ const PROVIDER_MATCH_ALIASES: Record<Provider, readonly string[]> = {
   [PROVIDERS.CODEX]: ["codex", "openai"],
   [PROVIDERS.ANTIGRAVITY]: ["antigravity"],
   [PROVIDERS.IFLOW]: ["iflow"],
-  [PROVIDERS.QWEN]: ["qwen"],
   [PROVIDERS.KIMI]: ["kimi"],
   [PROVIDERS.COPILOT]: ["copilot", "github", "github-copilot"],
   [PROVIDERS.KIRO]: ["kiro"],
   [PROVIDERS.CURSOR]: ["cursor"],
-  [PROVIDERS.CODEBUDDY]: ["codebuddy"],
+  [PROVIDERS.KILO]: ["kilo"],
+  [PROVIDERS.GITLAB]: ["gitlab"],
 };
 
 const CLIPROXYAPI_BASE = process.env.CLIPROXYAPI_MANAGEMENT_URL?.replace("/v0/management", "") || "http://cliproxyapi:8317";
@@ -55,6 +56,7 @@ const CALLBACK_PATHS: Partial<Record<Provider, string>> = {
   [PROVIDERS.CODEX]: `${CLIPROXYAPI_BASE}/codex/callback`,
   [PROVIDERS.ANTIGRAVITY]: `${CLIPROXYAPI_BASE}/antigravity/callback`,
   [PROVIDERS.IFLOW]: `${CLIPROXYAPI_BASE}/iflow/callback`,
+  [PROVIDERS.GITLAB]: `${CLIPROXYAPI_BASE}/gitlab/callback`,
 };
 
 interface OAuthCallbackRequestBody {

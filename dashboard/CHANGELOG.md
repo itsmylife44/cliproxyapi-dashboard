@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.78](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.77...dashboard-v0.1.78) (2026-04-20)
+
+
+### Bug Fixes
+
+* **install:** support Ubuntu/Debian derivatives (Zorin, Mint, Pop!_OS, etc.) ([c3f19f0](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c3f19f0006305effb16960bb57504e547bd31f03)), closes [#202](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/202)
+
 ## [0.1.77](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.76...dashboard-v0.1.77) (2026-04-17)
 
 

@@ -103,33 +103,56 @@ fi
 if [ -f /etc/os-release ]; then
     . /etc/os-release
     DISTRO_ID="${ID:-}"
-    DISTRO_CODENAME="${VERSION_CODENAME:-}"
+    DISTRO_ID_LIKE="${ID_LIKE:-}"
+    DISTRO_CODENAME="${UBUNTU_CODENAME:-${DEBIAN_CODENAME:-${VERSION_CODENAME:-}}}"
 else
     log_error "Cannot detect Linux distribution (/etc/os-release not found)"
     exit 1
 fi
 
-# Validate distro and set Docker repo URL
-case "$DISTRO_ID" in
-    ubuntu)
+# Resolve distro family: accept Ubuntu/Debian and their derivatives via ID_LIKE
+# (e.g., Zorin, Linux Mint, Pop!_OS, elementary, Raspbian, LMDE)
+DISTRO_FAMILY=""
+case " $DISTRO_ID $DISTRO_ID_LIKE " in
+    *\ ubuntu\ *)
+        DISTRO_FAMILY="ubuntu"
         DOCKER_REPO_URL="https://download.docker.com/linux/ubuntu"
+        # Codenames Docker publishes at https://download.docker.com/linux/ubuntu/dists/
+        SUPPORTED_CODENAMES="trusty xenial bionic focal jammy noble"
         ;;
-    debian)
+    *\ debian\ *)
+        DISTRO_FAMILY="debian"
         DOCKER_REPO_URL="https://download.docker.com/linux/debian"
+        # Codenames Docker publishes at https://download.docker.com/linux/debian/dists/
+        SUPPORTED_CODENAMES="jessie stretch buster bullseye bookworm trixie"
         ;;
     *)
-        log_error "Unsupported distribution: $DISTRO_ID (only Ubuntu and Debian supported)"
+        log_error "Unsupported distribution: $DISTRO_ID (only Ubuntu/Debian and their derivatives are supported)"
         exit 1
         ;;
 esac
 
-# Validate codename
+# Validate codename - must be a suite Docker actually publishes for this family.
+# Derivatives with rolling or custom codenames (e.g. Kali's kali-rolling) are
+# rejected here because Docker does not ship a matching apt suite for them.
 if [ -z "$DISTRO_CODENAME" ]; then
-    log_error "Cannot determine distribution codename (required for Docker repo)"
+    log_error "Cannot determine $DISTRO_FAMILY codename for $DISTRO_ID (no UBUNTU_CODENAME/DEBIAN_CODENAME/VERSION_CODENAME in /etc/os-release)"
     exit 1
 fi
+case " $SUPPORTED_CODENAMES " in
+    *\ "$DISTRO_CODENAME"\ *) ;;
+    *)
+        log_error "Unsupported $DISTRO_FAMILY codename '$DISTRO_CODENAME' for $DISTRO_ID: Docker publishes only [$SUPPORTED_CODENAMES]"
+        log_error "If your distribution is based on a supported $DISTRO_FAMILY release, set UBUNTU_CODENAME or DEBIAN_CODENAME in /etc/os-release and re-run."
+        exit 1
+        ;;
+esac
 
-log_info "Detected distribution: $DISTRO_ID ($DISTRO_CODENAME)"
+if [ "$DISTRO_ID" = "$DISTRO_FAMILY" ]; then
+    log_info "Detected distribution: $DISTRO_ID ($DISTRO_CODENAME)"
+else
+    log_info "Detected distribution: $DISTRO_ID (using $DISTRO_FAMILY $DISTRO_CODENAME repositories)"
+fi
 log_info "Docker repository: $DOCKER_REPO_URL"
 
 log_info "Starting CLIProxyAPI Stack installation..."

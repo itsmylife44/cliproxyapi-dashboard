@@ -212,7 +212,10 @@ const findUnclaimedAuthFiles = async (
   if (providerFiles.length === 0) return [];
 
   const existingOwnerships = await prisma.providerOAuthOwnership.findMany({
-    where: { accountName: { in: providerFiles.map((f) => f.name) } },
+    where: {
+      provider,
+      accountName: { in: providerFiles.map((f) => f.name) },
+    },
     select: { accountName: true },
   });
 

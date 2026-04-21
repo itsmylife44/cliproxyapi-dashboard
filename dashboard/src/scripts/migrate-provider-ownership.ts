@@ -14,7 +14,7 @@
 import { createHash } from "crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
-import { OAUTH_PROVIDER } from "@/lib/providers/constants";
+import { canonicalizeOAuthProvider } from "@/lib/providers/constants";
 
 const PROVIDER = {
   CLAUDE: "claude",
@@ -30,23 +30,6 @@ const PROVIDER_ENDPOINT = {
   [PROVIDER.OPENAI_COMPAT]: "/openai-compatibility",
 } as const;
 
-const OAUTH_PROVIDER_ALIASES: Record<string, string> = {
-  claude: OAUTH_PROVIDER.CLAUDE,
-  anthropic: OAUTH_PROVIDER.CLAUDE,
-  "gemini-cli": OAUTH_PROVIDER.GEMINI_CLI,
-  gemini: OAUTH_PROVIDER.GEMINI_CLI,
-  codex: OAUTH_PROVIDER.CODEX,
-  antigravity: OAUTH_PROVIDER.ANTIGRAVITY,
-  iflow: OAUTH_PROVIDER.IFLOW,
-  kimi: OAUTH_PROVIDER.KIMI,
-  copilot: OAUTH_PROVIDER.COPILOT,
-  "github-copilot": OAUTH_PROVIDER.COPILOT,
-  github: OAUTH_PROVIDER.COPILOT,
-  kiro: OAUTH_PROVIDER.KIRO,
-  cursor: OAUTH_PROVIDER.CURSOR,
-  kilo: OAUTH_PROVIDER.KILO,
-  gitlab: OAUTH_PROVIDER.GITLAB,
-};
 
 function hashProviderKey(apiKey: string): string {
   return createHash("sha256").update(apiKey).digest("hex");
@@ -286,13 +269,19 @@ async function main() {
             ? file.provider
             : typeof file.type === "string"
               ? file.type
-              : "unknown";
-        const providerType = providerTypeRaw.toLowerCase();
-        const normalizedProvider =
-          OAUTH_PROVIDER_ALIASES[providerType] ?? providerType;
+              : "";
+        const normalizedProvider = canonicalizeOAuthProvider(providerTypeRaw);
+        if (!normalizedProvider) {
+          console.warn(
+            `      ⚠️  ${accountName} - Skipping: unknown provider '${providerTypeRaw}'`
+          );
+          continue;
+        }
 
         const existing = await prisma.providerOAuthOwnership.findUnique({
-          where: { accountName },
+          where: {
+            provider_accountName: { provider: normalizedProvider, accountName },
+          },
         });
 
         if (existing) {

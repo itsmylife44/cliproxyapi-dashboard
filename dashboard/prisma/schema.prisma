@@ -147,12 +147,13 @@ model ProviderOAuthOwnership {
   id           String    @id @default(cuid())
   userId       String
   provider     String
-  accountName  String    @unique
+  accountName  String
   accountEmail String?
   createdAt    DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([provider, accountName])
   @@index([userId])
   @@map("provider_oauth_ownerships")
 }

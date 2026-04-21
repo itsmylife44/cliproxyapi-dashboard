@@ -78,7 +78,7 @@ export async function cascadeDeleteUserProviders(
     const oauthResults = await Promise.all(
       ownedOAuth.map(async (oauth) => {
         try {
-          const removeResult = await removeOAuthAccount(userId, oauth.accountName, isAdmin);
+          const removeResult = await removeOAuthAccount(userId, oauth.provider, oauth.accountName, isAdmin);
           if (!removeResult.ok) {
             return {
               ok: false as const,

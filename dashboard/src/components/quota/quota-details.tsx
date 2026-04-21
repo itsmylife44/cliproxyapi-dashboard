@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
+import { canonicalizeQuotaProvider } from "@/lib/quota/query-state";
+import { maskEmail } from "@/lib/mask-email";
 import {
   enrichModelFirstGroup,
   isModelFirstAccount,
@@ -15,21 +17,6 @@ import {
   type QuotaGroup,
 } from "@/lib/model-first-monitoring";
 
-function maskEmail(email: unknown, unknownLabel = "unknown"): string {
-  if (typeof email !== "string") return unknownLabel;
-  const trimmed = email.trim();
-  if (trimmed === "") return unknownLabel;
-
-  const atIndex = trimmed.indexOf("@");
-  if (atIndex <= 0 || atIndex === trimmed.length - 1) {
-    return trimmed;
-  }
-
-  const local = trimmed.slice(0, atIndex);
-  const domain = trimmed.slice(atIndex + 1);
-  const maskedLocal = local.length <= 3 ? `${local}***` : `${local.slice(0, 3)}***`;
-  return `${maskedLocal}@${domain}`;
-}
 function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: number; label: string; isShortTerm: boolean }> {
   const result: Record<string, { score: number; label: string; isShortTerm: boolean }> = {};
   for (const group of groups) {
@@ -53,6 +40,10 @@ function getCapacityBarClass(value: number): string {
 
 interface QuotaDetailsProps {
   filteredAccounts: QuotaAccount[];
+  hasAnyAccounts: boolean;
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
   expandedCards: Record<string, boolean>;
   onToggleCard: (accountId: string) => void;
   loading: boolean;
@@ -61,6 +52,10 @@ interface QuotaDetailsProps {
 
 export function QuotaDetails({
   filteredAccounts,
+  hasAnyAccounts,
+  currentPage,
+  totalPages,
+  onPageChange,
   expandedCards,
   onToggleCard,
   loading,
@@ -90,11 +85,14 @@ export function QuotaDetails({
     const buckets = new Map<string, { key: string; title: string; accounts: QuotaAccount[]; modelFirstView: boolean }>();
     for (const account of filteredAccounts) {
       const sectionModelFirstView = isModelFirstAccount(account);
+      // Key on the canonical provider so aliased raw values (e.g. `gemini` and
+      // `gemini-cli`) land in the same section, matching the toolbar filter.
+      const canonicalProvider = canonicalizeQuotaProvider(account.provider) ?? account.provider;
       const providerTitle =
-        account.provider === "github-copilot"
+        canonicalProvider === "github-copilot"
           ? "Copilot"
-          : account.provider.charAt(0).toUpperCase() + account.provider.slice(1);
-      const key = `${sectionModelFirstView ? "model-first" : "window-based"}:${account.provider}`;
+          : canonicalProvider.charAt(0).toUpperCase() + canonicalProvider.slice(1);
+      const key = `${sectionModelFirstView ? "model-first" : "window-based"}:${canonicalProvider}`;
       const bucket = buckets.get(key) ?? {
         key,
         title: providerTitle,
@@ -326,7 +324,33 @@ export function QuotaDetails({
 
       {filteredAccounts.length === 0 && !loading && (
         <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
-          {t("noAccountsFound")}
+          {hasAnyAccounts ? t("noAccountsFound") : t("noAccountsAvailable")}
+        </div>
+      )}
+
+      {totalPages > 1 && filteredAccounts.length > 0 && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-xs text-[var(--text-muted)]">
+            {t("pageOf", { page: currentPage, total: totalPages })}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+              disabled={currentPage <= 1}
+              className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-1 text-xs text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t("previous")}
+            </button>
+            <button
+              type="button"
+              onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage >= totalPages}
+              className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-1 text-xs text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t("next")}
+            </button>
+          </div>
         </div>
       )}
     </section>

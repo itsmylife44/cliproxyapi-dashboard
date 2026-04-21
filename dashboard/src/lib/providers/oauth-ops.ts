@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { Prisma } from "@/generated/prisma/client";
-import { type OAuthProvider } from "./constants";
+import { canonicalizeOAuthProvider, type OAuthProvider } from "./constants";
 import { normalizeImportedOAuthCredential } from "./oauth-import-normalization";
 import { invalidateUsageCaches, invalidateProxyModelsCache } from "@/lib/cache";
 import {
@@ -28,7 +28,7 @@ export async function contributeOAuthAccount(
 ): Promise<ContributeOAuthResult> {
   try {
     const existingOwnership = await prisma.providerOAuthOwnership.findUnique({
-      where: { accountName },
+      where: { provider_accountName: { provider, accountName } },
     });
 
     if (existingOwnership) {
@@ -338,17 +338,35 @@ export async function listOAuthWithOwnership(
       logger.warn({ err: error }, "listOAuthWithOwnership: failed to fetch quota groups");
     }
 
-    const accountNames = authFiles.map((file) => file.name);
-
-    const ownerships = await prisma.providerOAuthOwnership.findMany({
-      where: { accountName: { in: accountNames } },
-      include: { user: { select: { id: true, username: true } } },
+    // Build ownership lookup rows using canonical provider identifiers. Every
+    // write path (claim route, cascade, migration) canonicalizes before insert,
+    // so an auth file whose raw provider does not canonicalize cannot have an
+    // ownership row. Skipping such files from the DB query is therefore lossless:
+    // the `ownership` lookup would return undefined anyway, and the UI already
+    // renders the raw provider string verbatim (see `provider` field below).
+    const authFileLookups = authFiles.map((file) => {
+      const rawProvider = file.provider || file.type || "";
+      const canonical = canonicalizeOAuthProvider(rawProvider);
+      return { file, canonical };
     });
 
-    const ownershipMap = new Map(ownerships.map((o) => [o.accountName, o]));
+    const ownershipFilters = authFileLookups
+      .filter((entry): entry is { file: typeof entry.file; canonical: OAuthProvider } => entry.canonical !== null)
+      .map(({ file, canonical }) => ({ provider: canonical, accountName: file.name }));
 
-     const accountsWithOwnership: OAuthAccountWithOwnership[] = authFiles.map((file, index) => {
-       const ownership = ownershipMap.get(file.name);
+    const ownerships = ownershipFilters.length === 0
+      ? []
+      : await prisma.providerOAuthOwnership.findMany({
+          where: { OR: ownershipFilters },
+          include: { user: { select: { id: true, username: true } } },
+        });
+
+    const ownershipMap = new Map(
+      ownerships.map((o) => [`${o.provider}:${o.accountName}`, o] as const)
+    );
+
+     const accountsWithOwnership: OAuthAccountWithOwnership[] = authFileLookups.map(({ file, canonical }, index) => {
+       const ownership = canonical ? ownershipMap.get(`${canonical}:${file.name}`) : undefined;
        const isOwn = ownership?.userId === userId;
        const canSeeDetails = isOwn || isAdmin;
 
@@ -476,11 +494,23 @@ async function resolveOAuthAccountByIdOrName(
     };
   }
 
-  // Try to find by accountName (management API file ID)
-  const byName = await prisma.providerOAuthOwnership.findUnique({
+  // Try to find by accountName (management API file ID).
+  // After scoping ownership by (provider, accountName), the same accountName can
+  // legitimately exist across providers. We accept the first match and warn if
+  // more than one exists so ambiguous callers are visible in logs.
+  const byNameMatches = await prisma.providerOAuthOwnership.findMany({
     where: { accountName: idOrName },
-    select: { id: true, userId: true, accountName: true },
+    select: { id: true, userId: true, accountName: true, provider: true },
+    take: 2,
   });
+
+  const byName = byNameMatches[0];
+  if (byNameMatches.length > 1) {
+    logger.warn(
+      { accountName: idOrName, matchCount: byNameMatches.length },
+      "resolveOAuthAccountByIdOrName: ambiguous accountName spans multiple providers; returning first"
+    );
+  }
 
   if (byName) {
     return {
@@ -497,6 +527,7 @@ async function resolveOAuthAccountByIdOrName(
 
 export async function removeOAuthAccount(
   userId: string,
+  provider: string,
   accountName: string,
   isAdmin: boolean
 ): Promise<RemoveOAuthResult> {
@@ -506,7 +537,7 @@ export async function removeOAuthAccount(
 
   try {
     const ownership = await prisma.providerOAuthOwnership.findUnique({
-      where: { accountName },
+      where: { provider_accountName: { provider, accountName } },
     });
 
     if (ownership && !isAdmin && ownership.userId !== userId) {
@@ -540,7 +571,9 @@ export async function removeOAuthAccount(
       }
 
     if (ownership) {
-      await prisma.providerOAuthOwnership.delete({ where: { accountName } });
+      await prisma.providerOAuthOwnership.delete({
+        where: { provider_accountName: { provider, accountName } },
+      });
     }
 
     return { ok: true };

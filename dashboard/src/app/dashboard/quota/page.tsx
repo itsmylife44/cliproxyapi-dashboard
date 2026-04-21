@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { HelpTooltip } from "@/components/ui/tooltip";
+import { QuotaToolbar } from "@/components/quota/quota-toolbar";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
 import {
+  enrichModelFirstGroup,
   isModelFirstAccount,
+  isModelFirstAccountQuotaUnverified,
   isModelFirstProviderQuotaUnverified,
   normalizeFraction,
   summarizeModelFirstProvider,
@@ -19,6 +23,17 @@ import {
   type QuotaResponse,
 } from "@/lib/model-first-monitoring";
 import { formatRelativeTime } from "@/lib/format-relative-time";
+import { maskEmail } from "@/lib/mask-email";
+import {
+  buildQuotaSearch,
+  buildQuotaToolbarQuery,
+  canonicalizeQuotaProvider,
+  clearQuotaToolbarQuery,
+  parseQuotaQueryState,
+  type QuotaQueryProvider,
+  type QuotaQueryState,
+  type QuotaQueryStatus,
+} from "@/lib/quota/query-state";
 
 const QuotaChart = dynamic(
   () => import("@/components/quota/quota-chart").then((mod) => ({ default: mod.QuotaChart })),
@@ -27,16 +42,7 @@ const QuotaChart = dynamic(
 import { QuotaDetails } from "@/components/quota/quota-details";
 import { QuotaAlerts } from "@/components/quota/quota-alerts";
 
-const PROVIDERS = {
-  ALL: "all",
-  ANTIGRAVITY: "antigravity",
-  CLAUDE: "claude",
-  CODEX: "codex",
-  COPILOT: "github-copilot",
-  KIMI: "kimi",
-} as const;
-
-type ProviderType = (typeof PROVIDERS)[keyof typeof PROVIDERS];
+export const QUOTA_ACCOUNTS_PAGE_SIZE = 25;
 
 interface WindowCapacity {
   id: string;
@@ -55,6 +61,70 @@ interface ProviderSummary {
   windowCapacities: WindowCapacity[];
   modelFirstSummary?: ModelFirstProviderSummary;
 }
+
+function matchesSelectedProvider(provider: string, selected: QuotaQueryProvider): boolean {
+  if (selected === "all") return true;
+  return canonicalizeQuotaProvider(provider) === selected;
+}
+
+function getQuotaAccountStatus(account: QuotaAccount): QuotaQueryStatus {
+  if (!account.supported) return "disabled";
+  if (account.error) return "error";
+
+  if (isModelFirstAccount(account)) {
+    const providerSummary = summarizeModelFirstProvider([account]);
+    if (isModelFirstProviderQuotaUnverified(providerSummary)) return "warning";
+    if (isModelFirstAccountQuotaUnverified(account)) return "warning";
+  }
+
+  const fractions = (account.groups ?? [])
+    .map((group) => {
+      const normalizedGroup = isModelFirstAccount(account) ? enrichModelFirstGroup(group) : group;
+      return normalizeFraction(normalizedGroup.minRemainingFraction ?? normalizedGroup.remainingFraction);
+    })
+    .filter((value): value is number => value !== null);
+
+  if (fractions.length > 0 && Math.min(...fractions) <= 0.2) return "warning";
+
+  return "active";
+}
+
+function matchesQuotaSearch(account: QuotaAccount, query: string): boolean {
+  if (!query) return true;
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+
+  // Include the masked form so searches against the label rendered in the
+  // table (e.g. `foo***@example.com`) find the account, while still matching
+  // the raw email for admins who know the full address.
+  const haystack = [
+    account.email,
+    typeof account.email === "string" ? maskEmail(account.email, "") : null,
+    account.provider,
+    canonicalizeQuotaProvider(account.provider),
+    account.auth_index,
+  ]
+    .filter((value): value is string => typeof value === "string" && value.trim() !== "")
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(needle);
+}
+
+function matchesQuotaStatus(account: QuotaAccount, status: QuotaQueryStatus): boolean {
+  if (status === "all") return true;
+  return getQuotaAccountStatus(account) === status;
+}
+
+export function filterQuotaAccounts(accounts: QuotaAccount[], query: QuotaQueryState): QuotaAccount[] {
+  return accounts.filter(
+    (account) =>
+      matchesSelectedProvider(account.provider, query.provider) &&
+      matchesQuotaSearch(account, query.q) &&
+      matchesQuotaStatus(account, query.status)
+  );
+}
+
 function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
   const totalAccounts = accounts.length;
   const healthy = accounts.filter(
@@ -150,22 +220,21 @@ function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
   };
 }
 
-function calcOverallCapacity(summaries: ProviderSummary[], noDataLabel: string, weightedLabel: string): { value: number; label: string; provider: string } {
+function calcOverallCapacity(
+  summaries: ProviderSummary[],
+  noDataLabel: string,
+  weightedLabel: string
+): { value: number; label: string; provider: string } {
   if (summaries.length === 0) return { value: 0, label: noDataLabel, provider: "" };
 
   let weightedCapacity = 0;
   let weightedAccounts = 0;
 
   for (const summary of summaries) {
-    if (summary.healthyAccounts === 0) {
-      continue;
-    }
+    if (summary.healthyAccounts === 0) continue;
 
     if (summary.monitorMode === "model-first" && summary.modelFirstSummary) {
-      if (isModelFirstProviderQuotaUnverified(summary.modelFirstSummary)) {
-        continue;
-      }
-
+      if (isModelFirstProviderQuotaUnverified(summary.modelFirstSummary)) continue;
       const providerCapacity =
         summary.modelFirstSummary.totalAccounts > 0
           ? summary.modelFirstSummary.readyAccounts / summary.modelFirstSummary.totalAccounts
@@ -179,9 +248,7 @@ function calcOverallCapacity(summaries: ProviderSummary[], noDataLabel: string, 
     const shortTerm = summary.windowCapacities.filter((window) => window.isShortTerm);
     const relevantWindows = longTerm.length > 0 ? longTerm : shortTerm;
 
-    if (relevantWindows.length === 0) {
-      continue;
-    }
+    if (relevantWindows.length === 0) continue;
 
     const providerCapacity = Math.min(...relevantWindows.map((window) => window.capacity));
     weightedCapacity += providerCapacity * summary.healthyAccounts;
@@ -201,10 +268,19 @@ function calcOverallCapacity(summaries: ProviderSummary[], noDataLabel: string, 
 
 export default function QuotaPage() {
   const t = useTranslations("quota");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [quotaData, setQuotaData] = useState<QuotaResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedProvider, setSelectedProvider] = useState<ProviderType>(PROVIDERS.ALL);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+
+  const query = useMemo(() => parseQuotaQueryState(searchParams), [searchParams]);
+
+  const replaceQuery = (nextQuery: QuotaQueryState) => {
+    const nextSearch = buildQuotaSearch(nextQuery);
+    router.replace(`${pathname}${nextSearch}`, { scroll: false });
+  };
 
   const fetchQuota = async (signal?: AbortSignal, bust = false) => {
     setLoading(true);
@@ -232,22 +308,39 @@ export default function QuotaPage() {
     };
   }, []);
 
-  const filteredAccounts =
-    quotaData?.accounts.filter((account) => {
-      if (selectedProvider === PROVIDERS.ALL) return true;
-      if (selectedProvider === PROVIDERS.COPILOT) {
-        return account.provider === "github" || account.provider === "github-copilot";
-      }
-      return account.provider === selectedProvider;
-    }) ?? [];
+  const allAccounts = useMemo(() => quotaData?.accounts ?? [], [quotaData]);
+  const filteredAccounts = useMemo(() => filterQuotaAccounts(allAccounts, query), [allAccounts, query]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAccounts.length / QUOTA_ACCOUNTS_PAGE_SIZE));
+  const currentPage = Math.min(Math.max(1, query.page), totalPages);
+  const pageStart = (currentPage - 1) * QUOTA_ACCOUNTS_PAGE_SIZE;
+  const paginatedAccounts = filteredAccounts.slice(pageStart, pageStart + QUOTA_ACCOUNTS_PAGE_SIZE);
+
+  // Only rewrite URL to clamp `page` once quota data has arrived. Before the
+  // first fetch resolves, `filteredAccounts` is empty and `totalPages` is 1,
+  // so clamping here would drop a deep-linked `page=N` before it could be used.
+  const normalizedSearch = buildQuotaSearch({ ...query, page: currentPage });
+  const currentSearch = searchParams.toString();
+  const expectedSearch = normalizedSearch.startsWith("?") ? normalizedSearch.slice(1) : normalizedSearch;
+
+  useEffect(() => {
+    if (!quotaData) return;
+    if (currentSearch !== expectedSearch) {
+      router.replace(`${pathname}${normalizedSearch}`, { scroll: false });
+    }
+  }, [quotaData, currentSearch, expectedSearch, normalizedSearch, pathname, router]);
 
   const activeAccounts = filteredAccounts.filter((account) => account.supported && !account.error).length;
 
   const providerGroups = new Map<string, QuotaAccount[]>();
   for (const account of filteredAccounts) {
-    const existing = providerGroups.get(account.provider) ?? [];
+    // Group aliased providers (e.g. `gemini` and `gemini-cli`) into a single
+    // bucket so the filter and the summary stay consistent. Raw values without
+    // a canonical mapping fall back to the reported provider string.
+    const groupKey = canonicalizeQuotaProvider(account.provider) ?? account.provider;
+    const existing = providerGroups.get(groupKey) ?? [];
     existing.push(account);
-    providerGroups.set(account.provider, existing);
+    providerGroups.set(groupKey, existing);
   }
 
   const providerSummaries = Array.from(providerGroups.entries())
@@ -274,15 +367,6 @@ export default function QuotaPage() {
     return summary.windowCapacities.some((window) => window.capacity < 0.2) && summary.totalAccounts > 0;
   }).length;
 
-  const providerFilters = [
-    { key: PROVIDERS.ALL, label: t("filterAll") },
-    { key: PROVIDERS.ANTIGRAVITY, label: t("filterAntigravity") },
-    { key: PROVIDERS.CLAUDE, label: t("filterClaude") },
-    { key: PROVIDERS.CODEX, label: t("filterCodex") },
-    { key: PROVIDERS.COPILOT, label: t("filterCopilot") },
-    { key: PROVIDERS.KIMI, label: t("filterKimi") },
-  ];
-
   const toggleCard = (accountId: string) => {
     setExpandedCards((previous) => ({ ...previous, [accountId]: !previous[accountId] }));
   };
@@ -290,6 +374,8 @@ export default function QuotaPage() {
   const freshSnapshotCount = modelFirstSummary
     ? Math.max(0, modelFirstSummary.totalAccounts - modelFirstSummary.staleAccounts)
     : 0;
+
+  const hasAnyAccounts = allAccounts.length > 0;
 
   return (
     <div className="space-y-4">
@@ -302,33 +388,21 @@ export default function QuotaPage() {
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="flex flex-wrap gap-1">
-              {providerFilters.map((filter) => (
-                <Button
-                  key={filter.key}
-                  variant={selectedProvider === filter.key ? "secondary" : "ghost"}
-                  onClick={() => {
-                    setSelectedProvider(filter.key);
-                    if (filter.key !== PROVIDERS.ALL) {
-                      setTimeout(() => {
-                        document
-                          .getElementById("quota-accounts")
-                          ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                      }, 50);
-                    }
-                  }}
-                  className="px-2.5 py-1 text-xs"
-                >
-                  {filter.label}
-                </Button>
-              ))}
-            </div>
             <Button onClick={() => fetchQuota(undefined, true)} disabled={loading} className="px-2.5 py-1 text-xs">
               {loading ? t("loadingText") : t("refreshButton")}
             </Button>
           </div>
         </div>
       </section>
+
+      <QuotaToolbar
+        query={query}
+        total={filteredAccounts.length}
+        onSearchChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { q: value }))}
+        onProviderChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { provider: value }))}
+        onStatusChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { status: value }))}
+        onClear={() => replaceQuery(clearQuotaToolbarQuery())}
+      />
 
       {loading && !quotaData ? (
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
@@ -369,15 +443,13 @@ export default function QuotaPage() {
                 </div>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("staleSnapshotsLabel")}{" "}
-                    <HelpTooltip content={t("staleSnapshotsTooltip")} />
+                    {t("staleSnapshotsLabel")} <HelpTooltip content={t("staleSnapshotsTooltip")} />
                   </p>
                   <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{modelFirstSummary.staleAccounts}</p>
                 </div>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("closestResetLabel")}{" "}
-                    <HelpTooltip content={t("closestResetTooltip")} />
+                    {t("closestResetLabel")} <HelpTooltip content={t("closestResetTooltip")} />
                   </p>
                   <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
                     {formatRelativeTime(modelFirstSummary.nextWindowResetAt, t)}
@@ -385,8 +457,7 @@ export default function QuotaPage() {
                 </div>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("modelFamiliesLabel")}{" "}
-                    <HelpTooltip content={t("modelFamiliesTooltip")} />
+                    {t("modelFamiliesLabel")} <HelpTooltip content={t("modelFamiliesTooltip")} />
                   </p>
                   <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{modelFirstSummary.groups.length}</p>
                 </div>
@@ -395,15 +466,13 @@ export default function QuotaPage() {
               <>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("overallCapacityLabel")}{" "}
-                    <HelpTooltip content={t("overallCapacityTooltip")} />
+                    {t("overallCapacityLabel")} <HelpTooltip content={t("overallCapacityTooltip")} />
                   </p>
                   <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{Math.round(overallCapacity.value * 100)}%</p>
                 </div>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("lowCapacityLabel")}{" "}
-                    <HelpTooltip content={t("lowCapacityTooltip")} />
+                    {t("lowCapacityLabel")} <HelpTooltip content={t("lowCapacityTooltip")} />
                   </p>
                   <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{lowCapacityCount}</p>
                 </div>
@@ -423,7 +492,11 @@ export default function QuotaPage() {
           />
 
           <QuotaDetails
-            filteredAccounts={filteredAccounts}
+            filteredAccounts={paginatedAccounts}
+            hasAnyAccounts={hasAnyAccounts}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={(page) => replaceQuery({ ...query, page })}
             expandedCards={expandedCards}
             onToggleCard={toggleCard}
             loading={loading}

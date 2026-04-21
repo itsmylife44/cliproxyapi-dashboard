@@ -12,6 +12,7 @@ import {
   MANAGEMENT_API_KEY,
   isRecord,
 } from "@/lib/providers/management-api";
+import { canonicalizeOAuthProvider } from "@/lib/providers/constants";
 
 interface ClaimRequest {
   accountName: string;
@@ -67,13 +68,10 @@ export async function POST(request: NextRequest) {
       return Errors.internal("Management API key not configured");
     }
 
-    const existing = await prisma.providerOAuthOwnership.findUnique({
-      where: { accountName },
-    });
-
-    if (existing) {
-      return Errors.conflict("Account already has an owner");
-    }
+    // The existence check is deferred to the create call below: after scoping
+    // ownership by (provider, accountName), we can only answer "is this already
+    // claimed?" once we know the provider, which comes from the management API.
+    // The create either succeeds or fails with P2002, which we map to conflict.
 
     let getRes: Response;
     try {
@@ -107,7 +105,13 @@ export async function POST(request: NextRequest) {
       return Errors.notFound("Auth file not found in CLIProxyAPIPlus");
     }
 
-    const provider = matchingFile.provider || matchingFile.type || "unknown";
+    const rawProvider = matchingFile.provider || matchingFile.type || "";
+    const provider = canonicalizeOAuthProvider(rawProvider);
+    if (!provider) {
+      return Errors.validation(
+        `Cannot claim auth file: unknown provider '${rawProvider || ""}'`
+      );
+    }
 
     try {
       const ownership = await prisma.providerOAuthOwnership.create({

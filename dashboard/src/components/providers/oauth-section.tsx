@@ -395,6 +395,32 @@ export function OAuthSection({
     }
   };
 
+  const clearAllQuotaGroupCooldowns = async (authId: string) => {
+    const actionKey = `${authId}:auto-clear-all`;
+    setQuotaActionKey(actionKey);
+    try {
+      const res = await fetch(API_ENDPOINTS.MANAGEMENT.AUTH_FILE_QUOTA_GROUPS_AUTO_CLEAR, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          auth_id: authId,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(extractApiError(data, "Failed to clear quota cooldowns"), "error");
+        return;
+      }
+      showToast("All quota cooldowns cleared", "success");
+      await loadAccounts();
+      await refreshProviders();
+    } catch {
+      showToast(t("toastNetworkError"), "error");
+    } finally {
+      setQuotaActionKey(null);
+    }
+  };
+
   const openAuthPopup = (url: string) => {
     const popup = window.open(url, "oauth", "width=600,height=800");
     return popup !== null;
@@ -990,6 +1016,7 @@ export function OAuthSection({
             onForceSuspend={(authId, groupId) => void updateQuotaGroupManual(authId, groupId, true)}
             onLiftManual={(authId, groupId) => void updateQuotaGroupManual(authId, groupId, false)}
             onClearCooldown={(authId, groupId) => void clearQuotaGroupCooldown(authId, groupId)}
+            onClearAllCooldowns={(authId) => void clearAllQuotaGroupCooldowns(authId)}
           />
 
           <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 text-xs text-[var(--text-muted)]">

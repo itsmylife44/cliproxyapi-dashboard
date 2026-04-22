@@ -47,6 +47,7 @@ interface OAuthCredentialListProps {
   onForceSuspend: (authId: string, groupId: string) => void;
   onLiftManual: (authId: string, groupId: string) => void;
   onClearCooldown: (authId: string, groupId: string) => void;
+  onClearAllCooldowns: (authId: string) => void;
 }
 
 function parseStatusMessage(raw: string | null): string | null {
@@ -123,6 +124,7 @@ export function OAuthCredentialList({
   onForceSuspend,
   onLiftManual,
   onClearCooldown,
+  onClearAllCooldowns,
 }: OAuthCredentialListProps) {
   const t = useTranslations("providers");
   const [expandedAccounts, setExpandedAccounts] = useState<Record<string, boolean>>({});
@@ -150,7 +152,13 @@ export function OAuthCredentialList({
         </div>
       ) : (
         <div className="divide-y divide-[var(--surface-border)] rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
-          {accounts.map((account) => (
+          {accounts.map((account) => {
+            const hasAnyAutoCooldown =
+              Array.isArray(account.quotaGroups) &&
+              account.quotaGroups.some((group) => Boolean(group.autoSuspendedUntil));
+            const bulkClearActionKey = account.authId ? `${account.authId}:auto-clear-all` : null;
+
+            return (
             <div key={account.id} className="group p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 space-y-2">
@@ -177,6 +185,16 @@ export function OAuthCredentialList({
                 </div>
                 {currentUser && (account.isOwn || currentUser.isAdmin) && (
                   <div className="flex shrink-0 items-center gap-2">
+                    {currentUser.isAdmin && account.authId && hasAnyAutoCooldown && (
+                      <Button
+                        variant="secondary"
+                        className="px-2.5 py-1 text-xs"
+                        disabled={quotaActionKey === bulkClearActionKey}
+                        onClick={() => onClearAllCooldowns(account.authId as string)}
+                      >
+                        {quotaActionKey === bulkClearActionKey ? "..." : "Clear all cooldowns"}
+                      </Button>
+                    )}
                     {currentUser.isAdmin && !account.ownerUsername && (
                       <Button
                         variant="secondary"
@@ -208,7 +226,7 @@ export function OAuthCredentialList({
               {expandedAccounts[account.id] && Array.isArray(account.quotaGroups) && account.quotaGroups.length > 0 && (
                 <div className="mt-3 space-y-2 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/20 p-3">
                   {account.quotaGroups.map((group) => {
-                    const actionBase = `${account.id}:${group.groupId}`;
+                    const actionBase = `${account.authId ?? account.id}:${group.groupId}`;
                     const isManual = group.manualSuspended;
                     const hasAuto = Boolean(group.autoSuspendedUntil);
                     return (
@@ -278,7 +296,8 @@ export function OAuthCredentialList({
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </>

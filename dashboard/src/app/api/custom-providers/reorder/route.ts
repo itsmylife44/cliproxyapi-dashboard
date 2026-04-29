@@ -53,16 +53,19 @@ export async function PUT(request: NextRequest) {
     }
 
     const isAdmin = await isUserAdmin(session.userId);
+    // Reorder is intentionally scoped to the viewer's own providers plus
+    // shared providers, even for admins. Admins can edit/delete any custom
+    // provider for cleanup purposes (matching the existing OAuth admin
+    // convention), but rearranging private providers a user cannot see has
+    // no UI surface and would be a surprising side effect.
     const providers = await prisma.customProvider.findMany({
-      where: isAdmin
-        ? { id: { in: validated.providerIds } }
-        : {
-            id: { in: validated.providerIds },
-            OR: [
-              { userId: session.userId },
-              { isShared: true }
-            ],
-          },
+      where: {
+        id: { in: validated.providerIds },
+        OR: [
+          { userId: session.userId },
+          { isShared: true },
+        ],
+      },
       select: {
         id: true,
         providerId: true,

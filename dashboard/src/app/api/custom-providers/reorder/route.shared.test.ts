@@ -97,7 +97,7 @@ describe("PUT /api/custom-providers/reorder (shared/admin scope)", () => {
     expect(txMock).not.toHaveBeenCalled();
   });
 
-  it("admins can reorder providers regardless of ownership", async () => {
+  it("admins can reorder shared providers from other owners", async () => {
     adminMock.mockResolvedValue(true);
     findManyMock.mockResolvedValue([
       { id: "p1", providerId: "a", userId: "user-1", isShared: false },
@@ -105,10 +105,26 @@ describe("PUT /api/custom-providers/reorder (shared/admin scope)", () => {
     ]);
     const res = await callPut(["p2", "p1"]);
     expect(res.status).toBe(200);
-    const arg = findManyMock.mock.calls[0]?.[0] as { where: Record<string, unknown> };
-    expect(arg.where.OR).toBeUndefined();
-    expect(arg.where).toMatchObject({ id: { in: ["p2", "p1"] } });
+    const arg = findManyMock.mock.calls[0]?.[0] as { where: { OR?: unknown[] } };
+    // Reorder still scopes to own + shared even for admins (private providers
+    // cannot be reordered out from under the owner).
+    expect(arg.where.OR).toEqual([
+      { userId: "user-1" },
+      { isShared: true },
+    ]);
     expect(txMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects admins trying to reorder a non-shared provider owned by someone else", async () => {
+    adminMock.mockResolvedValue(true);
+    // Server query filter excludes private cross-owner providers; result
+    // length mismatch returns 400 rather than silently shuffling.
+    findManyMock.mockResolvedValue([
+      { id: "p1", providerId: "a", userId: "user-1", isShared: false },
+    ]);
+    const res = await callPut(["p1", "p2-private-other"]);
+    expect(res.status).toBe(400);
+    expect(txMock).not.toHaveBeenCalled();
   });
 
   it("returns 400 when an unknown provider id is submitted", async () => {

@@ -84,6 +84,12 @@ export async function PATCH(
     const isAdmin = await isUserAdmin(session.userId);
     const isOwner = existingProvider.userId === session.userId;
 
+    // Admins can edit any custom provider (shared or private), matching the
+    // existing OAuth admin convention in `lib/providers/oauth-ops.ts` where
+    // `isAdmin` bypasses ownership checks. This supports operational cleanup
+    // (stale users, broken configs) without requiring a separate admin tool.
+    // Cross-owner admin edits are recorded in the audit log via `actedAsAdmin`
+    // and `ownerUserId` metadata below.
     if (!isOwner && !isAdmin) {
       return Errors.forbidden();
     }
@@ -289,6 +295,9 @@ export async function DELETE(
     const isAdmin = await isUserAdmin(session.userId);
     const isOwner = existingProvider.userId === session.userId;
 
+    // Admins can delete any custom provider (shared or private), matching
+    // the existing OAuth admin convention. The audit log records ownerUserId
+    // and actedAsAdmin so cross-owner deletions are traceable.
     if (!isOwner && !isAdmin) {
       return Errors.forbidden();
     }

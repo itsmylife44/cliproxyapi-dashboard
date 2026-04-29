@@ -29,7 +29,7 @@ export function ProviderRow({
   const t = useTranslations("providers");
   const { user } = useAuth();
   const isAdmin = user?.isAdmin === true;
-  const canMutate = provider.isOwn !== false || isAdmin;
+  const canMutate = provider.isOwn === true || isAdmin;
 
   return (
     <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] items-center border-b border-[var(--surface-border)] px-3 py-2 last:border-b-0">

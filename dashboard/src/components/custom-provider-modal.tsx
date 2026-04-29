@@ -204,7 +204,9 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
       models: validModels,
       excludedModels: excludedModels.filter(e => e.trim()),
       groupId: groupId || null,
-      ...(isAdmin ? { isShared } : {})
+      ...(isAdmin && (!isEdit || isShared !== (provider?.isShared === true))
+        ? { isShared }
+        : {})
     };
 
     try {

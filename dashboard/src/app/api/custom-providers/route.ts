@@ -19,6 +19,7 @@ export async function GET() {
   }
 
   try {
+    const isAdmin = await isUserAdmin(session.userId);
     const providers = await prisma.customProvider.findMany({
       where: {
         OR: [
@@ -35,26 +36,35 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      providers: providers.map(p => ({
-        id: p.id,
-        name: p.name,
-        providerId: p.providerId,
-        baseUrl: p.baseUrl,
-        prefix: p.prefix,
-        proxyUrl: p.proxyUrl,
-        groupId: p.groupId,
-        sortOrder: p.sortOrder,
-        headers: p.headers,
-        models: p.models,
-        excludedModels: p.excludedModels,
-        hasEncryptedKey: p.apiKeyEncrypted !== null,
-        isShared: p.isShared,
-        isOwn: p.userId === session.userId,
-        ownerId: p.user.id,
-        ownerUsername: p.user.username,
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt
-      }))
+      providers: providers.map(p => {
+        const isOwn = p.userId === session.userId;
+        const canSeeSecrets = isOwn || isAdmin;
+        const rawHeaders = (p.headers ?? {}) as Record<string, string>;
+        return {
+          id: p.id,
+          name: p.name,
+          providerId: p.providerId,
+          baseUrl: p.baseUrl,
+          prefix: p.prefix,
+          proxyUrl: p.proxyUrl,
+          groupId: p.groupId,
+          sortOrder: p.sortOrder,
+          // Redact headers for non-owner non-admin viewers — they can contain
+          // Authorization tokens and other secrets. Admins keep visibility so
+          // they can meaningfully edit a shared provider they don't own.
+          headers: canSeeSecrets ? p.headers : {},
+          hasHeaders: Object.keys(rawHeaders).length > 0,
+          models: p.models,
+          excludedModels: p.excludedModels,
+          hasEncryptedKey: p.apiKeyEncrypted !== null,
+          isShared: p.isShared,
+          isOwn,
+          ownerId: p.user.id,
+          ownerUsername: p.user.username,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+        };
+      })
     });
   } catch (error) {
     return Errors.internal("GET /api/custom-providers error", error);

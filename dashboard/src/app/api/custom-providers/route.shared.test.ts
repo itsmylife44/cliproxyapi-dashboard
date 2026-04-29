@@ -144,6 +144,69 @@ describe("GET /api/custom-providers (shared providers)", () => {
     const body = await res.json();
     expect(body.providers[0]).toMatchObject({ isShared: false, isOwn: true });
   });
+
+  it("redacts headers for non-owner non-admin viewers but reports hasHeaders=true", async () => {
+    findManyMock.mockResolvedValue([
+      {
+        id: "p3",
+        userId: "user-2",
+        name: "shared",
+        providerId: "shared",
+        baseUrl: "https://example.com",
+        prefix: null,
+        proxyUrl: null,
+        groupId: null,
+        sortOrder: 0,
+        headers: { "x-api-key": "super-secret" },
+        models: [],
+        excludedModels: [],
+        apiKeyEncrypted: "enc",
+        isShared: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        user: { id: "user-2", username: "admin" },
+      },
+    ]);
+    const { GET } = await import("./route");
+    const res = await GET();
+    const body = await res.json();
+    expect(body.providers[0]).toMatchObject({
+      isOwn: false,
+      headers: {},
+      hasHeaders: true,
+    });
+    expect(body.providers[0].headers).not.toHaveProperty("x-api-key");
+  });
+
+  it("returns raw headers to admins viewing a shared provider they don't own", async () => {
+    adminMock.mockResolvedValueOnce(true);
+    findManyMock.mockResolvedValue([
+      {
+        id: "p3",
+        userId: "user-2",
+        name: "shared",
+        providerId: "shared",
+        baseUrl: "https://example.com",
+        prefix: null,
+        proxyUrl: null,
+        groupId: null,
+        sortOrder: 0,
+        headers: { "x-api-key": "super-secret" },
+        models: [],
+        excludedModels: [],
+        apiKeyEncrypted: "enc",
+        isShared: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        user: { id: "user-2", username: "admin" },
+      },
+    ]);
+    const { GET } = await import("./route");
+    const res = await GET();
+    const body = await res.json();
+    expect(body.providers[0].headers).toEqual({ "x-api-key": "super-secret" });
+    expect(body.providers[0].hasHeaders).toBe(true);
+  });
 });
 
 describe("POST /api/custom-providers (isShared admin gate)", () => {

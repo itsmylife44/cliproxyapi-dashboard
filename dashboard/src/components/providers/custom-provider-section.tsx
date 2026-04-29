@@ -11,6 +11,7 @@ import { UngroupedList } from "@/components/providers/ungrouped-list";
 import { extractApiError } from "@/lib/utils";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { useTranslations } from "next-intl";
+import { useAuth } from "@/hooks/use-auth";
 
 type ShowToast = ReturnType<typeof useToast>["showToast"];
 
@@ -277,18 +278,23 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
     return newList;
   };
 
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin === true;
+
   const reorderProviders = async (newGroups: ProviderGroup[], newUngrouped: CustomProvider[]) => {
     // Only include providers the viewer can mutate. Shared providers from
-    // other owners stay in the list visually but their order is owned by the
-    // creator (or an admin) and is not submitted from this client.
+    // other owners are mutable for admins (the server accepts admin reorder),
+    // and otherwise read-only. This keeps the UI's optimistic ordering in
+    // sync with the payload sent to the server.
+    const canMutate = (p: CustomProvider) => p.isOwn === true || isAdmin;
     const allProviderIds: string[] = [];
     newGroups.forEach(g => {
       g.providers.forEach(p => {
-        if (p.isOwn === true) allProviderIds.push(p.id);
+        if (canMutate(p)) allProviderIds.push(p.id);
       });
     });
     newUngrouped.forEach(p => {
-      if (p.isOwn === true) allProviderIds.push(p.id);
+      if (canMutate(p)) allProviderIds.push(p.id);
     });
 
     if (allProviderIds.length === 0) return;

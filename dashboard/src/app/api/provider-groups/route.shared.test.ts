@@ -31,6 +31,11 @@ vi.mock("@/lib/audit", () => ({
   logAuditAsync: vi.fn(),
 }));
 
+const adminMock = vi.fn<(userId?: string) => Promise<boolean>>(async () => false);
+vi.mock("@/lib/auth/admin", () => ({
+  isUserAdmin: (userId: string) => adminMock(userId),
+}));
+
 const groupFindManyMock = vi.fn<(arg?: unknown) => unknown>();
 const customFindManyMock = vi.fn<(arg?: unknown) => unknown>();
 
@@ -163,5 +168,46 @@ describe("GET /api/provider-groups (shared providers)", () => {
       ownerId: "user-1",
       ownerUsername: "alice",
     });
+  });
+
+  it("redacts headers for shared providers viewed by non-owner non-admin", async () => {
+    const sharedWithSecret = {
+      ...sharedInOwnersGroup,
+      headers: { authorization: "Bearer leak-me" },
+    };
+    customFindManyMock.mockResolvedValueOnce([sharedWithSecret]).mockResolvedValueOnce([]);
+    const res = await callGet();
+    const body = await res.json();
+    expect(body.ungrouped[0]).toMatchObject({
+      isOwn: false,
+      headers: {},
+      hasHeaders: true,
+    });
+    expect(body.ungrouped[0].headers).not.toHaveProperty("authorization");
+  });
+
+  it("returns raw headers when viewer is admin", async () => {
+    adminMock.mockResolvedValueOnce(true);
+    const sharedWithSecret = {
+      ...sharedInOwnersGroup,
+      headers: { authorization: "Bearer leak-me" },
+    };
+    customFindManyMock.mockResolvedValueOnce([sharedWithSecret]).mockResolvedValueOnce([]);
+    const res = await callGet();
+    const body = await res.json();
+    expect(body.ungrouped[0].headers).toEqual({ authorization: "Bearer leak-me" });
+  });
+
+  it("sorts the merged ungrouped list by sortOrder across own + shared sources", async () => {
+    const ungroupedOwn = { ...ownProvider, id: "own-2", sortOrder: 2 };
+    const ungroupedShared = { ...sharedUngrouped, id: "shared-3", sortOrder: 3 };
+    const sharedGrouped = { ...sharedInOwnersGroup, id: "shared-grouped-1", sortOrder: 1 };
+    customFindManyMock
+      .mockResolvedValueOnce([sharedGrouped])
+      .mockResolvedValueOnce([ungroupedOwn, ungroupedShared]);
+    const res = await callGet();
+    const body = await res.json();
+    const ids = body.ungrouped.map((p: { id: string }) => p.id);
+    expect(ids).toEqual(["shared-grouped-1", "own-2", "shared-3"]);
   });
 });

@@ -306,11 +306,16 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
        ? fetchProxyModelsCached(internalProxyUrl, apiKey)
        : Promise.resolve([]),
      fetchModelsDevLimits(),
-     prisma.customProvider.findMany({
-       where: { userId },
-       include: { models: true },
-       orderBy: { sortOrder: "asc" },
-     }),
+    prisma.customProvider.findMany({
+      where: {
+        OR: [
+          { userId },
+          { isShared: true }
+        ]
+      },
+      include: { models: true },
+      orderBy: { sortOrder: "asc" },
+    }),
    ]);
    const nativeModels = buildAvailableModelsFromProxy(proxyModels, modelsDevLimits);
    const aliasModels = extractOAuthModelAliases(managementConfig as ConfigData | null, oauthAccounts, modelsDevLimits);

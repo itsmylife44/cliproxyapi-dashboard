@@ -11,6 +11,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
 import { Errors, apiSuccess } from "@/lib/errors";
+import { isUserAdmin } from "@/lib/auth/admin";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -36,7 +37,8 @@ const UpdateCustomProviderSchema = z.object({
     upstreamName: z.string().min(1),
     alias: z.string().min(1)
   })).min(1, "At least one model mapping is required").optional(),
-  excludedModels: z.array(z.string()).optional()
+  excludedModels: z.array(z.string()).optional(),
+  isShared: z.boolean().optional()
 });
 
 interface ManagementApiKeyEntry {
@@ -79,14 +81,21 @@ export async function PATCH(
       return Errors.notFound("Provider");
     }
 
-    if (existingProvider.userId !== session.userId) {
+    const isAdmin = await isUserAdmin(session.userId);
+    const isOwner = existingProvider.userId === session.userId;
+
+    if (!isOwner && !isAdmin) {
+      return Errors.forbidden();
+    }
+
+    if (validated.isShared !== undefined && validated.isShared !== existingProvider.isShared && !isAdmin) {
       return Errors.forbidden();
     }
 
     if (validated.name) {
       const nameConflict = await prisma.customProvider.findFirst({
         where: {
-          userId: session.userId,
+          userId: existingProvider.userId,
           name: validated.name,
           id: { not: id }
         }
@@ -99,7 +108,7 @@ export async function PATCH(
 
     if (validated.groupId !== undefined && validated.groupId !== null) {
       const groupExists = await prisma.providerGroup.findFirst({
-        where: { id: validated.groupId, userId: session.userId },
+        where: { id: validated.groupId, userId: existingProvider.userId },
         select: { id: true },
       });
       if (!groupExists) {
@@ -132,6 +141,7 @@ export async function PATCH(
           prefix: validated.prefix,
           proxyUrl: validated.proxyUrl,
           groupId: validated.groupId,
+          ...(validated.isShared !== undefined ? { isShared: validated.isShared } : {}),
           headers: validated.headers ? (validated.headers as Record<string, string>) : undefined,
           models: validated.models ? {
             create: validated.models.map(m => ({
@@ -274,7 +284,10 @@ export async function DELETE(
       return Errors.notFound("Provider");
     }
 
-    if (existingProvider.userId !== session.userId) {
+    const isAdmin = await isUserAdmin(session.userId);
+    const isOwner = existingProvider.userId === session.userId;
+
+    if (!isOwner && !isAdmin) {
       return Errors.forbidden();
     }
 

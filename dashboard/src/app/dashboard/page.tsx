@@ -205,7 +205,12 @@ export default async function QuickStartPage() {
     fetchModelsDevLimits(),
     session
       ? prisma.customProvider.findMany({
-          where: { userId: session.userId },
+          where: {
+            OR: [
+              { userId: session.userId },
+              { isShared: true }
+            ]
+          },
           include: { models: true },
           orderBy: { sortOrder: "asc" },
         })

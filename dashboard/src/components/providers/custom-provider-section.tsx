@@ -37,6 +37,9 @@ export interface CustomProvider {
   groupId: string | null;
   sortOrder: number;
   hasEncryptedKey: boolean;
+  isShared?: boolean;
+  isOwn?: boolean;
+  ownerUsername?: string | null;
   createdAt: string;
   updatedAt: string;
 }

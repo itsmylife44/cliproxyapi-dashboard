@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import type { CustomProvider } from "@/components/providers/custom-provider-section";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ProviderRowProps {
   provider: CustomProvider;
@@ -26,6 +27,9 @@ export function ProviderRow({
   onMoveDown,
 }: ProviderRowProps) {
   const t = useTranslations("providers");
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin === true;
+  const canMutate = provider.isOwn !== false || isAdmin;
 
   return (
     <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_80px_80px_120px] items-center border-b border-[var(--surface-border)] px-3 py-2 last:border-b-0">
@@ -38,6 +42,14 @@ export function ProviderRow({
               className="shrink-0 rounded-sm border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
             >
               {t("resaveBadge")}
+            </span>
+          )}
+          {provider.isShared && (
+            <span
+              title={provider.ownerUsername ? t("sharedOwnerLabel", { username: provider.ownerUsername }) : t("sharedBadge")}
+              className="shrink-0 rounded-sm border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-medium text-blue-700"
+            >
+              {t("sharedBadge")}
             </span>
           )}
         </div>
@@ -69,11 +81,15 @@ export function ProviderRow({
         </button>
       </div>
 
-      <div className="flex items-center gap-2 justify-end">
+      <div
+        className="flex items-center gap-2 justify-end"
+        title={canMutate ? undefined : t("sharedReadOnlyTooltip")}
+      >
         <Button
           variant="secondary"
           className="px-2.5 py-1 text-xs"
           onClick={() => onEdit(provider)}
+          disabled={!canMutate}
         >
           {t("editButton")}
         </Button>
@@ -81,6 +97,7 @@ export function ProviderRow({
           variant="danger"
           className="px-2.5 py-1 text-xs"
           onClick={() => onDelete(provider.id)}
+          disabled={!canMutate}
         >
           {t("deleteButton")}
         </Button>

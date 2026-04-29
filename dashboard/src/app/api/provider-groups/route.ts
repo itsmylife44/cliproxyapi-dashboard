@@ -69,8 +69,10 @@ export async function GET() {
       }),
       prisma.customProvider.findMany({
         where: {
-          userId: session.userId,
-          groupId: null,
+          OR: [
+            { userId: session.userId, groupId: null },
+            { isShared: true, groupId: null }
+          ]
         },
         include: {
           models: true,

@@ -248,6 +248,8 @@ export async function PATCH(
         providerId: id,
         name: provider.name,
         updatedFields: Object.keys(validated),
+        ownerUserId: existingProvider.userId,
+        actedAsAdmin: !isOwner,
       },
       ipAddress: extractIpAddress(request),
     });
@@ -302,6 +304,8 @@ export async function DELETE(
       metadata: {
         deletedProviderId: id,
         name: existingProvider.name,
+        ownerUserId: existingProvider.userId,
+        actedAsAdmin: !isOwner,
       },
       ipAddress: extractIpAddress(request),
     });

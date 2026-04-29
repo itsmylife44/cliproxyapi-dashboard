@@ -62,7 +62,7 @@ export function ProviderRow({
         <button
           type="button"
           onClick={() => onMoveUp(provider.id, provider.groupId, index)}
-          disabled={isFirst}
+          disabled={isFirst || !canMutate}
           className="flex size-6 items-center justify-center rounded-sm border border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-30 disabled:hover:bg-[var(--surface-muted)] disabled:hover:text-[var(--text-secondary)] transition-colors"
           title={t("moveProviderUp")}
           aria-label={t("moveProviderUpLabel", { name: provider.name })}
@@ -72,7 +72,7 @@ export function ProviderRow({
         <button
           type="button"
           onClick={() => onMoveDown(provider.id, provider.groupId, index)}
-          disabled={isLast}
+          disabled={isLast || !canMutate}
           className="flex size-6 items-center justify-center rounded-sm border border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-30 disabled:hover:bg-[var(--surface-muted)] disabled:hover:text-[var(--text-secondary)] transition-colors"
           title={t("moveProviderDown")}
           aria-label={t("moveProviderDownLabel", { name: provider.name })}

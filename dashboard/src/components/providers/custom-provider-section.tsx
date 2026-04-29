@@ -278,11 +278,20 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
   };
 
   const reorderProviders = async (newGroups: ProviderGroup[], newUngrouped: CustomProvider[]) => {
+    // Only include providers the viewer can mutate. Shared providers from
+    // other owners stay in the list visually but their order is owned by the
+    // creator (or an admin) and is not submitted from this client.
     const allProviderIds: string[] = [];
     newGroups.forEach(g => {
-      g.providers.forEach(p => allProviderIds.push(p.id));
+      g.providers.forEach(p => {
+        if (p.isOwn === true) allProviderIds.push(p.id);
+      });
     });
-    newUngrouped.forEach(p => allProviderIds.push(p.id));
+    newUngrouped.forEach(p => {
+      if (p.isOwn === true) allProviderIds.push(p.id);
+    });
+
+    if (allProviderIds.length === 0) return;
 
     try {
       const res = await fetch(API_ENDPOINTS.CUSTOM_PROVIDERS.REORDER, {

@@ -53,9 +53,9 @@ Configuration is managed through `infrastructure/.env`.
 | `WEBHOOK_HOST` | No | Webhook server URL for deploy triggers | `http://localhost:9000` |
 | `DEPLOY_SECRET` | No | Secret for deploy webhook authentication | — |
 
-## CLIProxyAPIPlus Configuration
+## CLIProxyAPI Configuration
 
-CLIProxyAPIPlus configuration lives in `infrastructure/config/config.yaml`. The dashboard provides a structured UI for editing it, but you can also edit the file directly:
+CLIProxyAPI configuration lives in `infrastructure/config/config.yaml`. The dashboard provides a structured UI for editing it, but you can also edit the file directly:
 
 ```yaml
 api-keys:
@@ -114,7 +114,7 @@ For full plugin documentation, see [opencode-cliproxyapi-sync](https://github.co
 
 ## Usage Collection
 
-The dashboard automatically collects usage statistics from CLIProxyAPIPlus every 5 minutes using a dedicated cron service.
+The dashboard automatically collects usage statistics from CLIProxyAPI every 5 minutes using a dedicated cron service.
 
 ### How It Works
 

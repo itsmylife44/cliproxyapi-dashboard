@@ -153,7 +153,7 @@ const fetchAuthFiles = async (): Promise<AuthFileEntry[] | null> => {
 /**
  * Find new auth files by comparing before/after snapshots.
  * Primary strategy: snapshot-diff is provider-agnostic and works regardless
- * of how CLIProxyAPIPlus names the auth file.
+ * of how CLIProxyAPI names the auth file.
  */
 const findNewAuthFilesByDiff = (
   before: AuthFileEntry[],

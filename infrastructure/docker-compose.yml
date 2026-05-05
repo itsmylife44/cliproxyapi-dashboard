@@ -35,7 +35,7 @@ services:
 
   # CLIProxyAPI Service — requires ./config/config.yaml with `port: 8317` (OAuth URLs fail if unset)
   cliproxyapi:
-    image: eceasy/cli-proxy-api-plus:latest
+    image: eceasy/cli-proxy-api:latest
     container_name: cliproxyapi
     restart: unless-stopped
     # Resource limits (calibrated from real usage: ~25MiB actual)

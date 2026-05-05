@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     const matchingFile = authFiles.find((f) => f.name === accountName);
     if (!matchingFile) {
-      return Errors.notFound("Auth file not found in CLIProxyAPIPlus");
+      return Errors.notFound("Auth file not found in CLIProxyAPI");
     }
 
     const rawProvider = matchingFile.provider || matchingFile.type || "";

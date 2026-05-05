@@ -12,7 +12,7 @@ const execFileAsync = promisify(execFile);
 
 const CONTAINER_NAME = "cliproxyapi";
 const COMPOSE_FILE = "/opt/cliproxyapi/infrastructure/docker-compose.yml";
-const IMAGE_NAME = "eceasy/cli-proxy-api-plus";
+const IMAGE_NAME = "eceasy/cli-proxy-api";
 
 interface PortBinding {
   HostIp: string;

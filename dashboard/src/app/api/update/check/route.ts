@@ -29,15 +29,15 @@ interface GitHubRunsResponse {
 }
 
 async function getDockerHubTags(skipCache = false): Promise<DockerHubTag[]> {
-  const cacheKey = "docker-hub-tags:eceasy/cli-proxy-api-plus";
-  
+  const cacheKey = "docker-hub-tags:eceasy/cli-proxy-api";
+
   if (!skipCache) {
     const cached = updateCheckCache.get(cacheKey) as DockerHubTag[] | null;
     if (cached) return cached;
   }
 
   const response = await fetch(
-    "https://hub.docker.com/v2/repositories/eceasy/cli-proxy-api-plus/tags?page_size=20",
+    "https://hub.docker.com/v2/repositories/eceasy/cli-proxy-api/tags?page_size=20",
     { cache: "no-store" }
   );
   

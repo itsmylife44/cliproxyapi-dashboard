@@ -23,7 +23,7 @@ services:
       start_period: 5s
 
   cliproxyapi:
-    image: eceasy/cli-proxy-api-plus:latest
+    image: eceasy/cli-proxy-api:latest
     container_name: cliproxyapi-dev-api
     restart: unless-stopped
     environment:

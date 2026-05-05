@@ -1,5 +1,5 @@
 /**
- * Maps CLIProxyAPIPlus `owned_by` values to display-friendly provider names.
+ * Maps CLIProxyAPI `owned_by` values to display-friendly provider names.
  * Unknown owned_by values are title-cased automatically.
  */
 const OWNED_BY_DISPLAY: Record<string, string> = {

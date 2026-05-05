@@ -1,6 +1,6 @@
 {
-  "version": "0.1.79",
-  "tag": "dashboard-v0.1.79",
-  "releaseUrl": "https://github.com/itsmylife44/cliproxyapi-dashboard/releases/tag/dashboard-v0.1.79",
-  "releaseNotes": "## [0.1.79](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.78...dashboard-v0.1.79) (2026-05-05)\n\n\n### Features\n\n* **backup:** add external-cron scheduled backup runner ([df751ce](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/df751ce319e72f312704bb10273f54580ba5f44a))\n* **custom-providers:** allow admins to share custom providers globally ([#206](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/206)) ([adb3302](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/adb3302795ecd8215e52e49873e57a6bd54f02e5))\n* **i18n:** add Spanish translation ([#207](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/207)) ([15aa967](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/15aa96704accbf63ae1219e55eb53749804fb600))\n\n\n### Bug Fixes\n\n* **providers:** canonicalize oauth provider on write and add quota filter UI ([370634f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/370634faa3c873c46957650d0020738d82ecf553))\n* **usage:** migrate collector from removed /usage to /usage-queue endpoint ([#209](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/209)) ([32adc14](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/32adc14ac9fde91cff3a6e6a9535ad214d2c1d4a))"
+  "version": "0.1.80",
+  "tag": "dashboard-v0.1.80",
+  "releaseUrl": "https://github.com/itsmylife44/cliproxyapi-dashboard/releases/tag/dashboard-v0.1.80",
+  "releaseNotes": "## [0.1.80](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.79...dashboard-v0.1.80) (2026-05-05)\n\n\n### Bug Fixes\n\n* **entrypoint:** add isShared column migration for custom_providers ([c35d09f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c35d09f8e319f97ae45ac1dc085f27bf6ecb6472))"
 }

@@ -26,7 +26,7 @@ services:
 
   # Requires ./config.local.yaml mounted below with `port: 8317` for management/OAuth
   cliproxyapi:
-    image: eceasy/cli-proxy-api-plus:latest
+    image: eceasy/cli-proxy-api:latest
     container_name: cliproxyapi
     restart: unless-stopped
     networks:

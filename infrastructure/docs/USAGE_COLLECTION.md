@@ -4,7 +4,7 @@
 
 ## Overview
 
-CLIProxyAPI Dashboard includes an **automated usage collection system** that tracks API requests, token usage, and model statistics from CLIProxyAPIPlus and stores them in PostgreSQL for historical analysis.
+CLIProxyAPI Dashboard includes an **automated usage collection system** that tracks API requests, token usage, and model statistics from CLIProxyAPI and stores them in PostgreSQL for historical analysis.
 
 > **Key Point**: Usage data is collected every 5 minutes by a dedicated cron service and displayed in the Dashboard's Usage page.
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-CLIProxyAPI Dashboard is a Next.js 16/React 19 web control plane for CLIProxyAPIPlus, providing a modern UI to manage OAuth-based AI CLI proxies (Claude Code, Gemini CLI, Codex, etc.) without YAML editing. The monorepo contains three service boundaries:
+CLIProxyAPI Dashboard is a Next.js 16/React 19 web control plane for CLIProxyAPI, providing a modern UI to manage OAuth-based AI CLI proxies (Claude Code, Gemini CLI, Codex, etc.) without YAML editing. The monorepo contains three service boundaries:
 
 - **`dashboard/`** — Primary Next.js application with API routes, Prisma ORM, authentication, and provider management
 - **`infrastructure/`** — Production Docker Compose stack with Caddy reverse proxy, PostgreSQL, and service orchestration
@@ -38,7 +38,7 @@ cliproxyapi-dashboard/
 |---------|---------|
 | `caddy` | TLS termination, reverse proxy |
 | `dashboard` | Next.js standalone app |
-| `cliproxyapi` | Core proxy service (CLIProxyAPIPlus) |
+| `cliproxyapi` | Core proxy service (CLIProxyAPI) |
 | `postgres` | PostgreSQL database |
 | `docker-proxy` | Constrained Docker socket proxy |
 | `perplexity` | Optional Perplexity sidecar |

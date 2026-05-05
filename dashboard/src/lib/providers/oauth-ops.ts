@@ -73,7 +73,7 @@ export async function importOAuthCredential(
       return { ok: false, error: normalizedCredential.error };
     }
 
-    // Build multipart form data to upload to CLIProxyAPIPlus
+    // Build multipart form data to upload to CLIProxyAPI
     const blob = new Blob([normalizedCredential.normalizedContent], { type: "application/json" });
     const formData = new FormData();
     formData.append("file", blob, fileName);

@@ -10,6 +10,7 @@ import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
 import { CreateCustomProviderSchema } from "@/lib/validation/schemas";
 import { Errors } from "@/lib/errors";
+import { isUserAdmin } from "@/lib/auth/admin";
 
 export async function GET() {
   const session = await verifySession();
@@ -18,32 +19,52 @@ export async function GET() {
   }
 
   try {
+    const isAdmin = await isUserAdmin(session.userId);
     const providers = await prisma.customProvider.findMany({
-      where: { userId: session.userId },
+      where: {
+        OR: [
+          { userId: session.userId },
+          { isShared: true }
+        ]
+      },
       include: {
         models: true,
-        excludedModels: true
+        excludedModels: true,
+        user: { select: { id: true, username: true } }
       },
       orderBy: { sortOrder: "asc" }
     });
 
     return NextResponse.json({
-      providers: providers.map(p => ({
-        id: p.id,
-        name: p.name,
-        providerId: p.providerId,
-        baseUrl: p.baseUrl,
-        prefix: p.prefix,
-        proxyUrl: p.proxyUrl,
-        groupId: p.groupId,
-        sortOrder: p.sortOrder,
-        headers: p.headers,
-        models: p.models,
-        excludedModels: p.excludedModels,
-        hasEncryptedKey: p.apiKeyEncrypted !== null,
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt
-      }))
+      providers: providers.map(p => {
+        const isOwn = p.userId === session.userId;
+        const canSeeSecrets = isOwn || isAdmin;
+        const rawHeaders = (p.headers ?? {}) as Record<string, string>;
+        return {
+          id: p.id,
+          name: p.name,
+          providerId: p.providerId,
+          baseUrl: p.baseUrl,
+          prefix: p.prefix,
+          proxyUrl: p.proxyUrl,
+          groupId: p.groupId,
+          sortOrder: p.sortOrder,
+          // Redact headers for non-owner non-admin viewers — they can contain
+          // Authorization tokens and other secrets. Admins keep visibility so
+          // they can meaningfully edit a shared provider they don't own.
+          headers: canSeeSecrets ? p.headers : {},
+          hasHeaders: Object.keys(rawHeaders).length > 0,
+          models: p.models,
+          excludedModels: p.excludedModels,
+          hasEncryptedKey: p.apiKeyEncrypted !== null,
+          isShared: p.isShared,
+          isOwn,
+          ownerId: p.user.id,
+          ownerUsername: p.user.username,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+        };
+      })
     });
   } catch (error) {
     return Errors.internal("GET /api/custom-providers error", error);
@@ -67,6 +88,13 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validated = CreateCustomProviderSchema.parse(body);
+
+    if (validated.isShared === true) {
+      const isAdmin = await isUserAdmin(session.userId);
+      if (!isAdmin) {
+        return Errors.forbidden();
+      }
+    }
 
     const existingName = await prisma.customProvider.findFirst({
       where: { 
@@ -98,6 +126,7 @@ export async function POST(request: NextRequest) {
         prefix: validated.prefix,
         proxyUrl: validated.proxyUrl,
         headers: validated.headers ? (validated.headers as Record<string, string>) : {},
+        isShared: validated.isShared === true,
         models: {
           create: validated.models.map(m => ({
             upstreamName: m.upstreamName,

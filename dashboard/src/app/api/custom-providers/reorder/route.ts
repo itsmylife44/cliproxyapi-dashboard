@@ -8,6 +8,7 @@ import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { env } from "@/lib/env";
 import { invalidateProxyModelsCache } from "@/lib/cache";
 import { logger } from "@/lib/logger";
+import { isUserAdmin } from "@/lib/auth/admin";
 import { z } from "zod";
 
 const FETCH_TIMEOUT_MS = 10_000;
@@ -51,19 +52,37 @@ export async function PUT(request: NextRequest) {
       return Errors.validation("providerIds must not contain duplicates");
     }
 
+    const isAdmin = await isUserAdmin(session.userId);
+    // Reorder is intentionally scoped to the viewer's own providers plus
+    // shared providers, even for admins. Admins can edit/delete any custom
+    // provider for cleanup purposes (matching the existing OAuth admin
+    // convention), but rearranging private providers a user cannot see has
+    // no UI surface and would be a surprising side effect.
     const providers = await prisma.customProvider.findMany({
       where: {
-        userId: session.userId,
         id: { in: validated.providerIds },
+        OR: [
+          { userId: session.userId },
+          { isShared: true },
+        ],
       },
       select: {
         id: true,
         providerId: true,
+        userId: true,
+        isShared: true,
       },
     });
 
     if (providers.length !== validated.providerIds.length) {
-      return Errors.validation("One or more providers do not belong to the current user");
+      return Errors.validation("One or more providers were not found");
+    }
+
+    if (!isAdmin) {
+      const writable = providers.every(p => p.userId === session.userId);
+      if (!writable) {
+        return Errors.forbidden();
+      }
     }
 
     await prisma.$transaction(
@@ -86,7 +105,7 @@ export async function PUT(request: NextRequest) {
     } else {
       const orderedProviders = validated.providerIds
         .map((providerId) => providers.find((provider) => provider.id === providerId))
-        .filter((provider): provider is { id: string; providerId: string } => provider !== undefined);
+        .filter((provider): provider is { id: string; providerId: string; userId: string; isShared: boolean } => provider !== undefined);
 
       try {
         const getRes = await fetchWithTimeout(`${managementUrl}/openai-compatibility`, {

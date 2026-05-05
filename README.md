@@ -58,7 +58,7 @@ Open **http://localhost:3000** → create admin account → done.
 
 - **Visual Configuration** — Manage CLIProxyAPIPlus settings through structured forms, no YAML editing
 - **Multi-Provider OAuth** — Connect Claude, Gemini, Codex, Copilot, Kiro, Antigravity, iFlow, Kimi, and Qwen accounts
-- **Custom Providers** — Add any OpenAI-compatible endpoint (OpenRouter, Ollama, etc.) with model mappings
+- **Custom Providers** — Add any OpenAI-compatible endpoint (OpenRouter, Ollama, etc.) with model mappings; admins can mark a provider as **Shared** so all team members see and use it
 - **API Key Management** — Create, revoke, and track API keys with per-user ownership
 - **Real-time Monitoring** — Live log streaming, container health, and service management
 - **Quota Tracking** — Rate limits and usage per provider (Claude, Codex, Kimi, Antigravity)

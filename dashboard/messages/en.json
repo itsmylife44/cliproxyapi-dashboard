@@ -677,7 +677,12 @@
     "gitlabSavePat": "Save Token",
     "gitlabClientIdRequired": "OAuth Client ID is required.",
     "gitlabPatRequired": "Personal Access Token is required.",
-    "gitlabPatFailed": "Failed to authenticate with the provided token."
+    "gitlabPatFailed": "Failed to authenticate with the provided token.",
+    "shareLabel": "Share with all users",
+    "shareDescription": "Make this provider visible and usable for every dashboard user. Only administrators can change this.",
+    "sharedBadge": "Shared",
+    "sharedOwnerLabel": "Owner: {username}",
+    "sharedReadOnlyTooltip": "Shared providers can only be edited by their owner or an administrator."
   },
   "quota": {
     "pageTitle": "Quota Management",

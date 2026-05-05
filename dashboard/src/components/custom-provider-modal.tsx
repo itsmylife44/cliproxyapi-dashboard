@@ -12,6 +12,7 @@ import { ModelDiscovery } from "@/components/custom-providers/model-discovery";
 import { ModelMappings } from "@/components/custom-providers/model-mappings";
 import { ExcludedModels } from "@/components/custom-providers/excluded-models";
 import { GroupSelect } from "@/components/custom-providers/group-select";
+import { useAuth } from "@/hooks/use-auth";
 
 import { useTranslations } from "next-intl";
 interface ModelMapping {
@@ -36,6 +37,7 @@ interface CustomProvider {
   models: ApiModelMapping[];
   excludedModels: { pattern: string }[];
   groupId: string | null;
+  isShared?: boolean;
 }
 
 interface CustomProviderModalProps {
@@ -80,6 +82,8 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
   const { showToast } = useToast();
   const isEdit = !!provider;
   const t = useTranslations("providers");
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin === true;
 
   const [name, setName] = useState("");
   const [providerId, setProviderId] = useState("");
@@ -97,6 +101,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
   const [showFetchedModels, setShowFetchedModels] = useState(false);
   const [groupId, setGroupId] = useState<string | null>(null);
   const [groups, setGroups] = useState<{id: string; name: string; color: string | null}[]>([]);
+  const [isShared, setIsShared] = useState(false);
 
   const [errors, setErrors] = useState({
     name: "",
@@ -135,6 +140,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
     setFetchedModels([]);
     setShowFetchedModels(false);
     setGroupId(null);
+    setIsShared(false);
   }, []);
 
   useEffect(() => {
@@ -149,6 +155,7 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
       setExcludedModels(provider.excludedModels.map(e => e.pattern));
       excludedModelIds.current = provider.excludedModels.map(() => nextId());
       setGroupId(provider.groupId);
+      setIsShared(provider.isShared === true);
       setApiKey("");
       return;
     }
@@ -196,7 +203,10 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
       headers: Object.keys(headersObj).length > 0 ? headersObj : undefined,
       models: validModels,
       excludedModels: excludedModels.filter(e => e.trim()),
-      groupId: groupId || null
+      groupId: groupId || null,
+      ...(isAdmin && (!isEdit || isShared !== (provider?.isShared === true))
+        ? { isShared }
+        : {})
     };
 
     try {
@@ -430,6 +440,23 @@ export function CustomProviderModal({ isOpen, onClose, provider, onSuccess }: Cu
             saving={saving}
             onGroupIdChange={setGroupId}
           />
+
+          {isAdmin && (
+            <div className="flex items-start gap-3 rounded-md border border-border/60 bg-background/50 p-3">
+              <input
+                id="custom-provider-is-shared"
+                type="checkbox"
+                checked={isShared}
+                onChange={(e) => setIsShared(e.target.checked)}
+                disabled={saving}
+                className="mt-1 h-4 w-4"
+              />
+              <label htmlFor="custom-provider-is-shared" className="flex-1 cursor-pointer text-sm">
+                <div className="font-medium">{t("shareLabel")}</div>
+                <div className="text-xs text-muted-foreground">{t("shareDescription")}</div>
+              </label>
+            </div>
+          )}
         </div>
       </ModalContent>
 

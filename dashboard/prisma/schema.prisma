@@ -180,6 +180,7 @@ model CustomProvider {
   proxyUrl    String?                   // Optional SOCKS5/HTTP proxy
   headers     Json?     @default("{}")  // Custom headers JSON
   createdAt   DateTime @default(now())
+  isShared    Boolean  @default(false) // Admin-shared providers are visible to all users
   updatedAt   DateTime @updatedAt
   
   user           User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -188,6 +189,7 @@ model CustomProvider {
   excludedModels CustomProviderExcludedModel[]
   
   @@index([userId])
+  @@index([isShared])
   @@index([groupId])
   @@index([providerId])
   @@map("custom_providers")

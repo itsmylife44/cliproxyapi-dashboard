@@ -301,7 +301,8 @@ export const CreateCustomProviderSchema = z.object({
     upstreamName: z.string().min(1),
     alias: z.string().min(1)
   })).min(1, "At least one model mapping is required"),
-  excludedModels: z.array(z.string()).optional()
+  excludedModels: z.array(z.string()).optional(),
+  isShared: z.boolean().optional()
 });
 
 // ============================================================================

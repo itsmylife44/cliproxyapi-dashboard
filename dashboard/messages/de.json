@@ -677,7 +677,12 @@
     "gitlabSavePat": "Token speichern",
     "gitlabClientIdRequired": "OAuth Client-ID ist erforderlich.",
     "gitlabPatRequired": "Personal Access Token ist erforderlich.",
-    "gitlabPatFailed": "Authentifizierung mit dem angegebenen Token fehlgeschlagen."
+    "gitlabPatFailed": "Authentifizierung mit dem angegebenen Token fehlgeschlagen.",
+    "shareLabel": "Mit allen Benutzern teilen",
+    "shareDescription": "Diesen Provider für alle Dashboard-Benutzer sichtbar und nutzbar machen. Nur Administratoren können diese Einstellung ändern.",
+    "sharedBadge": "Geteilt",
+    "sharedOwnerLabel": "Eigentümer: {username}",
+    "sharedReadOnlyTooltip": "Geteilte Provider können nur vom Eigentümer oder einem Administrator bearbeitet werden."
   },
   "quota": {
     "pageTitle": "Kontingent-Verwaltung",

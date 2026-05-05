@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { Errors } from "@/lib/errors";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { CreateProviderGroupSchema } from "@/lib/validation/schemas";
+import { isUserAdmin } from "@/lib/auth/admin";
 import { z } from "zod";
 
 interface ProviderRecord {
@@ -21,13 +22,18 @@ interface ProviderRecord {
   prefix: string | null;
   proxyUrl: string | null;
   headers: unknown;
+  isShared: boolean;
   createdAt: Date;
   updatedAt: Date;
   models: { id: string; customProviderId: string; upstreamName: string; alias: string }[];
   excludedModels: { id: string; customProviderId: string; pattern: string }[];
+  user: { id: string; username: string };
 }
 
-function sanitizeProvider(p: ProviderRecord) {
+function sanitizeProvider(p: ProviderRecord, viewerUserId: string, isAdmin: boolean) {
+  const isOwn = p.userId === viewerUserId;
+  const canSeeSecrets = isOwn || isAdmin;
+  const rawHeaders = (p.headers ?? {}) as Record<string, string>;
   return {
     id: p.id,
     name: p.name,
@@ -35,12 +41,22 @@ function sanitizeProvider(p: ProviderRecord) {
     baseUrl: p.baseUrl,
     prefix: p.prefix,
     proxyUrl: p.proxyUrl,
-    groupId: p.groupId,
+    // Non-owners see shared providers as ungrouped — the group belongs to the
+    // owner and has no meaning in the viewer's own grouping.
+    groupId: isOwn ? p.groupId : null,
     sortOrder: p.sortOrder,
-    headers: p.headers,
+    // Redact headers for non-owner non-admin viewers — they can contain
+    // Authorization tokens and other secrets. Admins keep visibility so
+    // they can meaningfully edit a shared provider they don't own.
+    headers: canSeeSecrets ? p.headers : {},
+    hasHeaders: Object.keys(rawHeaders).length > 0,
     models: p.models,
     excludedModels: p.excludedModels,
     hasEncryptedKey: p.apiKeyEncrypted !== null,
+    isShared: p.isShared,
+    isOwn,
+    ownerId: p.user.id,
+    ownerUsername: p.user.username,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };
@@ -53,7 +69,8 @@ export async function GET() {
   }
 
   try {
-    const [groups, ungrouped] = await Promise.all([
+    const isAdmin = await isUserAdmin(session.userId);
+    const [groups, sharedInOtherUsersGroups, ungrouped] = await Promise.all([
       prisma.providerGroup.findMany({
         where: { userId: session.userId },
         include: {
@@ -61,20 +78,39 @@ export async function GET() {
             include: {
               models: true,
               excludedModels: true,
+              user: { select: { id: true, username: true } },
             },
             orderBy: { sortOrder: "asc" },
           },
         },
         orderBy: { sortOrder: "asc" },
       }),
+      // Shared providers that the owner placed in their own group should still
+      // appear for non-owners (treated as ungrouped via sanitizeProvider).
       prisma.customProvider.findMany({
         where: {
-          userId: session.userId,
-          groupId: null,
+          isShared: true,
+          groupId: { not: null },
+          userId: { not: session.userId },
         },
         include: {
           models: true,
           excludedModels: true,
+          user: { select: { id: true, username: true } },
+        },
+        orderBy: { sortOrder: "asc" },
+      }),
+      prisma.customProvider.findMany({
+        where: {
+          OR: [
+            { userId: session.userId, groupId: null },
+            { isShared: true, groupId: null, userId: { not: session.userId } },
+          ],
+        },
+        include: {
+          models: true,
+          excludedModels: true,
+          user: { select: { id: true, username: true } },
         },
         orderBy: { sortOrder: "asc" },
       }),
@@ -82,9 +118,14 @@ export async function GET() {
 
     const safeGroups = groups.map(group => ({
       ...group,
-      providers: group.providers.map(sanitizeProvider),
+      providers: group.providers.map(p => sanitizeProvider(p, session.userId, isAdmin)),
     }));
-    const safeUngrouped = ungrouped.map(sanitizeProvider);
+    // Merge own ungrouped + shared-in-others' groups and re-sort by sortOrder
+    // so the UI sees a single deterministic order.
+    const safeUngrouped = [
+      ...ungrouped.map(p => sanitizeProvider(p, session.userId, isAdmin)),
+      ...sharedInOtherUsersGroups.map(p => sanitizeProvider(p, session.userId, isAdmin)),
+    ].sort((a, b) => a.sortOrder - b.sortOrder);
 
     return NextResponse.json({ groups: safeGroups, ungrouped: safeUngrouped });
   } catch (error) {

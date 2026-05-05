@@ -17,6 +17,11 @@ const BATCH_SIZE = 500;
 const LATENCY_BACKFILL_BATCH_SIZE = 100;
 const COLLECTOR_LEASE_STALE_MS = 15 * 60 * 1000;
 
+// CLIProxyAPI v6.10+ replaced the aggregated `/usage` endpoint with a
+// drain-on-read queue at `/usage-queue`. Each GET returns the events
+// recorded since the previous read, then empties the queue server-side.
+// The response is a flat array of QueueEntry objects.
+
 function markCollectorError(runId: string, errorMessage: string): Promise<void> {
   return prisma.collectorState
     .upsert({
@@ -44,95 +49,37 @@ function markCollectorError(runId: string, errorMessage: string): Promise<void> 
 }
 
 interface TokenDetails {
-  input_tokens: number;
-  output_tokens: number;
-  reasoning_tokens: number;
-  cached_tokens: number;
-  total_tokens: number;
-}
-
-interface RequestDetail {
-  timestamp: string;
-  latency_ms?: number;
-  source: string;
-  auth_index: string;
-  tokens: TokenDetails;
-  failed: boolean;
-}
-
-interface ModelUsage {
-  total_requests: number;
-  total_tokens: number;
-  details: RequestDetail[];
-}
-
-interface ApiUsageEntry {
-  total_requests: number;
-  total_tokens: number;
-  success_count?: number;
-  failure_count?: number;
   input_tokens?: number;
   output_tokens?: number;
-  models?: Record<string, ModelUsage>;
-  [key: string]: unknown;
+  reasoning_tokens?: number;
+  cached_tokens?: number;
+  total_tokens?: number;
 }
 
-interface RawUsageResponse {
-  total_requests: number;
-  success_count: number;
-  failure_count: number;
-  total_tokens: number;
-  apis: Record<string, ApiUsageEntry>;
-  requests_by_day?: Record<string, number>;
-  requests_by_hour?: Record<string, number>;
-  tokens_by_day?: Record<string, number>;
-  tokens_by_hour?: Record<string, number>;
+interface UsageQueueEntry {
+  timestamp: string;
+  latency_ms?: number;
+  source?: string;
+  auth_index: string;
+  tokens?: TokenDetails;
+  failed?: boolean;
+  provider?: string;
+  model: string;
+  alias?: string;
+  endpoint?: string;
+  auth_type?: string;
+  api_key?: string;
+  request_id?: string;
 }
 
-function isApiUsageEntry(value: unknown): value is ApiUsageEntry {
+function isUsageQueueEntry(value: unknown): value is UsageQueueEntry {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
   return (
-    typeof value === "object" &&
-    value !== null &&
-    "total_requests" in value &&
-    "total_tokens" in value &&
-    typeof (value as ApiUsageEntry).total_requests === "number" &&
-    typeof (value as ApiUsageEntry).total_tokens === "number"
+    typeof v.timestamp === "string" &&
+    typeof v.auth_index === "string" &&
+    typeof v.model === "string"
   );
-}
-
-function isRawUsageResponse(value: unknown): value is RawUsageResponse {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    !("total_requests" in value) ||
-    !("success_count" in value) ||
-    !("failure_count" in value) ||
-    !("total_tokens" in value) ||
-    !("apis" in value)
-  ) {
-    return false;
-  }
-
-  const obj = value as Record<string, unknown>;
-  if (
-    typeof obj.total_requests !== "number" ||
-    typeof obj.success_count !== "number" ||
-    typeof obj.failure_count !== "number" ||
-    typeof obj.total_tokens !== "number" ||
-    typeof obj.apis !== "object" ||
-    obj.apis === null
-  ) {
-    return false;
-  }
-
-  const apis = obj.apis as Record<string, unknown>;
-  for (const apiValue of Object.values(apis)) {
-    if (!isApiUsageEntry(apiValue)) {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 interface UsageRecordCandidate {
@@ -266,7 +213,7 @@ export async function POST(request: NextRequest) {
     let authFilesResponse: Response | null = null;
     try {
       [usageResponse, authFilesResponse] = await Promise.all([
-        fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/usage`, {
+        fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/usage-queue`, {
           method: "GET",
           headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
           signal: AbortSignal.timeout(30_000),
@@ -298,7 +245,9 @@ export async function POST(request: NextRequest) {
           ? authFilesJson
           : Array.isArray((authFilesJson as Record<string, unknown>)?.auth_files)
             ? (authFilesJson as Record<string, unknown>).auth_files as AuthFileEntry[]
-            : [];
+            : Array.isArray((authFilesJson as Record<string, unknown>)?.files)
+              ? (authFilesJson as Record<string, unknown>).files as AuthFileEntry[]
+              : [];
         for (const entry of entries) {
           if (entry.auth_index) {
             authIndexToFile.set(entry.auth_index, {
@@ -318,7 +267,7 @@ export async function POST(request: NextRequest) {
       await usageResponse.body?.cancel();
       logger.error(
         { status: usageResponse.status, statusText: usageResponse.statusText },
-        "CLIProxyAPI usage endpoint returned error"
+        "CLIProxyAPI usage-queue endpoint returned error"
       );
       await markCollectorError(runId, "Failed to fetch usage data");
       return Errors.badGateway("Failed to fetch usage data from CLIProxyAPI");
@@ -326,21 +275,28 @@ export async function POST(request: NextRequest) {
 
     const responseJson: unknown = await usageResponse.json();
 
-    const rawData: unknown =
-      typeof responseJson === "object" &&
-      responseJson !== null &&
-      "usage" in responseJson
-        ? (responseJson as Record<string, unknown>).usage
-        : responseJson;
+    // /usage-queue returns a flat array. Be defensive about wrapped shapes
+    // that some intermediates may add (e.g. {queue: [...]} or {events: [...]}).
+    const rawEntries: unknown =
+      Array.isArray(responseJson)
+        ? responseJson
+        : typeof responseJson === "object" && responseJson !== null
+          ? (responseJson as Record<string, unknown>).queue ??
+            (responseJson as Record<string, unknown>).events ??
+            (responseJson as Record<string, unknown>).usage ??
+            null
+          : null;
 
-    if (!isRawUsageResponse(rawData)) {
+    if (!Array.isArray(rawEntries)) {
       logger.error(
         { response: JSON.stringify(responseJson).slice(0, 200) },
-        "Unexpected usage response format from CLIProxyAPI"
+        "Unexpected usage-queue response format from CLIProxyAPI"
       );
       await markCollectorError(runId, "Invalid usage data format");
       return Errors.badGateway("Invalid usage data format from CLIProxyAPI");
     }
+
+    const entries = rawEntries.filter(isUsageQueueEntry);
 
     const syncResult = await syncKeysToCliProxyApi();
     if (!syncResult.ok) {
@@ -389,75 +345,76 @@ export async function POST(request: NextRequest) {
 
     const candidates: UsageRecordCandidate[] = [];
 
-    for (const [apiGroupKey, apiEntry] of Object.entries(rawData.apis)) {
-      const models = apiEntry.models as Record<string, ModelUsage> | undefined;
-      if (!models) continue;
+    for (const entry of entries) {
+      const authIndex = entry.auth_index;
+      if (!authIndex) continue;
 
-      const keyGroupInfo = apiGroupKey.startsWith("sk-")
-        ? fullKeyMap.get(apiGroupKey) ?? null
-        : null;
+      const tokens = entry.tokens ?? {};
+      const source = entry.source ?? "";
+      const model = entry.model;
 
-      for (const [modelName, modelData] of Object.entries(models)) {
-        if (!modelData.details || !Array.isArray(modelData.details)) continue;
+      let resolvedUserId: string | null = null;
+      let resolvedApiKeyId: string | null = null;
 
-        for (const detail of modelData.details) {
-          const authIndex = detail.auth_index;
-          if (!authIndex) continue;
-
-          let resolvedUserId: string | null = null;
-          let resolvedApiKeyId: string | null = null;
-
-          // Resolution priority: 1) API key grouping 2) auth-files 3) source email 4) auth_index prefix
-          if (keyGroupInfo) {
-            resolvedUserId = keyGroupInfo.userId;
-            resolvedApiKeyId = keyGroupInfo.apiKeyId;
-          }
-
-          if (!resolvedUserId) {
-            const authFile = authIndexToFile.get(authIndex);
-            if (authFile) {
-              const byFile = sourceToUser.get(authFile.fileName.toLowerCase());
-              if (byFile) {
-                resolvedUserId = byFile;
-              } else if (authFile.email) {
-                resolvedUserId = sourceToUser.get(authFile.email.toLowerCase()) ?? null;
-              }
-            }
-          }
-
-          if (!resolvedUserId && detail.source) {
-            resolvedUserId = sourceToUser.get(detail.source.toLowerCase()) ?? null;
-          }
-
-          if (!resolvedUserId) {
-            const keyInfo = keyMap.get(authIndex);
-            if (keyInfo) {
-              resolvedUserId = keyInfo.userId;
-              resolvedApiKeyId = keyInfo.apiKeyId;
-            }
-          }
-
-          if (resolvedUserId && !resolvedApiKeyId) {
-            resolvedApiKeyId = userToApiKey.get(resolvedUserId) ?? null;
-          }
-
-          candidates.push({
-            authIndex,
-            apiKeyId: resolvedApiKeyId,
-            userId: resolvedUserId,
-            model: modelName,
-            source: detail.source || "",
-            timestamp: new Date(detail.timestamp),
-            latencyMs: Number.isFinite(Number(detail.latency_ms)) ? Math.max(0, Math.round(Number(detail.latency_ms))) : 0,
-            inputTokens: detail.tokens?.input_tokens || 0,
-            outputTokens: detail.tokens?.output_tokens || 0,
-            reasoningTokens: detail.tokens?.reasoning_tokens || 0,
-            cachedTokens: detail.tokens?.cached_tokens || 0,
-            totalTokens: detail.tokens?.total_tokens || 0,
-            failed: detail.failed || false,
-          });
+      // Resolution priority:
+      // 1) full api_key included on the queue entry (new endpoint provides this directly)
+      // 2) auth-files lookup by auth_index
+      // 3) source email
+      // 4) auth_index treated as a key prefix
+      if (entry.api_key) {
+        const keyInfo = fullKeyMap.get(entry.api_key);
+        if (keyInfo) {
+          resolvedUserId = keyInfo.userId;
+          resolvedApiKeyId = keyInfo.apiKeyId;
         }
       }
+
+      if (!resolvedUserId) {
+        const authFile = authIndexToFile.get(authIndex);
+        if (authFile) {
+          const byFile = sourceToUser.get(authFile.fileName.toLowerCase());
+          if (byFile) {
+            resolvedUserId = byFile;
+          } else if (authFile.email) {
+            resolvedUserId = sourceToUser.get(authFile.email.toLowerCase()) ?? null;
+          }
+        }
+      }
+
+      if (!resolvedUserId && source) {
+        resolvedUserId = sourceToUser.get(source.toLowerCase()) ?? null;
+      }
+
+      if (!resolvedUserId) {
+        const keyInfo = keyMap.get(authIndex);
+        if (keyInfo) {
+          resolvedUserId = keyInfo.userId;
+          resolvedApiKeyId = keyInfo.apiKeyId;
+        }
+      }
+
+      if (resolvedUserId && !resolvedApiKeyId) {
+        resolvedApiKeyId = userToApiKey.get(resolvedUserId) ?? null;
+      }
+
+      const ts = new Date(entry.timestamp);
+      if (Number.isNaN(ts.getTime())) continue;
+
+      candidates.push({
+        authIndex,
+        apiKeyId: resolvedApiKeyId,
+        userId: resolvedUserId,
+        model,
+        source,
+        timestamp: ts,
+        latencyMs: Number.isFinite(Number(entry.latency_ms)) ? Math.max(0, Math.round(Number(entry.latency_ms))) : 0,
+        inputTokens: tokens.input_tokens || 0,
+        outputTokens: tokens.output_tokens || 0,
+        reasoningTokens: tokens.reasoning_tokens || 0,
+        cachedTokens: tokens.cached_tokens || 0,
+        totalTokens: tokens.total_tokens || 0,
+        failed: entry.failed || false,
+      });
     }
 
     let totalStored = 0;

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.80](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.79...dashboard-v0.1.80) (2026-05-05)
+
+
+### Bug Fixes
+
+* **entrypoint:** add isShared column migration for custom_providers ([c35d09f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c35d09f8e319f97ae45ac1dc085f27bf6ecb6472))
+
 ## [0.1.79](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.78...dashboard-v0.1.79) (2026-05-05)
 
 

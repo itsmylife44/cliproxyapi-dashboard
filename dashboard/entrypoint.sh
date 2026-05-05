@@ -260,6 +260,12 @@ async function migrate() {
       ALTER TABLE "custom_providers" ALTER COLUMN "apiKeyHash" DROP NOT NULL;
     EXCEPTION WHEN others THEN NULL; END $$;
 
+    -- Add isShared flag if missing (existing installs upgrading past 20260429000000_custom_provider_is_shared)
+    DO $$ BEGIN
+      ALTER TABLE "custom_providers" ADD COLUMN "isShared" BOOLEAN NOT NULL DEFAULT false;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    CREATE INDEX IF NOT EXISTS "custom_providers_isShared_idx" ON "custom_providers"("isShared");
+
     -- Provider groups table (grouping + ordering for custom providers)
     CREATE TABLE IF NOT EXISTS "provider_groups" (
       "id" TEXT NOT NULL,

@@ -119,7 +119,7 @@ services:
   # Only starts when COMPOSE_PROFILES includes "perplexity" (set by install.sh)
   perplexity-sidecar:
     profiles: ["perplexity"]
-    build: ${INSTALL_DIR:-.}/../perplexity-sidecar
+    build: ../perplexity-sidecar
     container_name: cliproxyapi-perplexity-sidecar
     restart: unless-stopped
     # Resource limits (calibrated from real usage: ~72MiB actual)

@@ -232,6 +232,7 @@ threading.Thread(target=_startup_sync, daemon=True).start()
 
 _client: Perplexity | None = None
 _client_token_hash: str = ""
+_client_lock = threading.Lock()
 
 
 def _fetch_session_token_from_dashboard() -> str | None:
@@ -288,15 +289,16 @@ def get_client() -> Perplexity:
     token = _get_session_token()
     token_hash = token[:16] + token[-16:]
 
-    if _client is None or token_hash != _client_token_hash:
-        if _client is not None:
-            try:
-                _client.close()
-            except Exception:
-                pass
-        log.info("Initialising Perplexity client (token changed or first init)")
-        _client = Perplexity(session_token=token)
-        _client_token_hash = token_hash
+    with _client_lock:
+        if _client is None or token_hash != _client_token_hash:
+            if _client is not None:
+                try:
+                    _client.close()
+                except Exception:
+                    pass
+            log.info("Initialising Perplexity client (token changed or first init)")
+            _client = Perplexity(session_token=token)
+            _client_token_hash = token_hash
 
     return _client
 

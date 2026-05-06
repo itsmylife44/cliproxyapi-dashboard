@@ -1030,10 +1030,10 @@ EOF
         if grep -q "extra_hosts" "$OVERRIDE_FILE"; then
             log_info "extra_hosts already configured in override file"
         else
-            log_warn "docker-compose.override.yml exists but doesn't have extra_hosts."
-            log_warn "Please manually add the following under 'services: dashboard:':"
-            log_warn "    extra_hosts:"
-            log_warn "      - \"host.docker.internal:host-gateway\""
+            log_warning "docker-compose.override.yml exists but doesn't have extra_hosts."
+            log_warning "Please manually add the following under 'services: dashboard:':"
+            log_warning "    extra_hosts:"
+            log_warning "      - \"host.docker.internal:host-gateway\""
         fi
     else
         # Create new override file

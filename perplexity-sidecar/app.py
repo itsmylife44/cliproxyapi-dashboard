@@ -1,5 +1,7 @@
 import asyncio
+import importlib
 import json
+import re
 import logging
 import os
 import subprocess
@@ -129,7 +131,9 @@ log.info("Discovered %d models: %s", len(MODEL_REGISTRY), list(MODEL_REGISTRY.ke
 
 
 # ---------------------------------------------------------------------------
-# Auto-update: check PyPI periodically, restart if newer version available
+# Auto-update: periodically reapply the requirements.txt pin and restart if
+# the installed version actually changed. Constraints come from requirements
+# .txt so a future major bump (e.g. 2.x) will not be installed silently.
 # ---------------------------------------------------------------------------
 
 
@@ -155,18 +159,71 @@ def _get_installed_version() -> str:
         return "0.0.0"
 
 
-def _get_pypi_version() -> str | None:
+# Package name and version-specifier source. The auto-updater MUST resolve the
+# spec against requirements.txt so a runtime upgrade can never escape the pin
+# that was tested at image-build time.
+PACKAGE_NAME = "perplexity-webui-scraper"
+REQUIREMENTS_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "requirements.txt"
+)
+# Used only when requirements.txt is missing or unparseable. Mirror the pin
+# that ships in the repo so behaviour is predictable in both cases.
+DEFAULT_PIN_SPEC = f"{PACKAGE_NAME}>=1.0.2,<2"
+
+# Matches a requirements.txt line for PACKAGE_NAME, capturing the version
+# specifier portion (anything after the name up to a comment / env marker).
+_REQ_LINE_RE = re.compile(
+    r"^\s*(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)\s*(?P<spec>[^;#]*)",
+)
+
+
+def _normalize_dist_name(name: str) -> str:
+    """PEP 503 normalisation: lowercase + collapse runs of ``-_.`` to ``-``."""
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _read_pinned_spec() -> str:
+    """Return the pip install spec for PACKAGE_NAME from requirements.txt.
+
+    Falls back to ``DEFAULT_PIN_SPEC`` when the file is missing, the package
+    is absent, or the line is malformed. The returned string is suitable to
+    pass directly to ``pip install``.
+    """
+    target = _normalize_dist_name(PACKAGE_NAME)
     try:
-        req = urllib.request.Request(
-            "https://pypi.org/pypi/perplexity-webui-scraper/json",
-            headers={"Accept": "application/json"},
+        with open(REQUIREMENTS_PATH, encoding="utf-8") as fh:
+            for raw in fh:
+                line = raw.strip()
+                if not line or line.startswith("#") or line.startswith("-"):
+                    continue
+                m = _REQ_LINE_RE.match(line)
+                if not m:
+                    continue
+                if _normalize_dist_name(m.group("name")) != target:
+                    continue
+                spec = (m.group("spec") or "").strip()
+                # Reassemble using the canonical package name; pip is
+                # case-insensitive but stable casing keeps logs readable.
+                return f"{PACKAGE_NAME}{spec}" if spec else PACKAGE_NAME
+    except OSError as exc:
+        log.warning(
+            "Cannot read %s for auto-update pin (%s); using default %r",
+            REQUIREMENTS_PATH,
+            exc,
+            DEFAULT_PIN_SPEC,
         )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            return data.get("info", {}).get("version")
-    except Exception as exc:
-        log.debug("PyPI version check failed: %s", exc)
-    return None
+        return DEFAULT_PIN_SPEC
+
+    log.warning(
+        "%s not listed in %s; using default %r",
+        PACKAGE_NAME,
+        REQUIREMENTS_PATH,
+        DEFAULT_PIN_SPEC,
+    )
+    return DEFAULT_PIN_SPEC
+
+
+PINNED_SPEC = _read_pinned_spec()
 
 
 def _trigger_dashboard_sync():
@@ -190,20 +247,19 @@ def _trigger_dashboard_sync():
 
 
 def _auto_update_loop():
+    """Periodically reapply the pinned spec; restart only when the installed
+    version actually changed.
+
+    pip itself enforces the version constraint in ``PINNED_SPEC``, so a major
+    upstream release outside the pin (e.g. 2.x while pinned to ``<2``) is a
+    no-op here and does not trigger a restart loop.
+    """
     while True:
         time.sleep(UPDATE_CHECK_INTERVAL)
         try:
-            installed = _get_installed_version()
-            latest = _get_pypi_version()
-            if not latest or latest == installed:
-                log.debug("Library up to date (%s)", installed)
-                continue
+            installed_before = _get_installed_version()
 
-            log.info(
-                "New perplexity-webui-scraper version available: %s -> %s. Upgrading and restarting...",
-                installed,
-                latest,
-            )
+            log.debug("Reapplying pin %r (installed: %s)", PINNED_SPEC, installed_before)
             result = subprocess.run(
                 [
                     sys.executable,
@@ -213,19 +269,42 @@ def _auto_update_loop():
                     "--no-cache-dir",
                     "--quiet",
                     "--upgrade",
-                    "perplexity-webui-scraper",
+                    PINNED_SPEC,
                 ],
                 capture_output=True,
                 text=True,
                 timeout=120,
             )
-            if result.returncode == 0:
-                log.info("Upgrade successful. Triggering model sync before restart...")
-                _trigger_dashboard_sync()
-                log.info("Exiting for restart...")
-                os._exit(0)
-            else:
-                log.error("Upgrade failed: %s", result.stderr)
+
+            if result.returncode != 0:
+                log.error(
+                    "pip install %s failed (rc=%d): %s",
+                    PINNED_SPEC,
+                    result.returncode,
+                    (result.stderr or "").strip(),
+                )
+                continue
+
+            # importlib.metadata caches dist info per-call, but the loader
+            # itself caches the path entries. Invalidate so the post-install
+            # version read sees freshly written .dist-info files.
+            importlib.invalidate_caches()
+            installed_after = _get_installed_version()
+
+            if installed_after == installed_before:
+                log.debug("Library already at pinned ceiling (%s)", installed_after)
+                continue
+
+            log.info(
+                "%s upgraded within pin %r: %s -> %s. Syncing models and restarting...",
+                PACKAGE_NAME,
+                PINNED_SPEC,
+                installed_before,
+                installed_after,
+            )
+            _trigger_dashboard_sync()
+            log.info("Exiting for restart...")
+            os._exit(0)
         except Exception as exc:
             log.error("Auto-update check failed: %s", exc)
 

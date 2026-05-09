@@ -174,6 +174,17 @@ docker compose logs dashboard
 - JWT_SECRET not set in `.env`
 - Dashboard container can't reach PostgreSQL
 
+### Header shows "System offline" even though the proxy is healthy
+
+If the management API is reachable (e.g. `curl -H "Authorization: Bearer $MANAGEMENT_API_KEY" $CLIPROXYAPI_MANAGEMENT_URL/config` returns `200`) but the dashboard header still flags **System offline**, you are most likely hitting a name-resolution mismatch.
+
+Earlier releases inferred liveness from `docker ps` filtered by an exact regex match against `CLIPROXYAPI_CONTAINER_NAME`. Docker Swarm names tasks `<stack>_<service>.<slot>.<task-id>`, so the static name never matched and the indicator was permanently red ([#215](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/215)). Kubernetes, Nomad, and Compose without a pinned `container_name:` were affected the same way.
+
+The current release decides liveness by probing the Management API directly, so the indicator now goes green under any orchestrator. The `CLIPROXYAPI_CONTAINER_NAME` variable is only consulted to populate the cosmetic uptime label via `docker inspect`; if the name does not resolve (Swarm task IDs, K8s pod IDs, no Docker socket) the uptime simply renders as unknown — the green dot still works. If you upgrade and the indicator stays red, check:
+
+- The dashboard container can reach `CLIPROXYAPI_MANAGEMENT_URL` on the cluster network.
+- `MANAGEMENT_API_KEY` matches the value the proxy is configured with — a mismatch now correctly surfaces as offline.
+
 ## Can't Login to Dashboard
 
 There are no default credentials. The setup flow is:

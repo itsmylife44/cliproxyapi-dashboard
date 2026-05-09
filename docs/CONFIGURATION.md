@@ -31,7 +31,7 @@ Configuration is managed through `infrastructure/.env`.
 | `JWT_EXPIRES_IN` | No | JWT token expiration time | `7d` |
 | `LOG_LEVEL` | No | Pino log level (`fatal`, `error`, `warn`, `info`, `debug`, `trace`) | `info` |
 | `LOG_DIR` | No | Directory for log file storage | `<cwd>/logs` |
-| `CLIPROXYAPI_CONTAINER_NAME` | No | Docker container name for CLIProxyAPI | `cliproxyapi` |
+| `CLIPROXYAPI_CONTAINER_NAME` | No | Docker container name used **only** for the cosmetic uptime indicator (via `docker inspect`). Liveness is determined by probing `CLIPROXYAPI_MANAGEMENT_URL`, so this can be left at its default under Docker Swarm or Kubernetes — uptime simply reads as unknown when the name does not resolve. | `cliproxyapi` |
 | `DOCKER_HOST` | No | Docker socket proxy URL (for container management) | `tcp://docker-proxy:2375` |
 | `GITHUB_REPO` | No | GitHub repo for update checks | `itsmylife44/cliproxyapi-dashboard` |
 | `SYNC_TOKEN_MAX_AGE_DAYS` | No | Config sync token expiration in days | `90` |

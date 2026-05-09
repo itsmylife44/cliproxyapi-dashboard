@@ -14,9 +14,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from perplexity_webui_scraper import (
-    ConversationConfig,
     MODELS,
-    Model,
+    ConversationConfig,
     Perplexity,
     PerplexityError,
 )
@@ -38,62 +37,87 @@ SESSION_COOKIE_NAME = "__Secure-next-auth.session-token"
 # Auto Model Discovery — builds model map from library at startup
 # ---------------------------------------------------------------------------
 
-PROVIDER_MAP = {
-    "gpt": "openai",
-    "claude": "anthropic",
-    "gemini": "google",
-    "grok": "xai",
-    "kimi": "moonshot",
-    "pplx": "perplexity",
-    "sonar": "perplexity",
-    "experimental": "perplexity",
+# Map of model-id namespace prefixes (e.g. "openai/gpt-5.4" -> "openai") to the
+# provider label we expose downstream. perplexity-webui-scraper >= 1.0 ships
+# namespaced model ids, so we infer the provider from the namespace half.
+NAMESPACE_PROVIDER = {
+    "perplexity": "perplexity",
+    "openai": "openai",
+    "anthropic": "anthropic",
+    "google": "google",
+    "xai": "xai",
+    "moonshot": "moonshot",
+    "nvidia": "nvidia",
+}
+
+# Map of library short-slugs (the part after "<namespace>/") to the
+# perplexity-prefixed alias we expose on /v1/models. Anything not listed
+# here falls through to the generic "perplexity-{slug}" form. "sonar-2"
+# is mapped onto "perplexity-sonar" so existing config.yaml entries keep
+# working when Perplexity renames their Sonar model.
+SLUG_ALIASES = {
+    "best": "perplexity-auto",
+    "sonar": "perplexity-sonar",
+    "sonar-2": "perplexity-sonar",
+    "deep-research": "perplexity-deep-research",
 }
 
 
-def _slug_to_alias(slug: str) -> str:
-    """Convert library slug to our perplexity-prefixed alias.
-    e.g. 'best' -> 'perplexity-auto', 'gpt-5.4-thinking' -> 'perplexity-gpt-5.4-thinking'
+def _split_model_id(model_id: str) -> tuple[str, str]:
+    """Split a namespaced model id into ``(namespace, slug)``.
+
+    Falls back to ``("", model_id)`` when no namespace is present (older
+    library versions or unexpected ids).
     """
-    special = {
-        "best": "perplexity-auto",
-        "sonar": "perplexity-sonar",
-        "deep-research": "perplexity-deep-research",
-    }
-    if slug in special:
-        return special[slug]
+    if "/" in model_id:
+        namespace, _, slug = model_id.partition("/")
+        return namespace, slug
+    return "", model_id
+
+
+def _slug_to_alias(slug: str) -> str:
+    """Convert a library slug to our perplexity-prefixed alias.
+
+    e.g. ``"best"`` -> ``"perplexity-auto"``,
+         ``"gpt-5.4-thinking"`` -> ``"perplexity-gpt-5.4-thinking"``.
+    """
+    if slug in SLUG_ALIASES:
+        return SLUG_ALIASES[slug]
     return f"perplexity-{slug}"
 
 
-def _infer_provider(slug: str) -> str:
-    for prefix, provider in PROVIDER_MAP.items():
-        if slug.lower().startswith(prefix):
-            return provider
-    return "perplexity"
+def _infer_provider(namespace: str) -> str:
+    return NAMESPACE_PROVIDER.get(namespace, "perplexity")
 
 
 def discover_models() -> dict[str, dict]:
-    """Build {alias: {model, identifier, provider}} map from MODELS dict."""
+    """Build ``{alias: {model_id, identifier, provider, slug}}`` from MODELS.
+
+    perplexity-webui-scraper >= 1.0 exposes ``MODELS`` as a ``ModelRegistry``
+    singleton; iterate via ``MODELS.list_all()`` and pass model-id strings
+    (e.g. ``"perplexity/best"``) into ``Conversation.ask(model=...)``.
+    """
     registry: dict[str, dict] = {}
 
-    for slug, model_obj in MODELS.items():
+    for model in MODELS.list_all():
+        namespace, slug = _split_model_id(model.id)
         alias = _slug_to_alias(slug)
-        provider = _infer_provider(slug)
+        provider = _infer_provider(namespace)
         registry[alias] = {
-            "model": model_obj,
-            "identifier": model_obj.identifier,
+            "model_id": model.id,
+            "identifier": model.identifier,
             "provider": provider,
             "slug": slug,
         }
 
-    # Extra alias: perplexity-pro -> same as perplexity-auto
+    # Stable user-facing aliases. perplexity-pro is the public name for the
+    # auto-select model; perplexity-reasoning historically maps onto the same
+    # backend; perplexity-labs falls back to deep-research when no dedicated
+    # labs model is present.
     if "perplexity-auto" in registry:
         registry["perplexity-pro"] = registry["perplexity-auto"]
-
-    # Extra alias: perplexity-reasoning -> perplexity-auto (uses BEST in reasoning context)
-    if "perplexity-auto" in registry:
         registry["perplexity-reasoning"] = registry["perplexity-auto"]
 
-    # Extra alias: perplexity-labs -> deep-research if no dedicated labs model
     if "perplexity-labs" not in registry and "perplexity-deep-research" in registry:
         registry["perplexity-labs"] = registry["perplexity-deep-research"]
 
@@ -376,7 +400,7 @@ async def chat_completions(request: Request):
             detail=f"Unknown model: {model_name}. Available: {list(MODEL_REGISTRY.keys())}",
         )
 
-    model_obj = entry["model"]
+    model_id = entry["model_id"]
     query = messages_to_query(messages)
     request_id = f"chatcmpl-{uuid4().hex[:24]}"
     created = int(time.time())
@@ -388,7 +412,7 @@ async def chat_completions(request: Request):
     if stream:
         return StreamingResponse(
             _stream_response(
-                conversation, query, model_obj, model_name, request_id, created
+                conversation, query, model_id, model_name, request_id, created
             ),
             media_type="text/event-stream",
             headers={
@@ -399,7 +423,7 @@ async def chat_completions(request: Request):
         )
 
     try:
-        conversation.ask(query, model=model_obj, stream=False)
+        conversation.ask(query, model=model_id, stream=False)
         answer = conversation.answer or ""
 
         return JSONResponse(
@@ -433,7 +457,7 @@ async def chat_completions(request: Request):
 async def _stream_response(
     conversation,
     query: str,
-    model_obj: Model,
+    model_id: str,
     model_name: str,
     request_id: str,
     created: int,
@@ -444,7 +468,7 @@ async def _stream_response(
     def producer():
         last = ""
         try:
-            for resp in conversation.ask(query, model=model_obj, stream=True):
+            for resp in conversation.ask(query, model=model_id, stream=True):
                 current = resp.answer or ""
                 if len(current) > len(last):
                     delta = current[len(last) :]
@@ -453,7 +477,7 @@ async def _stream_response(
             loop.call_soon_threadsafe(queue.put_nowait, ("done", ""))
         except Exception as e:
             try:
-                conversation.ask(query, model=model_obj, stream=False)
+                conversation.ask(query, model=model_id, stream=False)
                 current = conversation.answer or ""
                 if len(current) > len(last):
                     loop.call_soon_threadsafe(

@@ -2,6 +2,37 @@
 
 ← [Back to README](../README.md)
 
+## `no configuration file provided: not found`
+
+If `docker compose` reports:
+
+```text
+no configuration file provided: not found
+```
+
+…you are running the command from a directory that does not contain `docker-compose.yml`. The compose file lives in `infrastructure/`, so any `docker compose ...` invocation must either run from there or be given an explicit path.
+
+```bash
+# Run from the infrastructure directory (recommended)
+cd /path/to/cliproxyapi-dashboard/infrastructure
+docker compose up -d --wait
+
+# Or run from anywhere with --project-directory
+docker compose --project-directory /path/to/cliproxyapi-dashboard/infrastructure up -d --wait
+```
+
+If you installed via `install.sh`, prefer the systemd unit — it already sets the
+working directory correctly:
+
+```bash
+sudo systemctl start cliproxyapi-stack
+sudo systemctl status cliproxyapi-stack
+```
+
+The systemd unit also uses `--project-directory` so it is safe to copy the
+`ExecStart` line out of `systemctl cat cliproxyapi-stack` and run it manually
+from any directory.
+
 ## Services Not Starting
 
 ### Local build vs image behavior (important)

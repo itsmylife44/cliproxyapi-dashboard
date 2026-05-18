@@ -629,19 +629,26 @@ if [ $SKIP_SERVICE -eq 0 ]; then
     # services explicitly. NOTE: when services are listed explicitly on the command
     # line Docker Compose does NOT auto-start profiled services from COMPOSE_PROFILES,
     # so perplexity-sidecar must also be listed here when it is enabled.
+    #
+    # We pass --project-directory with an absolute path so the command is portable
+    # across working directories. Users who copy it from `systemctl cat` and run it
+    # from a different cwd will not hit "no configuration file provided: not found"
+    # (see https://github.com/itsmylife44/cliproxyapi-dashboard/issues/216).
+    COMPOSE_BASE_CMD="/usr/bin/docker compose --project-directory $INSTALL_DIR/infrastructure"
     if [ $EXTERNAL_PROXY -eq 1 ]; then
         COMPOSE_SERVICES="postgres cliproxyapi docker-proxy dashboard backup-scheduler"
         if [ $PERPLEXITY_ENABLED -eq 1 ]; then
             COMPOSE_SERVICES="$COMPOSE_SERVICES perplexity-sidecar"
         fi
-        COMPOSE_START_CMD="/usr/bin/docker compose up -d --wait $COMPOSE_SERVICES"
+        COMPOSE_START_CMD="$COMPOSE_BASE_CMD up -d --wait $COMPOSE_SERVICES"
         COMPOSE_DESC="(without Caddy - using external reverse proxy)"
     else
         # No explicit list — Compose starts everything; COMPOSE_PROFILES in .env
         # activates the perplexity profile when present.
-        COMPOSE_START_CMD="/usr/bin/docker compose up -d --wait"
+        COMPOSE_START_CMD="$COMPOSE_BASE_CMD up -d --wait"
         COMPOSE_DESC="(full stack)"
     fi
+    COMPOSE_STOP_CMD="$COMPOSE_BASE_CMD down"
     log_info "Systemd compose command: $COMPOSE_START_CMD $COMPOSE_DESC"
 
     cat > "$SERVICE_FILE" << EOF
@@ -656,7 +663,7 @@ Type=oneshot
 RemainAfterExit=true
 WorkingDirectory=$INSTALL_DIR/infrastructure
 ExecStart=$COMPOSE_START_CMD
-ExecStop=/usr/bin/docker compose down
+ExecStop=$COMPOSE_STOP_CMD
 TimeoutStartSec=300
 TimeoutStopSec=120
 
@@ -1076,7 +1083,8 @@ echo ""
 echo "  2. Check status:"
 echo "     sudo systemctl status cliproxyapi-stack"
 echo ""
-echo "  3. View logs:"
+echo "  3. View logs (must run from infrastructure/ — docker compose"
+echo "     needs to find docker-compose.yml in the current directory):"
 echo "     cd $INSTALL_DIR/infrastructure"
 echo "     docker compose logs -f"
 echo ""

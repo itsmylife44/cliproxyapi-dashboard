@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.81](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.80...dashboard-v0.1.81) (2026-05-20)
+
+
+### Bug Fixes
+
+* **install:** make systemd compose command cwd-portable (fixes [#216](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/216)) ([#217](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/217)) ([bb01ed7](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/bb01ed7b67c4c2325801a6120075599c17e5e9a8))
+* log_warn to log_warning typo in install.sh (fixes [#205](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/205)) ([#214](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/214)) ([97a29dd](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/97a29dde74ee72b0e733f3a14b5c25490e303669))
+* **perplexity-sidecar:** auto-updater must respect requirements.txt pin ([abba67f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/abba67f68cc2ea0ba98edecbe02f876daf5f99e4))
+* **perplexity-sidecar:** port to perplexity-webui-scraper 1.0.x API (fixes [#212](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/212)) ([5e50b59](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/5e50b59bac9bf2a29dfbf0ae2f0666c66f8b0961))
+* **proxy/status:** probe management API for liveness instead of docker ps name match ([#215](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/215)) ([14e9c16](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/14e9c1682e17c74a123feec2997cd6e608631825))
+* **usage:** drain queued records in batches ([#219](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/219)) ([dd6ef62](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/dd6ef624deb7088a62950b7f4eebec10d3ffcba3))
+
 ## [0.1.80](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.79...dashboard-v0.1.80) (2026-05-05)
 
 

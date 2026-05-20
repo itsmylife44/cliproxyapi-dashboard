@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
     let authFilesResponse: Response | null = null;
     try {
       [usageResponse, authFilesResponse] = await Promise.all([
-        fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/usage-queue`, {
+        fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/usage-queue?count=${BATCH_SIZE}`, {
           method: "GET",
           headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
           signal: AbortSignal.timeout(30_000),

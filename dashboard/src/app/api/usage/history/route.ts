@@ -111,8 +111,10 @@ export async function GET(request: NextRequest) {
     return Errors.validation("Invalid date format. Use YYYY-MM-DD.");
   }
 
-  const fromDate = new Date(fromParam + "T00:00:00.000Z");
-  const toDate = new Date(toParam + "T23:59:59.999Z");
+  const [fromYear, fromMonth, fromDay] = fromParam.split("-").map(Number) as [number, number, number];
+  const [toYear, toMonth, toDay] = toParam.split("-").map(Number) as [number, number, number];
+  const fromDate = new Date(fromYear, fromMonth - 1, fromDay);
+  const toDate = new Date(toYear, toMonth - 1, toDay, 23, 59, 59, 999);
 
   if (fromDate > toDate) {
     return Errors.validation("from date must be before to date");
@@ -270,8 +272,11 @@ export async function GET(request: NextRequest) {
       keyUsage.models[modelName].inputTokens += record.inputTokens;
       keyUsage.models[modelName].outputTokens += record.outputTokens;
 
-      // Daily aggregation for charts
-      const dayKey = record.timestamp.toISOString().slice(0, 10);
+      // Daily aggregation for charts (use server local timezone, not UTC)
+      const yr = record.timestamp.getFullYear();
+      const mo = String(record.timestamp.getMonth() + 1).padStart(2, "0");
+      const dy = String(record.timestamp.getDate()).padStart(2, "0");
+      const dayKey = `${yr}-${mo}-${dy}`;
       if (!dailyMap[dayKey]) {
         dailyMap[dayKey] = { requests: 0, tokens: 0, inputTokens: 0, outputTokens: 0, success: 0, failure: 0 };
       }

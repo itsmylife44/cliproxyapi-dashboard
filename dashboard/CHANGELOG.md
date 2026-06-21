@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.82](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.81...dashboard-v0.1.82) (2026-06-21)
+
+
+### Bug Fixes
+
+* replace wget healthcheck with bash /dev/tcp for cliproxyapi container ([#223](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/223)) ([3cf8634](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/3cf863480313ff8fce44ea9d64c817418dd5ec33))
+* **usage:** respect server TZ for today filter and daily aggregation ([#221](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/221)) ([a6454e9](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a6454e950f83ada1f92e73037dff291eb67c8d49))
+
 ## [0.1.81](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.80...dashboard-v0.1.81) (2026-05-20)
 
 

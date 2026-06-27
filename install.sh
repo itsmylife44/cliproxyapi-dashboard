@@ -3,10 +3,40 @@
 # CLIProxyAPI Stack Installation Script
 # Installs Docker, Docker Compose, configures UFW, generates secrets, and sets up systemd service
 #
-# Usage: sudo ./install.sh
+# Usage: sudo ./install.sh [--dashboard-only]
 #
 
 set -euo pipefail
+
+DASHBOARD_ONLY=0
+
+show_usage() {
+    cat << EOF
+Usage: sudo ./install.sh [options]
+
+Options:
+  --dashboard-only   Install only the dashboard stack and connect it to an existing CLIProxyAPI
+  -h, --help         Show this help message
+EOF
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --dashboard-only)
+            DASHBOARD_ONLY=1
+            ;;
+        -h|--help)
+            show_usage
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            show_usage
+            exit 1
+            ;;
+    esac
+    shift
+done
 
 # Color codes for output
 RED='\033[0;31m'
@@ -60,7 +90,12 @@ check_port_conflict() {
 }
 
 check_container_conflicts() {
-    local container_names=("cliproxyapi-caddy" "cliproxyapi" "cliproxyapi-dashboard" "cliproxyapi-docker-proxy" "cliproxyapi-postgres")
+    local container_names
+    if [ "${DASHBOARD_ONLY:-0}" -eq 1 ]; then
+        container_names=("cliproxyapi-dashboard" "cliproxyapi-postgres" "cliproxyapi-usage-collector" "cliproxyapi-backup-scheduler")
+    elif [ $DASHBOARD_ONLY -eq 0 ]; then
+        container_names=("cliproxyapi-caddy" "cliproxyapi" "cliproxyapi-dashboard" "cliproxyapi-docker-proxy" "cliproxyapi-postgres")
+    fi
     local conflicts=()
     
     # Only check if Docker is running
@@ -165,6 +200,19 @@ echo ""
 log_info "=== Configuration ==="
 echo ""
 
+if [ $DASHBOARD_ONLY -eq 0 ]; then
+    read -p "Install dashboard only and connect to an existing CLIProxyAPI? [y/N]: " DASHBOARD_ONLY_INPUT
+    if [[ "$DASHBOARD_ONLY_INPUT" =~ ^[Yy]$ ]]; then
+        DASHBOARD_ONLY=1
+    fi
+fi
+
+if [ $DASHBOARD_ONLY -eq 1 ]; then
+    log_info "Dashboard-only mode enabled: CLIProxyAPI, Caddy, Docker proxy, and Perplexity sidecar will not be installed."
+    log_info "The dashboard will be exposed on 127.0.0.1:3000 for your reverse proxy."
+fi
+echo ""
+
 # Domain configuration
 while true; do
     read -p "Enter your domain (e.g., example.com): " DOMAIN
@@ -184,37 +232,84 @@ done
 read -p "Enter dashboard subdomain [default: dashboard]: " DASHBOARD_SUBDOMAIN
 DASHBOARD_SUBDOMAIN="${DASHBOARD_SUBDOMAIN:-dashboard}"
 
-# API subdomain
-read -p "Enter API subdomain [default: api]: " API_SUBDOMAIN
-API_SUBDOMAIN="${API_SUBDOMAIN:-api}"
+API_SUBDOMAIN="api"
+if [ $DASHBOARD_ONLY -eq 0 ]; then
+    # API subdomain
+    read -p "Enter API subdomain [default: api]: " API_SUBDOMAIN
+    API_SUBDOMAIN="${API_SUBDOMAIN:-api}"
+fi
 
 # External reverse proxy support
 echo ""
-read -p "Use existing reverse proxy/Caddy? [y/N]: " EXTERNAL_PROXY_INPUT
-if [[ "$EXTERNAL_PROXY_INPUT" =~ ^[Yy]$ ]]; then
+if [ $DASHBOARD_ONLY -eq 1 ]; then
     EXTERNAL_PROXY=1
 else
-    EXTERNAL_PROXY=0
+    read -p "Use existing reverse proxy/Caddy? [y/N]: " EXTERNAL_PROXY_INPUT
+    if [[ "$EXTERNAL_PROXY_INPUT" =~ ^[Yy]$ ]]; then
+        EXTERNAL_PROXY=1
+    else
+        EXTERNAL_PROXY=0
+    fi
+fi
+
+if [ $DASHBOARD_ONLY -eq 1 ]; then
+    echo ""
+    while true; do
+        read -p "Enter existing CLIProxyAPI management URL (remote, same-host, or non-Docker) [default: http://host.docker.internal:8317/v0/management]: " EXISTING_CLIPROXYAPI_MANAGEMENT_URL
+        EXISTING_CLIPROXYAPI_MANAGEMENT_URL="${EXISTING_CLIPROXYAPI_MANAGEMENT_URL:-http://host.docker.internal:8317/v0/management}"
+        EXISTING_CLIPROXYAPI_MANAGEMENT_URL="${EXISTING_CLIPROXYAPI_MANAGEMENT_URL%/}"
+        if [[ "$EXISTING_CLIPROXYAPI_MANAGEMENT_URL" =~ ^https?://.+/v0/management$ ]]; then
+            break
+        fi
+        log_error "Management URL must be an http(s) URL ending in /v0/management"
+    done
+
+    while true; do
+        read -p "Enter existing CLIProxyAPI public API URL (for generated client configs): " EXISTING_API_URL
+        EXISTING_API_URL="${EXISTING_API_URL%/}"
+        if [[ "$EXISTING_API_URL" =~ ^https?://.+ ]]; then
+            break
+        fi
+        log_error "API URL must start with http:// or https://"
+    done
+
+    while true; do
+        read -s -p "Enter existing CLIProxyAPI management API key: " EXISTING_MANAGEMENT_API_KEY
+        echo ""
+        if [[ "$EXISTING_MANAGEMENT_API_KEY" =~ ^[^[:space:]]{16,}$ ]]; then
+            break
+        fi
+        log_error "Management API key must be at least 16 characters and cannot contain whitespace"
+    done
 fi
 
 # OAuth provider support
 echo ""
-read -p "Enable OAuth provider callbacks? [y/N]: " OAUTH_ENABLED
-if [[ "$OAUTH_ENABLED" =~ ^[Yy]$ ]]; then
-    OAUTH_ENABLED=1
-else
+if [ $DASHBOARD_ONLY -eq 1 ]; then
+    log_info "OAuth callback ports are managed by your existing CLIProxyAPI installation."
     OAUTH_ENABLED=0
+else
+    read -p "Enable OAuth provider callbacks? [y/N]: " OAUTH_ENABLED
+    if [[ "$OAUTH_ENABLED" =~ ^[Yy]$ ]]; then
+        OAUTH_ENABLED=1
+    else
+        OAUTH_ENABLED=0
+    fi
 fi
 
 # Perplexity Pro Sidecar support
 echo ""
-log_info "Perplexity Pro Sidecar provides an OpenAI-compatible API wrapper for Perplexity Pro subscriptions."
-log_info "If enabled, it runs as a separate container alongside the stack."
-read -p "Enable Perplexity Pro Sidecar? [y/N]: " PERPLEXITY_ENABLED_INPUT
-if [[ "$PERPLEXITY_ENABLED_INPUT" =~ ^[Yy]$ ]]; then
-    PERPLEXITY_ENABLED=1
-else
+if [ $DASHBOARD_ONLY -eq 1 ]; then
     PERPLEXITY_ENABLED=0
+else
+    log_info "Perplexity Pro Sidecar provides an OpenAI-compatible API wrapper for Perplexity Pro subscriptions."
+    log_info "If enabled, it runs as a separate container alongside the stack."
+    read -p "Enable Perplexity Pro Sidecar? [y/N]: " PERPLEXITY_ENABLED_INPUT
+    if [[ "$PERPLEXITY_ENABLED_INPUT" =~ ^[Yy]$ ]]; then
+        PERPLEXITY_ENABLED=1
+    else
+        PERPLEXITY_ENABLED=0
+    fi
 fi
 
 # Backup interval
@@ -249,9 +344,15 @@ done
 
 echo ""
 log_info "Configuration summary:"
+log_info "  Mode: $([ $DASHBOARD_ONLY -eq 1 ] && echo 'dashboard-only' || echo 'full stack')"
 log_info "  Domain: $DOMAIN"
 log_info "  Dashboard: ${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
-log_info "  API: ${API_SUBDOMAIN}.${DOMAIN}"
+if [ $DASHBOARD_ONLY -eq 1 ]; then
+    log_info "  Existing CLIProxyAPI management URL: $EXISTING_CLIPROXYAPI_MANAGEMENT_URL"
+    log_info "  Existing CLIProxyAPI public API URL: $EXISTING_API_URL"
+else
+    log_info "  API: ${API_SUBDOMAIN}.${DOMAIN}"
+fi
 log_info "  External reverse proxy: $([ $EXTERNAL_PROXY -eq 1 ] && echo 'enabled' || echo 'disabled')"
 log_info "  OAuth callbacks: $([ $OAUTH_ENABLED -eq 1 ] && echo 'enabled' || echo 'disabled')"
 log_info "  Perplexity Sidecar: $([ $PERPLEXITY_ENABLED -eq 1 ] && echo 'enabled' || echo 'disabled')"
@@ -514,6 +615,10 @@ COLLECTOR_API_KEY=$(openssl rand -hex 32)
 BACKUP_SCHEDULER_KEY=$(openssl rand -hex 32)
 PROVIDER_ENCRYPTION_KEY=$(openssl rand -hex 32)
 
+if [ $DASHBOARD_ONLY -eq 1 ]; then
+    MANAGEMENT_API_KEY="$EXISTING_MANAGEMENT_API_KEY"
+fi
+
 if [ $PERPLEXITY_ENABLED -eq 1 ]; then
     PERPLEXITY_SIDECAR_SECRET=$(openssl rand -hex 32)
 fi
@@ -547,9 +652,21 @@ fi
 if [ $SKIP_ENV -eq 0 ]; then
     log_info "Creating .env file..."
 
+    DASHBOARD_PUBLIC_URL="https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
+    if [ $DASHBOARD_ONLY -eq 1 ]; then
+        CLIPROXYAPI_MANAGEMENT_ENV="$EXISTING_CLIPROXYAPI_MANAGEMENT_URL"
+        API_PUBLIC_URL="$EXISTING_API_URL"
+        STACK_MODE="dashboard-only"
+    else
+        CLIPROXYAPI_MANAGEMENT_ENV="http://cliproxyapi:8317/v0/management"
+        API_PUBLIC_URL="https://${API_SUBDOMAIN}.${DOMAIN}"
+        STACK_MODE="full"
+    fi
+
     cat > "$ENV_FILE" << EOF
 # CLIProxyAPI Stack Environment Configuration
 # Generated by install.sh on $(date)
+STACK_MODE=$STACK_MODE
 
 # Domain configuration
 DOMAIN=$DOMAIN
@@ -568,7 +685,7 @@ BACKUP_SCHEDULER_KEY=$BACKUP_SCHEDULER_KEY
 PROVIDER_ENCRYPTION_KEY=$PROVIDER_ENCRYPTION_KEY
 
 # Management API URL
-CLIPROXYAPI_MANAGEMENT_URL=http://cliproxyapi:8317/v0/management
+CLIPROXYAPI_MANAGEMENT_URL=$CLIPROXYAPI_MANAGEMENT_ENV
 
 # Installation directory (host path for volume mounts)
 INSTALL_DIR=$INSTALL_DIR
@@ -580,8 +697,8 @@ TZ=UTC
 LOG_LEVEL=info
 
 # Full URLs (for reference)
-DASHBOARD_URL=https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}
-API_URL=https://${API_SUBDOMAIN}.${DOMAIN}
+DASHBOARD_URL=$DASHBOARD_PUBLIC_URL
+API_URL=$API_PUBLIC_URL
 EOF
 
     # Perplexity Sidecar (conditional)
@@ -634,15 +751,21 @@ if [ $SKIP_SERVICE -eq 0 ]; then
     # across working directories. Users who copy it from `systemctl cat` and run it
     # from a different cwd will not hit "no configuration file provided: not found"
     # (see https://github.com/itsmylife44/cliproxyapi-dashboard/issues/216).
-    COMPOSE_BASE_CMD="/usr/bin/docker compose --project-directory $INSTALL_DIR/infrastructure"
-    if [ $EXTERNAL_PROXY -eq 1 ]; then
+    if [ $DASHBOARD_ONLY -eq 1 ]; then
+        COMPOSE_BASE_CMD="/usr/bin/docker compose --project-directory $INSTALL_DIR/infrastructure -f $INSTALL_DIR/infrastructure/docker-compose.dashboard-only.yml"
+        COMPOSE_START_CMD="$COMPOSE_BASE_CMD up -d --wait"
+        COMPOSE_DESC="(dashboard only - existing CLIProxyAPI)"
+    else
+        COMPOSE_BASE_CMD="/usr/bin/docker compose --project-directory $INSTALL_DIR/infrastructure"
+    fi
+    if [ $DASHBOARD_ONLY -eq 0 ] && [ $EXTERNAL_PROXY -eq 1 ]; then
         COMPOSE_SERVICES="postgres cliproxyapi docker-proxy dashboard backup-scheduler"
         if [ $PERPLEXITY_ENABLED -eq 1 ]; then
             COMPOSE_SERVICES="$COMPOSE_SERVICES perplexity-sidecar"
         fi
         COMPOSE_START_CMD="$COMPOSE_BASE_CMD up -d --wait $COMPOSE_SERVICES"
         COMPOSE_DESC="(without Caddy - using external reverse proxy)"
-    else
+    elif [ $DASHBOARD_ONLY -eq 0 ]; then
         # No explicit list — Compose starts everything; COMPOSE_PROFILES in .env
         # activates the perplexity profile when present.
         COMPOSE_START_CMD="$COMPOSE_BASE_CMD up -d --wait"
@@ -775,7 +898,7 @@ echo ""
 # EXTERNAL PROXY MODE SETUP
 # ============================================================================
 
-if [ $EXTERNAL_PROXY -eq 1 ]; then
+if [ $EXTERNAL_PROXY -eq 1 ] && [ $DASHBOARD_ONLY -eq 0 ]; then
     echo ""
     log_info "=== External Proxy Mode Setup ==="
     echo ""
@@ -807,8 +930,29 @@ if [ $EXTERNAL_PROXY -eq 1 ]; then
     log_info "=== Reverse Proxy Integration Setup ==="
     echo ""
     
-    # Generate Caddy configuration snippet for host Caddy (localhost upstream)
-    CADDY_SNIPPET_HOST=$(cat << 'CADDY_CONFIG'
+    if [ $DASHBOARD_ONLY -eq 1 ]; then
+        # Generate Caddy configuration snippet for host Caddy (localhost upstream)
+        CADDY_SNIPPET_HOST=$(cat << 'CADDY_CONFIG'
+# BEGIN CLIPROXYAPI-AUTO (Dashboard only - host Caddy)
+${DASHBOARD_SUBDOMAIN}.${DOMAIN} {
+    reverse_proxy localhost:3000
+}
+# END CLIPROXYAPI-AUTO
+CADDY_CONFIG
+)
+
+        # Generate Caddy configuration snippet for Dockerized Caddy (service name upstream)
+        CADDY_SNIPPET_DOCKER=$(cat << 'CADDY_DOCKER_CONFIG'
+# BEGIN CLIPROXYAPI-AUTO (Dashboard only - Docker Caddy)
+${DASHBOARD_SUBDOMAIN}.${DOMAIN} {
+    reverse_proxy cliproxyapi-dashboard:3000
+}
+# END CLIPROXYAPI-AUTO
+CADDY_DOCKER_CONFIG
+)
+    else
+        # Generate Caddy configuration snippet for host Caddy (localhost upstream)
+        CADDY_SNIPPET_HOST=$(cat << 'CADDY_CONFIG'
 # BEGIN CLIPROXYAPI-AUTO (Host Caddy - localhost upstream)
 ${DASHBOARD_SUBDOMAIN}.${DOMAIN} {
     reverse_proxy localhost:3000
@@ -821,8 +965,8 @@ ${API_SUBDOMAIN}.${DOMAIN} {
 CADDY_CONFIG
 )
     
-    # Generate Caddy configuration snippet for Dockerized Caddy (service name upstream)
-    CADDY_SNIPPET_DOCKER=$(cat << 'CADDY_DOCKER_CONFIG'
+        # Generate Caddy configuration snippet for Dockerized Caddy (service name upstream)
+        CADDY_SNIPPET_DOCKER=$(cat << 'CADDY_DOCKER_CONFIG'
 # BEGIN CLIPROXYAPI-AUTO (Docker Caddy - container upstream)
 ${DASHBOARD_SUBDOMAIN}.${DOMAIN} {
     reverse_proxy cliproxyapi-dashboard:3000
@@ -834,6 +978,7 @@ ${API_SUBDOMAIN}.${DOMAIN} {
 # END CLIPROXYAPI-AUTO
 CADDY_DOCKER_CONFIG
 )
+    fi
     
     # Replace template variables in both snippets
     CADDY_SNIPPET_HOST="${CADDY_SNIPPET_HOST//\$\{DASHBOARD_SUBDOMAIN\}/$DASHBOARD_SUBDOMAIN}"
@@ -844,6 +989,12 @@ CADDY_DOCKER_CONFIG
     CADDY_SNIPPET_DOCKER="${CADDY_SNIPPET_DOCKER//\$\{API_SUBDOMAIN\}/$API_SUBDOMAIN}"
     CADDY_SNIPPET_DOCKER="${CADDY_SNIPPET_DOCKER//\$\{DOMAIN\}/$DOMAIN}"
     
+    if [ $DASHBOARD_ONLY -eq 1 ]; then
+        CADDY_DOCKER_NETWORK="cliproxyapi_dashboard"
+    else
+        CADDY_DOCKER_NETWORK="cliproxyapi_frontend"
+    fi
+
     log_info "Generated Caddy configurations for both host and Docker Caddy:"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -856,8 +1007,8 @@ CADDY_DOCKER_CONFIG
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "$CADDY_SNIPPET_DOCKER"
     echo ""
-    echo "If using Docker Caddy, also connect it to the CLIProxyAPI frontend network:"
-    echo "  ${YELLOW}docker network connect cliproxyapi_frontend <your-caddy-container-name>${NC}"
+    echo "If using Docker Caddy, also connect it to this stack's Docker network:"
+    echo "  ${YELLOW}docker network connect $CADDY_DOCKER_NETWORK <your-caddy-container-name>${NC}"
     echo ""
     
     read -p "Apply configuration to Caddy? [y/N]: " APPLY_CADDY
@@ -951,10 +1102,8 @@ CADDY_DOCKER_CONFIG
         fi
     else
         log_info "Skipping auto-apply. Please manually add one of the configurations above to your Caddyfile."
-        if [[ "${CADDY_MODE:-}" =~ ^[Dd]ocker$ ]]; then
-            log_info "Remember to connect Caddy to the frontend network:"
-            echo "  ${YELLOW}docker network connect cliproxyapi_frontend <your-caddy-container-name>${NC}"
-        fi
+        log_info "If you use Docker Caddy, connect it to this stack's Docker network:"
+        echo "  ${YELLOW}docker network connect $CADDY_DOCKER_NETWORK <your-caddy-container-name>${NC}"
     fi
     
     echo ""
@@ -1074,7 +1223,11 @@ echo ""
 log_info "=== Installation Complete ==="
 echo ""
 
-log_success "CLIProxyAPI Stack installation completed successfully!"
+if [ $DASHBOARD_ONLY -eq 1 ]; then
+    log_success "CLIProxyAPI Dashboard-only installation completed successfully!"
+else
+    log_success "CLIProxyAPI Stack installation completed successfully!"
+fi
 echo ""
 log_info "Next steps:"
 echo "  1. Start the stack:"
@@ -1083,12 +1236,25 @@ echo ""
 echo "  2. Check status:"
 echo "     sudo systemctl status cliproxyapi-stack"
 echo ""
-echo "  3. View logs (must run from infrastructure/ — docker compose"
-echo "     needs to find docker-compose.yml in the current directory):"
+echo "  3. View logs:"
 echo "     cd $INSTALL_DIR/infrastructure"
-echo "     docker compose logs -f"
+if [ $DASHBOARD_ONLY -eq 1 ]; then
+    echo "     docker compose -f docker-compose.dashboard-only.yml logs -f"
+else
+    echo "     docker compose logs -f"
+fi
 echo ""
-if [ $EXTERNAL_PROXY -eq 1 ]; then
+if [ $DASHBOARD_ONLY -eq 1 ]; then
+    echo "  4. Configure your reverse proxy:"
+    echo "     - Dashboard routes to: localhost:3000"
+    echo "     - CLIProxyAPI remains your existing service: $EXISTING_API_URL"
+    echo "     - Ports 80/443 are not bound by the dashboard-only stack"
+    echo ""
+    echo "  5. Access services:"
+    echo "     Dashboard: https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
+    echo "     Existing API: $EXISTING_API_URL"
+    echo ""
+elif [ $EXTERNAL_PROXY -eq 1 ]; then
     echo "  4. Configure your reverse proxy:"
     echo "     - Dashboard routes to: localhost:3000"
     echo "     - API routes to: localhost:8317"
@@ -1104,7 +1270,7 @@ else
     echo "     API: https://${API_SUBDOMAIN}.${DOMAIN}"
     echo ""
 fi
-echo "  $([ $EXTERNAL_PROXY -eq 1 ] && echo 5 || echo 4). Create your admin account at the dashboard, then configure"
+echo "  $([ $EXTERNAL_PROXY -eq 1 ] && echo 6 || echo 5). Create your admin account at the dashboard, then configure"
 echo "     API keys and providers through the Configuration page."
 echo ""
 log_info "Backup commands:"

@@ -1,0 +1,141 @@
+# CLIProxyAPI Dashboard-only Docker Compose stack
+#
+# Use this when CLIProxyAPI is already installed elsewhere. This stack runs only
+# the dashboard, its PostgreSQL database, and the lightweight scheduler helpers.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cliproxyapi-postgres
+    restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 256m
+    mem_reservation: 64m
+    networks:
+      - dashboard
+    environment:
+      POSTGRES_DB: cliproxyapi
+      POSTGRES_USER: cliproxyapi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ}
+    env_file:
+      - ./.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cliproxyapi -d cliproxyapi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  dashboard:
+    image: ghcr.io/itsmylife44/cliproxyapi-dashboard/dashboard:latest
+    container_name: cliproxyapi-dashboard
+    restart: unless-stopped
+    cpus: 1.0
+    mem_limit: 512m
+    mem_reservation: 128m
+    networks:
+      - dashboard
+    ports:
+      - "127.0.0.1:3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      DATABASE_URL: postgresql://cliproxyapi:${POSTGRES_PASSWORD}@postgres:5432/cliproxyapi
+      CLIPROXYAPI_MANAGEMENT_URL: ${CLIPROXYAPI_MANAGEMENT_URL}
+      MANAGEMENT_API_KEY: ${MANAGEMENT_API_KEY}
+      COLLECTOR_API_KEY: ${COLLECTOR_API_KEY:-}
+      JWT_SECRET: ${JWT_SECRET}
+      NODE_ENV: production
+      API_URL: ${API_URL}
+      DASHBOARD_URL: ${DASHBOARD_URL}
+      GITHUB_REPO: ${GITHUB_REPO:-itsmylife44/cliproxyapi-dashboard}
+      ALLOW_LOCAL_PROVIDER_URLS: ${ALLOW_LOCAL_PROVIDER_URLS:-false}
+    env_file:
+      - ./.env
+    volumes:
+      - backup_data:/app/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  usage-collector:
+    image: alpine:3.19
+    container_name: cliproxyapi-usage-collector
+    restart: unless-stopped
+    cpus: 0.1
+    mem_limit: 64m
+    mem_reservation: 16m
+    networks:
+      - dashboard
+    environment:
+      COLLECTOR_API_KEY: ${COLLECTOR_API_KEY:-}
+      TZ: ${TZ}
+    env_file:
+      - ./.env
+    command: >
+      sh -c "
+        apk add --no-cache curl dcron &&
+        echo '*/5 * * * * curl -sf -X POST http://dashboard:3000/api/usage/collect -H \"Authorization: Bearer $$COLLECTOR_API_KEY\" > /dev/null 2>&1' > /tmp/crontab &&
+        crontab /tmp/crontab &&
+        crond -f -d 8
+      "
+    depends_on:
+      dashboard:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep crond > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  backup-scheduler:
+    image: alpine:3.19
+    container_name: cliproxyapi-backup-scheduler
+    restart: unless-stopped
+    cpus: 0.1
+    mem_limit: 64m
+    mem_reservation: 16m
+    networks:
+      - dashboard
+    environment:
+      BACKUP_SCHEDULER_KEY: ${BACKUP_SCHEDULER_KEY:-}
+      TZ: ${TZ}
+    env_file:
+      - ./.env
+    command: >
+      sh -c "
+        apk add --no-cache curl dcron &&
+        echo '*/5 * * * * curl -sf -X POST http://dashboard:3000/api/admin/backup/scheduled -H \"Authorization: Bearer $$BACKUP_SCHEDULER_KEY\" > /dev/null 2>&1' > /tmp/crontab &&
+        crontab /tmp/crontab &&
+        crond -f -d 8
+      "
+    depends_on:
+      dashboard:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep crond > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    driver: local
+  backup_data:
+    driver: local
+
+networks:
+  dashboard:
+    driver: bridge
+    name: cliproxyapi_dashboard

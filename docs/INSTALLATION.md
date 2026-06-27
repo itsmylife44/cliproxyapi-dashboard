@@ -104,6 +104,49 @@ docker compose logs usage-collector
 
 The usage collector runs automatically and will begin tracking API requests to display in the Dashboard's Usage page.
 
+## Dashboard-Only Install
+
+Use dashboard-only mode when you already have CLIProxyAPI installed and want this project to provide only the web UI and its dashboard database.
+
+```bash
+git clone https://github.com/itsmylife44/cliproxyapi-dashboard.git
+cd cliproxyapi-dashboard
+sudo ./install.sh --dashboard-only
+```
+
+This mode installs:
+
+- Dashboard
+- PostgreSQL for dashboard data
+- Usage collector and backup scheduler helper containers
+
+It does not install:
+
+- CLIProxyAPI
+- Caddy
+- Docker socket proxy
+- Perplexity sidecar
+
+During installation you will be prompted for:
+
+- Existing CLIProxyAPI management URL, for example `https://proxy.example.com/v0/management` for a remote server or `http://host.docker.internal:8317/v0/management` for same-host non-Docker installs
+- Existing CLIProxyAPI public API URL, for example `https://api.example.com`
+- Existing CLIProxyAPI management API key, matching the proxy's management password/key
+
+The dashboard is exposed on `127.0.0.1:3000`, so put your existing reverse proxy in front of it. The management URL must be reachable from inside the dashboard container. If your existing CLIProxyAPI runs directly on the same host and publishes port `8317`, `host.docker.internal` is available inside the dashboard container.
+
+Having only the public OpenAI-compatible API URL is not enough for dashboard management features. The dashboard also needs the CLIProxyAPI management endpoint (`/v0/management`) and its management key.
+
+After installation:
+
+```bash
+sudo systemctl start cliproxyapi-stack
+cd infrastructure
+docker compose -f docker-compose.dashboard-only.yml logs -f
+```
+
+Some stack-management features, such as restarting or updating the CLIProxyAPI container from the dashboard, are not available in dashboard-only mode unless you separately provide compatible Docker access and container naming.
+
 ### Initial Setup Flow
 
 1. **First Visit**: Navigate to `https://dashboard.yourdomain.com`

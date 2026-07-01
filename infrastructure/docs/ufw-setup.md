@@ -1,8 +1,14 @@
 # UFW Firewall Configuration
 
-This document describes the required UFW (Uncomplicated Firewall) rules for the CLIProxyAPI dashboard deployment.
+This document describes UFW (Uncomplicated Firewall) rules for CLIProxyAPI Dashboard deployments. The required rules depend on the selected installation mode.
+
+> **Existing server warning:** Enabling UFW can immediately block any inbound port that is not explicitly allowed. Before enabling UFW, identify your actual SSH port and every existing service port that must remain reachable. Do not assume SSH uses port `22`.
+>
+> Dashboard-only and external reverse proxy installs usually do not need this stack to open public UFW ports. Expose the dashboard through your existing reverse proxy/firewall plan instead.
 
 ## Required Ports
+
+The table below applies to the full stack with integrated Caddy. OAuth callback ports are only needed when OAuth callbacks are enabled.
 
 | Port | Protocol | Service | Purpose |
 |------|----------|---------|---------|
@@ -32,13 +38,19 @@ This design ensures:
 
 ## Setup Commands
 
-### 1. Reset UFW (Optional - Fresh Start)
+The commands below are for a fresh server or for an existing server where you intentionally want UFW to manage these inbound rules. If UFW is already active, add only the missing rules you need and preserve your current policy.
+
+### 1. Reset UFW (Optional - Fresh Start Only)
+
+Do not reset UFW on a server that already hosts other services unless you are intentionally rebuilding all firewall rules.
 
 ```bash
 sudo ufw --force reset
 ```
 
 ### 2. Set Default Policies
+
+Skip this on an existing firewall unless you intentionally want to change the server's default inbound/outbound policy.
 
 ```bash
 sudo ufw default deny incoming
@@ -48,10 +60,20 @@ sudo ufw default allow outgoing
 ### 3. Allow SSH (CRITICAL - Do this first!)
 
 ```bash
-sudo ufw allow 22/tcp comment "SSH access"
+# Change 22 if your server uses a different SSH port.
+SSH_PORT=22
+sudo ufw allow "${SSH_PORT}/tcp" comment "SSH access"
 ```
 
-**WARNING:** Always allow SSH before enabling UFW, or you may lock yourself out of the server.
+**WARNING:** Always allow the actual SSH port before enabling UFW, or you may lock yourself out of the server.
+
+If you already run other public services, allow those ports before enabling UFW as well:
+
+```bash
+sudo ufw allow 25/tcp comment "Existing SMTP"
+sudo ufw allow 587/tcp comment "Existing mail submission"
+sudo ufw allow 8443/tcp comment "Existing app"
+```
 
 ### 4. Allow Caddy Reverse Proxy Ports
 
@@ -90,7 +112,7 @@ Status: active
 
      To                         Action      From
      --                         ------      ----
-[ 1] 22/tcp                     ALLOW IN    Anywhere                   # SSH access
+[ 1] SSH_PORT/tcp               ALLOW IN    Anywhere                   # SSH access
 [ 2] 80/tcp                     ALLOW IN    Anywhere                   # HTTP (Caddy)
 [ 3] 443/tcp                    ALLOW IN    Anywhere                   # HTTPS (Caddy)
 [ 4] 443/udp                    ALLOW IN    Anywhere                   # HTTP/3 (Caddy)
@@ -99,7 +121,7 @@ Status: active
 [ 7] 54545/tcp                  ALLOW IN    Anywhere                   # CLIProxyAPI OAuth (alt2)
 [ 8] 51121/tcp                  ALLOW IN    Anywhere                   # CLIProxyAPI OAuth (alt3)
 [ 9] 11451/tcp                  ALLOW IN    Anywhere                   # CLIProxyAPI OAuth (alt4)
-[10] 22/tcp (v6)                ALLOW IN    Anywhere (v6)              # SSH access
+[10] SSH_PORT/tcp (v6)          ALLOW IN    Anywhere (v6)              # SSH access
 [11] 80/tcp (v6)                ALLOW IN    Anywhere (v6)              # HTTP (Caddy)
 [12] 443/tcp (v6)               ALLOW IN    Anywhere (v6)              # HTTPS (Caddy)
 [13] 443/udp (v6)               ALLOW IN    Anywhere (v6)              # HTTP/3 (Caddy)
@@ -112,10 +134,14 @@ Status: active
 
 ## All-in-One Setup Script
 
+Only use this example on a fresh server. On an existing server, add your real SSH port and all existing service ports before enabling UFW.
+
 ```bash
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
-sudo ufw allow 22/tcp comment "SSH access"
+# Change 22 if your server uses a different SSH port.
+SSH_PORT=22
+sudo ufw allow "${SSH_PORT}/tcp" comment "SSH access"
 sudo ufw allow 80/tcp comment "HTTP (Caddy)"
 sudo ufw allow 443/tcp comment "HTTPS (Caddy)"
 sudo ufw allow 443/udp comment "HTTP/3 (Caddy)"
@@ -185,7 +211,8 @@ If you accidentally locked yourself out:
    ```
 3. Fix SSH rule and re-enable:
    ```bash
-   sudo ufw allow 22/tcp
+   SSH_PORT=22 # Change this to your actual SSH port.
+   sudo ufw allow "${SSH_PORT}/tcp"
    sudo ufw enable
    ```
 
@@ -196,8 +223,9 @@ If you accidentally locked yourself out:
 Instead of allowing SSH from anywhere, restrict to known IPs:
 
 ```bash
-sudo ufw delete allow 22/tcp
-sudo ufw allow from YOUR_IP_ADDRESS to any port 22 proto tcp comment "SSH from trusted IP"
+SSH_PORT=22 # Change this to your actual SSH port.
+sudo ufw delete allow "${SSH_PORT}/tcp"
+sudo ufw allow from YOUR_IP_ADDRESS to any port "${SSH_PORT}" proto tcp comment "SSH from trusted IP"
 ```
 
 ### 2. Enable UFW Logging
@@ -211,7 +239,8 @@ sudo ufw logging on
 Protect against brute-force attacks:
 
 ```bash
-sudo ufw limit 22/tcp comment "SSH with rate limiting"
+SSH_PORT=22 # Change this to your actual SSH port.
+sudo ufw limit "${SSH_PORT}/tcp" comment "SSH with rate limiting"
 ```
 
 ### 4. Monitor Active Connections

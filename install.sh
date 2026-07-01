@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # CLIProxyAPI Stack Installation Script
-# Installs Docker, Docker Compose, configures UFW, generates secrets, and sets up systemd service
+# Installs Docker, Docker Compose, optionally configures UFW, generates secrets, and sets up systemd service
 #
 # Usage: sudo ./install.sh [--dashboard-only]
 #
@@ -116,6 +116,150 @@ check_container_conflicts() {
     if [ ${#conflicts[@]} -gt 0 ]; then
         printf '%s\n' "${conflicts[@]}"
     fi
+}
+
+join_by_comma() {
+    if [ "$#" -eq 0 ]; then
+        echo "(none)"
+        return
+    fi
+
+    local output=""
+    local item
+    for item in "$@"; do
+        if [ -z "$output" ]; then
+            output="$item"
+        else
+            output="$output, $item"
+        fi
+    done
+    echo "$output"
+}
+
+port_in_range() {
+    local port=$1
+    [[ "$port" =~ ^[0-9]+$ ]] && [ "$port" -ge 1 ] && [ "$port" -le 65535 ]
+}
+
+normalize_port_list() {
+    local raw=${1:-}
+    local item start end
+    local items=()
+    local ports=()
+    local IFS
+
+    raw="${raw//[[:space:]]/}"
+    [ -z "$raw" ] && return 0
+
+    IFS=','
+    read -ra items <<< "$raw"
+    for item in "${items[@]}"; do
+        [ -z "$item" ] && continue
+        if [[ "$item" =~ ^[0-9]+$ ]]; then
+            if ! port_in_range "$item"; then
+                return 1
+            fi
+            ports+=("$item")
+        elif [[ "$item" =~ ^([0-9]+):([0-9]+)$ ]]; then
+            start="${BASH_REMATCH[1]}"
+            end="${BASH_REMATCH[2]}"
+            if ! port_in_range "$start" || ! port_in_range "$end" || [ "$start" -gt "$end" ]; then
+                return 1
+            fi
+            ports+=("$start:$end")
+        else
+            return 1
+        fi
+    done
+
+    printf '%s\n' "${ports[@]}" | awk 'NF && !seen[$0]++'
+}
+
+normalize_ssh_port_list() {
+    local raw=${1:-}
+    local normalized
+    if ! normalized=$(normalize_port_list "$raw"); then
+        return 1
+    fi
+    if echo "$normalized" | grep -q ':'; then
+        return 1
+    fi
+    echo "$normalized"
+}
+
+detect_ssh_ports() {
+    local candidates=()
+    local port file
+
+    if [ -n "${SSH_CONNECTION:-}" ]; then
+        port=$(echo "$SSH_CONNECTION" | awk '{print $4}')
+        if port_in_range "$port"; then
+            candidates+=("$port")
+        fi
+    fi
+
+    if command -v sshd &> /dev/null; then
+        while read -r port; do
+            if port_in_range "$port"; then
+                candidates+=("$port")
+            fi
+        done < <(sshd -T 2>/dev/null | awk 'tolower($1) == "port" { print $2 }')
+    fi
+
+    for file in /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf; do
+        [ -f "$file" ] || continue
+        while read -r port; do
+            if port_in_range "$port"; then
+                candidates+=("$port")
+            fi
+        done < <(sed -E 's/[[:space:]]*#.*$//' "$file" | awk 'tolower($1) == "port" { print $2 }')
+    done
+
+    if [ ${#candidates[@]} -eq 0 ]; then
+        candidates+=(22)
+    fi
+
+    printf '%s\n' "${candidates[@]}" | awk 'NF && !seen[$0]++'
+}
+
+ufw_rule_exists() {
+    local port=$1
+    local proto=$2
+    ufw status 2>/dev/null | grep -Eq "(^|[[:space:]])${port}/${proto}([[:space:]]|$)"
+}
+
+add_ufw_allow_if_missing() {
+    local port=$1
+    local proto=$2
+    local comment=$3
+
+    if ufw_rule_exists "$port" "$proto"; then
+        return 1
+    fi
+
+    ufw allow "$port/$proto" comment "$comment"
+    log_info "Added UFW rule: $port/$proto"
+    return 0
+}
+
+add_required_ufw_rules() {
+    local port
+
+    UFW_RULES_ADDED=0
+
+    for port in "${REQUIRED_TCP_PORTS[@]}"; do
+        if add_ufw_allow_if_missing "$port" tcp "CLIProxyAPI Dashboard required TCP"; then
+            UFW_RULES_ADDED=$((UFW_RULES_ADDED + 1))
+        fi
+    done
+
+    for port in "${REQUIRED_UDP_PORTS[@]}"; do
+        if add_ufw_allow_if_missing "$port" udp "CLIProxyAPI Dashboard required UDP"; then
+            UFW_RULES_ADDED=$((UFW_RULES_ADDED + 1))
+        fi
+    done
+
+    return 0
 }
 
 # Check if running as root
@@ -375,13 +519,16 @@ log_info "=== Preflight Conflict Detection ==="
 echo ""
 
 # Define required ports (80/443 excluded if using external proxy)
-REQUIRED_PORTS=()
+REQUIRED_TCP_PORTS=()
+REQUIRED_UDP_PORTS=()
 if [ $EXTERNAL_PROXY -eq 0 ]; then
-    REQUIRED_PORTS+=(80 443)
+    REQUIRED_TCP_PORTS+=(80 443)
+    REQUIRED_UDP_PORTS+=(443)
 fi
 if [ $OAUTH_ENABLED -eq 1 ]; then
-    REQUIRED_PORTS+=(8085 1455 54545 51121 11451)
+    REQUIRED_TCP_PORTS+=(8085 1455 54545 51121 11451)
 fi
+REQUIRED_PORTS=("${REQUIRED_TCP_PORTS[@]}")
 
 # Check for port conflicts
 if [ $EXTERNAL_PROXY -eq 1 ]; then
@@ -516,86 +663,137 @@ echo ""
 log_info "=== UFW Firewall Configuration ==="
 echo ""
 
-if ! command -v ufw &> /dev/null; then
-    log_info "Installing UFW..."
-    apt-get install -y ufw
+UFW_AVAILABLE=0
+if command -v ufw &> /dev/null; then
+    UFW_AVAILABLE=1
+else
+    log_warning "UFW is not installed."
+    log_warning "The installer will not install or enable a firewall unless you explicitly opt in."
+    read -p "Install and configure UFW rules now? [y/N]: " INSTALL_UFW_INPUT
+    if [[ "$INSTALL_UFW_INPUT" =~ ^[Yy]$ ]]; then
+        log_info "Installing UFW..."
+        apt-get update
+        apt-get install -y ufw
+        UFW_AVAILABLE=1
+    else
+        log_info "Skipping UFW installation and firewall changes."
+    fi
 fi
 
-# Check if UFW is active
-UFW_STATUS=$(ufw status | head -n 1)
+if [ $UFW_AVAILABLE -eq 1 ]; then
+    UFW_STATUS=$(ufw status | head -n 1)
 
-if [[ "$UFW_STATUS" == *"inactive"* ]]; then
-    log_info "Configuring UFW rules..."
-    
-    # SSH first to prevent lockout
-    log_info "Allowing SSH (port 22) to prevent lockout..."
-    ufw limit 22/tcp comment 'SSH with rate limiting'
-    
-    # HTTP/HTTPS (skip if using external reverse proxy)
-    if [ $EXTERNAL_PROXY -eq 0 ]; then
-        log_info "Allowing HTTP/HTTPS (ports 80, 443)..."
-        ufw allow 80/tcp comment 'HTTP'
-        ufw allow 443/tcp comment 'HTTPS'
-        ufw allow 443/udp comment 'HTTP/3 (QUIC)'
-    else
-        log_info "Skipping HTTP/HTTPS rules (external proxy mode)"
-    fi
-    
-    # OAuth callback ports (conditional)
-    if [ $OAUTH_ENABLED -eq 1 ]; then
-        log_info "Allowing OAuth callback ports..."
-        ufw allow 8085/tcp comment 'CLIProxyAPI OAuth callback 1'
-        ufw allow 1455/tcp comment 'CLIProxyAPI OAuth callback 2'
-        ufw allow 54545/tcp comment 'CLIProxyAPI OAuth callback 3'
-        ufw allow 51121/tcp comment 'CLIProxyAPI OAuth callback 4'
-        ufw allow 11451/tcp comment 'CLIProxyAPI OAuth callback 5'
-    fi
-    
-    # Enable UFW
-    log_warning "Enabling UFW firewall..."
-    echo "y" | ufw enable
-    
-    log_success "UFW configured and enabled"
-else
-    log_warning "UFW already active, checking rules..."
-    
-    # Add missing rules if needed
-    RULES_ADDED=0
-    
-    # Helper function to check and add rule
-    add_rule_if_missing() {
-        local PORT=$1
-        local PROTO=$2
-        local COMMENT=$3
-        
-        if ! ufw status | grep -q "$PORT/$PROTO"; then
-            ufw allow "$PORT/$PROTO" comment "$COMMENT"
-            log_info "Added rule: $PORT/$PROTO"
-            RULES_ADDED=1
+    if [[ "$UFW_STATUS" == *"inactive"* ]]; then
+        log_warning "UFW is currently inactive."
+        log_warning "Enabling UFW on an existing server can block any service port that is not explicitly allowed."
+        log_warning "The installer will not enable UFW unless you opt in and confirm the exact allowed ports."
+        echo ""
+        log_info "Ports required by this selected installation mode:"
+        log_info "  TCP: $(join_by_comma "${REQUIRED_TCP_PORTS[@]}")"
+        log_info "  UDP: $(join_by_comma "${REQUIRED_UDP_PORTS[@]}")"
+        echo ""
+        read -p "Configure and enable UFW now? [y/N]: " ENABLE_UFW_INPUT
+
+        if [[ "$ENABLE_UFW_INPUT" =~ ^[Yy]$ ]]; then
+            readarray -t DETECTED_SSH_PORTS < <(detect_ssh_ports)
+            DETECTED_SSH_PORTS_TEXT=$(join_by_comma "${DETECTED_SSH_PORTS[@]}")
+
+            while true; do
+                read -p "SSH TCP port(s) to keep open [${DETECTED_SSH_PORTS_TEXT}]: " SSH_PORTS_INPUT
+                SSH_PORTS_INPUT="${SSH_PORTS_INPUT:-$(IFS=','; echo "${DETECTED_SSH_PORTS[*]}")}"
+                if SSH_PORTS_NORMALIZED=$(normalize_ssh_port_list "$SSH_PORTS_INPUT"); then
+                    SSH_PORTS=()
+                    if [ -n "$SSH_PORTS_NORMALIZED" ]; then
+                        readarray -t SSH_PORTS <<< "$SSH_PORTS_NORMALIZED"
+                    fi
+                    if [ ${#SSH_PORTS[@]} -gt 0 ]; then
+                        break
+                    fi
+                fi
+                log_error "Enter one or more SSH TCP ports, comma-separated (for example: 22,2222)"
+            done
+
+            while true; do
+                read -p "Additional existing TCP service ports/ranges to keep open (comma-separated, optional): " EXTRA_TCP_INPUT
+                if EXTRA_TCP_NORMALIZED=$(normalize_port_list "$EXTRA_TCP_INPUT"); then
+                    EXTRA_TCP_PORTS=()
+                    if [ -n "$EXTRA_TCP_NORMALIZED" ]; then
+                        readarray -t EXTRA_TCP_PORTS <<< "$EXTRA_TCP_NORMALIZED"
+                    fi
+                    break
+                fi
+                log_error "Invalid TCP port list. Use values like: 25,587,8000:8010"
+            done
+
+            while true; do
+                read -p "Additional existing UDP service ports/ranges to keep open (comma-separated, optional): " EXTRA_UDP_INPUT
+                if EXTRA_UDP_NORMALIZED=$(normalize_port_list "$EXTRA_UDP_INPUT"); then
+                    EXTRA_UDP_PORTS=()
+                    if [ -n "$EXTRA_UDP_NORMALIZED" ]; then
+                        readarray -t EXTRA_UDP_PORTS <<< "$EXTRA_UDP_NORMALIZED"
+                    fi
+                    break
+                fi
+                log_error "Invalid UDP port list. Use values like: 53,123,6000:6010"
+            done
+
+            echo ""
+            log_warning "UFW enable plan:"
+            log_warning "  SSH TCP: $(join_by_comma "${SSH_PORTS[@]}")"
+            log_warning "  Dashboard/CLIProxyAPI TCP: $(join_by_comma "${REQUIRED_TCP_PORTS[@]}")"
+            log_warning "  Dashboard/CLIProxyAPI UDP: $(join_by_comma "${REQUIRED_UDP_PORTS[@]}")"
+            log_warning "  Additional TCP: $(join_by_comma "${EXTRA_TCP_PORTS[@]}")"
+            log_warning "  Additional UDP: $(join_by_comma "${EXTRA_UDP_PORTS[@]}")"
+            log_warning "Any other inbound ports may become unreachable after UFW is enabled."
+            read -p "Type ENABLE to apply these rules and enable UFW, or anything else to skip: " UFW_ENABLE_CONFIRM
+
+            if [ "$UFW_ENABLE_CONFIRM" = "ENABLE" ]; then
+                for port in "${SSH_PORTS[@]}"; do
+                    if ! ufw_rule_exists "$port" tcp; then
+                        ufw limit "$port/tcp" comment 'SSH access'
+                        log_info "Added UFW SSH rule: $port/tcp"
+                    fi
+                done
+
+                add_required_ufw_rules
+
+                for port in "${EXTRA_TCP_PORTS[@]}"; do
+                    add_ufw_allow_if_missing "$port" tcp "User-preserved existing TCP service" || true
+                done
+
+                for port in "${EXTRA_UDP_PORTS[@]}"; do
+                    add_ufw_allow_if_missing "$port" udp "User-preserved existing UDP service" || true
+                done
+
+                ufw --force enable
+                log_success "UFW configured and enabled"
+            else
+                log_warning "Skipping UFW enable. Configure firewall rules manually before exposing the service."
+            fi
+        else
+            log_info "Skipping UFW enable. Existing network access will not be changed by the installer."
         fi
-    }
-    
-    add_rule_if_missing 22 tcp "SSH with rate limiting"
-    if [ $EXTERNAL_PROXY -eq 0 ]; then
-        add_rule_if_missing 80 tcp "HTTP"
-        add_rule_if_missing 443 tcp "HTTPS"
-        add_rule_if_missing 443 udp "HTTP/3 (QUIC)"
-    fi
-    
-    # OAuth callback ports (conditional)
-    if [ $OAUTH_ENABLED -eq 1 ]; then
-        add_rule_if_missing 8085 tcp "CLIProxyAPI OAuth callback 1"
-        add_rule_if_missing 1455 tcp "CLIProxyAPI OAuth callback 2"
-        add_rule_if_missing 54545 tcp "CLIProxyAPI OAuth callback 3"
-        add_rule_if_missing 51121 tcp "CLIProxyAPI OAuth callback 4"
-        add_rule_if_missing 11451 tcp "CLIProxyAPI OAuth callback 5"
-    fi
-    
-    if [ $RULES_ADDED -eq 0 ]; then
-        log_success "All required UFW rules already configured"
     else
-        ufw reload
-        log_success "UFW rules updated"
+        log_warning "UFW is already active. Existing rules and default policies will be preserved."
+        if [ ${#REQUIRED_TCP_PORTS[@]} -eq 0 ] && [ ${#REQUIRED_UDP_PORTS[@]} -eq 0 ]; then
+            log_info "This selected installation mode does not require opening public UFW ports."
+        else
+            log_info "Ports required by this selected installation mode:"
+            log_info "  TCP: $(join_by_comma "${REQUIRED_TCP_PORTS[@]}")"
+            log_info "  UDP: $(join_by_comma "${REQUIRED_UDP_PORTS[@]}")"
+            read -p "Add missing CLIProxyAPI Dashboard UFW allow rules to the active firewall? [y/N]: " ADD_UFW_RULES_INPUT
+            if [[ "$ADD_UFW_RULES_INPUT" =~ ^[Yy]$ ]]; then
+                add_required_ufw_rules
+                if [ "${UFW_RULES_ADDED:-0}" -eq 0 ]; then
+                    log_success "All selected-mode UFW rules were already configured"
+                else
+                    ufw reload
+                    log_success "UFW rules updated"
+                fi
+            else
+                log_info "Skipping UFW rule changes. Configure required ports manually if needed."
+            fi
+        fi
     fi
 fi
 

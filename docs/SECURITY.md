@@ -21,8 +21,9 @@
    ```
 
 4. **Firewall Configuration**:
-   - Only open required ports
-   - Use `ufw limit` for SSH to enable rate limiting
+   - Only open ports required for your selected installation mode
+   - On existing servers, allow your actual SSH port and any existing service ports before enabling UFW
+   - Use `ufw limit <ssh-port>/tcp` for SSH to enable rate limiting
    - Consider IP whitelisting for SSH access
 
 5. **Regular Updates**:

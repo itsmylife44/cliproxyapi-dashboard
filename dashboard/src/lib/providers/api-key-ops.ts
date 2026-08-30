@@ -117,14 +117,20 @@ export async function contributeKey(
     } else {
       const responseKey = `${provider}-api-key`;
       const rawData = getData[responseKey];
+      // CLIProxyAPI v7.2.145+ treats Codex entries without a base URL as
+      // removed. Direct OpenAI keys use the official Responses API endpoint.
+      const newKeyEntry =
+        provider === PROVIDER.CODEX
+          ? { "api-key": trimmedKey, "base-url": "https://api.openai.com/v1" }
+          : { "api-key": trimmedKey };
 
       if (rawData === null || (Array.isArray(rawData) && rawData.length === 0)) {
-        updatedPayload = [{ "api-key": trimmedKey }];
+        updatedPayload = [newKeyEntry];
       } else if (!isApiKeyArray(rawData)) {
         await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
         return { ok: false, error: `Invalid Management API response for ${provider}` };
       } else {
-        updatedPayload = [...rawData, { "api-key": trimmedKey }];
+        updatedPayload = [...rawData, newKeyEntry];
       }
     }
 
@@ -156,6 +162,35 @@ export async function contributeKey(
       await putRes.body?.cancel();
       await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
       return { ok: false, error: `Failed to add key to Management API: HTTP ${putRes.status}` };
+    }
+
+    await putRes.body?.cancel();
+
+    // Some Management API versions return 200 after silently filtering an
+    // invalid entry. Verify persistence before retaining the ownership row.
+    if (provider !== PROVIDER.OPENAI_COMPAT) {
+      const verifyRes = await fetchWithTimeout(endpoint, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+      });
+
+      if (!verifyRes.ok) {
+        await verifyRes.body?.cancel();
+        await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
+        return { ok: false, error: `Failed to verify added key: HTTP ${verifyRes.status}` };
+      }
+
+      const verifyData = await verifyRes.json();
+      const responseKey = `${provider}-api-key`;
+      const persistedKeys = isRecord(verifyData) ? verifyData[responseKey] : null;
+
+      if (
+        !isApiKeyArray(persistedKeys) ||
+        !persistedKeys.some((entry) => entry["api-key"] === trimmedKey)
+      ) {
+        await prisma.providerKeyOwnership.deleteMany({ where: { keyHash } });
+        return { ok: false, error: "Management API did not persist the key" };
+      }
     }
 
     invalidateUsageCaches();

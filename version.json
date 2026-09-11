@@ -1,6 +1,6 @@
 {
-  "version": "0.1.82",
-  "tag": "dashboard-v0.1.82",
-  "releaseUrl": "https://github.com/itsmylife44/cliproxyapi-dashboard/releases/tag/dashboard-v0.1.82",
-  "releaseNotes": "## [0.1.82](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.81...dashboard-v0.1.82) (2026-06-21)\n\n\n### Bug Fixes\n\n* replace wget healthcheck with bash /dev/tcp for cliproxyapi container ([#223](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/223)) ([3cf8634](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/3cf863480313ff8fce44ea9d64c817418dd5ec33))\n* **usage:** respect server TZ for today filter and daily aggregation ([#221](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/221)) ([a6454e9](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a6454e950f83ada1f92e73037dff291eb67c8d49))"
+  "version": "0.1.83",
+  "tag": "dashboard-v0.1.83",
+  "releaseUrl": "https://github.com/itsmylife44/cliproxyapi-dashboard/releases/tag/dashboard-v0.1.83",
+  "releaseNotes": "## [0.1.83](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.82...dashboard-v0.1.83) (2026-09-11)\n\n\n### Features\n\n* **i18n:** add Simplified Chinese translation ([#227](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/227)) ([de1b00d](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/de1b00df7ca6ecc6c2295d95b4e47f456999c426))\n* **install:** add dashboard-only deployment mode ([dd7f369](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/dd7f36960a4aa8760e179f7a4ca5c748f62e5ffa))\n\n\n### Bug Fixes\n\n* **install:** make UFW setup opt-in ([b9cc297](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/b9cc297fb3e3dd1334bfecaedb0cf7c83738c328))\n* persist Codex API keys with required base URL ([#226](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/226)) ([d48975d](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d48975d96c9024cab4699ef72d7d21e11bc9ae58))"
 }

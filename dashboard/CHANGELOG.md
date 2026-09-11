@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.83](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.82...dashboard-v0.1.83) (2026-09-11)
+
+
+### Features
+
+* **i18n:** add Simplified Chinese translation ([#227](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/227)) ([de1b00d](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/de1b00df7ca6ecc6c2295d95b4e47f456999c426))
+* **install:** add dashboard-only deployment mode ([dd7f369](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/dd7f36960a4aa8760e179f7a4ca5c748f62e5ffa))
+
+
+### Bug Fixes
+
+* **install:** make UFW setup opt-in ([b9cc297](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/b9cc297fb3e3dd1334bfecaedb0cf7c83738c328))
+* persist Codex API keys with required base URL ([#226](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/226)) ([d48975d](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d48975d96c9024cab4699ef72d7d21e11bc9ae58))
+
 ## [0.1.82](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.81...dashboard-v0.1.82) (2026-06-21)
 
 

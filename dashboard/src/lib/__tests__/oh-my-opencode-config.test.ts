@@ -2,7 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { applyPreset, buildOhMyOpenCodeConfig, getMissingPresetModels } from "../config-generators/oh-my-opencode";
 import type { OhMyOpenCodePreset } from "../config-generators/oh-my-opencode-types";
-import { validateFullConfig } from "../config-generators/oh-my-opencode-types";
+import {
+  AVAILABLE_SKILLS,
+  BROWSER_PROVIDERS,
+  OPENAGENT_BETA_BROWSER_PROVIDERS,
+  OPENAGENT_BETA_SKILLS,
+  OPENAGENT_STABLE_SKILLS,
+  validateFullConfig,
+} from "../config-generators/oh-my-opencode-types";
 
 describe("oh-my-opencode config", () => {
   beforeEach(() => {
@@ -305,13 +312,49 @@ describe("oh-my-opencode config", () => {
     expect(result.background_task?.providerConcurrency?.openai).toBe(2);
   });
 
-  it("uses schema URL from main branch", () => {
+  it("pins the schema URL to the stable channel, not the dev branch", () => {
     const config = buildOhMyOpenCodeConfig(["claude-opus-4.6"]);
 
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
-    expect(typedConfig.$schema).toEqual(expect.stringContaining("/main/"));
+    // `latest` on unpkg resolves to the stable channel. The repository's
+    // default branch is `dev` (v5 beta schema) and there is no `main` branch,
+    // so neither may be used here.
+    expect(typedConfig.$schema).toBe(
+      "https://unpkg.com/oh-my-openagent@latest/dist/oh-my-opencode.schema.json",
+    );
     expect(typedConfig.$schema).not.toEqual(expect.stringContaining("/dev/"));
+    expect(typedConfig.$schema).not.toEqual(expect.stringContaining("/main/"));
+  });
+
+  describe("channel-scoped catalogues", () => {
+    it("offers every browser provider the targeted stable channel accepts", () => {
+      // The stable 4.19.4 schema accepts agent-browser; the v5 beta dropped it.
+      expect([...BROWSER_PROVIDERS]).toEqual([
+        "playwright",
+        "agent-browser",
+        "dev-browser",
+        "playwright-cli",
+      ]);
+      expect([...OPENAGENT_BETA_BROWSER_PROVIDERS]).toEqual([
+        "playwright",
+        "dev-browser",
+        "playwright-cli",
+      ]);
+    });
+
+    it("lists exactly the bundled skills of each channel", () => {
+      expect([...OPENAGENT_STABLE_SKILLS]).toHaveLength(17);
+      expect([...OPENAGENT_STABLE_SKILLS]).toContain("start-work");
+      expect([...OPENAGENT_STABLE_SKILLS]).not.toContain("ulw-execute");
+
+      expect([...OPENAGENT_BETA_SKILLS]).toHaveLength(17);
+      expect([...OPENAGENT_BETA_SKILLS]).toContain("ulw-execute");
+      expect([...OPENAGENT_BETA_SKILLS]).not.toContain("start-work");
+
+      // The dashboard targets stable for the skills it offers.
+      expect([...AVAILABLE_SKILLS]).toEqual([...OPENAGENT_STABLE_SKILLS]);
+    });
   });
 
   describe("agent/category skipping when models unavailable", () => {

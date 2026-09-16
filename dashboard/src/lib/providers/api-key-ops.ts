@@ -21,6 +21,15 @@ import {
   type KeyWithOwnership,
 } from "./management-api";
 
+/**
+ * Official upstream base URLs for the Codex-shaped providers. CLIProxyAPI
+ * discards management entries that omit `base-url`, so these are required.
+ */
+const PROVIDER_DEFAULT_BASE_URL: Partial<Record<Provider, string>> = {
+  [PROVIDER.CODEX]: "https://api.openai.com/v1",
+  [PROVIDER.XAI]: "https://api.x.ai/v1",
+};
+
 export async function contributeKey(
   userId: string,
   provider: Provider,
@@ -117,12 +126,12 @@ export async function contributeKey(
     } else {
       const responseKey = `${provider}-api-key`;
       const rawData = getData[responseKey];
-      // CLIProxyAPI v7.2.145+ treats Codex entries without a base URL as
-      // removed. Direct OpenAI keys use the official Responses API endpoint.
-      const newKeyEntry =
-        provider === PROVIDER.CODEX
-          ? { "api-key": trimmedKey, "base-url": "https://api.openai.com/v1" }
-          : { "api-key": trimmedKey };
+      // CLIProxyAPI v7.2.145+ drops Codex-shaped entries (Codex and xAI) that
+      // carry no base URL, so both require the provider's official endpoint.
+      const baseUrl = PROVIDER_DEFAULT_BASE_URL[provider];
+      const newKeyEntry = baseUrl
+        ? { "api-key": trimmedKey, "base-url": baseUrl }
+        : { "api-key": trimmedKey };
 
       if (rawData === null || (Array.isArray(rawData) && rawData.length === 0)) {
         updatedPayload = [newKeyEntry];

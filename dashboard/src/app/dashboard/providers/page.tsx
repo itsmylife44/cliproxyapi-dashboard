@@ -32,6 +32,7 @@ const loadProvidersData = async (signal?: AbortSignal): Promise<Record<ProviderI
     [PROVIDER_IDS.CLAUDE]: { keys: [] },
     [PROVIDER_IDS.GEMINI]: { keys: [] },
     [PROVIDER_IDS.CODEX]: { keys: [] },
+    [PROVIDER_IDS.XAI]: { keys: [] },
     [PROVIDER_IDS.OPENAI]: { keys: [] },
   };
 
@@ -63,6 +64,7 @@ export default function ProvidersPage() {
     [PROVIDER_IDS.CLAUDE]: { keys: [] },
     [PROVIDER_IDS.GEMINI]: { keys: [] },
     [PROVIDER_IDS.CODEX]: { keys: [] },
+    [PROVIDER_IDS.XAI]: { keys: [] },
     [PROVIDER_IDS.OPENAI]: { keys: [] },
   }));
   const [loading, setLoading] = useState(true);

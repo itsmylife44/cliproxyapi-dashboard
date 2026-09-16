@@ -15,6 +15,7 @@ export const PROVIDER_IDS = {
   CLAUDE: "claude",
   GEMINI: "gemini",
   CODEX: "codex",
+  XAI: "xai",
   OPENAI: "openai-compatibility",
 } as const;
 
@@ -59,6 +60,11 @@ export const PROVIDERS = [
     id: PROVIDER_IDS.CODEX,
     name: "OpenAI / Codex",
     description: "OpenAI API including GPT models",
+  },
+  {
+    id: PROVIDER_IDS.XAI,
+    name: "xAI (Grok)",
+    description: "xAI Grok API",
   },
   {
     id: PROVIDER_IDS.OPENAI,
@@ -325,7 +331,10 @@ export function ApiKeySection({
                 <p className="text-[var(--text-primary)]">
                   <strong>{t("usageLabel")}</strong>{" "}
                   {t("usageContributed", {
-                    contributed: configs[PROVIDER_IDS.CLAUDE].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.GEMINI].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.CODEX].keys.filter((k) => k.isOwn).length + configs[PROVIDER_IDS.OPENAI].keys.filter((k) => k.isOwn).length,
+                    contributed: PROVIDERS.reduce(
+                      (sum, provider) => sum + configs[provider.id].keys.filter((key) => key.isOwn).length,
+                      0
+                    ),
                     max: maxKeysPerUser
                   })}
                 </p>

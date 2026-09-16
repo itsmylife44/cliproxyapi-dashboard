@@ -64,7 +64,7 @@ Open **http://localhost:3000** → create admin account → done.
 - **Quota Tracking** — Rate limits and usage per provider (Claude, Codex, Kimi, Antigravity)
 - **Telegram Quota Alerts** — Automatic notifications when OAuth quota drops below threshold (configurable per-provider, 1-hour cooldown)
 - **Usage Analytics** — Request counts, provider breakdown, model stats, error rates
-- **Oh-My-Open-Agent Variant Toggle** — Choose between [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (9 agents + categories) and [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (6 agents, lower tokens, fallback chains) with per-agent model/skills configuration
+- **Oh-My-Open-Agent Variant Toggle** — Choose between [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (11 agents + 8 built-in categories, stable 4.19.4) and [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (7 primary agents + optional observer, stable 2.2.21) with per-agent model/skills configuration
 - **Config Sync** — Auto-sync OpenCode configs via the [`opencode-cliproxyapi-sync`](https://github.com/itsmylife44/opencode-cliproxyapi-sync) plugin (includes slim config)
 - **Config Sharing** — Share model configs with others via share codes (`XXXX-XXXX`)
 - **One-Click Updates** — Update both Dashboard (GHCR) and CLIProxyAPI (Docker Hub) from the admin panel
@@ -102,26 +102,34 @@ Use the **Test Message** button to verify your configuration before enabling.
 
 The dashboard supports two OpenCode orchestration variants. Toggle between them in the **Using with OpenCode** section:
 
-| Variant | Agents | Description |
-|---------|--------|-------------|
-| **Oh-My-Open-Agent** | 9 agents + 8 categories | Full-featured orchestration with sisyphus, atlas, prometheus, oracle, and more |
-| **Oh-My-OpenCode Slim** | 6 agents | Lightweight: orchestrator, oracle, designer, explorer, librarian, fixer. Lower token usage with dedicated fallback chains |
+| Variant | Upstream | Agents | Description |
+|---------|----------|--------|-------------|
+| **Oh-My-Open-Agent** | `oh-my-openagent` 4.19.4 (stable) | 11 agents + 8 built-in categories | Full-featured orchestration with sisyphus, atlas, prometheus, oracle, and more |
+| **Oh-My-OpenCode Slim** | `oh-my-opencode-slim` 2.2.21 (stable) | 7 primary agents + optional `observer` | Lightweight: orchestrator, oracle, designer, explorer, librarian, fixer, council. Model fallbacks are ordered `model` arrays per agent |
+
+Both variants target their **stable** upstream channel. The v5 / 3.0 beta channels use different configuration systems (new `omo.jsonc` format for OpenAgent, a different preset layout for Slim) and are **not generated** by the dashboard.
 
 **How it works:**
 
 1. Select your variant in the dashboard -- the plugin in `opencode.json` switches automatically
 2. Assign models to agents (auto-assigned by tier, or manually override)
-3. Toggle skills per agent (simplify, cartography, agent-browser)
+3. Toggle skills per agent (Slim: `codemap`, `clonedeps`, `deepwork`, `verification-planning`, `reflect`, `oh-my-opencode-slim`, `worktrees` for the orchestrator, and `simplify` for the oracle)
 4. Config syncs automatically via the sync plugin
 
 **First-time setup** (run once per variant):
 
 ```bash
 bunx oh-my-openagent@latest install          # Normal variant
-bunx oh-my-opencode-slim@latest install     # Slim variant
+bunx oh-my-opencode-slim@latest install      # Slim variant
 ```
 
 Each variant has its own config file (`oh-my-openagent.json` / `oh-my-opencode-slim.json`) -- they don't conflict.
+
+> The install commands above install the skills the generated configuration grants. Do not install with `--skills=no` while generating skill grants.
+
+Existing dashboards keep working: legacy stored configurations (old fallback chains, legacy council master blocks, the removed scoring/planning sections) are migrated on read, and unknown fields are preserved.
+
+See [`docs/upstream-opencode-integrations.md`](docs/upstream-opencode-integrations.md) for the full upstream audit, the stable/beta support matrix and the provenance of every constant.
 
 ## Screenshots
 

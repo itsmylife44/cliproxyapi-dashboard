@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { ChartContainer, SERIES_PALETTE, useChartTheme, formatCompact } from "@/components/ui/chart-theme";
 import {
   resolveModelPrice,
-  calculateCost,
+  calculateTieredCost,
   loadCustomPricing,
   formatUSD,
   type ModelPrice,
@@ -25,6 +25,10 @@ interface KeyUsage {
     totalTokens: number;
     inputTokens: number;
     outputTokens: number;
+    cachedTokens: number;
+    longContextInputTokens: number;
+    longContextOutputTokens: number;
+    longContextCachedTokens: number;
   }>;
 }
 
@@ -57,15 +61,37 @@ interface ProviderCostEntry {
 
 function buildCostBreakdown(keys: Record<string, KeyUsage>, customPricing: Record<string, ModelPrice>): ModelCostEntry[] {
   // Aggregate all models across all keys
-  const modelAgg: Record<string, { inputTokens: number; outputTokens: number; totalTokens: number; requests: number }> = {};
+  const modelAgg: Record<string, {
+    inputTokens: number;
+    outputTokens: number;
+    cachedTokens: number;
+    longContextInputTokens: number;
+    longContextOutputTokens: number;
+    longContextCachedTokens: number;
+    totalTokens: number;
+    requests: number;
+  }> = {};
 
   for (const key of Object.values(keys)) {
     for (const [model, data] of Object.entries(key.models)) {
       if (!modelAgg[model]) {
-        modelAgg[model] = { inputTokens: 0, outputTokens: 0, totalTokens: 0, requests: 0 };
+        modelAgg[model] = {
+          inputTokens: 0,
+          outputTokens: 0,
+          cachedTokens: 0,
+          longContextInputTokens: 0,
+          longContextOutputTokens: 0,
+          longContextCachedTokens: 0,
+          totalTokens: 0,
+          requests: 0,
+        };
       }
       modelAgg[model].inputTokens += data.inputTokens;
       modelAgg[model].outputTokens += data.outputTokens;
+      modelAgg[model].cachedTokens += data.cachedTokens;
+      modelAgg[model].longContextInputTokens += data.longContextInputTokens;
+      modelAgg[model].longContextOutputTokens += data.longContextOutputTokens;
+      modelAgg[model].longContextCachedTokens += data.longContextCachedTokens;
       modelAgg[model].totalTokens += data.totalTokens;
       modelAgg[model].requests += data.totalRequests;
     }
@@ -74,7 +100,23 @@ function buildCostBreakdown(keys: Record<string, KeyUsage>, customPricing: Recor
   return Object.entries(modelAgg)
     .map(([model, data]) => {
       const price = resolveModelPrice(model, customPricing);
-      const estimatedCost = price ? calculateCost(data.inputTokens, data.outputTokens, price) : 0;
+      // The long-context subset was bucketed per request server-side; the
+      // remainder is the short-context tier.
+      const estimatedCost = price
+        ? calculateTieredCost(
+            {
+              inputTokens: data.inputTokens - data.longContextInputTokens,
+              outputTokens: data.outputTokens - data.longContextOutputTokens,
+              cachedTokens: data.cachedTokens - data.longContextCachedTokens,
+            },
+            {
+              inputTokens: data.longContextInputTokens,
+              outputTokens: data.longContextOutputTokens,
+              cachedTokens: data.longContextCachedTokens,
+            },
+            price
+          )
+        : 0;
       return {
         model,
         displayName: price?.displayName ?? model,
@@ -287,7 +329,8 @@ export function CostEstimation({ keys }: CostEstimationProps) {
         </div>
         <div className="border-t border-[var(--surface-border)] px-4 py-2 text-[10px] text-[var(--text-muted)]">
           💡 {t('costDisclaimerPart1')}{' '}
-          {t('costDisclaimerPart2')} <code className="bg-[var(--surface-muted)] px-1 rounded text-[9px]">cliproxy-custom-pricing</code>.
+          {t('costDisclaimerPart2')} <code className="bg-[var(--surface-muted)] px-1 rounded text-[9px]">cliproxy-custom-pricing</code>.{' '}
+          {t('costDisclaimerPart3')}
         </div>
       </div>
     </div>

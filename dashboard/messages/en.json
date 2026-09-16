@@ -865,6 +865,7 @@
     "totalEstimatedCost": "Total Estimated Cost",
     "costDisclaimerPart1": "Costs are estimates based on official API pricing. OAuth/subscription usage may have different or zero actual cost.",
     "costDisclaimerPart2": "Customize rates in your browser's localStorage under",
+    "costDisclaimerPart3": "Requests above a model's long-context threshold (for example xAI at 200k prompt tokens) are billed at the higher tier where the price table defines one; other models are estimated at their standard rate.",
     "unknownProvider": "Unknown",
     "providerStats": "{models} models · {requests} requests",
     "timePeriod": "Time Period",

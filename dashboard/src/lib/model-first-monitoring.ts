@@ -23,6 +23,10 @@ export interface QuotaGroup {
   remainingFraction?: number | null;
   resetTime: string | null;
   models: QuotaModel[];
+  /** Provider-reported severity (e.g. Anthropic's `normal` | `warning` | `critical`). */
+  severity?: string;
+  /** Whether the provider currently treats this limit as the active/binding one. */
+  isActive?: boolean;
   monitorMode?: QuotaMonitorMode;
   readyModelCount?: number;
   depletedModelCount?: number;

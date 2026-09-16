@@ -91,11 +91,32 @@ interface ClaudeUsageWindow {
   resets_at?: string | null;
 }
 
+interface ClaudeUsageLimitScopeModel {
+  id?: string | null;
+  display_name?: string | null;
+}
+
+/**
+ * Anthropic models per-model weekly buckets as entries in `limits[]`. The flat
+ * `seven_day_*` keys are `null` on newer responses, so the `weekly_scoped`
+ * entries are the only place a per-model limit (e.g. Fable) is reported.
+ */
+interface ClaudeUsageLimit {
+  kind?: string;
+  group?: string;
+  percent?: number;
+  severity?: string;
+  is_active?: boolean;
+  resets_at?: string | null;
+  scope?: { model?: ClaudeUsageLimitScopeModel };
+}
+
 interface ClaudeOAuthUsageResponse {
   five_hour?: ClaudeUsageWindow;
   seven_day?: ClaudeUsageWindow;
   seven_day_sonnet?: ClaudeUsageWindow;
   seven_day_opus?: ClaudeUsageWindow;
+  limits?: ClaudeUsageLimit[];
   extra_usage?: {
     is_enabled?: boolean;
     utilization?: number;
@@ -926,6 +947,90 @@ async function callClaudeUsageEndpoint(
   return null;
 }
 
+function slugifyLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function humanizeLimitKind(value: string): string {
+  const words = value.split(/[^a-z0-9]+/i).filter(Boolean);
+  if (words.length === 0) return "Limit";
+  return words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+}
+
+/**
+ * Map Anthropic's unified rate-limit status to the severity vocabulary used by
+ * the `limits[]` response, so both quota paths render identically.
+ */
+function severityFromUnifiedStatus(status: string | null | undefined): string | undefined {
+  switch (status?.trim().toLowerCase()) {
+    case "rejected":
+      return "critical";
+    case "allowed_warning":
+      return "warning";
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Build quota groups from Anthropic's `limits[]` array, preferred over the flat
+ * `seven_day_*` keys because the latter no longer carry per-model buckets.
+ * `weekly_scoped` entries name their model via `scope.model.display_name`, so a
+ * newly scoped model needs no dashboard change.
+ */
+function buildClaudeLimitGroups(limits: ClaudeUsageLimit[] | undefined): QuotaGroup[] {
+  if (!Array.isArray(limits)) return [];
+
+  const groups: QuotaGroup[] = [];
+  const seenIds = new Set<string>();
+
+  for (const limit of limits) {
+    if (!limit || typeof limit !== "object") continue;
+    if (typeof limit.percent !== "number" || !Number.isFinite(limit.percent)) continue;
+
+    const remainingFraction = Math.max(0, Math.min(1, 1 - limit.percent / 100));
+    const resetTime = limit.resets_at ?? null;
+    const scopedModelName =
+      limit.scope?.model?.display_name?.trim() || limit.scope?.model?.id?.trim() || null;
+
+    let id: string;
+    let label: string;
+
+    if (limit.kind === "session" || limit.group === "session") {
+      id = "five-hour";
+      label = "5h Session";
+    } else if (limit.kind === "weekly_all") {
+      id = "seven-day";
+      label = "7d Weekly";
+    } else if (scopedModelName) {
+      id = `seven-day-${slugifyLabel(scopedModelName)}`;
+      label = `7d ${scopedModelName}`;
+    } else {
+      const fallbackKind = limit.kind ?? limit.group ?? "limit";
+      id = `limit-${slugifyLabel(fallbackKind)}`;
+      label = humanizeLimitKind(fallbackKind);
+    }
+
+    if (seenIds.has(id)) continue;
+    seenIds.add(id);
+
+    groups.push({
+      id,
+      label,
+      remainingFraction,
+      resetTime,
+      severity: typeof limit.severity === "string" ? limit.severity : undefined,
+      isActive: limit.is_active === true,
+      models: [{ id, displayName: label, remainingFraction, resetTime }],
+    });
+  }
+
+  return groups;
+}
+
 async function fetchClaudeQuota(
   authIndex: string
 ): Promise<QuotaGroup[] | { error: string }> {
@@ -946,6 +1051,8 @@ async function fetchClaudeQuota(
           label: string,
           window: ClaudeUsageWindow | undefined
         ) => {
+          // `limits[]` entries take precedence for the windows they cover.
+          if (usageGroups.some((group) => group.id === id)) return;
           if (window?.utilization === undefined || window.utilization === null) {
             return;
           }
@@ -970,6 +1077,10 @@ async function fetchClaudeQuota(
             ],
           });
         };
+
+        // `limits[]` carries per-model buckets; the flat keys still supply the
+        // shared windows for responses that omit them.
+        usageGroups.push(...buildClaudeLimitGroups(usageData.limits));
 
         pushUsageGroup("five-hour", "5h Session", usageData.five_hour);
         pushUsageGroup("seven-day", "7d Weekly", usageData.seven_day);
@@ -1079,15 +1190,20 @@ async function fetchClaudeQuota(
     const unified7dReset = getHeaderValue(headers, "anthropic-ratelimit-unified-7d-reset");
     const unified7dSonnetUtilization = getHeaderValue(headers, "anthropic-ratelimit-unified-7d_sonnet-utilization");
     const unified7dSonnetReset = getHeaderValue(headers, "anthropic-ratelimit-unified-7d_sonnet-reset");
+    // CLIProxyAPI models `7d_oi` as the Fable-scoped weekly bucket, alongside
+    // the shared 5h/7d windows.
+    const unified7dOiUtilization = getHeaderValue(headers, "anthropic-ratelimit-unified-7d_oi-utilization");
+    const unified7dOiReset = getHeaderValue(headers, "anthropic-ratelimit-unified-7d_oi-reset");
 
-    if (unified5hUtilization || unified7dUtilization) {
+    if (unified5hUtilization || unified7dUtilization || unified7dOiUtilization) {
       const unifiedGroups: QuotaGroup[] = [];
 
       const pushUnifiedGroup = (
         id: string,
         label: string,
         utilization: string | null,
-        resetEpoch: string | null
+        resetEpoch: string | null,
+        status?: string | null
       ) => {
         if (!utilization) return;
         const util = parseFloat(utilization);
@@ -1103,13 +1219,33 @@ async function fetchClaudeQuota(
           label,
           remainingFraction,
           resetTime,
+          severity: severityFromUnifiedStatus(status),
           models: [{ id, displayName: label, remainingFraction, resetTime }],
         });
       };
 
-      pushUnifiedGroup("five-hour", "5h Session", unified5hUtilization, unified5hReset);
-      pushUnifiedGroup("seven-day", "7d Weekly", unified7dUtilization, unified7dReset);
+      pushUnifiedGroup(
+        "five-hour",
+        "5h Session",
+        unified5hUtilization,
+        unified5hReset,
+        getHeaderValue(headers, "anthropic-ratelimit-unified-5h-status")
+      );
+      pushUnifiedGroup(
+        "seven-day",
+        "7d Weekly",
+        unified7dUtilization,
+        unified7dReset,
+        getHeaderValue(headers, "anthropic-ratelimit-unified-7d-status")
+      );
       pushUnifiedGroup("seven-day-sonnet", "7d Sonnet", unified7dSonnetUtilization, unified7dSonnetReset);
+      pushUnifiedGroup(
+        "seven-day-oi",
+        "7d Fable",
+        unified7dOiUtilization,
+        unified7dOiReset,
+        getHeaderValue(headers, "anthropic-ratelimit-unified-7d_oi-status")
+      );
 
       if (unifiedGroups.length > 0) {
         return unifiedGroups;

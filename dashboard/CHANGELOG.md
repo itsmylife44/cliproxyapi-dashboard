@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.84](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.83...dashboard-v0.1.84) (2026-09-16)
+
+
+### Features
+
+* **providers:** add first-class xAI support ([#231](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/231)) ([6d030b6](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6d030b6a5f5258ad614f7c5874d8b1870d91c2de))
+
+
+### Bug Fixes
+
+* **config:** align routing strategies with CLIProxyAPI ([#229](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/229)) ([6d030b6](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6d030b6a5f5258ad614f7c5874d8b1870d91c2de))
+* **quota:** parse Anthropic per-model limits ([#230](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/230)) ([6d030b6](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6d030b6a5f5258ad614f7c5874d8b1870d91c2de))
+* **usage:** update model pricing, cache accounting, and long-context tiers ([#232](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/232)) ([6d030b6](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6d030b6a5f5258ad614f7c5874d8b1870d91c2de))
+
 ## [0.1.83](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.82...dashboard-v0.1.83) (2026-09-11)
 
 

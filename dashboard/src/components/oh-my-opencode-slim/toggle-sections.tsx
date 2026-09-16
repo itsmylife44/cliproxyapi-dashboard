@@ -5,22 +5,18 @@ import { useTranslations } from "next-intl";
 
 import type {
   OhMyOpenCodeSlimFullConfig,
-  SlimTmuxConfig,
-  SlimBackgroundConfig,
+  SlimBackgroundJobsConfig,
   SlimFallbackConfig,
   SlimCouncilConfig,
   SlimMultiplexerConfig,
   SlimInterviewConfig,
-  SlimTodoContinuationConfig,
-  SlimWebsearchConfig,
-  SlimManualPlanEntry,
 } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import {
-  SLIM_TMUX_LAYOUTS,
-  SLIM_SCORING_VERSIONS,
-  SLIM_COUNCILLOR_EXECUTION_MODES,
+  SLIM_BACKGROUND_JOB_STRATEGIES,
+  SLIM_IMAGE_ROUTING_MODES,
+  SLIM_MULTIPLEXER_LAYOUTS,
   SLIM_MULTIPLEXER_TYPES,
-  SLIM_WEBSEARCH_PROVIDERS,
+  SLIM_ZELLIJ_PANE_MODES,
 } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { HelpTooltip } from "@/components/ui/tooltip";
 
@@ -126,97 +122,141 @@ function JsonApplyEditor({
   );
 }
 
+/** Reusable "tag list" editor for the disabled_* string arrays. */
+function DisabledListSection({
+  entries,
+  onAdd,
+  onRemove,
+  placeholder,
+  addLabel,
+  removeAriaLabel,
+}: {
+  entries: string[];
+  onAdd: (value: string) => boolean;
+  onRemove: (value: string) => void;
+  placeholder: string;
+  addLabel: string;
+  removeAriaLabel: (value: string) => string;
+}) {
+  const [input, setInput] = useState("");
+
+  const submit = () => {
+    if (onAdd(input)) setInput("");
+  };
+
+  return (
+    <>
+      {entries.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {entries.map((entry) => (
+            <span
+              key={entry}
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]"
+            >
+              {entry}
+              <button
+                type="button"
+                onClick={() => onRemove(entry)}
+                className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                aria-label={removeAriaLabel(entry)}
+              >
+                &times;
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              submit();
+            }
+          }}
+          placeholder={placeholder}
+          className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)] placeholder:text-[var(--text-muted)]"
+        />
+        <button
+          type="button"
+          onClick={submit}
+          className="rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+        >
+          {addLabel}
+        </button>
+      </div>
+    </>
+  );
+}
+
 interface SlimToggleSectionsProps {
   overrides: OhMyOpenCodeSlimFullConfig;
-  onTmuxChange: (tmux: SlimTmuxConfig | undefined) => void;
-  onBackgroundChange: (background: SlimBackgroundConfig | undefined) => void;
+  onBackgroundJobsChange: (backgroundJobs: SlimBackgroundJobsConfig | undefined) => void;
   onFallbackChange: (fallback: SlimFallbackConfig | undefined) => void;
   onCouncilChange: (council: SlimCouncilConfig | undefined) => void;
   onDisabledMcpAdd: (mcp: string) => boolean;
   onDisabledMcpRemove: (mcp: string) => void;
+  onDisabledToolAdd: (tool: string) => boolean;
+  onDisabledToolRemove: (tool: string) => void;
+  onDisabledSkillAdd: (skill: string) => boolean;
+  onDisabledSkillRemove: (skill: string) => void;
   onScalarChange: (field: string, value: unknown) => void;
   onMultiplexerChange: (multiplexer: SlimMultiplexerConfig | undefined) => void;
   onDisabledAgentAdd: (agent: string) => boolean;
   onDisabledAgentRemove: (agent: string) => void;
   onInterviewChange: (interview: SlimInterviewConfig | undefined) => void;
-  onTodoContinuationChange: (todoContinuation: SlimTodoContinuationConfig | undefined) => void;
-  onWebsearchChange: (websearch: SlimWebsearchConfig | undefined) => void;
-  onManualPlanChange: (manualPlan: Record<string, SlimManualPlanEntry> | undefined) => void;
   onRawOverridesChange: (overrides: unknown) => void;
 }
 
 export function SlimToggleSections({
   overrides,
-  onTmuxChange,
-  onBackgroundChange,
+  onBackgroundJobsChange,
   onFallbackChange,
   onCouncilChange,
   onDisabledMcpAdd,
   onDisabledMcpRemove,
+  onDisabledToolAdd,
+  onDisabledToolRemove,
+  onDisabledSkillAdd,
+  onDisabledSkillRemove,
   onScalarChange,
   onMultiplexerChange,
   onDisabledAgentAdd,
   onDisabledAgentRemove,
   onInterviewChange,
-  onTodoContinuationChange,
-  onWebsearchChange,
-  onManualPlanChange,
   onRawOverridesChange,
 }: SlimToggleSectionsProps) {
   const t = useTranslations("ohMyOpenCodeSlim");
-  const [showTmux, setShowTmux] = useState(false);
-  const [showBackground, setShowBackground] = useState(false);
+  const [showGeneral, setShowGeneral] = useState(false);
+  const [showBackgroundJobs, setShowBackgroundJobs] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
   const [showMcps, setShowMcps] = useState(false);
-  const [showScoring, setShowScoring] = useState(false);
+  const [showTools, setShowTools] = useState(false);
+  const [showSkills, setShowSkills] = useState(false);
   const [showCouncil, setShowCouncil] = useState(false);
   const [showMultiplexer, setShowMultiplexer] = useState(false);
   const [showDisabledAgents, setShowDisabledAgents] = useState(false);
   const [showInterview, setShowInterview] = useState(false);
-  const [showTodoContinuation, setShowTodoContinuation] = useState(false);
-  const [showWebsearch, setShowWebsearch] = useState(false);
-  const [showManualPlan, setShowManualPlan] = useState(false);
   const [showRawConfig, setShowRawConfig] = useState(false);
-  const [mcpInput, setMcpInput] = useState("");
-  const [agentInput, setAgentInput] = useState("");
 
-  const tmux = overrides.tmux ?? {};
-  const background = overrides.background ?? {};
+  const backgroundJobs = overrides.backgroundJobs ?? {};
   const fallback = overrides.fallback ?? {};
   const council = overrides.council ?? {};
   const multiplexer = overrides.multiplexer ?? {};
   const interview = overrides.interview ?? {};
-  const todoContinuation = overrides.todoContinuation ?? {};
-  const websearch = overrides.websearch ?? {};
 
   return (
     <div className="border-t border-white/5 pt-4 space-y-3">
       <div className="grid gap-3 md:grid-cols-2">
         <Section
-          label={t("scoringSectionLabel")}
-          isExpanded={showScoring}
-          onToggle={() => setShowScoring((value) => !value)}
-          tooltip={t("scoringSectionTooltip")}
+          label={t("generalSectionLabel")}
+          isExpanded={showGeneral}
+          onToggle={() => setShowGeneral((value) => !value)}
+          tooltip={t("generalSectionTooltip")}
         >
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-28">{t("scoringEngineLabel")}</span>
-            <select
-              value={overrides.scoringEngineVersion ?? "v1"}
-              onChange={(event) => onScalarChange("scoringEngineVersion", event.target.value)}
-              className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-            >
-              {SLIM_SCORING_VERSIONS.map((version) => <option key={version} value={version}>{version}</option>)}
-            </select>
-          </div>
-          <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-            <input
-              type="checkbox"
-              checked={overrides.balanceProviderUsage ?? false}
-              onChange={() => onScalarChange("balanceProviderUsage", !(overrides.balanceProviderUsage ?? false))}
-              className="accent-black"
-            />
-            {t("balanceProviderLabel")}
-          </label>
           <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
             <input
               type="checkbox"
@@ -226,6 +266,47 @@ export function SlimToggleSections({
             />
             {t("setDefaultAgentLabel")}
           </label>
+          <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+            <input
+              type="checkbox"
+              checked={overrides.compactSidebar ?? true}
+              onChange={() => onScalarChange("compactSidebar", !(overrides.compactSidebar ?? true))}
+              className="accent-black"
+            />
+            {t("compactSidebarLabel")}
+          </label>
+          <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+            <input
+              type="checkbox"
+              checked={overrides.stripOrchestratorModel ?? false}
+              onChange={() =>
+                onScalarChange("stripOrchestratorModel", !(overrides.stripOrchestratorModel ?? false))
+              }
+              className="accent-black"
+            />
+            {t("stripOrchestratorModelLabel")}
+          </label>
+          <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+            <input
+              type="checkbox"
+              checked={overrides.autoUpdate ?? true}
+              onChange={() => onScalarChange("autoUpdate", !(overrides.autoUpdate ?? true))}
+              className="accent-black"
+            />
+            {t("autoUpdateLabel")}
+          </label>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--text-muted)] w-28">{t("imageRoutingLabel")}</span>
+            <select
+              value={overrides.image_routing ?? "direct"}
+              onChange={(event) => onScalarChange("image_routing", event.target.value)}
+              className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+            >
+              {SLIM_IMAGE_ROUTING_MODES.map((mode) => (
+                <option key={mode} value={mode}>{mode}</option>
+              ))}
+            </select>
+          </div>
         </Section>
 
         <Section
@@ -237,7 +318,7 @@ export function SlimToggleSections({
           <div className="flex items-center gap-2">
             <span className="text-xs text-[var(--text-muted)] w-16">{t("typeLabel")}</span>
             <select
-              value={multiplexer.type ?? "auto"}
+              value={multiplexer.type ?? "none"}
               onChange={(event) => onMultiplexerChange({ ...multiplexer, type: event.target.value as SlimMultiplexerConfig["type"] })}
               className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
             >
@@ -245,51 +326,78 @@ export function SlimToggleSections({
             </select>
           </div>
           {(multiplexer.type === "tmux" || multiplexer.type === "auto" || multiplexer.type === undefined) && (
-            <>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--text-muted)] w-16">{t("layoutLabel")}</span>
-                <select
-                  value={multiplexer.layout ?? "main-vertical"}
-                  onChange={(event) => onMultiplexerChange({ ...multiplexer, layout: event.target.value as SlimMultiplexerConfig["layout"] })}
-                  className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-                >
-                  {SLIM_TMUX_LAYOUTS.map((layout) => <option key={layout} value={layout}>{layout}</option>)}
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--text-muted)] w-16">{t("paneSizeLabel")}</span>
-                <input
-                  type="number"
-                  min={20}
-                  max={80}
-                  value={multiplexer.main_pane_size ?? 60}
-                  onChange={(event) => {
-                    const next = parseInt(event.target.value, 10);
-                    onMultiplexerChange({ ...multiplexer, main_pane_size: Number.isNaN(next) ? 60 : next });
-                  }}
-                  className="w-20 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-                />
-              </div>
-            </>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--text-muted)] w-16">{t("layoutLabel")}</span>
+              <select
+                value={multiplexer.layout ?? "main-vertical"}
+                onChange={(event) => onMultiplexerChange({ ...multiplexer, layout: event.target.value as SlimMultiplexerConfig["layout"] })}
+                className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+              >
+                {SLIM_MULTIPLEXER_LAYOUTS.map((layout) => <option key={layout} value={layout}>{layout}</option>)}
+              </select>
+            </div>
+          )}
+          {multiplexer.type === "zellij" && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--text-muted)] w-16">{t("zellijPaneModeLabel")}</span>
+              <select
+                value={multiplexer.zellij_pane_mode ?? "agent-tab"}
+                onChange={(event) => onMultiplexerChange({ ...multiplexer, zellij_pane_mode: event.target.value as SlimMultiplexerConfig["zellij_pane_mode"] })}
+                className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+              >
+                {SLIM_ZELLIJ_PANE_MODES.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+              </select>
+            </div>
+          )}
+          {(multiplexer.type === "tmux" || multiplexer.type === "auto" || multiplexer.type === undefined) && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--text-muted)] w-16">{t("paneSizeLabel")}</span>
+              <input
+                type="number"
+                min={20}
+                max={80}
+                value={multiplexer.main_pane_size ?? 60}
+                onChange={(event) => {
+                  const next = parseInt(event.target.value, 10);
+                  onMultiplexerChange({ ...multiplexer, main_pane_size: Number.isNaN(next) ? 60 : next });
+                }}
+                className="w-20 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+              />
+            </div>
           )}
         </Section>
 
         <Section
-          label={t("backgroundSectionLabel")}
-          isExpanded={showBackground}
-          onToggle={() => setShowBackground((value) => !value)}
-          tooltip={t("backgroundSectionTooltip")}
+          label={t("backgroundJobsSectionLabel")}
+          isExpanded={showBackgroundJobs}
+          onToggle={() => setShowBackgroundJobs((value) => !value)}
+          tooltip={t("backgroundJobsSectionTooltip")}
         >
           <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)]">{t("maxConcurrentLabel")}</span>
+            <span className="text-xs text-[var(--text-muted)] w-32">{t("backgroundStrategyLabel")}</span>
+            <select
+              value={backgroundJobs.strategy ?? "latest"}
+              onChange={(event) => onBackgroundJobsChange({ ...backgroundJobs, strategy: event.target.value as SlimBackgroundJobsConfig["strategy"] })}
+              className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+            >
+              {SLIM_BACKGROUND_JOB_STRATEGIES.map((strategy) => (
+                <option key={strategy} value={strategy}>{strategy}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--text-muted)] w-32">{t("maxSessionsPerAgentLabel")}</span>
             <input
               type="number"
               min={1}
-              max={50}
-              value={background.maxConcurrentStarts ?? 10}
+              max={10}
+              value={backgroundJobs.maxSessionsPerAgent ?? 2}
               onChange={(event) => {
                 const next = parseInt(event.target.value, 10);
-                onBackgroundChange(next > 0 ? { maxConcurrentStarts: Math.min(50, next) } : undefined);
+                onBackgroundJobsChange({
+                  ...backgroundJobs,
+                  maxSessionsPerAgent: Number.isNaN(next) ? 2 : Math.min(10, Math.max(1, next)),
+                });
               }}
               className="w-20 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
             />
@@ -302,38 +410,14 @@ export function SlimToggleSections({
           onToggle={() => setShowDisabledAgents((value) => !value)}
           tooltip={t("disabledAgentsSectionTooltip")}
         >
-          {(overrides.disabled_agents ?? []).length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {(overrides.disabled_agents ?? []).map((agent) => (
-                <span key={agent} className="inline-flex items-center gap-1 rounded-full border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
-                  {agent}
-                  <button type="button" onClick={() => onDisabledAgentRemove(agent)} className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]" aria-label={t("removeAgentAria", { agent })}>&times;</button>
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={agentInput}
-              onChange={(event) => setAgentInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  if (onDisabledAgentAdd(agentInput)) setAgentInput("");
-                }
-              }}
-              placeholder={t("agentNamePlaceholder")}
-              className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)] placeholder:text-[var(--text-muted)]"
-            />
-            <button
-              type="button"
-              onClick={() => { if (onDisabledAgentAdd(agentInput)) setAgentInput(""); }}
-              className="rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            >
-              {t("agentAddButton")}
-            </button>
-          </div>
+          <DisabledListSection
+            entries={overrides.disabled_agents ?? []}
+            onAdd={onDisabledAgentAdd}
+            onRemove={onDisabledAgentRemove}
+            placeholder={t("agentNamePlaceholder")}
+            addLabel={t("agentAddButton")}
+            removeAriaLabel={(agent) => t("removeAgentAria", { agent })}
+          />
         </Section>
 
         <Section
@@ -352,57 +436,42 @@ export function SlimToggleSections({
             {t("enableFallback")}
           </label>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-24">{t("timeoutLabel")}</span>
+            <span className="text-xs text-[var(--text-muted)] w-32">{t("maxRetriesLabel")}</span>
             <input
               type="number"
               min={0}
-              value={fallback.timeoutMs ?? 15000}
+              value={fallback.maxRetries ?? 3}
               onChange={(event) => {
                 const next = parseInt(event.target.value, 10);
-                onFallbackChange({ ...fallback, timeoutMs: Number.isNaN(next) ? 15000 : next });
+                onFallbackChange({ ...fallback, maxRetries: Number.isNaN(next) ? 3 : Math.max(0, next) });
               }}
               className="w-24 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-24">{t("retryDelayLabel")}</span>
+            <span className="text-xs text-[var(--text-muted)] w-32">{t("initialRetryDelayLabel")}</span>
+            <input
+              type="number"
+              min={0}
+              value={fallback.initialRetryDelayMs ?? 0}
+              onChange={(event) => {
+                const next = parseInt(event.target.value, 10);
+                onFallbackChange({ ...fallback, initialRetryDelayMs: Number.isNaN(next) ? 0 : Math.max(0, next) });
+              }}
+              className="w-24 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--text-muted)] w-32">{t("retryDelayLabel")}</span>
             <input
               type="number"
               min={0}
               value={fallback.retryDelayMs ?? 500}
               onChange={(event) => {
                 const next = parseInt(event.target.value, 10);
-                onFallbackChange({ ...fallback, retryDelayMs: Number.isNaN(next) ? 500 : next });
+                onFallbackChange({ ...fallback, retryDelayMs: Number.isNaN(next) ? 500 : Math.max(0, next) });
               }}
               className="w-24 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-            />
-          </div>
-          <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-            <input
-              type="checkbox"
-              checked={fallback.retry_on_empty ?? true}
-              onChange={() => onFallbackChange({ ...fallback, retry_on_empty: !(fallback.retry_on_empty ?? true) })}
-              className="accent-black"
-            />
-            {t("retryOnEmptyLabel")}
-          </label>
-          <div className="space-y-1">
-            <p className="text-[11px] font-medium text-[var(--text-muted)]">{t("fallbackChainsLabel")}</p>
-            <p className="text-[11px] text-[var(--text-muted)]">{t("fallbackChainsHelp")}</p>
-            <JsonApplyEditor
-            key={formatJson(fallback.chains ?? {})}
-              value={fallback.chains ?? {}}
-              placeholder={t("fallbackChainsPlaceholder")}
-              invalidLabel={t("jsonInvalidLabel")}
-              applyLabel={t("applyJsonButton")}
-              onApply={(parsed) => {
-                onFallbackChange({
-                  ...fallback,
-                  chains: isObjectRecord(parsed) && Object.keys(parsed).length > 0
-                    ? parsed as Record<string, string[]>
-                    : undefined,
-                });
-              }}
             />
           </div>
         </Section>
@@ -413,38 +482,46 @@ export function SlimToggleSections({
           onToggle={() => setShowMcps((value) => !value)}
           tooltip={t("disabledMcpsSectionTooltip")}
         >
-          {(overrides.disabled_mcps ?? []).length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {(overrides.disabled_mcps ?? []).map((mcp) => (
-                <span key={mcp} className="inline-flex items-center gap-1 rounded-full border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
-                  {mcp}
-                  <button type="button" onClick={() => onDisabledMcpRemove(mcp)} className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]" aria-label={t("removeMcpAria", { mcp })}>&times;</button>
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={mcpInput}
-              onChange={(event) => setMcpInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  if (onDisabledMcpAdd(mcpInput)) setMcpInput("");
-                }
-              }}
-              placeholder={t("mcpNamePlaceholder")}
-              className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)] placeholder:text-[var(--text-muted)]"
-            />
-            <button
-              type="button"
-              onClick={() => { if (onDisabledMcpAdd(mcpInput)) setMcpInput(""); }}
-              className="rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            >
-              {t("mcpAddButton")}
-            </button>
-          </div>
+          <DisabledListSection
+            entries={overrides.disabled_mcps ?? []}
+            onAdd={onDisabledMcpAdd}
+            onRemove={onDisabledMcpRemove}
+            placeholder={t("mcpNamePlaceholder")}
+            addLabel={t("mcpAddButton")}
+            removeAriaLabel={(mcp) => t("removeMcpAria", { mcp })}
+          />
+        </Section>
+
+        <Section
+          label={t("disabledToolsSectionLabel")}
+          isExpanded={showTools}
+          onToggle={() => setShowTools((value) => !value)}
+          tooltip={t("disabledToolsSectionTooltip")}
+        >
+          <DisabledListSection
+            entries={overrides.disabled_tools ?? []}
+            onAdd={onDisabledToolAdd}
+            onRemove={onDisabledToolRemove}
+            placeholder={t("toolNamePlaceholder")}
+            addLabel={t("toolAddButton")}
+            removeAriaLabel={(tool) => t("removeToolAria", { tool })}
+          />
+        </Section>
+
+        <Section
+          label={t("disabledSkillsSectionLabel")}
+          isExpanded={showSkills}
+          onToggle={() => setShowSkills((value) => !value)}
+          tooltip={t("disabledSkillsSectionTooltip")}
+        >
+          <DisabledListSection
+            entries={overrides.disabled_skills ?? []}
+            onAdd={onDisabledSkillAdd}
+            onRemove={onDisabledSkillRemove}
+            placeholder={t("skillNamePlaceholder")}
+            addLabel={t("skillAddButton")}
+            removeAriaLabel={(skill) => t("removeSkillAria", { skill })}
+          />
         </Section>
 
         <Section
@@ -453,36 +530,6 @@ export function SlimToggleSections({
           onToggle={() => setShowCouncil((value) => !value)}
           tooltip={t("councilSectionTooltip")}
         >
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-24">{t("councilMasterModelLabel")}</span>
-            <input
-              type="text"
-              value={council.master?.model ?? ""}
-              onChange={(event) => onCouncilChange({ ...council, master: { ...council.master, model: event.target.value || undefined } })}
-              placeholder="anthropic/claude-opus-4-6"
-              className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-24">{t("councilMasterVariantLabel")}</span>
-            <input
-              type="text"
-              value={council.master?.variant ?? ""}
-              onChange={(event) => onCouncilChange({ ...council, master: { ...council.master, variant: event.target.value || undefined } })}
-              placeholder={t("optionalLabel")}
-              className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-24">{t("councilExecModeLabel")}</span>
-            <select
-              value={council.councillor_execution_mode ?? "parallel"}
-              onChange={(event) => onCouncilChange({ ...council, councillor_execution_mode: event.target.value as SlimCouncilConfig["councillor_execution_mode"] })}
-              className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-            >
-              {SLIM_COUNCILLOR_EXECUTION_MODES.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
-            </select>
-          </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-[var(--text-muted)] w-24">{t("councilDefaultPresetLabel")}</span>
             <input
@@ -493,72 +540,11 @@ export function SlimToggleSections({
               className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-24">{t("councilMasterTimeoutLabel")}</span>
-            <input
-              type="number"
-              min={0}
-              max={600000}
-              value={council.master_timeout ?? ""}
-              onChange={(event) => {
-                const next = parseInt(event.target.value, 10);
-                onCouncilChange({ ...council, master_timeout: Number.isNaN(next) ? undefined : Math.min(600000, Math.max(0, next)) });
-              }}
-              className="w-28 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-24">{t("councilCouncillorsTimeoutLabel")}</span>
-            <input
-              type="number"
-              min={0}
-              max={600000}
-              value={council.councillors_timeout ?? ""}
-              onChange={(event) => {
-                const next = parseInt(event.target.value, 10);
-                onCouncilChange({ ...council, councillors_timeout: Number.isNaN(next) ? undefined : Math.min(600000, Math.max(0, next)) });
-              }}
-              className="w-28 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-24">{t("councilRetriesLabel")}</span>
-            <input
-              type="number"
-              min={0}
-              max={5}
-              value={council.councillor_retries ?? ""}
-              onChange={(event) => {
-                const next = parseInt(event.target.value, 10);
-                onCouncilChange({ ...council, councillor_retries: Number.isNaN(next) ? undefined : Math.min(5, Math.max(0, next)) });
-              }}
-              className="w-20 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-24">{t("councilMasterFallbackLabel")}</span>
-            <input
-              type="text"
-              value={(council.master_fallback ?? []).join(", ")}
-              onChange={(event) => {
-                const next = event.target.value
-                  .split(",")
-                  .map((item) => item.trim())
-                  .filter(Boolean);
-                onCouncilChange({ ...council, master_fallback: next.length > 0 ? next : undefined });
-              }}
-              placeholder={t("modelListPlaceholder")}
-              className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-            />
-          </div>
-          {council.master && (!council.presets || Object.keys(council.presets).length === 0) && (
-            <p className="text-[11px] text-amber-600/90">{t("councilIncompleteHint")}</p>
-          )}
           <div className="space-y-1">
             <p className="text-[11px] font-medium text-[var(--text-muted)]">{t("councilPresetsLabel")}</p>
             <p className="text-[11px] text-[var(--text-muted)]">{t("councilPresetsHelp")}</p>
             <JsonApplyEditor
-            key={formatJson(council.presets ?? {})}
+              key={formatJson(council.presets ?? {})}
               value={council.presets ?? {}}
               placeholder={t("councilPresetsPlaceholder")}
               invalidLabel={t("jsonInvalidLabel")}
@@ -635,149 +621,7 @@ export function SlimToggleSections({
             {t("interviewDashboardLabel")}
           </label>
         </Section>
-
-        <Section
-          label={t("todoContinuationSectionLabel")}
-          isExpanded={showTodoContinuation}
-          onToggle={() => setShowTodoContinuation((value) => !value)}
-          tooltip={t("todoContinuationSectionTooltip")}
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-24">{t("maxContinuationsLabel")}</span>
-            <input
-              type="number"
-              min={1}
-              max={50}
-              value={todoContinuation.maxContinuations ?? 5}
-              onChange={(event) => {
-                const next = parseInt(event.target.value, 10);
-                onTodoContinuationChange({ ...todoContinuation, maxContinuations: Number.isNaN(next) ? 5 : Math.min(50, Math.max(1, next)) });
-              }}
-              className="w-20 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-24">{t("cooldownMsLabel")}</span>
-            <input
-              type="number"
-              min={0}
-              max={30000}
-              value={todoContinuation.cooldownMs ?? 3000}
-              onChange={(event) => {
-                const next = parseInt(event.target.value, 10);
-                onTodoContinuationChange({ ...todoContinuation, cooldownMs: Number.isNaN(next) ? 3000 : Math.min(30000, Math.max(0, next)) });
-              }}
-              className="w-24 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-            />
-          </div>
-          <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-            <input
-              type="checkbox"
-              checked={todoContinuation.autoEnable ?? false}
-              onChange={() => onTodoContinuationChange({ ...todoContinuation, autoEnable: !(todoContinuation.autoEnable ?? false) })}
-              className="accent-black"
-            />
-            {t("autoEnableLabel")}
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-24">{t("autoEnableThresholdLabel")}</span>
-            <input
-              type="number"
-              min={1}
-              max={50}
-              value={todoContinuation.autoEnableThreshold ?? 4}
-              onChange={(event) => {
-                const next = parseInt(event.target.value, 10);
-                onTodoContinuationChange({ ...todoContinuation, autoEnableThreshold: Number.isNaN(next) ? 4 : Math.min(50, Math.max(1, next)) });
-              }}
-              className="w-20 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-            />
-          </div>
-        </Section>
-
-        <Section
-          label={t("websearchSectionLabel")}
-          isExpanded={showWebsearch}
-          onToggle={() => setShowWebsearch((value) => !value)}
-          tooltip={t("websearchSectionTooltip")}
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] w-16">{t("providerLabel")}</span>
-            <select
-              value={websearch.provider ?? "exa"}
-              onChange={(event) => onWebsearchChange({ ...websearch, provider: event.target.value as SlimWebsearchConfig["provider"] })}
-              className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-            >
-              {SLIM_WEBSEARCH_PROVIDERS.map((provider) => <option key={provider} value={provider}>{provider}</option>)}
-            </select>
-          </div>
-        </Section>
-
-        <Section
-          label={t("tmuxSectionLabel")}
-          isExpanded={showTmux}
-          onToggle={() => setShowTmux((value) => !value)}
-          tooltip={t("tmuxSectionTooltip")}
-        >
-          <p className="text-[11px] text-[var(--text-muted)]">{t("tmuxLegacyHint")}</p>
-          <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-            <input
-              type="checkbox"
-              checked={tmux.enabled ?? false}
-              onChange={() => {
-                const enabled = !(tmux.enabled ?? false);
-                onTmuxChange(enabled ? { enabled: true, layout: tmux.layout ?? "main-vertical", main_pane_size: tmux.main_pane_size ?? 60 } : undefined);
-              }}
-              className="accent-black"
-            />
-            {t("enableTmux")}
-          </label>
-          {tmux.enabled && (
-            <>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--text-muted)] w-16">{t("layoutLabel")}</span>
-                <select
-                  value={tmux.layout ?? "main-vertical"}
-                  onChange={(event) => onTmuxChange({ ...tmux, layout: event.target.value as SlimTmuxConfig["layout"] })}
-                  className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-                >
-                  {SLIM_TMUX_LAYOUTS.map((layout) => <option key={layout} value={layout}>{layout}</option>)}
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--text-muted)] w-16">{t("paneSizeLabel")}</span>
-                <input
-                  type="number"
-                  min={20}
-                  max={80}
-                  value={tmux.main_pane_size ?? 60}
-                  onChange={(event) => {
-                    const next = parseInt(event.target.value, 10);
-                    onTmuxChange({ ...tmux, main_pane_size: Number.isNaN(next) ? 60 : next });
-                  }}
-                  className="w-20 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-                />
-              </div>
-            </>
-          )}
-        </Section>
       </div>
-
-      <Section
-        label={t("manualPlanSectionLabel")}
-        isExpanded={showManualPlan}
-        onToggle={() => setShowManualPlan((value) => !value)}
-        tooltip={t("manualPlanSectionTooltip")}
-      >
-        <JsonApplyEditor
-          key={formatJson(overrides.manualPlan ?? {})}
-          value={overrides.manualPlan ?? {}}
-          placeholder={t("manualPlanPlaceholder")}
-          invalidLabel={t("jsonInvalidLabel")}
-          applyLabel={t("applyJsonButton")}
-          onApply={(parsed) => onManualPlanChange(isObjectRecord(parsed) && Object.keys(parsed).length > 0 ? parsed as Record<string, SlimManualPlanEntry> : undefined)}
-        />
-      </Section>
 
       <Section
         label={t("advancedSectionLabel")}

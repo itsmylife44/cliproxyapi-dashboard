@@ -1,0 +1,107 @@
+{
+  "$comment": "Derived contract extracted from the shipped oh-my-opencode-slim JSON schema. Not the upstream file itself. Regenerate with scripts in docs/upstream-opencode-integrations.md.",
+  "upstream": {
+    "project": "oh-my-opencode-slim",
+    "repository": "https://github.com/alvinunreal/oh-my-opencode-slim",
+    "license": "MIT",
+    "channel": "stable",
+    "version": "2.2.21",
+    "tag": "v2.2.21",
+    "commit": "f34d7ae22af0985bec257d72d0b6213f2aed3e48",
+    "schemaUrl": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
+    "derivedAt": "2026-09-16"
+  },
+  "topLevelKeys": [
+    "acpAgents",
+    "agents",
+    "autoUpdate",
+    "backgroundJobs",
+    "compactSidebar",
+    "companion",
+    "council",
+    "disabled_agents",
+    "disabled_mcps",
+    "disabled_skills",
+    "disabled_tools",
+    "fallback",
+    "image_routing",
+    "interview",
+    "multiplexer",
+    "preset",
+    "presets",
+    "setDefaultAgent",
+    "stripOrchestratorModel",
+    "webfetch"
+  ],
+  "fallbackKeys": [
+    "enabled",
+    "initialRetryDelayMs",
+    "maxRetries",
+    "retryDelayMs"
+  ],
+  "councilKeys": [
+    "default_preset",
+    "presets"
+  ],
+  "councilRequired": [
+    "presets"
+  ],
+  "agentKeys": [
+    "color",
+    "description",
+    "displayName",
+    "inheritModelFrom",
+    "mcps",
+    "model",
+    "options",
+    "orchestratorPrompt",
+    "permission",
+    "prompt",
+    "skills",
+    "skills_add",
+    "skills_remove",
+    "temperature",
+    "variant"
+  ],
+  "enums": {
+    "multiplexerType": [
+      "auto",
+      "tmux",
+      "zellij",
+      "herdr",
+      "kitty",
+      "cmux",
+      "none"
+    ],
+    "multiplexerLayout": [
+      "main-horizontal",
+      "main-vertical",
+      "tiled",
+      "even-horizontal",
+      "even-vertical"
+    ],
+    "zellijPaneMode": [
+      "agent-tab",
+      "current-tab"
+    ],
+    "imageRouting": [
+      "auto",
+      "direct"
+    ]
+  },
+  "removedTopLevelKeys": [
+    "scoringEngineVersion",
+    "balanceProviderUsage",
+    "manualPlan",
+    "todoContinuation",
+    "websearch",
+    "background",
+    "tmux"
+  ],
+  "legacyFallbackKeys": [
+    "timeoutMs",
+    "retry_on_empty",
+    "runtimeOverride",
+    "chains"
+  ]
+}

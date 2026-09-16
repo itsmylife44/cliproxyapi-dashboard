@@ -2,6 +2,7 @@
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Toggle, Select, SectionHeader, ConfigField } from "@/components/config/config-fields";
+import { ROUTING_STRATEGIES } from "@/lib/routing-strategies";
 import type {
   Config,
   StreamingConfig,
@@ -114,7 +115,11 @@ export default function AgentConfigEditor({
             <Input type="number" name="max-retry-interval" value={String(config["max-retry-interval"])} onChange={(value) => updateConfig("max-retry-interval", Number(value))} className="font-mono" />
           </ConfigField>
           <ConfigField label={t("fieldRoutingStrategyLabel")} description={t("fieldRoutingStrategyDesc")}>
-            <Select value={config.routing.strategy} onChange={(value) => updateRoutingConfig("strategy", value)} options={[{ value: "round-robin", label: t("routingRoundRobin") }, { value: "random", label: t("routingRandom") }, { value: "least-loaded", label: t("routingLeastLoaded") }]} />
+            <Select
+              value={config.routing.strategy}
+              onChange={(value) => updateRoutingConfig("strategy", value)}
+              options={ROUTING_STRATEGIES.map((strategy) => ({ value: strategy.value, label: t(strategy.labelKey) }))}
+            />
           </ConfigField>
           <ConfigField label={t("fieldSwitchProjectLabel")} description={t("fieldSwitchProjectDesc")}>
             <Toggle enabled={config["quota-exceeded"]["switch-project"]} onChange={(value) => updateQuotaConfig("switch-project", value)} />

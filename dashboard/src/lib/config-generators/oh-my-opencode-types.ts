@@ -136,12 +136,61 @@ export const AVAILABLE_AGENTS = [
   "sisyphus-junior",
 ] as const;
 
-export const AVAILABLE_SKILLS = [
-  "playwright",
-  "agent-browser",
-  "frontend-ui-ux",
+/**
+ * Skills bundled with the stable 4.19.4 channel.
+ * Source: `packages/shared-skills/skills/` in the oh-my-openagent@4.19.4 tarball.
+ */
+export const OPENAGENT_STABLE_SKILLS = [
+  "ast-grep",
+  "coding-agent-sessions",
+  "data-scientist",
+  "debugging",
+  "frontend",
   "git-master",
+  "init-deep",
+  "lsp-setup",
+  "programming",
+  "refactor",
+  "remove-ai-slops",
+  "review-work",
+  "start-work",
+  "ultimate-browsing",
+  "ulw-plan",
+  "ulw-research",
+  "visual-qa",
 ] as const;
+
+/**
+ * Skills bundled with the 5.0.0-beta.67 channel.
+ * Differs from stable: `start-work` was replaced by `ulw-execute`.
+ */
+export const OPENAGENT_BETA_SKILLS = [
+  "ast-grep",
+  "coding-agent-sessions",
+  "data-scientist",
+  "debugging",
+  "frontend",
+  "git-master",
+  "init-deep",
+  "lsp-setup",
+  "programming",
+  "refactor",
+  "remove-ai-slops",
+  "review-work",
+  "ultimate-browsing",
+  "ulw-execute",
+  "ulw-plan",
+  "ulw-research",
+  "visual-qa",
+] as const;
+
+/**
+ * Skill catalogue for the channel this dashboard targets (stable 4.19.4).
+ *
+ * `agent-browser` is not a skill in either channel; it was removed upstream and
+ * must not be offered as a current built-in.
+ */
+export const AVAILABLE_SKILLS = OPENAGENT_STABLE_SKILLS;
 
 export const AVAILABLE_COMMANDS = [
   "init-deep",
@@ -156,10 +205,28 @@ export const TMUX_LAYOUTS = [
   "even-vertical",
 ] as const;
 
-export const BROWSER_PROVIDERS = [
+/**
+ * Valid `browser_automation_engine.provider` values per channel.
+ * Source: `browser_automation_engine.provider` enum in the shipped
+ * `oh-my-opencode.schema.json`.
+ *   stable 4.19.4:      playwright, agent-browser, dev-browser, playwright-cli
+ *   beta 5.0.0-beta.67: playwright, dev-browser, playwright-cli
+ */
+export const OPENAGENT_STABLE_BROWSER_PROVIDERS = [
   "playwright",
   "agent-browser",
+  "dev-browser",
+  "playwright-cli",
 ] as const;
+
+export const OPENAGENT_BETA_BROWSER_PROVIDERS = [
+  "playwright",
+  "dev-browser",
+  "playwright-cli",
+] as const;
+
+/** Provider list for the channel this dashboard targets (stable 4.19.4). */
+export const BROWSER_PROVIDERS = OPENAGENT_STABLE_BROWSER_PROVIDERS;
 
 // ============================================================================
 // HOOK_GROUPS - Hooks grouped by functionality

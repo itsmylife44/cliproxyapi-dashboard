@@ -7,57 +7,65 @@ function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfig>): OhMy
   return config as OhMyOpenCodeSlimFullConfig;
 }
 
-describe("buildSlimConfig – fallback chains behavior", () => {
-  it("should passthrough external models and prefix available ones", () => {
-    const available = ["model-a", "model-b"];
-    const config = buildSlimConfig(available, {
+describe("buildSlimConfig – fallback behavior", () => {
+  it("emits only the currently supported global fallback fields", () => {
+    const config = buildSlimConfig(["model-a"], {
       fallback: {
         enabled: true,
-        chains: {
-          // "model-x" is NOT in available — treated as external, passed through as-is
-          orchestrator: ["model-x", "model-y"],
-          // "model-a" IS available — prefixed with cliproxyapi/
-          oracle: ["model-a", "model-b"],
-        },
+        maxRetries: 5,
+        initialRetryDelayMs: 250,
+        retryDelayMs: 750,
       },
     });
 
     expect(config).not.toBeNull();
     const fallback = (config as Record<string, unknown>).fallback as Record<string, unknown>;
-    expect(fallback).toBeDefined();
-
-    const chains = fallback.chains as Record<string, string[]> | undefined;
-
-    // Both chains should be present
-    expect(chains).toBeDefined();
-    // Available models get prefixed
-    expect(chains!.oracle).toEqual(["cliproxyapi/model-a", "cliproxyapi/model-b"]);
-    // External models are passed through as-is (not prefixed)
-    expect(chains!.orchestrator).toEqual(["model-x", "model-y"]);
+    expect(fallback).toEqual({
+      enabled: true,
+      maxRetries: 5,
+      initialRetryDelayMs: 250,
+      retryDelayMs: 750,
+    });
   });
 
-  it("should preserve chains with all external models", () => {
-    const available = ["model-a"];
-    const config = buildSlimConfig(available, {
+  it("never emits fallback chains, timeoutMs, retry_on_empty or runtimeOverride", () => {
+    // Legacy shapes are migrated on read; the generator must not re-emit them.
+    const config = buildSlimConfig(["model-a"], {
       fallback: {
         enabled: true,
-        chains: {
-          // All models are external (not in available)
-          orchestrator: ["model-x"],
-          oracle: ["model-y"],
+        chains: { orchestrator: ["model-a"] },
+        timeoutMs: 15000,
+        retry_on_empty: true,
+        runtimeOverride: true,
+      } as OhMyOpenCodeSlimFullConfig["fallback"],
+    });
+
+    const fallback = (config as Record<string, unknown>).fallback as Record<string, unknown>;
+    expect(fallback).not.toHaveProperty("chains");
+    expect(fallback).not.toHaveProperty("timeoutMs");
+    expect(fallback).not.toHaveProperty("retry_on_empty");
+    expect(fallback).not.toHaveProperty("runtimeOverride");
+  });
+
+  it("expresses per-agent fallback order through the agent model array", () => {
+    const config = buildSlimConfig(["model-a", "model-b"], {
+      preset: "chained",
+      presets: {
+        chained: {
+          orchestrator: { model: ["model-a", "model-b"] },
         },
       },
     });
 
     expect(config).not.toBeNull();
-    const fallback = (config as Record<string, unknown>).fallback as Record<string, unknown>;
-    expect(fallback).toBeDefined();
-    
-    const chains = fallback.chains as Record<string, string[]> | undefined;
-    // External models are passed through as-is
-    expect(chains).toBeDefined();
-    expect(chains!.orchestrator).toEqual(["model-x"]);
-    expect(chains!.oracle).toEqual(["model-y"]);
+    const presets = (config as Record<string, unknown>).presets as Record<
+      string,
+      Record<string, { model?: unknown }>
+    >;
+    expect(presets.chained!.orchestrator!.model).toEqual([
+      "cliproxyapi/model-a",
+      "cliproxyapi/model-b",
+    ]);
   });
 });
 
@@ -151,29 +159,49 @@ describe("buildSlimConfig – preset and global override semantics", () => {
     expect(generated.agents?.oracle).toEqual({ variant: "high" });
   });
 
-  it("preserves council master overrides without a model", () => {
+  it("emits council presets with flat councillor names and a default preset", () => {
     const config = buildSlimConfig(available, {
       council: {
-        master: {
-          variant: "high-precision",
-          prompt: "Coordinate the council.",
-        },
+        default_preset: "default",
         presets: {
           default: {
-            councillors: {
-              alpha: { model: "model-a" },
-            },
+            alpha: { model: "model-a" },
+            council: { variant: "high", prompt: "Coordinate the council." },
           },
         },
       },
     });
 
     const generated = expectGeneratedConfig(config);
-    expect(generated.council).toBeDefined();
-    expect(generated.council?.master).toEqual({
-      variant: "high-precision",
-      prompt: "Coordinate the council.",
+    expect(generated.council).toEqual({
+      default_preset: "default",
+      presets: {
+        default: {
+          alpha: { model: "cliproxyapi/model-a" },
+          council: { variant: "high", prompt: "Coordinate the council." },
+        },
+      },
     });
+  });
+
+  it("never emits council master or nested councillors structures", () => {
+    const config = buildSlimConfig(available, {
+      council: {
+        presets: {
+          default: { alpha: { model: "model-a" } },
+        },
+      },
+    });
+
+    const council = (config as Record<string, unknown>).council as Record<string, unknown>;
+    expect(council).not.toHaveProperty("master");
+    expect(council).not.toHaveProperty("master_timeout");
+    expect(council).not.toHaveProperty("councillors_timeout");
+    expect(council).not.toHaveProperty("master_fallback");
+    expect(council).not.toHaveProperty("councillor_execution_mode");
+    expect(council).not.toHaveProperty("councillor_retries");
+    const defaultPreset = (council.presets as Record<string, Record<string, unknown>>).default;
+    expect(defaultPreset).not.toHaveProperty("councillors");
   });
 
   it("should handle disabled_agents field", () => {

@@ -155,126 +155,205 @@ export const AgentConfigSchema = z.object({
 // SLIM AGENT CONFIG
 // ============================================================================
 
-const SlimAgentEntrySchema = z.object({
-  model: z.union([
+/**
+ * Slim request validation.
+ *
+ * This is the API boundary only: it accepts both the CURRENT upstream schema
+ * and the legacy shapes that older dashboard versions stored, then
+ * `validateSlimConfig` migrates and normalises. Containers are `.passthrough()`
+ * so fields the dashboard does not model survive the boundary instead of being
+ * silently stripped.
+ */
+const SlimModelEntrySchema = z.object({
+  id: z.string(),
+  variant: z.string().optional(),
+});
+
+const SlimModelSchema = z.union([
+  z.string(),
+  z.array(z.union([z.string(), SlimModelEntrySchema])),
+]);
+
+const SlimPermissionValueSchema = z.enum(["ask", "allow", "deny"]);
+
+const SlimPermissionSchema = z.union([
+  SlimPermissionValueSchema,
+  z.record(
     z.string(),
-    z.array(z.union([
-      z.string(),
-      z.object({
-        id: z.string(),
-        variant: z.string().optional(),
+    z.union([
+      SlimPermissionValueSchema,
+      z.record(z.string(), SlimPermissionValueSchema),
+    ]),
+  ),
+]);
+
+const SlimAgentEntrySchema = z
+  .object({
+    model: SlimModelSchema.optional(),
+    inheritModelFrom: z.enum(["session", "orchestrator"]).optional(),
+    temperature: z.number().min(0).max(2).optional(),
+    variant: z.string().optional(),
+    skills: z.array(z.string()).optional(),
+    skills_add: z.array(z.string()).optional(),
+    skills_remove: z.array(z.string()).optional(),
+    mcps: z.array(z.string()).optional(),
+    prompt: z.string().optional(),
+    orchestratorPrompt: z.string().optional(),
+    options: z.record(z.string(), z.unknown()).optional(),
+    displayName: z.string().optional(),
+    color: z.string().optional(),
+    description: z.string().optional(),
+    permission: SlimPermissionSchema.optional(),
+  })
+  .passthrough();
+
+const SlimFallbackSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    maxRetries: z.number().int().min(0).optional(),
+    initialRetryDelayMs: z.number().int().min(0).optional(),
+    retryDelayMs: z.number().int().min(0).optional(),
+    // Legacy keys stay accepted so stored configs can be re-submitted and
+    // migrated rather than rejected.
+    timeoutMs: z.number().min(0).optional(),
+    retry_on_empty: z.boolean().optional(),
+    runtimeOverride: z.boolean().optional(),
+    chains: z.record(z.string(), z.array(z.string())).optional(),
+  })
+  .passthrough();
+
+const SlimMultiplexerSchema = z
+  .object({
+    type: z
+      .enum(["auto", "tmux", "zellij", "herdr", "kitty", "cmux", "none"])
+      .optional(),
+    layout: z
+      .enum([
+        "main-horizontal",
+        "main-vertical",
+        "tiled",
+        "even-horizontal",
+        "even-vertical",
+      ])
+      .optional(),
+    main_pane_size: z.number().min(20).max(80).optional(),
+    zellij_pane_mode: z.enum(["agent-tab", "current-tab"]).optional(),
+  })
+  .passthrough();
+
+const SlimBackgroundJobsSchema = z
+  .object({
+    strategy: z.enum(["latest", "checkpoint-compatible"]).optional(),
+    maxSessionsPerAgent: z.number().int().min(1).max(10).optional(),
+    maxContextLines: z.number().int().min(0).optional(),
+    readContextMinLines: z.number().int().min(0).optional(),
+    readContextMaxFiles: z.number().int().min(0).optional(),
+    maxRetainedSnapshots: z.number().int().min(1).max(100).optional(),
+    wallClockTimeoutMs: z.number().min(0).optional(),
+    abortGraceMs: z.number().int().min(1000).max(60000).optional(),
+    waitForUserGuard: z.boolean().optional(),
+    orchestratorWake: z
+      .object({
+        enabled: z.boolean().optional(),
+        intervalMs: z.number().int().min(60000).optional(),
+        mode: z.enum(["auto", "todo", "children"]).optional(),
       })
-    ]))
-  ]).optional(),
-  temperature: z.number().min(0).max(2).optional(),
-  variant: z.string().optional(),
-  skills: z.array(z.string()).optional(),
-  mcps: z.array(z.string()).optional(),
-  options: z.record(z.string(), z.unknown()).optional(),
-});
+      .passthrough()
+      .optional(),
+    concurrency: z
+      .object({
+        defaultConcurrency: z.number().int().min(0).optional(),
+        providerConcurrency: z.record(z.string(), z.number()).optional(),
+        modelConcurrency: z.record(z.string(), z.number()).optional(),
+      })
+      .passthrough()
+      .optional(),
+    sameProviderPolicy: z.record(z.string(), z.literal("foreground")).optional(),
+  })
+  .passthrough();
 
-const SlimManualPlanEntrySchema = z.object({
-  primary: z.string(),
-  fallback1: z.string(),
-  fallback2: z.string(),
-  fallback3: z.string(),
-});
+const SlimCouncilSchema = z
+  .object({
+    // Current shape: presets.<preset>.<flatCouncillorName> = agent config.
+    presets: z.record(z.string(), z.record(z.string(), SlimAgentEntrySchema)).optional(),
+    default_preset: z.string().optional(),
+  })
+  .passthrough();
 
-const SlimFallbackSchema = z.object({
-  enabled: z.boolean().optional(),
-  timeoutMs: z.number().min(0).optional(),
-  retryDelayMs: z.number().min(0).optional(),
-  retry_on_empty: z.boolean().optional(),
-  chains: z.record(z.string(), z.array(z.string()).min(1)).optional(),
-});
+const SlimInterviewSchema = z
+  .object({
+    maxQuestions: z.number().min(1).max(10).optional(),
+    outputFolder: z.string().optional(),
+    autoOpenBrowser: z.boolean().optional(),
+    port: z.number().min(0).max(65535).optional(),
+    dashboard: z.boolean().optional(),
+  })
+  .passthrough();
 
-const SlimTmuxSchema = z.object({
-  enabled: z.boolean().optional(),
-  layout: z.enum(["main-horizontal", "main-vertical", "tiled", "even-horizontal", "even-vertical"]).optional(),
-  main_pane_size: z.number().min(20).max(80).optional(),
-});
+const SlimCompanionSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    binaryPath: z.string().optional(),
+    position: z
+      .enum(["bottom-right", "bottom-left", "top-right", "top-left"])
+      .optional(),
+    size: z.enum(["small", "medium", "large"]).optional(),
+    gifPack: z.string().optional(),
+    loopStyle: z.enum(["classic", "smooth"]).optional(),
+    speed: z.number().min(0.25).max(4).optional(),
+    debug: z.boolean().optional(),
+  })
+  .passthrough();
 
-const SlimBackgroundSchema = z.object({
-  maxConcurrentStarts: z.number().min(1).max(50).optional(),
-});
+const SlimWebfetchSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    model: SlimModelSchema.optional(),
+  })
+  .passthrough();
 
-const SlimCouncillorEntrySchema = z.object({
-  model: z.string(),
-  variant: z.string().optional(),
-  prompt: z.string().optional(),
-});
+const SlimAcpAgentSchema = z
+  .object({
+    command: z.string().optional(),
+    args: z.array(z.string()).optional(),
+    env: z.record(z.string(), z.string()).optional(),
+    cwd: z.string().optional(),
+    description: z.string().optional(),
+    prompt: z.string().optional(),
+    orchestratorPrompt: z.string().optional(),
+    wrapperModel: z.string().optional(),
+    timeoutMs: z.number().int().min(0).optional(),
+    permissionMode: z.enum(["ask", "allow", "reject"]).optional(),
+  })
+  .passthrough();
 
-const SlimCouncilPresetMasterOverrideSchema = z.object({
-  model: z.string().optional(),
-  variant: z.string().optional(),
-  prompt: z.string().optional(),
-}).refine(
-  (value) => value.model !== undefined || value.variant !== undefined || value.prompt !== undefined,
-  "Council master override must include at least one of model, variant, or prompt",
-);
+const SlimConfigOverridesSchema = z
+  .object({
+    preset: z.string().optional(),
+    presets: z.record(z.string(), z.record(z.string(), SlimAgentEntrySchema)).optional(),
+    agents: z.record(z.string(), SlimAgentEntrySchema).optional(),
 
-const SlimCouncilPresetSchema = z.object({
-  councillors: z.record(z.string(), SlimCouncillorEntrySchema),
-  master: SlimCouncilPresetMasterOverrideSchema.optional(),
-});
+    setDefaultAgent: z.boolean().optional(),
+    compactSidebar: z.boolean().optional(),
+    stripOrchestratorModel: z.boolean().optional(),
+    autoUpdate: z.boolean().optional(),
+    image_routing: z.enum(["auto", "direct"]).optional(),
 
-const SlimCouncilSchema = z.object({
-  master: SlimCouncilPresetMasterOverrideSchema.optional(),
-  presets: z.record(z.string(), SlimCouncilPresetSchema).optional(),
-  master_timeout: z.number().min(0).optional(),
-  councillors_timeout: z.number().min(0).optional(),
-  default_preset: z.string().optional(),
-  master_fallback: z.array(z.string()).optional(),
-  councillor_execution_mode: z.enum(["parallel", "serial"]).optional(),
-  councillor_retries: z.number().int().min(0).max(5).optional(),
-});
+    disabled_agents: z.array(z.string()).optional(),
+    disabled_mcps: z.array(z.string()).optional(),
+    disabled_tools: z.array(z.string()).optional(),
+    disabled_skills: z.array(z.string()).optional(),
 
-const SlimPresetSchema = z.record(z.string(), SlimAgentEntrySchema);
-
-const SlimMultiplexerSchema = z.object({
-  type: z.enum(["auto", "tmux", "zellij", "none"]).optional(),
-  layout: z.enum(["main-horizontal", "main-vertical", "tiled", "even-horizontal", "even-vertical"]).optional(),
-  main_pane_size: z.number().min(20).max(80).optional(),
-});
-
-const SlimInterviewSchema = z.object({
-  maxQuestions: z.number().min(1).max(10).optional(),
-  outputFolder: z.string().optional(),
-  autoOpenBrowser: z.boolean().optional(),
-  port: z.number().min(0).max(65535).optional(),
-  dashboard: z.boolean().optional(),
-});
-
-const SlimTodoContinuationSchema = z.object({
-  maxContinuations: z.number().min(1).max(50).optional(),
-  cooldownMs: z.number().min(0).max(30000).optional(),
-  autoEnable: z.boolean().optional(),
-  autoEnableThreshold: z.number().min(1).max(50).optional(),
-});
-
-const SlimWebsearchSchema = z.object({
-  provider: z.enum(["exa", "tavily"]).optional(),
-});
-
-const SlimConfigOverridesSchema = z.object({
-  preset: z.string().optional(),
-  presets: z.record(z.string(), SlimPresetSchema).optional(),
-  setDefaultAgent: z.boolean().optional(),
-  scoringEngineVersion: z.enum(["v1", "v2-shadow", "v2"]).optional(),
-  balanceProviderUsage: z.boolean().optional(),
-  manualPlan: z.record(z.string(), SlimManualPlanEntrySchema).optional(),
-  agents: z.record(z.string(), SlimAgentEntrySchema).optional(),
-  disabled_agents: z.array(z.string()).optional(),
-  disabled_mcps: z.array(z.string()).optional(),
-  tmux: SlimTmuxSchema.optional(),
-  multiplexer: SlimMultiplexerSchema.optional(),
-  background: SlimBackgroundSchema.optional(),
-  fallback: SlimFallbackSchema.optional(),
-  council: SlimCouncilSchema.optional(),
-  interview: SlimInterviewSchema.optional(),
-  todoContinuation: SlimTodoContinuationSchema.optional(),
-  websearch: SlimWebsearchSchema.optional(),
-});
+    multiplexer: SlimMultiplexerSchema.optional(),
+    backgroundJobs: SlimBackgroundJobsSchema.optional(),
+    fallback: SlimFallbackSchema.optional(),
+    council: SlimCouncilSchema.optional(),
+    companion: SlimCompanionSchema.optional(),
+    webfetch: SlimWebfetchSchema.optional(),
+    acpAgents: z.record(z.string(), SlimAcpAgentSchema).optional(),
+    interview: SlimInterviewSchema.optional(),
+  })
+  .passthrough();
 
 export const SlimAgentConfigSchema = z.object({
   overrides: SlimConfigOverridesSchema,

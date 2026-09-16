@@ -22,16 +22,12 @@ import {
   validateSlimConfig,
   type OhMyOpenCodeSlimFullConfig,
   type SlimAgentConfig,
-  type SlimBackgroundConfig,
+  type SlimBackgroundJobsConfig,
   type SlimFallbackConfig,
-  type SlimTmuxConfig,
   type SlimCouncilConfig,
   type SlimPreset,
   type SlimMultiplexerConfig,
   type SlimInterviewConfig,
-  type SlimTodoContinuationConfig,
-  type SlimWebsearchConfig,
-  type SlimManualPlanEntry,
 } from "@/lib/config-generators/oh-my-opencode-slim-types";
 
 interface OhMyOpenCodeSlimConfigGeneratorProps {
@@ -47,18 +43,6 @@ interface OhMyOpenCodeSlimConfigGeneratorProps {
 type EditingScope = "agents" | "preset";
 
 const DEFAULT_PRESET_NAME = "cliproxyapi";
-
-export function applySlimTerminalOverrides(
-  overrides: OhMyOpenCodeSlimFullConfig,
-  change: { tmux: SlimTmuxConfig | undefined } | { multiplexer: SlimMultiplexerConfig | undefined },
-): OhMyOpenCodeSlimFullConfig {
-  // Legacy tmux and canonical multiplexer are mutually exclusive editor surfaces.
-  if ("tmux" in change) {
-    return { ...overrides, tmux: change.tmux, multiplexer: undefined };
-  }
-
-  return { ...overrides, multiplexer: change.multiplexer, tmux: undefined };
-}
 
 export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGeneratorProps) {
   const { apiKeys, proxyModelIds, excludedModels, slimOverrides: initialOverrides, modelSourceMap } = props;
@@ -334,12 +318,8 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
     }
   };
 
-  const handleTmuxChange = (tmux: SlimTmuxConfig | undefined) => {
-    commitOverrides(applySlimTerminalOverrides(overrides, { tmux }));
-  };
-
-  const handleBackgroundChange = (background: SlimBackgroundConfig | undefined) => {
-    commitOverrides({ ...overrides, background });
+  const handleBackgroundJobsChange = (backgroundJobs: SlimBackgroundJobsConfig | undefined) => {
+    commitOverrides({ ...overrides, backgroundJobs });
   };
 
   const handleFallbackChange = (fallback: SlimFallbackConfig | undefined) => {
@@ -365,7 +345,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
   };
 
   const handleMultiplexerChange = (multiplexer: SlimMultiplexerConfig | undefined) => {
-    commitOverrides(applySlimTerminalOverrides(overrides, { multiplexer }));
+    commitOverrides({ ...overrides, multiplexer });
   };
 
   const handleDisabledAgentAdd = (agent: string) => {
@@ -386,16 +366,32 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
     commitOverrides({ ...overrides, interview });
   };
 
-  const handleTodoContinuationChange = (todoContinuation: SlimTodoContinuationConfig | undefined) => {
-    commitOverrides({ ...overrides, todoContinuation });
+  const handleDisabledToolAdd = (tool: string) => {
+    const trimmed = tool.trim();
+    if (!trimmed) return false;
+    const current = overrides.disabled_tools ?? [];
+    if (current.includes(trimmed)) return true;
+    commitOverrides({ ...overrides, disabled_tools: [...current, trimmed] });
+    return true;
   };
 
-  const handleWebsearchChange = (websearch: SlimWebsearchConfig | undefined) => {
-    commitOverrides({ ...overrides, websearch });
+  const handleDisabledToolRemove = (tool: string) => {
+    const next = (overrides.disabled_tools ?? []).filter((item) => item !== tool);
+    commitOverrides({ ...overrides, disabled_tools: next.length > 0 ? next : undefined });
   };
 
-  const handleManualPlanChange = (manualPlan: Record<string, SlimManualPlanEntry> | undefined) => {
-    commitOverrides({ ...overrides, manualPlan });
+  const handleDisabledSkillAdd = (skill: string) => {
+    const trimmed = skill.trim();
+    if (!trimmed) return false;
+    const current = overrides.disabled_skills ?? [];
+    if (current.includes(trimmed)) return true;
+    commitOverrides({ ...overrides, disabled_skills: [...current, trimmed] });
+    return true;
+  };
+
+  const handleDisabledSkillRemove = (skill: string) => {
+    const next = (overrides.disabled_skills ?? []).filter((item) => item !== skill);
+    commitOverrides({ ...overrides, disabled_skills: next.length > 0 ? next : undefined });
   };
 
   const handleRawOverridesChange = (nextRaw: unknown) => {
@@ -407,7 +403,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
   };
 
   const handleScalarChange = (field: string, value: unknown) => {
-    if (!["setDefaultAgent", "scoringEngineVersion", "balanceProviderUsage"].includes(field)) return;
+    if (!["setDefaultAgent", "compactSidebar", "stripOrchestratorModel", "autoUpdate", "image_routing"].includes(field)) return;
     commitOverrides({ ...overrides, [field]: value } as OhMyOpenCodeSlimFullConfig);
   };
 
@@ -665,20 +661,20 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
 
       <SlimToggleSections
         overrides={overrides}
-        onTmuxChange={handleTmuxChange}
-        onBackgroundChange={handleBackgroundChange}
+        onBackgroundJobsChange={handleBackgroundJobsChange}
         onFallbackChange={handleFallbackChange}
         onCouncilChange={handleCouncilChange}
         onDisabledMcpAdd={handleDisabledMcpAdd}
         onDisabledMcpRemove={handleDisabledMcpRemove}
+        onDisabledToolAdd={handleDisabledToolAdd}
+        onDisabledToolRemove={handleDisabledToolRemove}
+        onDisabledSkillAdd={handleDisabledSkillAdd}
+        onDisabledSkillRemove={handleDisabledSkillRemove}
         onScalarChange={handleScalarChange}
         onMultiplexerChange={handleMultiplexerChange}
         onDisabledAgentAdd={handleDisabledAgentAdd}
         onDisabledAgentRemove={handleDisabledAgentRemove}
         onInterviewChange={handleInterviewChange}
-        onTodoContinuationChange={handleTodoContinuationChange}
-        onWebsearchChange={handleWebsearchChange}
-        onManualPlanChange={handleManualPlanChange}
         onRawOverridesChange={handleRawOverridesChange}
       />
 

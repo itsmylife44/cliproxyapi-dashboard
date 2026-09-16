@@ -345,8 +345,11 @@ export function buildOhMyOpenCodeConfig(
   }
 
   const config: Record<string, unknown> = {
+    // Channel-accurate schema: unpkg resolves `latest`, i.e. the stable
+    // channel. The upstream repository's default branch is `dev`, which serves
+    // the v5 beta schema and has no `main` branch at all.
     $schema:
-      "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/main/assets/oh-my-opencode.schema.json",
+      "https://unpkg.com/oh-my-openagent@latest/dist/oh-my-opencode.schema.json",
   };
 
   if (Object.keys(agents).length > 0) {

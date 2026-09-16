@@ -126,6 +126,88 @@ The plugin supports OCX profiles — each profile can have its own sync config.
 
 For full plugin documentation, see [opencode-cliproxyapi-sync](https://github.com/itsmylife44/opencode-cliproxyapi-sync).
 
+## OpenCode Variant Configuration
+
+The dashboard generates configuration for two OpenCode orchestration plugins. Both target their **stable** upstream channel.
+
+| Variant | Package | Config file | Upstream channel |
+|---------|---------|-------------|------------------|
+| Oh-My-Open-Agent | `oh-my-openagent@latest` | `oh-my-openagent.json[c]` | stable `4.19.4` |
+| Oh-My-OpenCode Slim | `oh-my-opencode-slim@latest` | `oh-my-opencode-slim.json[c]` | stable `2.2.21` |
+
+Slim files live next to the OpenCode config: `$OPENCODE_CONFIG_DIR` → `$XDG_CONFIG_HOME/opencode` → `~/.config/opencode`.
+
+### Release channels
+
+The dashboard deliberately generates **stable** configuration only:
+
+- `oh-my-openagent@latest` (`4.19.4`) uses `oh-my-openagent.json[c]`. The v5 beta line (`5.0.0-beta.67`) uses a different, unified configuration system read from `~/.omo/omo.jsonc` and `.omo/omo.jsonc`; it is **not generated** by the dashboard.
+- `oh-my-opencode-slim@latest` (`2.2.21`) uses `oh-my-opencode-slim.json[c]`. The `3.0.0-beta.13` line wraps preset agents in an extra `agents` key; it is **not generated** by the dashboard.
+
+The upstream repositories' default branches (`dev` for OpenAgent, `master` for Slim) are not used as a schema source, because `dev` carries the v5 beta schema.
+
+### Agent and skill contracts
+
+**Slim** (7 primary agents + optional `observer`): `orchestrator`, `explorer`, `librarian`, `oracle`, `designer`, `fixer`, `council`. `observer` is optional and disabled by default upstream. `councillor` is an internal agent created per council session.
+
+Bundled Slim skills and their default grants:
+
+| Skill | Granted to |
+|-------|-----------|
+| `simplify` | `oracle` |
+| `requesting-code-review` (permission-only, not installed) | `oracle` |
+| `codemap`, `clonedeps`, `deepwork`, `verification-planning`, `reflect`, `oh-my-opencode-slim`, `worktrees` | `orchestrator` |
+
+**OpenAgent**: 11 agents plus 8 built-in categories (`artistry`, `deep`, `quick`, `ultrabrain`, `unspecified-high`, `unspecified-low`, `visual-engineering`, `writing`).
+
+### Fallback models
+
+Slim expresses fallbacks as an **ordered `model` array per agent**, not as a global chain:
+
+```jsonc
+{
+  "presets": {
+    "cliproxyapi": {
+      "orchestrator": { "model": ["provider/model-a", "provider/model-b"] }
+    }
+  },
+  "fallback": { "enabled": true, "maxRetries": 3, "initialRetryDelayMs": 0, "retryDelayMs": 500 }
+}
+```
+
+The global `fallback` block accepts only `enabled`, `maxRetries`, `initialRetryDelayMs` and `retryDelayMs`. `fallback.chains`, `timeoutMs`, `retry_on_empty` and `runtimeOverride` are no longer part of the schema.
+
+### Council format
+
+```jsonc
+{
+  "council": {
+    "presets": {
+      "default": {
+        "alpha": { "model": "provider/model-a" },
+        "beta": { "model": "provider/model-b" }
+      }
+    },
+    "default_preset": "default"
+  }
+}
+```
+
+Councillor names are flat keys directly under a preset, and each councillor may carry its own model chain. `council.master`, nested `councillors` objects and the removed master/councillor timeout, retry and execution-mode fields are not valid.
+
+### Migration and backward compatibility
+
+Stored dashboard configurations are migrated on read and are safe to re-run:
+
+- legacy `fallback.chains` become ordered `model` arrays on the matching agents
+- a legacy `council.master` becomes the `council` agent's model
+- nested `council.presets.*.councillors` are flattened
+- a legacy `tmux` block becomes `multiplexer`
+- the removed top-level sections (`scoringEngineVersion`, `balanceProviderUsage`, `manualPlan`, `todoContinuation`, `websearch`, `background`) are dropped
+- unknown fields are preserved on round-trip
+
+See [`upstream-opencode-integrations.md`](upstream-opencode-integrations.md) for the full audit, the stable/beta matrix and per-constant provenance.
+
 ## Usage Collection
 
 The dashboard automatically collects usage statistics from CLIProxyAPI every 5 minutes using a dedicated cron service.

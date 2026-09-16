@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { usageCache } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
+import { isLongContextPrompt, resolveModelPrice } from "@/lib/model-pricing";
 
 // Cache for 5 seconds to allow frequent polling without overwhelming the database
 // The frontend polls every 60 seconds, so 5s cache won't cause missed updates
@@ -29,6 +30,15 @@ interface KeyUsage {
     totalTokens: number;
     inputTokens: number;
     outputTokens: number;
+    cachedTokens: number;
+    /**
+     * Subset of the totals above from requests whose prompt reached the
+     * long-context threshold. Tiering must happen per request: providers with
+     * long-context pricing bill the whole request at the higher rate.
+     */
+    longContextInputTokens: number;
+    longContextOutputTokens: number;
+    longContextCachedTokens: number;
   }>;
 }
 
@@ -220,6 +230,17 @@ export async function GET(request: NextRequest) {
     let totalSuccessCount = 0;
     let totalFailureCount = 0;
 
+    // Long-context thresholds are per model; resolve each model once. Only the
+    // built-in table is available server-side (user overrides live in the
+    // browser), which is what the bucket split is based on.
+    const modelPrices = new Map<string, ReturnType<typeof resolveModelPrice>>();
+    const priceForModel = (model: string) => {
+      if (!modelPrices.has(model)) {
+        modelPrices.set(model, resolveModelPrice(model));
+      }
+      return modelPrices.get(model) ?? null;
+    };
+
     for (const record of usageRecords) {
       const groupKey = record.apiKeyId ?? record.userId ?? record.authIndex;
 
@@ -265,12 +286,26 @@ export async function GET(request: NextRequest) {
           totalTokens: 0,
           inputTokens: 0,
           outputTokens: 0,
+          cachedTokens: 0,
+          longContextInputTokens: 0,
+          longContextOutputTokens: 0,
+          longContextCachedTokens: 0,
         };
       }
-      keyUsage.models[modelName].totalRequests += 1;
-      keyUsage.models[modelName].totalTokens += record.totalTokens;
-      keyUsage.models[modelName].inputTokens += record.inputTokens;
-      keyUsage.models[modelName].outputTokens += record.outputTokens;
+      const modelUsage = keyUsage.models[modelName];
+      modelUsage.totalRequests += 1;
+      modelUsage.totalTokens += record.totalTokens;
+      modelUsage.inputTokens += record.inputTokens;
+      modelUsage.outputTokens += record.outputTokens;
+      modelUsage.cachedTokens += record.cachedTokens;
+
+      // Tier selection happens on the individual request, not on the model sum,
+      // and uses that model's own threshold (xAI 200k, OpenAI >272k).
+      if (isLongContextPrompt(record.inputTokens, priceForModel(modelName))) {
+        modelUsage.longContextInputTokens += record.inputTokens;
+        modelUsage.longContextOutputTokens += record.outputTokens;
+        modelUsage.longContextCachedTokens += record.cachedTokens;
+      }
 
       // Daily aggregation for charts (use server local timezone, not UTC)
       const yr = record.timestamp.getFullYear();

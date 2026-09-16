@@ -24,7 +24,7 @@ interface OAuthSectionProps {
   incognitoBrowserEnabled?: boolean;
 }
 
-const OAUTH_PROVIDERS = [
+export const OAUTH_PROVIDERS = [
   {
     id: "claude" as const,
     name: "Claude Code",
@@ -47,6 +47,14 @@ const OAUTH_PROVIDERS = [
     description: "OpenAI Codex (Plus/Pro subscription)",
     authEndpoint: "/api/management/codex-auth-url?is_webui=true",
     requiresCallback: true,
+    preConnect: null,
+  },
+  {
+    id: "xai" as const,
+    name: "xAI (Grok)",
+    description: "xAI Grok (device OAuth)",
+    authEndpoint: "/api/management/xai-auth-url?is_webui=true",
+    requiresCallback: false,
     preConnect: null,
   },
   {

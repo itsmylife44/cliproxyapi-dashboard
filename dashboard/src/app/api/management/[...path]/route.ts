@@ -33,6 +33,7 @@ const NON_ADMIN_OAUTH_PATHS = new Set<string>([
   "cursor-auth-url",
   "kilo-auth-url",
   "gitlab-auth-url",
+  "xai-auth-url",
   "get-auth-status",
 ]);
 

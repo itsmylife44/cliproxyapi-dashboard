@@ -35,6 +35,10 @@ interface KeyUsage {
     totalTokens: number;
     inputTokens: number;
     outputTokens: number;
+    cachedTokens: number;
+    longContextInputTokens: number;
+    longContextOutputTokens: number;
+    longContextCachedTokens: number;
   }>;
 }
 

@@ -48,6 +48,14 @@ function markCollectorError(runId: string, errorMessage: string): Promise<void> 
     });
 }
 
+/**
+ * Token fields persisted from the CLIProxyAPI usage queue.
+ *
+ * Known gap: CLIProxyAPI also reports cache *write* tokens
+ * (`cache_creation_tokens`, and `cache_read_tokens` alongside
+ * `cached_tokens`), but there is no `UsageRecord` column for them, so they are
+ * dropped here and cache-write pricing cannot be estimated.
+ */
 interface TokenDetails {
   input_tokens?: number;
   output_tokens?: number;

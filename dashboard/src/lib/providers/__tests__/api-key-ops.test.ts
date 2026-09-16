@@ -94,6 +94,38 @@ describe("contributeKey", () => {
     expect(mocks.deleteMany).not.toHaveBeenCalled();
   });
 
+  it("adds the official xAI base URL to xAI API key entries", async () => {
+    const apiKey = "xai-test-key";
+
+    mocks.fetchWithTimeout
+      .mockResolvedValueOnce(jsonResponse({ "xai-api-key": [] }))
+      .mockResolvedValueOnce(jsonResponse({ status: "ok" }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          "xai-api-key": [
+            { "api-key": apiKey, "base-url": "https://api.x.ai/v1" },
+          ],
+        }),
+      );
+
+    const result = await contributeKey("user-1", PROVIDER.XAI, apiKey);
+
+    expect(result.ok).toBe(true);
+
+    // CLIProxyAPI exposes xAI keys on their own management endpoint.
+    const getCall = mocks.fetchWithTimeout.mock.calls[0];
+    expect(getCall?.[0]).toBe("http://management.test/xai-api-key");
+
+    // Entries without a base URL are dropped by the proxy, so it is required.
+    const putCall = mocks.fetchWithTimeout.mock.calls[1];
+    if (!putCall) throw new Error("Expected a Management API PUT request");
+    const putOptions = putCall[1] as RequestInit;
+    expect(JSON.parse(putOptions.body as string)).toEqual([
+      { "api-key": apiKey, "base-url": "https://api.x.ai/v1" },
+    ]);
+    expect(mocks.deleteMany).not.toHaveBeenCalled();
+  });
+
   it("rolls back ownership when the management API silently filters the key", async () => {
     mocks.fetchWithTimeout
       .mockResolvedValueOnce(jsonResponse({ "codex-api-key": [] }))

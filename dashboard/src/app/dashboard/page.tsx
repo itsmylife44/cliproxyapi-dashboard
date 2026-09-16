@@ -179,6 +179,7 @@ export default async function QuickStartPage() {
     "gemini-api-key",
     "claude-api-key",
     "codex-api-key",
+    "xai-api-key",
     "vertex-api-key",
     "openai-compatibility",
   ];

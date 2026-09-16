@@ -46,6 +46,10 @@ export function Select({
   options: Array<{ value: string; label: string }>;
   disabled?: boolean;
 }) {
+  // A value set outside this build (e.g. via the CLIProxyAPI control panel) must
+  // still render as the selected entry instead of leaving the control blank.
+  const hasMatchingOption = options.some((option) => option.value === value);
+
   return (
     <select
       value={value}
@@ -59,6 +63,11 @@ export function Select({
         transition-colors duration-200
       "
     >
+      {!hasMatchingOption && value !== "" && (
+        <option value={value} className="bg-[var(--surface-base)] text-[var(--text-primary)]">
+          {value}
+        </option>
+      )}
       {options.map((option) => (
         <option key={option.value} value={option.value} className="bg-[var(--surface-base)] text-[var(--text-primary)]">
           {option.label}

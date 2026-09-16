@@ -21,7 +21,9 @@ function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: 
   const result: Record<string, { score: number; label: string; isShortTerm: boolean }> = {};
   for (const group of groups) {
     if (group.id === "extra-usage") continue;
-    const score = normalizeFraction(group.remainingFraction);
+    // A provider-reported critical limit is exhausted even if the reported
+    // utilization alone would still leave headroom.
+    const score = group.severity === "critical" ? 0 : normalizeFraction(group.remainingFraction);
     if (score === null) continue;
     result[group.id] = {
       score,
@@ -296,13 +298,14 @@ export function QuotaDetails({
                                   {account.groups.map((group) => {
                                     const fraction = normalizeFraction(group.remainingFraction);
                                     const pct = fraction === null ? null : Math.round(fraction * 100);
+                                    const isCritical = group.severity === "critical";
                                     return (
                                       <div
                                         key={group.id}
                                         className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 last:border-b-0"
                                       >
                                         <span className="truncate text-xs text-[var(--text-primary)]">{group.label}</span>
-                                        <span className="text-xs text-[var(--text-secondary)]">{pct === null ? "-" : `${pct}%`}</span>
+                                        <span className={cn("text-xs", isCritical ? "font-semibold text-rose-600" : "text-[var(--text-secondary)]")}>{pct === null ? "-" : `${pct}%`}</span>
                                         <span className="truncate text-xs text-[var(--text-muted)]">{formatRelativeTime(group.resetTime, t)}</span>
                                       </div>
                                     );

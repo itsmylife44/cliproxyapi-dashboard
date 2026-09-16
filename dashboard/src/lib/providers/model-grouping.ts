@@ -14,6 +14,7 @@ const OWNED_BY_DISPLAY: Record<string, string> = {
   kiro: "Kiro",
   iflow: "iFlow",
   qwen: "Qwen",
+  xai: "xAI",
 };
 
 /** Display order for known providers. Unknown providers sort after these. */
@@ -28,6 +29,7 @@ export const MODEL_PROVIDER_ORDER = [
   "Kiro",
   "iFlow",
   "Qwen",
+  "xAI",
   "OpenAI-Compatible",
   "Other",
 ] as const;
@@ -78,6 +80,7 @@ export function detectModelProvider(
   if (lower.startsWith("kiro-") || lower.startsWith("amazonq-")) return "Kiro";
   if (lower.startsWith("glm-") || lower.startsWith("iflow-") || lower.startsWith("minimax-") || lower.startsWith("tstars")) return "iFlow";
   if (lower.startsWith("qwen")) return "Qwen";
+  if (lower.startsWith("grok-") || lower.startsWith("xai/")) return "xAI";
   if (
     lower.startsWith("gpt-") ||
     lower.startsWith("o1") ||
@@ -90,7 +93,6 @@ export function detectModelProvider(
   if (
     lower.startsWith("openrouter/") ||
     lower.startsWith("groq/") ||
-    lower.startsWith("xai/") ||
     lower.startsWith("deepseek/") ||
     lower.startsWith("anthropic/") ||
     lower.startsWith("google/")

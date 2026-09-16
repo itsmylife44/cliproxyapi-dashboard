@@ -2,6 +2,7 @@ export const PROVIDER = {
   CLAUDE: "claude",
   GEMINI: "gemini",
   CODEX: "codex",
+  XAI: "xai",
   OPENAI_COMPAT: "openai-compatibility",
 } as const;
 
@@ -11,6 +12,7 @@ export const PROVIDER_ENDPOINT = {
   [PROVIDER.CLAUDE]: "/claude-api-key",
   [PROVIDER.GEMINI]: "/gemini-api-key",
   [PROVIDER.CODEX]: "/codex-api-key",
+  [PROVIDER.XAI]: "/xai-api-key",
   [PROVIDER.OPENAI_COMPAT]: "/openai-compatibility",
 } as const;
 
@@ -27,6 +29,7 @@ export const OAUTH_PROVIDER = {
   KILO: "kilo",
   GITLAB: "gitlab",
   QWEN: "qwen",
+  XAI: "xai",
 } as const;
 
 export type OAuthProvider = (typeof OAUTH_PROVIDER)[keyof typeof OAUTH_PROVIDER];
@@ -58,6 +61,7 @@ const OAUTH_PROVIDER_ALIASES: Record<string, OAuthProvider> = {
   kilo: OAUTH_PROVIDER.KILO,
   gitlab: OAUTH_PROVIDER.GITLAB,
   qwen: OAUTH_PROVIDER.QWEN,
+  xai: OAUTH_PROVIDER.XAI,
 };
 
 export function canonicalizeOAuthProvider(raw: string | null | undefined): OAuthProvider | null {

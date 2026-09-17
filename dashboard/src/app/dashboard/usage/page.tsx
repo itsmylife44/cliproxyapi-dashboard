@@ -39,6 +39,9 @@ interface KeyUsage {
     longContextInputTokens: number;
     longContextOutputTokens: number;
     longContextCachedTokens: number;
+    peakInputTokens: number;
+    peakOutputTokens: number;
+    peakCachedTokens: number;
   }>;
 }
 

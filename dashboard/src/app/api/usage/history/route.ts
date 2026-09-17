@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { usageCache } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
-import { isLongContextPrompt, resolveModelPrice } from "@/lib/model-pricing";
+import { isLongContextPrompt, isPeakRateTimestamp, resolveModelPrice } from "@/lib/model-pricing";
 
 // Cache for 5 seconds to allow frequent polling without overwhelming the database
 // The frontend polls every 60 seconds, so 5s cache won't cause missed updates
@@ -39,6 +39,14 @@ interface KeyUsage {
     longContextInputTokens: number;
     longContextOutputTokens: number;
     longContextCachedTokens: number;
+    /**
+     * Subset of the totals above from requests that fell inside a model's peak
+     * rate windows (DeepSeek bills peak/off-peak). Only models with peak
+     * windows populate these; every other model keeps them at zero.
+     */
+    peakInputTokens: number;
+    peakOutputTokens: number;
+    peakCachedTokens: number;
   }>;
 }
 
@@ -290,6 +298,9 @@ export async function GET(request: NextRequest) {
           longContextInputTokens: 0,
           longContextOutputTokens: 0,
           longContextCachedTokens: 0,
+          peakInputTokens: 0,
+          peakOutputTokens: 0,
+          peakCachedTokens: 0,
         };
       }
       const modelUsage = keyUsage.models[modelName];
@@ -305,6 +316,15 @@ export async function GET(request: NextRequest) {
         modelUsage.longContextInputTokens += record.inputTokens;
         modelUsage.longContextOutputTokens += record.outputTokens;
         modelUsage.longContextCachedTokens += record.cachedTokens;
+      }
+
+      // Peak/off-peak is selected per request from its own timestamp in UTC, so
+      // a request is never billed at a window it did not hit. Models without
+      // peak windows never qualify and keep the buckets at zero.
+      if (isPeakRateTimestamp(record.timestamp, priceForModel(modelName))) {
+        modelUsage.peakInputTokens += record.inputTokens;
+        modelUsage.peakOutputTokens += record.outputTokens;
+        modelUsage.peakCachedTokens += record.cachedTokens;
       }
 
       // Daily aggregation for charts (use server local timezone, not UTC)

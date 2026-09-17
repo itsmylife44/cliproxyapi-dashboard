@@ -218,6 +218,7 @@ Opens all routes as a fake admin user — useful for testing themes, layouts, an
 | **[Installation](docs/INSTALLATION.md)** | Server deployment, local setup, manual installation |
 | **[Configuration](docs/CONFIGURATION.md)** | Environment variables, config.yaml, config sync |
 | **[Usage Collection](infrastructure/docs/USAGE_COLLECTION.md)** | Usage tracking service, troubleshooting, manual collection |
+| **[Model Pricing](docs/PRICING.md)** | Price table sources, model ID resolution, cache and peak-rate accounting |
 | **[Troubleshooting](docs/TROUBLESHOOTING.md)** | Common issues and solutions |
 | **[Security](docs/SECURITY.md)** | Best practices for production |
 | **[Backup & Restore](docs/BACKUP.md)** | Automated and manual backups |

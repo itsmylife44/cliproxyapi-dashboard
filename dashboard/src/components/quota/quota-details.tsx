@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/format-relative-time";
-import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
+import { capacityQuotaGroups, isShortTermQuotaWindow } from "@/lib/quota-window-classification";
 import { canonicalizeQuotaProvider } from "@/lib/quota/query-state";
 import { maskEmail } from "@/lib/mask-email";
 import {
@@ -40,6 +40,7 @@ function getCapacityBarClass(value: number): string {
   return "bg-rose-500/80";
 }
 
+
 interface QuotaDetailsProps {
   filteredAccounts: QuotaAccount[];
   hasAnyAccounts: boolean;
@@ -64,6 +65,23 @@ export function QuotaDetails({
   modelFirstOnlyView,
 }: QuotaDetailsProps) {
   const t = useTranslations("quota");
+
+  const maskedAccountCounts = new Map<string, number>();
+  for (const account of filteredAccounts) {
+    const masked = maskEmail(account.email, t("unknown"));
+    maskedAccountCounts.set(masked, (maskedAccountCounts.get(masked) ?? 0) + 1);
+  }
+  const maskedAccountOccurrences = new Map<string, number>();
+  const accountLabels = new Map<string, string>();
+  for (const account of filteredAccounts) {
+    const masked = maskEmail(account.email, t("unknown"));
+    const occurrence = (maskedAccountOccurrences.get(masked) ?? 0) + 1;
+    maskedAccountOccurrences.set(masked, occurrence);
+    accountLabels.set(
+      account.auth_index,
+      maskedAccountCounts.get(masked)! > 1 ? t("accountOccurrenceLabel", { account: masked, number: occurrence }) : masked
+    );
+  }
 
   const sections = (() => {
     if (filteredAccounts.length === 0) {
@@ -142,7 +160,7 @@ export function QuotaDetails({
 
                 {section.accounts.map((account) => {
                   const isRowExpanded = expandedCards[account.auth_index];
-                  const scores = account.groups ? Object.values(calcAccountWindowScores(account.groups)) : [];
+                  const scores = account.groups ? Object.values(calcAccountWindowScores(capacityQuotaGroups(account.provider, account.groups))) : [];
                   const longScores = scores.filter((score) => !score.isShortTerm);
                   const shortScores = scores.filter((score) => score.isShortTerm);
                   const longMin = longScores.length > 0 ? Math.min(...longScores.map((score) => score.score)) : null;
@@ -176,7 +194,7 @@ export function QuotaDetails({
                         )}
                       >
                         <span className={cn("text-xs text-[var(--text-muted)] transition-transform", isRowExpanded && "rotate-180")}>⌄</span>
-                        <span className="truncate text-xs text-[var(--text-primary)]">{maskEmail(account.email, t("unknown"))}</span>
+                        <span className="truncate text-xs text-[var(--text-primary)]">{accountLabels.get(account.auth_index)}</span>
                         <span className="truncate text-xs capitalize text-[var(--text-secondary)]">{account.provider}</span>
                         <span
                           className={cn(
@@ -295,9 +313,14 @@ export function QuotaDetails({
                                 </div>
                               ) : (
                                 <div className="min-w-[400px]">
+                                  <div className="grid grid-cols-[minmax(0,1fr)_80px_160px] border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                                    <span>{t("quotaGroupColumnLabel")}</span>
+                                    <span>{t("remainingColumnLabel")}</span>
+                                    <span>{t("resetColumnLabel")}</span>
+                                  </div>
                                   {account.groups.map((group) => {
                                     const fraction = normalizeFraction(group.remainingFraction);
-                                    const pct = fraction === null ? null : Math.round(fraction * 100);
+                                    const pct = fraction === null ? null : `${Math.round(fraction * 100)}%`;
                                     const isCritical = group.severity === "critical";
                                     return (
                                       <div
@@ -305,8 +328,8 @@ export function QuotaDetails({
                                         className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 last:border-b-0"
                                       >
                                         <span className="truncate text-xs text-[var(--text-primary)]">{group.label}</span>
-                                        <span className={cn("text-xs", isCritical ? "font-semibold text-rose-600" : "text-[var(--text-secondary)]")}>{pct === null ? "-" : `${pct}%`}</span>
-                                        <span className="truncate text-xs text-[var(--text-muted)]">{formatRelativeTime(group.resetTime, t)}</span>
+                                        <span className={cn("text-xs", isCritical ? "font-semibold text-rose-600" : "text-[var(--text-secondary)]")}>{pct ?? "-"}</span>
+                                        <span className="truncate text-xs text-[var(--text-muted)]" title={group.resetTime ?? undefined}>{formatRelativeTime(group.resetTime, t)}</span>
                                       </div>
                                     );
                                   })}

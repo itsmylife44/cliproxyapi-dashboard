@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
-import type { QuotaGroup, QuotaModel } from "@/lib/model-first-monitoring";
+import type { QuotaGroup } from "@/lib/model-first-monitoring";
 
 vi.mock("@/lib/auth/session", () => ({
   verifySession: vi.fn(() => ({ userId: "test-user" })),
@@ -214,174 +214,105 @@ describe("GET /api/quota - Gemini CLI support (issue #125)", () => {
     expect(account.groups).toBeDefined();
   });
 
-  it("falls back to the next Antigravity quota endpoint and returns model-first metadata", async () => {
+  it("falls back to the next summary endpoint and returns only shared quota windows", async () => {
     const authFilesResponse = {
-      files: [
-        {
-          auth_index: 0,
-          provider: "antigravity",
-          email: "test@gmail.com",
-          disabled: false,
-          status: "active",
-        },
+      files: [{ auth_index: 0, provider: "antigravity", email: "test@gmail.com", disabled: false, status: "active" }],
+    };
+    const summary = {
+      groups: [
+        { displayName: "Gemini Models", buckets: [
+          { bucketId: "gemini-weekly", window: "weekly", remainingFraction: 0.31, resetTime: "2026-04-14T12:00:00Z" },
+          { bucketId: "gemini-5h", window: "5h", remainingFraction: 0.82, resetTime: "2026-04-07T17:00:00Z" },
+        ] },
+        { displayName: "Claude and GPT models", buckets: [
+          { bucketId: "3p-weekly", window: "weekly", remainingFraction: 0.48, resetTime: "2026-04-14T18:00:00Z" },
+          { bucketId: "3p-5h", window: "5h", remainingFraction: 0.9, resetTime: "2026-04-07T18:00:00Z" },
+        ] },
       ],
     };
-
-    const googleModelsResponse = {
-      status_code: 200,
-      body: {
-        models: {
-          "gemini-2.5-flash": {
-            quotaInfo: {
-              remainingFraction: 0.8,
-              resetTime: "2026-03-08T05:00:00Z",
-            },
-          },
-          "gemini-3-pro-high": {
-            displayName: "Gemini 3 Pro High",
-            quotaInfo: {
-              remainingFraction: 0.4,
-              resetTime: "2026-03-12T00:00:00Z",
-            },
-          },
-        },
-      },
-    };
-
     fetchMock
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(authFilesResponse),
-        body: { cancel: vi.fn() },
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status_code: 200,
-            body: {
-              cloudaicompanionProject: "test-project",
-            },
-          }),
-        body: { cancel: vi.fn() },
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status_code: 429,
-            body: {},
-          }),
-        body: { cancel: vi.fn() },
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(googleModelsResponse),
-        body: { cancel: vi.fn() },
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(authFilesResponse) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ status_code: 200, body: { cloudaicompanionProject: "test-project" } }) })
+      .mockImplementation(async (_url: string, options?: { body?: string }) => {
+        const call = JSON.parse(options?.body ?? "{}");
+        if (!call.url.includes("sandbox")) return { ok: true, json: async () => ({ status_code: 429, body: {} }) };
+        return { ok: true, json: async () => ({ status_code: 200, body: JSON.stringify(summary) }) };
       });
 
     const { GET } = await import("./route");
-
-    const request = new Request("http://localhost/api/quota", {
-      headers: { cookie: "session=test" },
-    });
-    const response = await GET(request as NextRequest);
-    const data = await response.json();
+    const response = await GET(new Request("http://localhost/api/quota") as NextRequest);
+    const account = (await response.json()).accounts[0];
 
     expect(fetchMock).toHaveBeenCalledTimes(4);
-    expect(data.accounts).toHaveLength(1);
-    expect(data.generatedAt).toBeDefined();
-
-    const account = data.accounts[0];
-    expect(account.provider).toBe("antigravity");
-    expect(account.monitorMode).toBe("model-first");
-    expect(account.snapshotFetchedAt).toBeDefined();
-    expect(account.snapshotSource).toContain("daily-cloudcode-pa.googleapis.com");
-    expect(account.groups[0].monitorMode).toBe("model-first");
-    expect(account.groups[0].nextWindowResetAt).toBeDefined();
-    expect(account.groups[0].p50RemainingFraction).toBeDefined();
-    expect(account.groups[0].models[0].displayName).toBe("Gemini 3 Pro High");
-    expect(account.groups[1].models[0].displayName).toBe("gemini-2.5-flash");
+    expect(fetchMock.mock.calls.some((call) => String(call[1]?.body).includes("fetchAvailableModels"))).toBe(false);
+    const summaryRequest = JSON.parse(String(fetchMock.mock.calls.find((call) => String(call[1]?.body).includes("sandbox.googleapis.com/v1internal:retrieveUserQuotaSummary"))?.[1]?.body));
+    expect(summaryRequest.url).toContain("retrieveUserQuotaSummary");
+    expect(summaryRequest.data).toBe('{"project":"test-project"}');
+    expect(account.monitorMode).toBe("window-based");
+    expect(account.snapshotSource).toContain("sandbox.googleapis.com");
+    expect(account.groups.map((group: QuotaGroup) => [group.id, group.remainingFraction, group.resetTime])).toEqual([
+      ["gemini-weekly", 0.31, "2026-04-14T12:00:00Z"],
+      ["gemini-5h", 0.82, "2026-04-07T17:00:00Z"],
+      ["claude-gpt-weekly", 0.48, "2026-04-14T18:00:00Z"],
+      ["claude-gpt-5h", 0.9, "2026-04-07T18:00:00Z"],
+    ]);
   });
 
-  it("passes project_id to fetchAvailableModels and treats missing remainingFraction as depleted", async () => {
-    const authFilesResponse = {
-      files: [
-        {
-          auth_index: 0,
-          provider: "antigravity",
-          email: "test@gmail.com",
-          disabled: false,
-          status: "active",
-        },
-      ],
-    };
-
+  it("keeps authoritative windows without requesting per-model snapshots", async () => {
     fetchMock
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(authFilesResponse),
-        body: { cancel: vi.fn() },
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status_code: 200,
-            body: {
-              cloudaicompanionProject: "confident-arc-98xjk",
-            },
-          }),
-        body: { cancel: vi.fn() },
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status_code: 200,
-            body: {
-              models: {
-                "claude-opus-4-6-thinking": {
-                  displayName: "Claude Opus 4.6 (Thinking)",
-                  quotaInfo: {
-                    resetTime: "2026-04-07T20:18:24Z",
-                  },
-                },
-                "gemini-3-flash": {
-                  displayName: "Gemini 3 Flash",
-                  quotaInfo: {
-                    remainingFraction: 0.8,
-                    resetTime: "2026-04-07T12:10:05Z",
-                  },
-                },
-              },
-            },
-          }),
-        body: { cancel: vi.fn() },
-      });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ files: [
+        { auth_index: 1, provider: "antigravity", disabled: false, status: "active" },
+      ] }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ status_code: 200, body: { cloudaicompanionProject: "test-project" } }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ status_code: 200, body: { groups: [
+        { displayName: "Gemini Models", buckets: [
+          { window: "weekly", resetTime: "2026-04-14T12:00:00Z" },
+          { window: "5h", remainingFraction: 0, resetTime: "invalid" },
+        ] },
+      ] } }) });
 
     const { GET } = await import("./route");
+    const response = await GET(new Request("http://localhost/api/quota") as NextRequest);
+    const account = (await response.json()).accounts[0];
 
-    const request = new Request("http://localhost/api/quota", {
-      headers: { cookie: "session=test" },
+    expect(account.error).toBeUndefined();
+    expect(account.groups.map((group: QuotaGroup) => [group.id, group.remainingFraction, group.resetTime])).toEqual([
+      ["gemini-weekly", 0, "2026-04-14T12:00:00Z"],
+      ["gemini-5h", 0, null],
+    ]);
+    expect(fetchMock.mock.calls.some((call) => String(call[1]?.body).includes("fetchAvailableModels"))).toBe(false);
+  });
+
+  it("keeps both Antigravity accounts' four windows independent", async () => {
+    fetchMock.mockImplementation(async (url: string, options?: { body?: string }) => {
+      if (url.endsWith("/auth-files")) return { ok: true, json: async () => ({ files: [
+        { auth_index: 1, provider: "antigravity", disabled: false, status: "active" },
+        { auth_index: 2, provider: "antigravity", disabled: false, status: "active" },
+      ] }) };
+
+      const call = JSON.parse(options?.body ?? "{}");
+      if (call.url.includes("loadCodeAssist")) return { ok: true, json: async () => ({ status_code: 200, body: { cloudaicompanionProject: "test-project" } }) };
+      if (call.url.includes("fetchAvailableModels")) return { ok: true, json: async () => ({ status_code: 200, body: { models: {} } }) };
+
+      const weekly = call.auth_index === "1" ? 0.2 : 0.7;
+      return { ok: true, json: async () => ({ status_code: 200, body: { groups: [
+        { displayName: "Gemini Models", buckets: [
+          { window: "weekly", remainingFraction: weekly, resetTime: "2026-10-07T12:00:00Z" },
+          { window: "5h", remainingFraction: 0.8, resetTime: "2026-09-30T12:00:00Z" },
+        ] },
+        { displayName: "Claude and GPT models", buckets: [
+          { window: "weekly", remainingFraction: 0.5, resetTime: "2026-10-07T18:00:00Z" },
+          { window: "5h", remainingFraction: 0.9, resetTime: "2026-09-30T18:00:00Z" },
+        ] },
+      ] } }) };
     });
-    const response = await GET(request as NextRequest);
-    const data = await response.json();
 
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({
-      method: "POST",
-    });
-    const fetchQuotaCallBody = JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body));
-    expect(fetchQuotaCallBody.data).toBe("{\"project\":\"confident-arc-98xjk\"}");
+    const { GET } = await import("./route");
+    const accounts = (await (await GET(new Request("http://localhost/api/quota") as NextRequest)).json()).accounts;
 
-    const account = data.accounts[0];
-    const models = account.groups.flatMap((group: QuotaGroup) => group.models);
-    const claudeModel = models.find((model: QuotaModel) => model.id === "claude-opus-4-6-thinking");
-    const flashModel = models.find((model: QuotaModel) => model.id === "gemini-3-flash");
-
-    expect(claudeModel?.remainingFraction).toBe(0);
-    expect(flashModel?.remainingFraction).toBe(0.8);
+    expect(accounts).toHaveLength(2);
+    expect(accounts.map((account: { groups: QuotaGroup[] }) => account.groups.length)).toEqual([4, 4]);
+    expect(accounts.map((account: { groups: QuotaGroup[] }) => account.groups[0]?.remainingFraction)).toEqual([0.2, 0.7]);
   });
 });
 

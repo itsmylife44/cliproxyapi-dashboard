@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { QuotaToolbar } from "@/components/quota/quota-toolbar";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
-import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
+import { capacityQuotaGroups, isShortTermQuotaWindow } from "@/lib/quota-window-classification";
 import {
   enrichModelFirstGroup,
   isModelFirstAccount,
@@ -127,9 +127,9 @@ export function filterQuotaAccounts(accounts: QuotaAccount[], query: QuotaQueryS
 
 function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
   const totalAccounts = accounts.length;
-  const healthy = accounts.filter(
-    (account) => account.supported && !account.error && account.groups && account.groups.length > 0
-  );
+  const healthy = accounts
+    .filter((account) => account.supported && !account.error && account.groups && account.groups.length > 0)
+    .map((account) => ({ ...account, groups: capacityQuotaGroups(account.provider, account.groups ?? []) }));
   const errorAccounts = totalAccounts - healthy.length;
   const modelFirst = healthy.length > 0 && healthy.every((account) => isModelFirstAccount(account));
 
@@ -468,7 +468,9 @@ export default function QuotaPage() {
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     {t("overallCapacityLabel")} <HelpTooltip content={t("overallCapacityTooltip")} />
                   </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{Math.round(overallCapacity.value * 100)}%</p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                    {overallCapacity.provider ? `${Math.round(overallCapacity.value * 100)}%` : t("noData")}
+                  </p>
                 </div>
                 <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">

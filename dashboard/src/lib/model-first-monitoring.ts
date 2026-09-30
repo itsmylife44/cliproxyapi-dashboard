@@ -1,3 +1,9 @@
+export const ANTIGRAVITY_SUMMARY_ENDPOINTS = [
+  "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary",
+  "https://daily-cloudcode-pa.sandbox.googleapis.com/v1internal:retrieveUserQuotaSummary",
+  "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary",
+] as const;
+
 export const ANTIGRAVITY_QUOTA_ENDPOINTS = [
   "https://daily-cloudcode-pa.sandbox.googleapis.com/v1internal:fetchAvailableModels",
   "https://daily-cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels",
@@ -119,7 +125,8 @@ export function isModelFirstProvider(provider: string | undefined | null): boole
 }
 
 export function isModelFirstAccount(account: Pick<QuotaAccount, "provider" | "monitorMode">): boolean {
-  return account.monitorMode === "model-first" || isModelFirstProvider(account.provider);
+  return account.monitorMode === "model-first" ||
+    (account.monitorMode !== "window-based" && isModelFirstProvider(account.provider));
 }
 
 export function isStaleSnapshot(

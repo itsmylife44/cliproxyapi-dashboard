@@ -30,6 +30,15 @@ interface QuotaChartProps {
   modelFirstSummary: ModelFirstProviderSummary | null;
   modelFirstOnlyView: boolean;
 }
+
+export function getComparableProviderSummaries(providerSummaries: ProviderSummary[]): ProviderSummary[] {
+  return providerSummaries.filter((summary) =>
+    summary.monitorMode === "model-first"
+      ? summary.modelFirstSummary?.minRemainingFraction != null
+      : summary.windowCapacities.length > 0
+  );
+}
+
 export function QuotaChart({
   overallCapacity,
   providerSummaries,
@@ -165,8 +174,8 @@ export function QuotaChart({
   return (
     <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
       <ChartContainer title={t("overallCapacityTitle")} subtitle={t("overallCapacitySubtitle")}>
-        {providerSummaries.length === 0 ? (
-          <ChartEmpty message={t("noProviderData")} />
+        {providerSummaries.length === 0 || !overallCapacity.provider ? (
+          <ChartEmpty message={providerSummaries.length === 0 ? t("noProviderData") : t("noAggregatedQuota")} />
         ) : (() => {
           const pct = Math.round(overallCapacity.value * 100);
           const gaugeColor =
@@ -205,7 +214,12 @@ export function QuotaChart({
         {providerSummaries.length === 0 ? (
           <ChartEmpty message={t("noProviderData")} />
         ) : (() => {
-          const barData = providerSummaries.map((summary) => {
+          const chartSummaries = getComparableProviderSummaries(providerSummaries);
+          if (chartSummaries.length === 0) {
+            return <ChartEmpty message={t("noComparableProviderQuota")} />;
+          }
+
+          const barData = chartSummaries.map((summary) => {
             if (summary.monitorMode === "model-first" && summary.modelFirstSummary) {
               return {
                 provider: summary.provider,
@@ -279,7 +293,7 @@ export function QuotaChart({
                   <Legend
                     verticalAlign="top"
                     height={24}
-                    formatter={(value: string) => (value === "longTerm" ? t("primaryMetricLabel") : t("shortTermLabel"))}
+                    formatter={(value: string) => (value === "longTerm" ? t("longTermLabel") : t("shortTermLabel"))}
                     wrapperStyle={{ fontSize: 10, color: tokens.text.dimmed }}
                   />
                   <Bar dataKey="longTerm" radius={[0, 3, 3, 0]} fill={CHART_COLORS.success} />

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { isShortTermQuotaWindow } from "../quota-window-classification";
+import { capacityQuotaGroups, isShortTermQuotaWindow } from "../quota-window-classification";
 
 describe("isShortTermQuotaWindow", () => {
   it("keeps explicit short-term markers classified as short-term", () => {
@@ -42,6 +42,18 @@ describe("isShortTermQuotaWindow", () => {
     vi.useRealTimers();
   });
 
+  it("uses explicit Antigravity bucket windows even when both resets are imminent", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-30T10:00:00.000Z"));
+    const groups = [
+      { id: "gemini-weekly", label: "Gemini · Weekly", resetTime: "2026-09-30T14:00:00Z" },
+      { id: "gemini-5h", label: "Gemini · 5-hour", resetTime: "2026-09-30T12:00:00Z" },
+    ] as const;
+    expect(isShortTermQuotaWindow(groups[0], groups)).toBe(false);
+    expect(isShortTermQuotaWindow(groups[1], groups)).toBe(true);
+    vi.useRealTimers();
+  });
+
   it("treats windows without markers or reset time as long-term", () => {
     expect(
       isShortTermQuotaWindow({
@@ -50,5 +62,15 @@ describe("isShortTermQuotaWindow", () => {
         resetTime: null,
       })
     ).toBe(false);
+  });
+});
+
+describe("capacityQuotaGroups", () => {
+  const groups = ["gemini-weekly", "gemini-5h", "claude-gpt-weekly", "claude-gpt-5h"].map((id) => ({ id, label: id, resetTime: null }));
+  it("keeps only Gemini windows for Antigravity", () => {
+    expect(capacityQuotaGroups("antigravity", groups).map(({ id }) => id)).toEqual(["gemini-weekly", "gemini-5h"]);
+  });
+  it("keeps every window for other providers", () => {
+    expect(capacityQuotaGroups("claude", groups)).toHaveLength(4);
   });
 });

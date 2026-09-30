@@ -9,16 +9,25 @@ export interface QuotaWindowLike {
   resetTime: string | null;
 }
 
+// Antigravity's Claude/GPT windows are shown for reference but excluded from
+// capacity bars and aggregates; only its Gemini windows count.
+export function capacityQuotaGroups<T extends QuotaWindowLike>(provider: string, groups: readonly T[]): T[] {
+  if (provider.toLowerCase() !== "antigravity") return [...groups];
+  return groups.filter((group) => group.id.startsWith("gemini-"));
+}
+
 function hasExplicitShortTermMarker(group: QuotaWindowLike): boolean {
   const id = group.id.toLowerCase();
   const label = group.label.toLowerCase();
 
   return (
     id.includes("five-hour") ||
+    id.endsWith("-5h") ||
     id.includes("primary") ||
     id.includes("request") ||
     id.includes("token") ||
     label.includes("5h") ||
+    label.includes("5-hour") ||
     label.includes("5m") ||
     label.includes("request") ||
     label.includes("token")
@@ -38,6 +47,9 @@ export function isShortTermQuotaWindow(
 ): boolean {
   if (hasExplicitShortTermMarker(group)) {
     return true;
+  }
+  if (group.id.toLowerCase().endsWith("-weekly")) {
+    return false;
   }
 
   const groupReset = parseResetTime(group.resetTime);

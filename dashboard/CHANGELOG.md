@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.85](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.84...dashboard-v0.1.85) (2026-10-02)
+
+
+### Bug Fixes
+
+* **quota:** Antigravity shared quota windows and capacity accuracy ([#238](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/238)) ([a9594ae](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a9594ae094e61898adc24b693461216d14487a59))
+* **quota:** keep Claude weekly windows in long-term capacity ([#239](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/239)) ([5bda1c7](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/5bda1c7341e0431a729f529f412454355a0bd2e2))
+
 ## [0.1.84](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.83...dashboard-v0.1.84) (2026-09-16)
 
 

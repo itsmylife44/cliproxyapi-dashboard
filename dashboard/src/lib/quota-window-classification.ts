@@ -45,10 +45,14 @@ export function isShortTermQuotaWindow(
   group: QuotaWindowLike,
   siblingGroups: readonly QuotaWindowLike[] = []
 ): boolean {
+  const id = group.id.toLowerCase();
+  if (id === "seven-day" || id.startsWith("seven-day-")) {
+    return false;
+  }
   if (hasExplicitShortTermMarker(group)) {
     return true;
   }
-  if (group.id.toLowerCase().endsWith("-weekly")) {
+  if (id.endsWith("-weekly")) {
     return false;
   }
 

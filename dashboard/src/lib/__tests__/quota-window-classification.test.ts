@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { capacityQuotaGroups, isShortTermQuotaWindow } from "../quota-window-classification";
 
@@ -52,6 +52,34 @@ describe("isShortTermQuotaWindow", () => {
     expect(isShortTermQuotaWindow(groups[0], groups)).toBe(false);
     expect(isShortTermQuotaWindow(groups[1], groups)).toBe(true);
     vi.useRealTimers();
+  });
+
+  describe("Claude weekly windows", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-09-30T23:40:00Z"));
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it.each([null, "2026-10-01T04:49:59Z"])(
+      "keeps the weekly window long-term when the five-hour reset is %s",
+      (fiveHourReset) => {
+        const groups = [
+          { id: "five-hour", label: "5h Session", resetTime: fiveHourReset },
+          { id: "seven-day", label: "7d Weekly", resetTime: "2026-10-01T15:59:59Z" },
+        ] as const;
+
+        expect(isShortTermQuotaWindow(groups[0], groups)).toBe(true);
+        expect(isShortTermQuotaWindow(groups[1], groups)).toBe(false);
+      }
+    );
+
+    it.each([
+      { id: "seven-day-sonnet", label: "7d Sonnet" },
+      { id: "seven-day-token-optimized", label: "7d Token Optimized" },
+    ])("keeps model-scoped weekly window $id long-term near reset", ({ id, label }) => {
+      expect(isShortTermQuotaWindow({ id, label, resetTime: "2026-10-01T15:59:59Z" })).toBe(false);
+    });
   });
 
   it("treats windows without markers or reset time as long-term", () => {

@@ -1,561 +1,23 @@
 /**
- * Default model pricing database.
+ * Model price resolution and cost estimation.
  *
- * Prices are in USD per 1 million tokens.
- * Users can override these via the Settings page (persisted in localStorage).
+ * Prices come from `model-pricing-table.ts` and can be overridden by the user
+ * (persisted in localStorage). Resolution order:
  *
- * When a model is not found, we attempt prefix matching:
- *   "claude-sonnet-4.5-xxx" → matches "claude-sonnet-4.5"
- * A shorter key only matches at a version boundary, so "gpt-5" does NOT match
- * "gpt-5.6-sol" (that would silently price a newer model at an older rate).
- * If still unmatched the request is tagged as "unpriced".
+ *   1. exact match, user overrides first, then the built-in table
+ *   2. longest-prefix match at a version boundary, so
+ *      "claude-sonnet-4.5-20260620" resolves to "claude-sonnet-4.5" while
+ *      "gpt-5" does not absorb "gpt-5.6-sol"
+ *   3. provider-prefix fallback, so "opencode-go/kimi-k3" resolves to "kimi-k3"
+ *
+ * A model that still does not match is reported as "unpriced" instead of being
+ * billed at a similar model's rate.
  */
 
-/**
- * Rates that apply once a request's prompt reaches a model's long-context
- * threshold.
- */
-export interface LongContextPrice {
-  /**
-   * Smallest prompt-token count billed at these rates (inclusive lower bound).
-   * The vendors word this differently, so the boundary is expressed as the
-   * first qualifying size:
-   * - xAI bills a request once its prompt *reaches* 200k → 200_000 qualifies
-   *   (https://docs.x.ai/developers/pricing).
-   * - OpenAI bills a request once its prompt is *above* 272k → 272_001 is the
-   *   first qualifying size (https://developers.openai.com/api/docs/models/gpt-5.6-sol).
-   */
-  thresholdTokens: number;
-  /** USD per 1M input tokens */
-  inputPer1M: number;
-  /** USD per 1M cached (cache read) input tokens */
-  cacheReadPer1M: number;
-  /** USD per 1M output tokens */
-  outputPer1M: number;
-}
+import { DEFAULT_MODEL_PRICING, type ModelPrice } from "./model-pricing-table";
 
-/** First prompt size billed at xAI long-context rates. */
-const XAI_LONG_CONTEXT_MIN_TOKENS = 200_000;
-/** First prompt size billed at OpenAI long-context rates ("more than 272k"). */
-const OPENAI_LONG_CONTEXT_MIN_TOKENS = 272_001;
-
-export interface ModelPrice {
-  /** Display name for the model family */
-  displayName: string;
-  /** USD per 1M input tokens */
-  inputPer1M: number;
-  /** USD per 1M output tokens */
-  outputPer1M: number;
-  /**
-   * USD per 1M cached (cache read) input tokens. Falls back to `inputPer1M`
-   * when the provider does not publish a distinct cache-read rate.
-   */
-  cacheReadPer1M?: number;
-  /**
-   * How the provider reports cache reads relative to `inputTokens`:
-   * - `"separate"` (default): `inputTokens` excludes cache reads, so both are
-   *   billed independently. This is Anthropic's Messages API shape, used by
-   *   CLIProxyAPI's `NewIndependentTokenBreakdown`.
-   * - `"included"`: `inputTokens` already contains the cached tokens, so only
-   *   the uncached remainder is billed at `inputPer1M`. This is the shape of
-   *   OpenAI-compatible usage (`prompt_tokens` includes
-   *   `prompt_tokens_details.cached_tokens`), which CLIProxyAPI normalizes with
-   *   `NewSubsetTokenBreakdown` and which the xAI executor publishes via
-   *   `helps.ParseOpenAIUsage` / `helps.ParseCodexUsage`.
-   */
-  cacheAccounting?: "separate" | "included";
-  /** Rates for requests whose prompt reaches LONG_CONTEXT_THRESHOLD_TOKENS. */
-  longContext?: LongContextPrice;
-  /**
-   * Restricts this entry to an exact model ID. Set for documented aliases and
-   * dated snapshots (`gpt-5.6` → GPT-5.6 Sol, `grok-code-fast-1`, …) so an
-   * unknown sibling slug such as `gpt-5.6-nonexistent` is not silently billed
-   * at the alias's rate.
-   */
-  exactMatchOnly?: boolean;
-  /** Optional: provider grouping */
-  provider: string;
-}
-
-/**
- * Built-in pricing table.  Keep alphabetically sorted by key.
- * Source: official pricing pages as of September 2026.
- */
-export const DEFAULT_MODEL_PRICING: Record<string, ModelPrice> = {
-  // ── Anthropic ──────────────────────────────────────────────
-  // Cache reads cost 0.1x the input rate, except Fable 5/5.1 (2.5% on 5.1).
-  // Keys follow CLIProxyAPI's model registry ID form (`claude-opus-4-6`, ...);
-  // the dotted variants are kept for reseller passthrough IDs.
-  "claude-haiku-4-5": {
-    displayName: "Claude Haiku 4.5",
-    inputPer1M: 1,
-    outputPer1M: 5,
-    cacheReadPer1M: 0.1,
-    provider: "Anthropic",
-  },
-  "claude-sonnet-4": {
-    displayName: "Claude Sonnet 4",
-    inputPer1M: 3,
-    outputPer1M: 15,
-    cacheReadPer1M: 0.3,
-    provider: "Anthropic",
-  },
-  "claude-sonnet-4.5": {
-    displayName: "Claude Sonnet 4.5",
-    inputPer1M: 3,
-    outputPer1M: 15,
-    cacheReadPer1M: 0.3,
-    provider: "Anthropic",
-  },
-  "claude-sonnet-4-5": {
-    displayName: "Claude Sonnet 4.5",
-    inputPer1M: 3,
-    outputPer1M: 15,
-    cacheReadPer1M: 0.3,
-    provider: "Anthropic",
-  },
-  "claude-sonnet-4-6": {
-    displayName: "Claude Sonnet 4.6",
-    inputPer1M: 3,
-    outputPer1M: 15,
-    cacheReadPer1M: 0.3,
-    provider: "Anthropic",
-  },
-  "claude-sonnet-5": {
-    displayName: "Claude Sonnet 5",
-    inputPer1M: 2,
-    outputPer1M: 10,
-    cacheReadPer1M: 0.2,
-    provider: "Anthropic",
-  },
-  "claude-opus-4": {
-    displayName: "Claude Opus 4",
-    inputPer1M: 15,
-    outputPer1M: 75,
-    cacheReadPer1M: 1.5,
-    provider: "Anthropic",
-  },
-  "claude-opus-4.6": {
-    displayName: "Claude Opus 4.6",
-    inputPer1M: 5,
-    outputPer1M: 25,
-    cacheReadPer1M: 0.5,
-    provider: "Anthropic",
-  },
-  "claude-opus-4-5": {
-    displayName: "Claude Opus 4.5",
-    inputPer1M: 5,
-    outputPer1M: 25,
-    cacheReadPer1M: 0.5,
-    provider: "Anthropic",
-  },
-  "claude-opus-4-6": {
-    displayName: "Claude Opus 4.6",
-    inputPer1M: 5,
-    outputPer1M: 25,
-    cacheReadPer1M: 0.5,
-    provider: "Anthropic",
-  },
-  "claude-opus-4-7": {
-    displayName: "Claude Opus 4.7",
-    inputPer1M: 5,
-    outputPer1M: 25,
-    cacheReadPer1M: 0.5,
-    provider: "Anthropic",
-  },
-  "claude-opus-4-8": {
-    displayName: "Claude Opus 4.8",
-    inputPer1M: 5,
-    outputPer1M: 25,
-    cacheReadPer1M: 0.5,
-    provider: "Anthropic",
-  },
-  "claude-opus-5": {
-    displayName: "Claude Opus 5",
-    inputPer1M: 5,
-    outputPer1M: 25,
-    cacheReadPer1M: 0.5,
-    provider: "Anthropic",
-  },
-  "claude-fable-5": {
-    displayName: "Claude Fable 5",
-    inputPer1M: 10,
-    outputPer1M: 50,
-    cacheReadPer1M: 1,
-    provider: "Anthropic",
-  },
-  "claude-fable-5-1": {
-    displayName: "Claude Fable 5.1",
-    inputPer1M: 10,
-    outputPer1M: 50,
-    cacheReadPer1M: 0.25,
-    provider: "Anthropic",
-  },
-
-  // ── OpenAI ─────────────────────────────────────────────────
-  "gpt-4o": {
-    displayName: "GPT-4o",
-    inputPer1M: 2.5,
-    outputPer1M: 10,
-    provider: "OpenAI",
-  },
-  "gpt-4o-mini": {
-    displayName: "GPT-4o Mini",
-    inputPer1M: 0.15,
-    outputPer1M: 0.6,
-    provider: "OpenAI",
-  },
-  // Cached input is 10% of the input rate and is a subset of `prompt_tokens`
-  // (see `cacheAccounting`). Neither model has a published long-context tier, so
-  // none is modelled here.
-  // https://developers.openai.com/api/docs/models/gpt-5
-  "gpt-5": {
-    displayName: "GPT-5",
-    inputPer1M: 1.25,
-    outputPer1M: 10,
-    cacheReadPer1M: 0.125,
-    cacheAccounting: "included",
-    provider: "OpenAI",
-  },
-  // Default snapshot of `gpt-5` (documented alias, same rates).
-  "gpt-5-2025-08-07": {
-    displayName: "GPT-5",
-    inputPer1M: 1.25,
-    outputPer1M: 10,
-    cacheReadPer1M: 0.125,
-    cacheAccounting: "included",
-    exactMatchOnly: true,
-    provider: "OpenAI",
-  },
-  // https://developers.openai.com/api/docs/models/gpt-5.2
-  "gpt-5.2": {
-    displayName: "GPT-5.2",
-    inputPer1M: 1.75,
-    outputPer1M: 14,
-    cacheReadPer1M: 0.175,
-    cacheAccounting: "included",
-    provider: "OpenAI",
-  },
-  // Default snapshot of `gpt-5.2` (documented alias, same rates).
-  "gpt-5.2-2025-12-11": {
-    displayName: "GPT-5.2",
-    inputPer1M: 1.75,
-    outputPer1M: 14,
-    cacheReadPer1M: 0.175,
-    cacheAccounting: "included",
-    exactMatchOnly: true,
-    provider: "OpenAI",
-  },
-  // GPT-5.6 / GPT-6 tiers. Cached input is 10% of the standard input rate, and
-  // `cacheAccounting: "included"` matches CLIProxyAPI's OpenAI-style usage
-  // parser (prompt_tokens contains prompt_tokens_details.cached_tokens), so
-  // cached tokens are a subset of inputTokens and must not be billed twice.
-  // Prompts above 272k input tokens are billed at 2x input/cache and 1.5x
-  // output for the whole request.
-  // https://developers.openai.com/api/docs/models/gpt-5.6-sol
-  "gpt-5.6-sol": {
-    displayName: "GPT-5.6 Sol",
-    inputPer1M: 4,
-    outputPer1M: 20,
-    cacheReadPer1M: 0.4,
-    cacheAccounting: "included",
-    longContext: {
-      thresholdTokens: OPENAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 8,
-      cacheReadPer1M: 0.8,
-      outputPer1M: 30,
-    },
-    provider: "OpenAI",
-  },
-  // `gpt-5.6` is the documented alias for GPT-5.6 Sol ("The `gpt-5.6` alias
-  // routes requests to GPT-5.6 Sol"), so it carries Sol's rates and tier.
-  // https://developers.openai.com/api/docs/models/gpt-5.6
-  "gpt-5.6": {
-    displayName: "GPT-5.6 Sol",
-    inputPer1M: 4,
-    outputPer1M: 20,
-    cacheReadPer1M: 0.4,
-    cacheAccounting: "included",
-    exactMatchOnly: true,
-    longContext: {
-      thresholdTokens: OPENAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 8,
-      cacheReadPer1M: 0.8,
-      outputPer1M: 30,
-    },
-    provider: "OpenAI",
-  },
-  "gpt-5.6-terra": {
-    displayName: "GPT-5.6 Terra",
-    inputPer1M: 2,
-    outputPer1M: 12,
-    cacheReadPer1M: 0.2,
-    cacheAccounting: "included",
-    longContext: {
-      thresholdTokens: OPENAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 4,
-      cacheReadPer1M: 0.4,
-      outputPer1M: 18,
-    },
-    provider: "OpenAI",
-  },
-  "gpt-5.6-luna": {
-    displayName: "GPT-5.6 Luna",
-    inputPer1M: 0.2,
-    outputPer1M: 1.2,
-    cacheReadPer1M: 0.02,
-    cacheAccounting: "included",
-    longContext: {
-      thresholdTokens: OPENAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 0.4,
-      cacheReadPer1M: 0.04,
-      outputPer1M: 1.8,
-    },
-    provider: "OpenAI",
-  },
-  "gpt-6-astra": {
-    displayName: "GPT-6 Astra",
-    inputPer1M: 10,
-    outputPer1M: 50,
-    cacheReadPer1M: 1,
-    cacheAccounting: "included",
-    longContext: {
-      thresholdTokens: OPENAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 20,
-      cacheReadPer1M: 2,
-      outputPer1M: 75,
-    },
-    provider: "OpenAI",
-  },
-  "o3": {
-    displayName: "o3",
-    inputPer1M: 10,
-    outputPer1M: 40,
-    provider: "OpenAI",
-  },
-  "o3-mini": {
-    displayName: "o3-mini",
-    inputPer1M: 1.1,
-    outputPer1M: 4.4,
-    provider: "OpenAI",
-  },
-  "o4-mini": {
-    displayName: "o4-mini",
-    inputPer1M: 1.1,
-    outputPer1M: 4.4,
-    provider: "OpenAI",
-  },
-
-  // ── Google ─────────────────────────────────────────────────
-  "gemini-2.5-pro": {
-    displayName: "Gemini 2.5 Pro",
-    inputPer1M: 1.25,
-    outputPer1M: 10,
-    provider: "Google",
-  },
-  "gemini-2.5-flash": {
-    displayName: "Gemini 2.5 Flash",
-    inputPer1M: 0.15,
-    outputPer1M: 0.6,
-    provider: "Google",
-  },
-
-  // ── Perplexity ─────────────────────────────────────────────
-  "sonar": {
-    displayName: "Sonar",
-    inputPer1M: 1,
-    outputPer1M: 1,
-    provider: "Perplexity",
-  },
-  "sonar-pro": {
-    displayName: "Sonar Pro",
-    inputPer1M: 3,
-    outputPer1M: 15,
-    provider: "Perplexity",
-  },
-  "sonar-reasoning": {
-    displayName: "Sonar Reasoning",
-    inputPer1M: 1,
-    outputPer1M: 5,
-    provider: "Perplexity",
-  },
-  "sonar-reasoning-pro": {
-    displayName: "Sonar Reasoning Pro",
-    inputPer1M: 2,
-    outputPer1M: 8,
-    provider: "Perplexity",
-  },
-  "sonar-deep-research": {
-    displayName: "Sonar Deep Research",
-    inputPer1M: 2,
-    outputPer1M: 8,
-    provider: "Perplexity",
-  },
-
-  // ── xAI (Grok) ─────────────────────────────────────────────
-  //
-  // Source: https://docs.x.ai/developers/pricing. Only model IDs that appear in
-  // that table are listed; retired or unpriced slugs stay unpriced rather than
-  // being billed at historical rates.
-  //
-  // Every model below is billed at double rate for the *whole* request once its
-  // prompt reaches 200k tokens, so the long-context tier is selected per request
-  // (see `isLongContextPrompt`), never from an aggregated model total.
-  //
-  // `cacheAccounting: "included"` — CLIProxyAPI's xAI executor publishes usage
-  // through `helps.ParseOpenAIUsage` / `helps.ParseCodexUsage`, which normalize
-  // with `usage.NewSubsetTokenBreakdown`: `prompt_tokens` already contains
-  // `prompt_tokens_details.cached_tokens`, so `inputTokens` includes the cached
-  // tokens and the prompt size is exactly `inputTokens`.
-  "grok-4.3": {
-    displayName: "Grok 4.3",
-    inputPer1M: 1.25,
-    outputPer1M: 2.5,
-    cacheReadPer1M: 0.2,
-    cacheAccounting: "included",
-    longContext: {
-      thresholdTokens: XAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 2.5,
-      cacheReadPer1M: 0.4,
-      outputPer1M: 5,
-    },
-    provider: "xAI",
-  },
-  "grok-4.5": {
-    displayName: "Grok 4.5",
-    inputPer1M: 2,
-    outputPer1M: 6,
-    cacheReadPer1M: 0.3,
-    cacheAccounting: "included",
-    longContext: {
-      thresholdTokens: XAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 4,
-      cacheReadPer1M: 0.6,
-      outputPer1M: 12,
-    },
-    provider: "xAI",
-  },
-  "grok-4.6": {
-    displayName: "Grok 4.6",
-    inputPer1M: 2,
-    outputPer1M: 6,
-    cacheReadPer1M: 0.5,
-    cacheAccounting: "included",
-    longContext: {
-      thresholdTokens: XAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 4,
-      cacheReadPer1M: 1,
-      outputPer1M: 12,
-    },
-    provider: "xAI",
-  },
-  "grok-4.20-0309-non-reasoning": {
-    displayName: "Grok 4.20 (Non-Reasoning)",
-    inputPer1M: 1.25,
-    outputPer1M: 2.5,
-    cacheReadPer1M: 0.2,
-    cacheAccounting: "included",
-    longContext: {
-      thresholdTokens: XAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 2.5,
-      cacheReadPer1M: 0.4,
-      outputPer1M: 5,
-    },
-    provider: "xAI",
-  },
-  "grok-4.20-0309-reasoning": {
-    displayName: "Grok 4.20 (Reasoning)",
-    inputPer1M: 1.25,
-    outputPer1M: 2.5,
-    cacheReadPer1M: 0.2,
-    cacheAccounting: "included",
-    longContext: {
-      thresholdTokens: XAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 2.5,
-      cacheReadPer1M: 0.4,
-      outputPer1M: 5,
-    },
-    provider: "xAI",
-  },
-  "grok-4.20-multi-agent-0309": {
-    displayName: "Grok 4.20 (Multi-Agent)",
-    inputPer1M: 1.25,
-    outputPer1M: 2.5,
-    cacheReadPer1M: 0.2,
-    cacheAccounting: "included",
-    longContext: {
-      thresholdTokens: XAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 2.5,
-      cacheReadPer1M: 0.4,
-      outputPer1M: 5,
-    },
-    provider: "xAI",
-  },
-  "grok-build-0.1": {
-    displayName: "Grok Build 0.1",
-    inputPer1M: 1,
-    outputPer1M: 2,
-    cacheReadPer1M: 0.2,
-    cacheAccounting: "included",
-    longContext: {
-      thresholdTokens: XAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 2,
-      cacheReadPer1M: 0.4,
-      outputPer1M: 4,
-    },
-    provider: "xAI",
-  },
-  // `grok-code-fast-1` was retired on 2026-05-15 and redirects to
-  // `grok-build-0.1`; the three IDs below are its documented aliases and are
-  // billed at Grok Build rates, not at their historical prices.
-  // https://docs.x.ai/developers/models/grok-build-0.1
-  // https://docs.x.ai/developers/migration/may-15-retirement
-  "grok-code-fast": {
-    displayName: "Grok Build 0.1",
-    inputPer1M: 1,
-    outputPer1M: 2,
-    cacheReadPer1M: 0.2,
-    cacheAccounting: "included",
-    exactMatchOnly: true,
-    longContext: {
-      thresholdTokens: XAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 2,
-      cacheReadPer1M: 0.4,
-      outputPer1M: 4,
-    },
-    provider: "xAI",
-  },
-  "grok-code-fast-1": {
-    displayName: "Grok Build 0.1",
-    inputPer1M: 1,
-    outputPer1M: 2,
-    cacheReadPer1M: 0.2,
-    cacheAccounting: "included",
-    exactMatchOnly: true,
-    longContext: {
-      thresholdTokens: XAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 2,
-      cacheReadPer1M: 0.4,
-      outputPer1M: 4,
-    },
-    provider: "xAI",
-  },
-  "grok-code-fast-1-0825": {
-    displayName: "Grok Build 0.1",
-    inputPer1M: 1,
-    outputPer1M: 2,
-    cacheReadPer1M: 0.2,
-    cacheAccounting: "included",
-    exactMatchOnly: true,
-    longContext: {
-      thresholdTokens: XAI_LONG_CONTEXT_MIN_TOKENS,
-      inputPer1M: 2,
-      cacheReadPer1M: 0.4,
-      outputPer1M: 4,
-    },
-    provider: "xAI",
-  },
-};
+export { DEFAULT_MODEL_PRICING } from "./model-pricing-table";
+export type { LongContextPrice, ModelPrice, PeakRateWindow, PeakRates } from "./model-pricing-table";
 
 const LOCALSTORAGE_KEY = "cliproxy-custom-pricing";
 
@@ -667,6 +129,51 @@ export function isLongContextPrompt(
 }
 
 /**
+ * Whether a request timestamp falls inside one of a model's peak windows.
+ *
+ * The comparison is done in UTC, because the published windows are UTC
+ * ("Peak hours are 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday").
+ * Windows are half-open, so 04:00:00 is already off-peak again.
+ *
+ * Models without `peak` windows are never in peak hours, so their aggregated
+ * peak buckets stay at zero.
+ */
+export function isPeakRateTimestamp(
+  timestamp: Date,
+  price: ModelPrice | null | undefined
+): boolean {
+  const peak = price?.peak;
+  if (!peak || peak.windows.length === 0) return false;
+
+  const weekday = timestamp.getUTCDay();
+  const hour = timestamp.getUTCHours();
+
+  return peak.windows.some(
+    (window) =>
+      window.weekdaysUtc.includes(weekday) &&
+      hour >= window.startHourUtc &&
+      hour < window.endHourUtc
+  );
+}
+
+/**
+ * The model's price with its peak rates applied, or `null` when the model has
+ * no peak windows.
+ *
+ * Callers price the tokens that fall inside the peak windows with the returned
+ * price and everything else with the base price.
+ */
+export function peakRatePrice(price: ModelPrice): ModelPrice | null {
+  if (!price.peak) return null;
+  return {
+    ...price,
+    inputPer1M: price.peak.inputPer1M,
+    outputPer1M: price.peak.outputPer1M,
+    cacheReadPer1M: price.peak.cacheReadPer1M,
+  };
+}
+
+/**
  * Calculate estimated cost for a set of tokens.
  *
  * The cache-read rate falls back to `inputPer1M` when the provider publishes no
@@ -756,6 +263,74 @@ export function calculateTieredCost(
       longPrice,
       longContext.cachedTokens
     )
+  );
+}
+
+/**
+ * Aggregated usage for one model, as the usage history route reports it.
+ *
+ * `longContext*` and `peak*` are per-request subsets of the totals, so a record
+ * is only ever counted once. A model with peak windows has no long-context tier
+ * (see `PeakRates`), so the two subsets never overlap.
+ */
+export interface AggregatedUsageBuckets {
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  longContextInputTokens: number;
+  longContextOutputTokens: number;
+  longContextCachedTokens: number;
+  peakInputTokens: number;
+  peakOutputTokens: number;
+  peakCachedTokens: number;
+}
+
+/**
+ * Cost for one model's aggregated buckets.
+ *
+ * Everything outside the long-context and peak subsets is the off-peak,
+ * short-context remainder billed at the model's standard rates; the
+ * long-context subset moves to the long-context tier and the peak subset to the
+ * peak rate card. Models without peak windows have all-zero peak buckets, so
+ * the second term drops out.
+ *
+ * Correctness rests on the table invariant that no model has both a peak card
+ * and a long-context tier: the two subsets are subtracted independently, so an
+ * overlapping pair would double-bill. The pricing tests enforce it.
+ */
+export function calculateAggregatedCost(buckets: AggregatedUsageBuckets, price: ModelPrice): number {
+  const peakPrice = peakRatePrice(price);
+  // Only split the peak bucket out when the model has a peak card to bill it
+  // with. The route never fills peak buckets for any other model; treating a
+  // stray bucket as part of the standard totals keeps this helper
+  // token-conserving rather than silently dropping it.
+  const peak = peakPrice
+    ? {
+        inputTokens: buckets.peakInputTokens,
+        outputTokens: buckets.peakOutputTokens,
+        cachedTokens: buckets.peakCachedTokens,
+      }
+    : { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
+
+  const standardCost = calculateTieredCost(
+    {
+      inputTokens: buckets.inputTokens - buckets.longContextInputTokens - peak.inputTokens,
+      outputTokens: buckets.outputTokens - buckets.longContextOutputTokens - peak.outputTokens,
+      cachedTokens: buckets.cachedTokens - buckets.longContextCachedTokens - peak.cachedTokens,
+    },
+    {
+      inputTokens: buckets.longContextInputTokens,
+      outputTokens: buckets.longContextOutputTokens,
+      cachedTokens: buckets.longContextCachedTokens,
+    },
+    price
+  );
+
+  if (!peakPrice) return standardCost;
+
+  return (
+    standardCost +
+    calculateCost(peak.inputTokens, peak.outputTokens, peakPrice, peak.cachedTokens)
   );
 }
 

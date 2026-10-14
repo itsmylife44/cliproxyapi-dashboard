@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
+import { getManagementUrl } from "@/lib/management-url";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
@@ -32,9 +33,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return Errors.conflict(`Migration already completed (${existingKeyCount} existing keys)`);
     }
 
-    const managementUrl =
-      process.env.CLIPROXYAPI_MANAGEMENT_URL ||
-      "http://cliproxyapi:8317/v0/management";
+    const managementUrl = getManagementUrl();
     const managementApiKey = process.env.MANAGEMENT_API_KEY;
 
     if (!managementApiKey) {

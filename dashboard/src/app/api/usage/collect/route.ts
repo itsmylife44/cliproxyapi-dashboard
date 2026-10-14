@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
+import { getManagementUrl } from "@/lib/management-url";
 import { validateOrigin } from "@/lib/auth/origin";
 import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
 import { prisma } from "@/lib/db";
@@ -8,9 +9,7 @@ import { randomUUID, timingSafeEqual } from "crypto";
 import { Errors } from "@/lib/errors";
 import { mergeConfigYaml } from "@/lib/config-yaml";
 
-const CLIPROXYAPI_MANAGEMENT_URL =
-  process.env.CLIPROXYAPI_MANAGEMENT_URL ||
-  "http://cliproxyapi:8317/v0/management";
+const CLIPROXYAPI_MANAGEMENT_URL = getManagementUrl();
 const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
 const COLLECTOR_API_KEY = process.env.COLLECTOR_API_KEY;
 

@@ -1,10 +1,9 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { getManagementUrl } from "@/lib/management-url";
 import { logger } from "@/lib/logger";
 
-const MANAGEMENT_BASE_URL =
-  process.env.CLIPROXYAPI_MANAGEMENT_URL ||
-  "http://cliproxyapi:8317/v0/management";
+const MANAGEMENT_BASE_URL = getManagementUrl();
 
 /**
  * Sync result indicating successful synchronization.

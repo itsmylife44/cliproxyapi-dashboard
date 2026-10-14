@@ -5,6 +5,7 @@ import { QuickStartConfigSection } from "@/components/quick-start-config-section
 import { ConfigPublisher } from "@/components/config-publisher";
 import { ConfigSubscriber } from "@/components/config-subscriber";
 import { verifySession } from "@/lib/auth/session";
+import { getManagementUrl, getProxyBaseUrl } from "@/lib/management-url";
 import { prisma } from "@/lib/db";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
@@ -22,9 +23,7 @@ interface ManagementFetchParams {
 
 async function fetchManagementJson({ path }: ManagementFetchParams) {
   try {
-    const baseUrl =
-      process.env.CLIPROXYAPI_MANAGEMENT_URL ||
-      "http://cliproxyapi:8317/v0/management";
+    const baseUrl = getManagementUrl();
     const res = await fetch(`${baseUrl}/${path}`, {
       headers: {
         Authorization: `Bearer ${process.env.MANAGEMENT_API_KEY}`,
@@ -40,10 +39,7 @@ async function fetchManagementJson({ path }: ManagementFetchParams) {
 
 async function getServiceHealth() {
   try {
-    const baseUrl =
-      process.env.CLIPROXYAPI_MANAGEMENT_URL ||
-      "http://cliproxyapi:8317/v0/management";
-    const root = baseUrl.replace(/\/v0\/management\/?$/, "/");
+    const root = `${getProxyBaseUrl()}/`;
     const res = await fetch(root, { cache: "no-store" });
     return res.ok;
   } catch {

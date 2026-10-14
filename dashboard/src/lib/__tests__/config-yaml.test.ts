@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { mergeConfigYaml, parseConfigYaml } from "@/lib/config-yaml";
+import { mergeConfigYaml, parseConfigYaml, readAuthDir } from "@/lib/config-yaml";
+
+describe("readAuthDir", () => {
+  it("reads a custom auth-dir from a legacy config.yaml", () => {
+    expect(readAuthDir("debug: false\nauth-dir: /root/custom-auths\n")).toBe("/root/custom-auths");
+  });
+
+  it("reads oauth.auth-dir from a v8 config.yaml", () => {
+    const rawYaml = "config-version: 8\noauth:\n  auth-dir: /data/auths\n";
+    expect(readAuthDir(rawYaml)).toBe("/data/auths");
+  });
+
+  it("returns an empty string when auth-dir is not set", () => {
+    expect(readAuthDir("debug: false\n")).toBe("");
+  });
+});
 
 describe("parseConfigYaml", () => {
   it("returns empty object for empty/whitespace-only input", () => {

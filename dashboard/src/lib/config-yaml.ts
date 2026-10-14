@@ -28,6 +28,14 @@ export function parseConfigYaml(rawYaml: string): ConfigYamlObject {
   return parsed;
 }
 
+/** auth-dir as stored in config.yaml (GET /config never returns it). The v8 path wins, like upstream. */
+export function readAuthDir(rawYaml: string): string {
+  const parsed = parseConfigYaml(rawYaml);
+  const oauth = isPlainObject(parsed.oauth) ? parsed.oauth : {};
+  const value = oauth["auth-dir"] ?? parsed["auth-dir"];
+  return typeof value === "string" ? value : "";
+}
+
 export function mergeConfigYaml(rawYaml: string, changes: ConfigYamlObject): string {
   const mergedConfig = { ...parseConfigYaml(rawYaml) };
 

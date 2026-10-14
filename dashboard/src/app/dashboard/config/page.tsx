@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
-import { mergeConfigYaml } from "@/lib/config-yaml";
+import { mergeConfigYaml, readAuthDir } from "@/lib/config-yaml";
 import AgentConfigEditor from "@/components/config/agent-config-editor";
 import ConfigPreview from "@/components/config/config-preview";
 import { useTranslations } from 'next-intl';
@@ -173,8 +173,13 @@ export default function ConfigPage() {
         }
 
         const data = await res.json();
-        if (!data["auth-dir"]) {
-          data["auth-dir"] = "~/.cli-proxy-api";
+        // GET /config never returns auth-dir; read the real value from the raw YAML.
+        data["auth-dir"] = "";
+        try {
+          const yamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML);
+          if (yamlRes.ok) data["auth-dir"] = readAuthDir(await yamlRes.text());
+        } catch {
+          // leave empty: unchanged auth-dir is never written back
         }
         const stamped = stampOAuthIds(data as Config);
         setConfig(stamped);
@@ -343,28 +348,6 @@ export default function ConfigPage() {
             yamlChanges[key] = newVal;
           }
         }
-      }
-
-      // Fetch the current live config once — used for the auth-dir guard.
-      let liveConfig: Record<string, unknown> | null = null;
-      try {
-        const currentRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG);
-        if (currentRes.ok) {
-          liveConfig = await currentRes.json();
-        } else {
-          await currentRes.body?.cancel();
-        }
-      } catch {
-        // handled below
-      }
-
-      // Ensure auth-dir is always persisted in config.yaml.  Without it,
-      // CLIProxyAPI may write OAuth credential files into its CWD instead
-      // of the auth directory, making them invisible to the management API.
-      // This runs *before* the yamlChanges gate so endpoint-only saves
-      // (e.g. debug, proxy-url) still trigger the yaml write when needed.
-      if (liveConfig && !("auth-dir" in liveConfig) && !("auth-dir" in yamlChanges)) {
-        yamlChanges["auth-dir"] = config["auth-dir"] || "~/.cli-proxy-api";
       }
 
       // If there are fields that need config.yaml update, merge and write

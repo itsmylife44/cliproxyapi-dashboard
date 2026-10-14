@@ -43,14 +43,6 @@ export interface ClaudeHeaderDefaults {
   timeout: string;
 }
 
-export interface AmpcodeConfig {
-  "upstream-url": string;
-  "upstream-api-key": string;
-  "restrict-management-to-localhost": boolean;
-  "model-mappings": unknown;
-  "force-model-mappings": boolean;
-}
-
 export interface PayloadConfig {
   default: unknown;
   "default-raw": unknown;
@@ -87,13 +79,9 @@ export interface Config {
   "request-log": boolean;
   "max-retry-credentials": number;
   "passthrough-headers": boolean;
-  "incognito-browser": boolean;
-  "kiro-preferred-endpoint": string;
-  kiro: unknown;
   tls: TlsConfig;
   pprof: PprofConfig;
   "claude-header-defaults": ClaudeHeaderDefaults;
-  ampcode: AmpcodeConfig;
   payload: PayloadConfig;
   "oauth-model-alias": Record<string, OAuthModelAliasEntry[]>;
 }
@@ -332,8 +320,7 @@ export default function ConfigPage() {
       const fieldsWithoutEndpoints = [
         "auth-dir", "streaming", "commercial-mode",
         "disable-cooling", "max-retry-credentials", "passthrough-headers",
-        "incognito-browser", "kiro-preferred-endpoint", "kiro", "tls", "pprof",
-        "claude-header-defaults", "ampcode", "payload", "oauth-model-alias",
+        "tls", "pprof", "claude-header-defaults", "payload", "oauth-model-alias",
       ] as const;
 
       const yamlChanges: Record<string, unknown> = {};
@@ -460,11 +447,6 @@ export default function ConfigPage() {
   const updateClaudeHeaderDefaults = (key: keyof ClaudeHeaderDefaults, value: string) => {
     if (!config) return;
     setConfig({ ...config, "claude-header-defaults": { ...config["claude-header-defaults"], [key]: value } });
-  };
-
-  const updateAmpcodeConfig = (key: keyof AmpcodeConfig, value: string | boolean | unknown) => {
-    if (!config) return;
-    setConfig({ ...config, ampcode: { ...config.ampcode, [key]: value } });
   };
 
   const updatePayloadConfig = (key: keyof PayloadConfig, value: unknown) => {
@@ -654,7 +636,6 @@ export default function ConfigPage() {
         updateTlsConfig={updateTlsConfig}
         updatePprofConfig={updatePprofConfig}
         updateClaudeHeaderDefaults={updateClaudeHeaderDefaults}
-        updateAmpcodeConfig={updateAmpcodeConfig}
         updatePayloadConfig={updatePayloadConfig}
         toggleProviderExpanded={toggleProviderExpanded}
         updateOAuthAliasEntry={updateOAuthAliasEntry}

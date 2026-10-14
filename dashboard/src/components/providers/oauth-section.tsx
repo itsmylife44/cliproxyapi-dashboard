@@ -21,7 +21,6 @@ interface OAuthSectionProps {
   currentUser: CurrentUserLike | null;
   refreshProviders: () => Promise<void>;
   onAccountCountChange: (count: number) => void;
-  incognitoBrowserEnabled?: boolean;
 }
 
 export const OAUTH_PROVIDERS = [
@@ -206,7 +205,6 @@ export function OAuthSection({
   currentUser,
   refreshProviders,
   onAccountCountChange,
-  incognitoBrowserEnabled = false,
 }: OAuthSectionProps) {
   const t = useTranslations("providers");
   const getCallbackMessage = (result: ReturnType<typeof validateCallbackUrl>): string => {
@@ -233,8 +231,6 @@ export function OAuthSection({
   const selectedOAuthProviderIdRef = useRef<OAuthProviderId | null>(null);
   const [deviceCodeInfo, setDeviceCodeInfo] = useState<{ verificationUrl: string; userCode: string } | null>(null);
   const deviceCodePopupOpenedRef = useRef(false);
-  const incognitoRef = useRef(incognitoBrowserEnabled);
-  incognitoRef.current = incognitoBrowserEnabled;
   const [accounts, setAccounts] = useState<OAuthAccountWithOwnership[]>([]);
   const [oauthAccountsLoading, setOauthAccountsLoading] = useState(true);
   const [showConfirmOAuthDelete, setShowConfirmOAuthDelete] = useState(false);
@@ -448,7 +444,7 @@ export function OAuthSection({
             userCode: data.user_code,
           });
           setAuthLaunchUrl(data.verification_url);
-          if (!deviceCodePopupOpenedRef.current && !incognitoRef.current) {
+          if (!deviceCodePopupOpenedRef.current) {
             deviceCodePopupOpenedRef.current = true;
             window.open(data.verification_url, "oauth", "width=600,height=800");
           }
@@ -615,30 +611,27 @@ export function OAuthSection({
       }
       setAuthLaunchUrl(data.url);
 
-      const shouldOpenPopup = !incognitoBrowserEnabled;
-      if (shouldOpenPopup) {
-        const popupOpened = openAuthPopup(data.url);
-        if (!popupOpened) {
-          return fail(t("errorOAuthPopupBlocked"));
-        }
+      const popupOpened = openAuthPopup(data.url);
+      if (!popupOpened) {
+        return fail(t("errorOAuthPopupBlocked"));
       }
       authStateRef.current = data.state;
       if (provider.requiresCallback) {
         setOauthModalStatus(MODAL_STATUS.WAITING);
         setCallbackValidation(CALLBACK_VALIDATION.EMPTY);
         setCallbackMessage(t("callbackMsgEmpty"));
-        showToast(incognitoBrowserEnabled ? t("toastOAuthFollowStepsIncognito") : t("toastOAuthFollowStepsPopup"), "info");
+        showToast(t("toastOAuthFollowStepsPopup"), "info");
       } else {
         setOauthModalStatus(MODAL_STATUS.POLLING);
         setCallbackValidation(CALLBACK_VALIDATION.VALID);
-        setCallbackMessage(incognitoBrowserEnabled ? t("callbackMsgNoCallbackIncognito") : t("callbackMsgNoCallbackPopup"));
-        showToast(incognitoBrowserEnabled ? t("toastOAuthNoCallbackIncognito") : t("toastOAuthNoCallbackPopup"), "info");
+        setCallbackMessage(t("callbackMsgNoCallbackPopup"));
+        showToast(t("toastOAuthNoCallbackPopup"), "info");
         if (data.user_code && data.url) {
           setDeviceCodeInfo({
             verificationUrl: data.url,
             userCode: data.user_code,
           });
-          deviceCodePopupOpenedRef.current = shouldOpenPopup;
+          deviceCodePopupOpenedRef.current = true;
         }
         stopNoCallbackClaimPolling();
         void claimOAuthWithoutCallback(providerId, data.state);
@@ -1002,9 +995,7 @@ export function OAuthSection({
 
           <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 text-xs text-[var(--text-muted)]">
             <strong className="text-[var(--text-primary)]">{t("noteLabel")}</strong>{" "}
-            {incognitoBrowserEnabled
-              ? t("oauthIncognitoNote")
-              : t("oauthPopupNote")}
+            {t("oauthPopupNote")}
           </div>
 
           <OAuthActions
@@ -1029,18 +1020,12 @@ export function OAuthSection({
           )}
 
           {authLaunchUrl && (oauthModalStatus === MODAL_STATUS.WAITING || oauthModalStatus === MODAL_STATUS.POLLING || oauthModalStatus === MODAL_STATUS.ERROR) && (
-            <div className={`rounded-xl border-l-4 p-4 text-sm ${
-              incognitoBrowserEnabled
-                ? "border-amber-300 bg-amber-500/10 text-amber-900"
-                : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
-            }`}>
+            <div className="rounded-xl border-l-4 border-[var(--surface-border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
               <div className="font-medium text-[var(--text-primary)]">
-                {incognitoBrowserEnabled ? "Open This URL In A Private Window" : "Authorization URL"}
+                Authorization URL
               </div>
               <p className="mt-2 text-[var(--text-secondary)]">
-                {incognitoBrowserEnabled
-                  ? t("oauthOpenManuallyIncognito")
-                  : t("oauthOpenManually")}
+                {t("oauthOpenManually")}
               </p>
               <div className="mt-3 rounded-lg bg-[var(--surface-muted)] p-3">
                 <input
@@ -1063,19 +1048,17 @@ export function OAuthSection({
                 >
                   {t("oauthCopyUrlButton")}
                 </Button>
-                {!incognitoBrowserEnabled && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      const popupOpened = openAuthPopup(authLaunchUrl);
-                      if (!popupOpened) {
-                        showToast(t("errorOAuthPopupBlocked"), "error");
-                      }
-                    }}
-                  >
-                    {t("oauthOpenAgainButton")}
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    const popupOpened = openAuthPopup(authLaunchUrl);
+                    if (!popupOpened) {
+                      showToast(t("errorOAuthPopupBlocked"), "error");
+                    }
+                  }}
+                >
+                  {t("oauthOpenAgainButton")}
+                </Button>
               </div>
             </div>
           )}
@@ -1091,7 +1074,7 @@ export function OAuthSection({
                   Step-by-step
                 </div>
                 <ol className="mt-3 list-decimal space-y-2 pl-4 text-[var(--text-primary)]">
-                  <li>{incognitoBrowserEnabled ? "Open the authorization URL above in a private/incognito window and sign in there." : "Log in and authorize in the popup window."}</li>
+                  <li>Log in and authorize in the popup window.</li>
                   <li>
                     After authorizing, the page will fail to load (this is
                     expected).
@@ -1144,7 +1127,7 @@ export function OAuthSection({
                 Device Authorization
               </div>
               <ol className="mt-3 list-decimal space-y-2 pl-4 text-[var(--text-primary)]">
-                <li>{incognitoBrowserEnabled ? "Open the authorization URL above in a private/incognito window." : "A browser window has opened with the authorization page."}</li>
+                <li>A browser window has opened with the authorization page.</li>
                 <li>Log in and approve the access request.</li>
                 <li>{t("oauthDeviceStep3")}</li>
               </ol>

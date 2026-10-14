@@ -92,15 +92,6 @@ const ALLOWED_MANAGEMENT_PATHS = new Set<string>([
   "oauth-model-alias",
   "oauth-quota-groups",
 
-  // Ampcode
-  "ampcode",
-  "ampcode/upstream-url",
-  "ampcode/upstream-api-key",
-  "ampcode/restrict-management-to-localhost",
-  "ampcode/model-mappings",
-  "ampcode/force-model-mappings",
-  "ampcode/upstream-api-keys",
-
   // Vertex
   "vertex/import",
 

@@ -77,11 +77,11 @@ describe("mergeConfigYaml", () => {
   it("creates a valid YAML document when the current file is empty", () => {
     const merged = mergeConfigYaml("", {
       "auth-dir": "~/.cli-proxy-api",
-      "incognito-browser": true,
+      "commercial-mode": true,
     });
 
     expect(merged).toContain("auth-dir: ~/.cli-proxy-api");
-    expect(merged).toContain("incognito-browser: true");
+    expect(merged).toContain("commercial-mode: true");
   });
 
   it("replaces arrays wholesale instead of merging them", () => {

@@ -99,19 +99,9 @@ export const API_ENDPOINTS = {
     // Providers
     OPENAI_COMPATIBILITY: "/api/management/openai-compatibility",
     API_KEYS: "/api/management/api-keys",
-
-    // Ampcode
-    AMPCODE: "/api/management/ampcode",
-    AMPCODE_UPSTREAM_URL: "/api/management/ampcode/upstream-url",
-    AMPCODE_UPSTREAM_API_KEY: "/api/management/ampcode/upstream-api-key",
-    AMPCODE_RESTRICT_MANAGEMENT: "/api/management/ampcode/restrict-management-to-localhost",
-    AMPCODE_MODEL_MAPPINGS: "/api/management/ampcode/model-mappings",
-    AMPCODE_FORCE_MODEL_MAPPINGS: "/api/management/ampcode/force-model-mappings",
-    AMPCODE_UPSTREAM_API_KEYS: "/api/management/ampcode/upstream-api-keys",
   },
   PROXY: {
     STATUS: "/api/proxy/status",
-    OAUTH_SETTINGS: "/api/proxy/oauth-settings",
   },
   CONFIG_SYNC: {
     TOKENS: "/api/config-sync/tokens",

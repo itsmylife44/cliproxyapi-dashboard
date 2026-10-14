@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- **Node.js** 20+
+- **Node.js** 24+
 - **Docker Desktop** (for local development with Postgres + CLIProxyAPI)
 - **Git**
 

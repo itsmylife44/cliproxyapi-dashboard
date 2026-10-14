@@ -277,7 +277,7 @@ describe('MyModule', () => {
 
 | Tool | Version/Notes |
 |------|---------------|
-| Node.js | 20+ required |
+| Node.js | 24+ required |
 | Package manager | npm (not yarn/pnpm) |
 | Next.js | 16 with App Router |
 | React | 19 |

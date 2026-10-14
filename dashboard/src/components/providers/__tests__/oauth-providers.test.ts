@@ -22,7 +22,7 @@ vi.mock("@/lib/env", () => ({
 }));
 
 import { GET } from "@/app/api/management/[...path]/route";
-import { OAUTH_PROVIDERS } from "../oauth-section";
+import { OAUTH_PROVIDERS, visibleOAuthProviders } from "../oauth-section";
 
 /** Extract the management path from a provider's proxied auth endpoint. */
 function managementPathFor(authEndpoint: string): string | null {
@@ -73,5 +73,39 @@ describe("OAuth provider list vs management proxy allowlist", () => {
     expect(xai).toBeDefined();
     expect(xai?.requiresCallback).toBe(false);
     expect(xai?.authEndpoint).toContain("xai-auth-url");
+  });
+});
+
+describe("OAuth login list vs upstream support", () => {
+  const ids = (providers: ReadonlyArray<{ id: string }>) => providers.map((p) => p.id);
+
+  it("offers only built-in logins on a stock stack (plugins disabled)", () => {
+    expect(ids(visibleOAuthProviders([]))).toEqual(["claude", "codex", "xai", "antigravity", "kimi"]);
+  });
+
+  it("never offers logins upstream dropped entirely", () => {
+    for (const id of ["iflow", "kilo", "gitlab", "qwen"]) {
+      expect(ids(OAUTH_PROVIDERS)).not.toContain(id);
+    }
+  });
+
+  it("offers a plugin-served login only when its plugin is installed and enabled", () => {
+    expect(ids(visibleOAuthProviders(["copilot"]))).toContain("copilot");
+    expect(ids(visibleOAuthProviders(["copilot"]))).not.toContain("gemini-cli");
+    expect(ids(visibleOAuthProviders(["gemini-cli", "copilot", "kiro", "cursor"]))).toEqual(
+      expect.arrayContaining(["gemini-cli", "copilot", "kiro", "cursor"])
+    );
+  });
+
+  it("starts plugin logins on the <plugin oauth_provider>-auth-url path upstream routes to the plugin", () => {
+    const pluginEndpoints = Object.fromEntries(
+      OAUTH_PROVIDERS.filter((p) => p.requiresPlugin).map((p) => [p.id, managementPathFor(p.authEndpoint)])
+    );
+    expect(pluginEndpoints).toEqual({
+      "gemini-cli": "gemini-cli-auth-url",
+      copilot: "copilot-auth-url",
+      kiro: "kiro-auth-url",
+      cursor: "cursor-auth-url",
+    });
   });
 });

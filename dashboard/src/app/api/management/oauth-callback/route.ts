@@ -12,24 +12,21 @@ const PROVIDERS = {
   GEMINI_CLI: "gemini-cli",
   CODEX: "codex",
   ANTIGRAVITY: "antigravity",
-  IFLOW: "iflow",
   KIMI: "kimi",
   COPILOT: "copilot",
   KIRO: "kiro",
   CURSOR: "cursor",
-  KILO: "kilo",
-  GITLAB: "gitlab",
 } as const;
 
 type Provider = (typeof PROVIDERS)[keyof typeof PROVIDERS];
 
+// Redirect-based flows: the user pastes the redirect URL, which we relay to
+// upstream's generic POST /oauth-callback. gemini-cli is plugin-served.
 const PROVIDERS_WITH_CALLBACK = new Set<Provider>([
   PROVIDERS.CLAUDE,
   PROVIDERS.GEMINI_CLI,
   PROVIDERS.CODEX,
   PROVIDERS.ANTIGRAVITY,
-  PROVIDERS.IFLOW,
-  PROVIDERS.GITLAB,
 ]);
 
 const PROVIDER_MATCH_ALIASES: Record<Provider, readonly string[]> = {
@@ -37,27 +34,14 @@ const PROVIDER_MATCH_ALIASES: Record<Provider, readonly string[]> = {
   [PROVIDERS.GEMINI_CLI]: ["gemini-cli", "gemini"],
   [PROVIDERS.CODEX]: ["codex", "openai"],
   [PROVIDERS.ANTIGRAVITY]: ["antigravity"],
-  [PROVIDERS.IFLOW]: ["iflow"],
   [PROVIDERS.KIMI]: ["kimi"],
   [PROVIDERS.COPILOT]: ["copilot", "github", "github-copilot"],
   [PROVIDERS.KIRO]: ["kiro"],
   [PROVIDERS.CURSOR]: ["cursor"],
-  [PROVIDERS.KILO]: ["kilo"],
-  [PROVIDERS.GITLAB]: ["gitlab"],
 };
 
-const CLIPROXYAPI_BASE = process.env.CLIPROXYAPI_MANAGEMENT_URL?.replace("/v0/management", "") || "http://cliproxyapi:8317";
 const CLIPROXYAPI_MANAGEMENT_URL = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
 const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
-
-const CALLBACK_PATHS: Partial<Record<Provider, string>> = {
-  [PROVIDERS.CLAUDE]: `${CLIPROXYAPI_BASE}/anthropic/callback`,
-  [PROVIDERS.GEMINI_CLI]: `${CLIPROXYAPI_BASE}/google/callback`,
-  [PROVIDERS.CODEX]: `${CLIPROXYAPI_BASE}/codex/callback`,
-  [PROVIDERS.ANTIGRAVITY]: `${CLIPROXYAPI_BASE}/antigravity/callback`,
-  [PROVIDERS.IFLOW]: `${CLIPROXYAPI_BASE}/iflow/callback`,
-  [PROVIDERS.GITLAB]: `${CLIPROXYAPI_BASE}/gitlab/callback`,
-};
 
 interface OAuthCallbackRequestBody {
   provider: Provider;
@@ -273,17 +257,23 @@ export async function POST(request: NextRequest) {
         return Errors.validation("Callback URL must include code and state");
       }
 
-      const callbackPath = CALLBACK_PATHS[provider];
-      if (!callbackPath) {
-        return Errors.internal("OAuth callback endpoint is not configured");
-      }
-
-      const callbackTarget = new URL(callbackPath);
-      callbackTarget.searchParams.set("code", callbackParams.code);
-      callbackTarget.searchParams.set("state", callbackParams.state);
       resolvedState = callbackParams.state;
 
-      const response = await fetch(callbackTarget.toString(), { method: "GET" });
+      // Upstream normalizes `provider` (claude -> anthropic) and checks it
+      // against the provider stored for `state`.
+      const response = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/oauth-callback`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(MANAGEMENT_API_KEY ? { Authorization: `Bearer ${MANAGEMENT_API_KEY}` } : {}),
+        },
+        body: JSON.stringify({
+          provider,
+          redirect_url: callbackUrl,
+          code: callbackParams.code,
+          state: callbackParams.state,
+        }),
+      });
       responseStatus = response.status;
 
       if (!response.ok) {

@@ -29,7 +29,6 @@ export const OAUTH_PROVIDERS = [
   {
     id: "claude" as const,
     name: "Claude Code",
-    description: "Anthropic Claude (Pro/Max subscription)",
     authEndpoint: "/api/management/anthropic-auth-url?is_webui=true",
     requiresCallback: true,
     requiresPlugin: false,
@@ -37,7 +36,6 @@ export const OAUTH_PROVIDERS = [
   {
     id: "gemini-cli" as const,
     name: "Gemini CLI",
-    description: "Google Gemini (via Google OAuth)",
     authEndpoint: "/api/management/gemini-cli-auth-url?project_id=ALL&is_webui=true",
     requiresCallback: true,
     requiresPlugin: true,
@@ -45,7 +43,6 @@ export const OAUTH_PROVIDERS = [
   {
     id: "codex" as const,
     name: "Codex",
-    description: "OpenAI Codex (Plus/Pro subscription)",
     authEndpoint: "/api/management/codex-auth-url?is_webui=true",
     requiresCallback: true,
     requiresPlugin: false,
@@ -53,7 +50,6 @@ export const OAUTH_PROVIDERS = [
   {
     id: "xai" as const,
     name: "xAI (Grok)",
-    description: "xAI Grok (device OAuth)",
     authEndpoint: "/api/management/xai-auth-url?is_webui=true",
     requiresCallback: false,
     requiresPlugin: false,
@@ -61,7 +57,6 @@ export const OAUTH_PROVIDERS = [
   {
     id: "antigravity" as const,
     name: "Antigravity",
-    description: "Google Antigravity (via Google OAuth)",
     authEndpoint: "/api/management/antigravity-auth-url?is_webui=true",
     requiresCallback: true,
     requiresPlugin: false,
@@ -69,15 +64,34 @@ export const OAUTH_PROVIDERS = [
   {
     id: "kimi" as const,
     name: "Kimi",
-    description: "Moonshot AI Kimi (device OAuth)",
     authEndpoint: "/api/management/kimi-auth-url?is_webui=true",
+    requiresCallback: false,
+    requiresPlugin: false,
+  },
+  {
+    id: "kimi-ai" as const,
+    name: "Kimi.ai",
+    authEndpoint: "/api/management/kimi-ai-auth-url?is_webui=true",
+    requiresCallback: false,
+    requiresPlugin: false,
+  },
+  {
+    id: "devin" as const,
+    name: "Devin",
+    authEndpoint: "/api/management/devin-auth-url?is_webui=true",
+    requiresCallback: true,
+    requiresPlugin: false,
+  },
+  {
+    id: "meta" as const,
+    name: "Meta AI",
+    authEndpoint: "/api/management/meta-auth-url?is_webui=true",
     requiresCallback: false,
     requiresPlugin: false,
   },
   {
     id: "copilot" as const,
     name: "GitHub Copilot",
-    description: "GitHub Copilot (via GitHub device OAuth)",
     authEndpoint: "/api/management/copilot-auth-url?is_webui=true",
     requiresCallback: false,
     requiresPlugin: true,
@@ -85,7 +99,6 @@ export const OAUTH_PROVIDERS = [
   {
     id: "kiro" as const,
     name: "Kiro",
-    description: "AWS CodeWhisperer / Kiro (device OAuth)",
     authEndpoint: "/api/management/kiro-auth-url?is_webui=true",
     requiresCallback: false,
     requiresPlugin: true,
@@ -93,7 +106,6 @@ export const OAUTH_PROVIDERS = [
   {
     id: "cursor" as const,
     name: "Cursor",
-    description: "Cursor IDE (via PKCE OAuth)",
     authEndpoint: "/api/management/cursor-auth-url?is_webui=true",
     requiresCallback: false,
     requiresPlugin: true,

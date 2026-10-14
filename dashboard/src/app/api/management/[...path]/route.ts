@@ -26,7 +26,10 @@ const NON_ADMIN_OAUTH_PATHS = new Set<string>([
   "codex-auth-url",
   "antigravity-auth-url",
   "kimi-auth-url",
+  "kimi-ai-auth-url",
   "xai-auth-url",
+  "devin-auth-url",
+  "meta-auth-url",
   // Plugin-served logins (shown only while the plugin is enabled)
   "gemini-cli-auth-url",
   "copilot-auth-url",

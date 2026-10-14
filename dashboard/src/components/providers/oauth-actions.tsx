@@ -8,7 +8,6 @@ import type { OAuthProviderId } from "@/components/providers/oauth-section";
 interface OAuthProviderEntry {
   id: OAuthProviderId;
   name: string;
-  description: string;
 }
 
 interface OAuthActionsProps {
@@ -40,7 +39,7 @@ export function OAuthActions({
           >
             <div className="space-y-1">
               <div className="text-sm font-medium text-[var(--text-primary)]">{provider.name}</div>
-              <p className="text-xs leading-relaxed text-[var(--text-muted)]">{provider.description}</p>
+              <p className="text-xs leading-relaxed text-[var(--text-muted)]">{t(`oauthProviderDescriptions.${provider.id}`)}</p>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               <Button

@@ -13,9 +13,12 @@ const PROVIDERS = {
   CODEX: "codex",
   ANTIGRAVITY: "antigravity",
   KIMI: "kimi",
+  KIMI_AI: "kimi-ai",
   COPILOT: "copilot",
   KIRO: "kiro",
   CURSOR: "cursor",
+  DEVIN: "devin",
+  META: "meta",
 } as const;
 
 type Provider = (typeof PROVIDERS)[keyof typeof PROVIDERS];
@@ -27,6 +30,7 @@ const PROVIDERS_WITH_CALLBACK = new Set<Provider>([
   PROVIDERS.GEMINI_CLI,
   PROVIDERS.CODEX,
   PROVIDERS.ANTIGRAVITY,
+  PROVIDERS.DEVIN,
 ]);
 
 const PROVIDER_MATCH_ALIASES: Record<Provider, readonly string[]> = {
@@ -35,9 +39,12 @@ const PROVIDER_MATCH_ALIASES: Record<Provider, readonly string[]> = {
   [PROVIDERS.CODEX]: ["codex", "openai"],
   [PROVIDERS.ANTIGRAVITY]: ["antigravity"],
   [PROVIDERS.KIMI]: ["kimi"],
+  [PROVIDERS.KIMI_AI]: ["kimi-ai"],
   [PROVIDERS.COPILOT]: ["copilot", "github", "github-copilot"],
   [PROVIDERS.KIRO]: ["kiro"],
   [PROVIDERS.CURSOR]: ["cursor"],
+  [PROVIDERS.DEVIN]: ["devin"],
+  [PROVIDERS.META]: ["meta"],
 };
 
 const CLIPROXYAPI_MANAGEMENT_URL = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
@@ -73,8 +80,11 @@ const matchesAuthFileProvider = (
 ) => {
   const aliases = PROVIDER_MATCH_ALIASES[provider];
   const fileProvider = fileProviderRaw.toLowerCase();
+  // Trust the provider field when present: name matching alone would let
+  // `kimi` claim `kimi-ai-*.json`.
+  if (fileProvider) return aliases.includes(fileProvider);
   const fileName = fileNameRaw.toLowerCase();
-  return aliases.some((alias) => fileProvider === alias || fileName.includes(alias));
+  return aliases.some((alias) => fileName.includes(alias));
 };
 
 const parseRequestBody = (body: unknown): OAuthCallbackRequestBody | null => {

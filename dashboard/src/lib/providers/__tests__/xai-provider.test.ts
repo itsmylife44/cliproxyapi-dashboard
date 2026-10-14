@@ -27,6 +27,12 @@ describe("xAI credential canonicalization", () => {
     expect(canonicalizeOAuthProvider("github-copilot")).toBe("copilot");
     expect(canonicalizeOAuthProvider("unknown-provider")).toBeNull();
   });
+
+  it("canonicalizes the Kimi.ai, Devin and Meta auth files upstream writes", () => {
+    expect(canonicalizeOAuthProvider("kimi-ai")).toBe("kimi-ai");
+    expect(canonicalizeOAuthProvider("devin")).toBe("devin");
+    expect(canonicalizeOAuthProvider("meta")).toBe("meta");
+  });
 });
 
 describe("xAI API key provider entry", () => {

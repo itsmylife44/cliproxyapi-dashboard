@@ -23,6 +23,7 @@ export const OAUTH_PROVIDER = {
   ANTIGRAVITY: "antigravity",
   IFLOW: "iflow",
   KIMI: "kimi",
+  KIMI_AI: "kimi-ai",
   COPILOT: "copilot",
   KIRO: "kiro",
   CURSOR: "cursor",
@@ -30,6 +31,8 @@ export const OAUTH_PROVIDER = {
   GITLAB: "gitlab",
   QWEN: "qwen",
   XAI: "xai",
+  DEVIN: "devin",
+  META: "meta",
 } as const;
 
 export type OAuthProvider = (typeof OAUTH_PROVIDER)[keyof typeof OAUTH_PROVIDER];
@@ -53,6 +56,7 @@ const OAUTH_PROVIDER_ALIASES: Record<string, OAuthProvider> = {
   antigravity: OAUTH_PROVIDER.ANTIGRAVITY,
   iflow: OAUTH_PROVIDER.IFLOW,
   kimi: OAUTH_PROVIDER.KIMI,
+  "kimi-ai": OAUTH_PROVIDER.KIMI_AI,
   copilot: OAUTH_PROVIDER.COPILOT,
   "github-copilot": OAUTH_PROVIDER.COPILOT,
   github: OAUTH_PROVIDER.COPILOT,
@@ -62,6 +66,8 @@ const OAUTH_PROVIDER_ALIASES: Record<string, OAuthProvider> = {
   gitlab: OAUTH_PROVIDER.GITLAB,
   qwen: OAUTH_PROVIDER.QWEN,
   xai: OAUTH_PROVIDER.XAI,
+  devin: OAUTH_PROVIDER.DEVIN,
+  meta: OAUTH_PROVIDER.META,
 };
 
 export function canonicalizeOAuthProvider(raw: string | null | undefined): OAuthProvider | null {

@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-vi.hoisted(() => {
+const mocks = vi.hoisted(() => {
   process.env.CLIPROXYAPI_MANAGEMENT_URL = "http://cliproxyapi:8317/v0/management";
   process.env.MANAGEMENT_API_KEY = "test-management-key-16";
+  return { create: vi.fn() };
 });
 
 vi.mock("@/lib/auth/session", () => ({ verifySession: vi.fn().mockResolvedValue({ userId: "user-1" }) }));
@@ -12,7 +13,7 @@ vi.mock("@/lib/auth/rate-limit", () => ({
   checkRateLimitWithPreset: vi.fn(() => ({ allowed: true })),
 }));
 vi.mock("@/lib/db", () => ({
-  prisma: { providerOAuthOwnership: { create: vi.fn(), findMany: vi.fn().mockResolvedValue([]) } },
+  prisma: { providerOAuthOwnership: { create: mocks.create, findMany: vi.fn().mockResolvedValue([]) } },
 }));
 vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() },
@@ -69,6 +70,27 @@ describe("POST /api/management/oauth-callback", () => {
         callbackRequest({ provider, callbackUrl: "http://localhost/callback?code=a&state=b" })
       );
       expect(response.status).toBe(400);
+    }
+  });
+
+  it("relays Devin's redirect URL (root /callback) like the other built-ins", async () => {
+    const redirectUrl = "http://localhost:8317/callback?code=dc&state=dv-1";
+    await POST(callbackRequest({ provider: "devin", callbackUrl: redirectUrl }));
+
+    const relay = fetchMock.mock.calls.find(([url]) => String(url).endsWith("/oauth-callback"));
+    expect(JSON.parse(String(relay?.[1]?.body))).toMatchObject({ provider: "devin", state: "dv-1" });
+  });
+
+  it("does not claim a Kimi.ai auth file for a Kimi device login", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockImplementation(async () => json({ files: [{ name: "kimi-ai-123.json", provider: "kimi-ai" }] }));
+      const pending = POST(callbackRequest({ provider: "kimi", state: "kmi-1" }));
+      await vi.runAllTimersAsync();
+      expect((await pending).status).toBe(202);
+      expect(mocks.create).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
     }
   });
 });

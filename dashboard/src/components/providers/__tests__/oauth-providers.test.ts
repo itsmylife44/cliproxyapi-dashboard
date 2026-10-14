@@ -80,7 +80,23 @@ describe("OAuth login list vs upstream support", () => {
   const ids = (providers: ReadonlyArray<{ id: string }>) => providers.map((p) => p.id);
 
   it("offers only built-in logins on a stock stack (plugins disabled)", () => {
-    expect(ids(visibleOAuthProviders([]))).toEqual(["claude", "codex", "xai", "antigravity", "kimi"]);
+    expect(ids(visibleOAuthProviders([]))).toEqual([
+      "claude",
+      "codex",
+      "xai",
+      "antigravity",
+      "kimi",
+      "kimi-ai",
+      "devin",
+      "meta",
+    ]);
+  });
+
+  it("uses device flows for Kimi.ai and Meta and the callback paste flow for Devin", () => {
+    const flow = (id: string) => OAUTH_PROVIDERS.find((p) => p.id === id)?.requiresCallback;
+    expect(flow("kimi-ai")).toBe(false);
+    expect(flow("meta")).toBe(false);
+    expect(flow("devin")).toBe(true);
   });
 
   it("never offers logins upstream dropped entirely", () => {

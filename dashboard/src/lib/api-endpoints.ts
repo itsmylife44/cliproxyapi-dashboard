@@ -35,6 +35,7 @@ export const API_ENDPOINTS = {
   USAGE: {
     COLLECT: "/api/usage/collect",
     COLLECTION_STATUS: "/api/usage/collection-status",
+    HISTORY: "/api/usage/history",
   },
   USER: {
     API_KEYS: "/api/user/api-keys",
@@ -60,7 +61,6 @@ export const API_ENDPOINTS = {
   MANAGEMENT: {
     CONFIG: "/api/management/config",
     CONFIG_YAML: "/api/management/config.yaml",
-    USAGE: "/api/management/usage",
     LOGS: "/api/management/logs",
     LATEST_VERSION: "/api/management/latest-version",
     OAUTH_CALLBACK: "/api/management/oauth-callback",

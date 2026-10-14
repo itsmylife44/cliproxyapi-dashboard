@@ -42,10 +42,7 @@ const ALLOWED_MANAGEMENT_PATHS = new Set<string>([
   "config",
   "config.yaml",
 
-  // Usage & logs
-  "usage",
-  "usage/export",
-  "usage/import",
+  // Logs
   "logs",
   "request-error-logs",
   "request-log",

@@ -254,8 +254,8 @@ docker compose ps cliproxyapi
 docker compose logs cliproxyapi
 
 # Verify management API is accessible
-docker compose exec dashboard curl -s http://cliproxyapi:8317/v0/management/usage \
-  -H "Authorization: Bearer $MANAGEMENT_API_KEY"
+# (should print {"usage-statistics-enabled":true})
+docker compose exec dashboard sh -c 'wget -qO- --header "Authorization: Bearer $MANAGEMENT_API_KEY" http://cliproxyapi:8317/v0/management/usage-statistics-enabled'
 ```
 
 #### Issue: Usage not attributed to users

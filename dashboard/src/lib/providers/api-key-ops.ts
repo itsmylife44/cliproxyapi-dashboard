@@ -244,25 +244,40 @@ function planKeyRemoval(
   rawKeys: unknown,
   keyHash: string
 ): KeyRemovalPlan {
-  const init: RequestInit = {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-  };
+  const headers = { Authorization: `Bearer ${MANAGEMENT_API_KEY}` };
+  const init: RequestInit = { method: "DELETE", headers };
 
   if (provider === PROVIDER.OPENAI_COMPAT) {
     if (!isOpenAICompatArray(rawKeys)) {
       return { ok: false, error: "Invalid OpenAI compatibility response" };
     }
+    // Upstream DELETE only takes ?name= or ?index= and drops the whole entry,
+    // so it is used only when this key is the entry's last one; otherwise the
+    // entry is PATCHed with the remaining keys left untouched.
     for (const providerEntry of rawKeys) {
-      const keyEntry = providerEntry["api-key-entries"].find(
-        (entry) => hashProviderKey(entry["api-key"]) === keyHash
-      );
-      if (keyEntry) {
+      const keyEntries = providerEntry["api-key-entries"];
+      const index = keyEntries.findIndex((entry) => hashProviderKey(entry["api-key"]) === keyHash);
+      if (index === -1) continue;
+      if (keyEntries.length === 1) {
         return {
           ok: true,
-          request: { url: `${endpoint}?api-key=${encodeURIComponent(keyEntry["api-key"])}`, init },
+          request: { url: `${endpoint}?name=${encodeURIComponent(providerEntry.name)}`, init },
         };
       }
+      return {
+        ok: true,
+        request: {
+          url: endpoint,
+          init: {
+            method: "PATCH",
+            headers: { ...headers, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: providerEntry.name,
+              value: { "api-key-entries": keyEntries.filter((_, i) => i !== index) },
+            }),
+          },
+        },
+      };
     }
     return { ok: true, request: null };
   }

@@ -200,3 +200,68 @@ describe("key removal", () => {
     );
   });
 });
+
+describe("openai-compatibility key removal", () => {
+  const key = "sk-compat-target";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.delete.mockResolvedValue({});
+    mocks.findUnique.mockResolvedValue({
+      keyHash: hashProviderKey(key),
+      userId: "user-1",
+      provider: PROVIDER.OPENAI_COMPAT,
+    });
+  });
+
+  it("deletes the entry by name when the key is its only one", async () => {
+    mocks.fetchWithTimeout
+      .mockResolvedValueOnce(
+        jsonResponse({
+          "openai-compatibility": [
+            { name: "other", "api-key-entries": [{ "api-key": "sk-other" }] },
+            { name: "mock", "api-key-entries": [{ "api-key": key }] },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ status: "ok" }));
+
+    const result = await removeKey("user-1", hashProviderKey(key), false);
+
+    expect(result).toEqual({ ok: true });
+    const [url, init] = mocks.fetchWithTimeout.mock.calls[1] as [string, RequestInit];
+    expect(url).toBe("http://management.test/openai-compatibility?name=mock");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("patches out just this key when the entry has other keys", async () => {
+    mocks.fetchWithTimeout
+      .mockResolvedValueOnce(
+        jsonResponse({
+          "openai-compatibility": [
+            {
+              name: "mock",
+              "api-key-entries": [
+                { "api-key": "sk-keep", "proxy-url": "socks5://proxy:1080" },
+                { "api-key": key },
+              ],
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ status: "ok" }));
+
+    const result = await removeKeyByAdmin(hashProviderKey(key), PROVIDER.OPENAI_COMPAT);
+
+    expect(result).toEqual({ ok: true });
+    const [url, init] = mocks.fetchWithTimeout.mock.calls[1] as [string, RequestInit];
+    expect(url).toBe("http://management.test/openai-compatibility");
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(init.body as string)).toEqual({
+      name: "mock",
+      value: {
+        "api-key-entries": [{ "api-key": "sk-keep", "proxy-url": "socks5://proxy:1080" }],
+      },
+    });
+  });
+});

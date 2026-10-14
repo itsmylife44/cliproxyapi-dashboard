@@ -16,6 +16,9 @@ export const PROVIDER_IDS = {
   GEMINI: "gemini",
   CODEX: "codex",
   XAI: "xai",
+  VERTEX: "vertex",
+  INTERACTIONS: "interactions",
+  META: "meta",
   OPENAI: "openai-compatibility",
 } as const;
 
@@ -45,32 +48,16 @@ export interface ProviderState {
   keys: KeyWithOwnership[];
 }
 
+// Descriptions live in i18n under providers.apiKeyProviderDescriptions.<id>.
 export const PROVIDERS = [
-  {
-    id: PROVIDER_IDS.CLAUDE,
-    name: "Claude (Anthropic)",
-    description: "Official Anthropic API",
-  },
-  {
-    id: PROVIDER_IDS.GEMINI,
-    name: "Gemini (Google)",
-    description: "Google Gemini API",
-  },
-  {
-    id: PROVIDER_IDS.CODEX,
-    name: "OpenAI / Codex",
-    description: "OpenAI API including GPT models",
-  },
-  {
-    id: PROVIDER_IDS.XAI,
-    name: "xAI (Grok)",
-    description: "xAI Grok API",
-  },
-  {
-    id: PROVIDER_IDS.OPENAI,
-    name: "OpenAI Compatible",
-    description: "Custom providers like OpenRouter",
-  },
+  { id: PROVIDER_IDS.CLAUDE, name: "Claude (Anthropic)" },
+  { id: PROVIDER_IDS.GEMINI, name: "Gemini (Google)" },
+  { id: PROVIDER_IDS.INTERACTIONS, name: "Gemini Interactions (Google)" },
+  { id: PROVIDER_IDS.VERTEX, name: "Vertex AI (Google)" },
+  { id: PROVIDER_IDS.CODEX, name: "OpenAI / Codex" },
+  { id: PROVIDER_IDS.XAI, name: "xAI (Grok)" },
+  { id: PROVIDER_IDS.META, name: "Meta AI" },
+  { id: PROVIDER_IDS.OPENAI, name: "OpenAI Compatible" },
 ] as const;
 
 export const API_KEY_PROVIDERS = PROVIDERS.filter(
@@ -246,7 +233,7 @@ export function ApiKeySection({
                   <div className="grid grid-cols-[minmax(0,1.6fr)_96px_120px_128px] items-center gap-3 px-4 py-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-[var(--text-primary)]">{provider.name}</p>
-                      <p className="truncate text-xs text-[var(--text-muted)]">{provider.description}</p>
+                      <p className="truncate text-xs text-[var(--text-muted)]">{t(`apiKeyProviderDescriptions.${provider.id}`)}</p>
                     </div>
                     <span className={`text-xs font-medium ${isConfigured ? "text-emerald-700" : "text-[var(--text-muted)]"}`}>
                       {isConfigured ? t("statusActive") : t("statusInactive")}

@@ -3,6 +3,9 @@ export const PROVIDER = {
   GEMINI: "gemini",
   CODEX: "codex",
   XAI: "xai",
+  VERTEX: "vertex",
+  INTERACTIONS: "interactions",
+  META: "meta",
   OPENAI_COMPAT: "openai-compatibility",
 } as const;
 
@@ -13,8 +16,14 @@ export const PROVIDER_ENDPOINT = {
   [PROVIDER.GEMINI]: "/gemini-api-key",
   [PROVIDER.CODEX]: "/codex-api-key",
   [PROVIDER.XAI]: "/xai-api-key",
+  [PROVIDER.VERTEX]: "/vertex-api-key",
+  [PROVIDER.INTERACTIONS]: "/interactions-api-key",
+  [PROVIDER.META]: "/meta-api-key",
   [PROVIDER.OPENAI_COMPAT]: "/openai-compatibility",
 } as const;
+
+/** config.yaml lists that make a provider count as configured. */
+export const PROVIDER_CONFIG_KEYS = Object.values(PROVIDER_ENDPOINT).map((endpoint) => endpoint.slice(1));
 
 export const OAUTH_PROVIDER = {
   CLAUDE: "claude",

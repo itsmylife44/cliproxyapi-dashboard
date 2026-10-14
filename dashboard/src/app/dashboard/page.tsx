@@ -14,6 +14,7 @@ import type { ConfigData } from "@/lib/config-generators/shared";
 import { resolveOwnedByDisplay } from "@/lib/providers/model-grouping";
 import { LazyDashboardMiniCharts } from "@/components/lazy-dashboard-mini-charts";
 import { getTranslations } from 'next-intl/server';
+import { PROVIDER_CONFIG_KEYS } from "@/lib/providers/constants";
 
 interface ManagementFetchParams {
   path: string;
@@ -175,15 +176,7 @@ export default async function QuickStartPage() {
   const apiKeys = userApiKeys.map((k) => ({ key: k.key, name: k.name }));
   const oauthAccounts = extractOAuthAccounts(oauthData);
 
-  const providerKeys = [
-    "gemini-api-key",
-    "claude-api-key",
-    "codex-api-key",
-    "xai-api-key",
-    "vertex-api-key",
-    "openai-compatibility",
-  ];
-  const configProviderCount = providerKeys.filter((key) => {
+  const configProviderCount = PROVIDER_CONFIG_KEYS.filter((key) => {
     const value = config?.[key];
     if (Array.isArray(value)) return value.length > 0;
     return Boolean(value);

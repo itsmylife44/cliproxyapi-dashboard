@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getInternalProxyUrl } from "@/lib/config-generators/opencode";
 import { fetchProxyModels } from "@/lib/config-generators/shared";
 import { Errors } from "@/lib/errors";
+import { PROVIDER_CONFIG_KEYS } from "@/lib/providers/constants";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -43,15 +44,7 @@ async function fetchProviderCount(): Promise<number> {
     let configProviderCount = 0;
     if (configRes.status === "fulfilled" && configRes.value.ok) {
       const config = (await configRes.value.json()) as Record<string, unknown>;
-      const providerKeys = [
-        "gemini-api-key",
-        "claude-api-key",
-        "codex-api-key",
-        "xai-api-key",
-        "vertex-api-key",
-        "openai-compatibility",
-      ];
-      configProviderCount = providerKeys.filter((key) => {
+      configProviderCount = PROVIDER_CONFIG_KEYS.filter((key) => {
         const value = config[key];
         if (Array.isArray(value)) return value.length > 0;
         return Boolean(value);

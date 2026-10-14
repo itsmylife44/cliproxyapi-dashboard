@@ -579,6 +579,16 @@
     "connectNewAccount": "连接新账号",
     "connectButton": "连接",
     "importJsonButton": "导入 JSON",
+    "apiKeyProviderDescriptions": {
+      "claude": "Anthropic 官方 API",
+      "gemini": "Google Gemini API",
+      "interactions": "Google Gemini Interactions API",
+      "vertex": "Vertex AI API 密钥（快速模式）",
+      "codex": "OpenAI API（含 GPT 模型）",
+      "xai": "xAI Grok API",
+      "meta": "Meta AI API",
+      "openai-compatibility": "自定义提供商，如 OpenRouter"
+    },
     "oauthProviderDescriptions": {
       "claude": "Anthropic Claude（Pro/Max 订阅）",
       "gemini-cli": "Google Gemini（通过 Google OAuth，插件）",

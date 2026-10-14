@@ -579,6 +579,16 @@
     "connectNewAccount": "Connect New Account",
     "connectButton": "Connect",
     "importJsonButton": "Import JSON",
+    "apiKeyProviderDescriptions": {
+      "claude": "Official Anthropic API",
+      "gemini": "Google Gemini API",
+      "interactions": "Google Gemini Interactions API",
+      "vertex": "Vertex AI API key (express mode)",
+      "codex": "OpenAI API including GPT models",
+      "xai": "xAI Grok API",
+      "meta": "Meta AI API",
+      "openai-compatibility": "Custom providers like OpenRouter"
+    },
     "oauthProviderDescriptions": {
       "claude": "Anthropic Claude (Pro/Max subscription)",
       "gemini-cli": "Google Gemini (via Google OAuth, plugin)",

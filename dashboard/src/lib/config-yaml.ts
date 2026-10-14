@@ -36,19 +36,44 @@ export function readAuthDir(rawYaml: string): string {
   return typeof value === "string" ? value : "";
 }
 
+// v8 locations of the legacy root keys the config page merges (subset of upstream
+// buildV8Paths in internal/config/config_v8.go). On a v8 file the v8 path wins, so
+// writing the legacy key there would be silently dropped.
+const V8_PATHS: Record<string, string[]> = {
+  "auth-dir": ["oauth", "auth-dir"],
+  streaming: ["requests", "streaming"],
+  "commercial-mode": ["server", "commercial-mode"],
+  "disable-cooling": ["routing", "cooldown", "disable-cooling"],
+  "passthrough-headers": ["requests", "passthrough-headers"],
+  tls: ["server", "tls"],
+  pprof: ["observability", "pprof"],
+  "claude-header-defaults": ["upstream", "claude", "header-defaults"],
+  payload: ["requests", "payload"],
+};
+
+function mergeValue(target: ConfigYamlObject, key: string, value: unknown): void {
+  const current = target[key];
+  target[key] = isPlainObject(value) && isPlainObject(current) ? { ...current, ...value } : value;
+}
+
 export function mergeConfigYaml(rawYaml: string, changes: ConfigYamlObject): string {
-  const mergedConfig = { ...parseConfigYaml(rawYaml) };
+  const mergedConfig = parseConfigYaml(rawYaml);
+  const isV8 = mergedConfig["config-version"] === 8;
 
   for (const [key, value] of Object.entries(changes)) {
-    if (isPlainObject(value) && isPlainObject(mergedConfig[key])) {
-      mergedConfig[key] = {
-        ...(mergedConfig[key] as ConfigYamlObject),
-        ...value,
-      };
+    const v8Path = isV8 ? V8_PATHS[key] : undefined;
+    if (!v8Path) {
+      mergeValue(mergedConfig, key, value);
       continue;
     }
 
-    mergedConfig[key] = value;
+    let parent = mergedConfig;
+    for (const segment of v8Path.slice(0, -1)) {
+      const next = parent[segment];
+      parent = parent[segment] = isPlainObject(next) ? next : {};
+    }
+    mergeValue(parent, v8Path[v8Path.length - 1] ?? key, value);
+    delete mergedConfig[key];
   }
 
   return yaml.dump(mergedConfig, { lineWidth: -1, noRefs: true });

@@ -128,3 +128,54 @@ describe("mergeConfigYaml", () => {
     expect(merged).toContain("debug: false");
   });
 });
+
+describe("mergeConfigYaml on a v8-layout config.yaml", () => {
+  const v8Yaml = [
+    "config-version: 8",
+    "requests:",
+    "  passthrough-headers: false",
+    "upstream:",
+    "  claude:",
+    "    disable-claude-cloak-mode: true",
+    "observability:",
+    "  pprof:",
+    "    enable: false",
+    "    addr: 127.0.0.1:8316",
+    "",
+  ].join("\n");
+
+  it("writes a changed field to its existing v8 path without adding the legacy key", () => {
+    const merged = parseConfigYaml(mergeConfigYaml(v8Yaml, { "passthrough-headers": true }));
+    expect(merged.requests).toEqual({ "passthrough-headers": true });
+    expect(merged).not.toHaveProperty("passthrough-headers");
+  });
+
+  it("creates the v8 path when it is absent and keeps sibling keys", () => {
+    const merged = parseConfigYaml(
+      mergeConfigYaml(v8Yaml, {
+        streaming: { "keepalive-seconds": 15 },
+        "claude-header-defaults": { "user-agent": "ua" },
+        "auth-dir": "/data/auths",
+      })
+    );
+    expect(merged.requests).toEqual({ "passthrough-headers": false, streaming: { "keepalive-seconds": 15 } });
+    expect(merged.upstream).toEqual({
+      claude: { "disable-claude-cloak-mode": true, "header-defaults": { "user-agent": "ua" } },
+    });
+    expect(merged.oauth).toEqual({ "auth-dir": "/data/auths" });
+    expect(merged).not.toHaveProperty("streaming");
+    expect(merged).not.toHaveProperty("claude-header-defaults");
+    expect(merged).not.toHaveProperty("auth-dir");
+  });
+
+  it("shallow-merges objects at the v8 path", () => {
+    const merged = parseConfigYaml(mergeConfigYaml(v8Yaml, { pprof: { enable: true } }));
+    expect(merged.observability).toEqual({ pprof: { enable: true, addr: "127.0.0.1:8316" } });
+    expect(merged).not.toHaveProperty("pprof");
+  });
+
+  it("keeps legacy files on legacy root keys", () => {
+    const merged = parseConfigYaml(mergeConfigYaml("passthrough-headers: false\n", { "passthrough-headers": true }));
+    expect(merged).toEqual({ "passthrough-headers": true });
+  });
+});

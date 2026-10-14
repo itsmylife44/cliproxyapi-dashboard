@@ -244,6 +244,7 @@ export default function ConfigPage() {
     "usage-statistics-enabled": API_ENDPOINTS.MANAGEMENT.USAGE_STATISTICS_ENABLED,
     "request-retry": API_ENDPOINTS.MANAGEMENT.REQUEST_RETRY,
     "max-retry-interval": API_ENDPOINTS.MANAGEMENT.MAX_RETRY_INTERVAL,
+    "max-retry-credentials": API_ENDPOINTS.MANAGEMENT.MAX_RETRY_CREDENTIALS,
     "request-log": API_ENDPOINTS.MANAGEMENT.REQUEST_LOG,
     "ws-auth": API_ENDPOINTS.MANAGEMENT.WS_AUTH,
     "force-model-prefix": API_ENDPOINTS.MANAGEMENT.FORCE_MODEL_PREFIX,
@@ -270,12 +271,12 @@ export default function ConfigPage() {
       let successCount = 0;
 
       // Helper to update a single field via its dedicated endpoint
-      const updateField = async (endpoint: string, value: unknown): Promise<boolean> => {
+      const updateField = async (endpoint: string, value: unknown, body: unknown = { value }): Promise<boolean> => {
         try {
           const res = await fetch(endpoint, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ value }),
+            body: JSON.stringify(body),
           });
           if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
@@ -315,12 +316,18 @@ export default function ConfigPage() {
         }
       }
 
+      // oauth-model-alias PUT takes the raw provider map as body, not { value }.
+      if (JSON.stringify(originalConfig["oauth-model-alias"]) !== JSON.stringify(config["oauth-model-alias"])) {
+        const aliases = stripOAuthIds(config)["oauth-model-alias"] ?? {};
+        if (await updateField(API_ENDPOINTS.MANAGEMENT.OAUTH_MODEL_ALIAS, aliases, aliases)) successCount++;
+      }
+
       // For fields without dedicated endpoints, we need to use config.yaml
       // But ONLY send those specific fields that changed and don't have endpoints
       const fieldsWithoutEndpoints = [
         "auth-dir", "streaming", "commercial-mode",
-        "disable-cooling", "max-retry-credentials", "passthrough-headers",
-        "tls", "pprof", "claude-header-defaults", "payload", "oauth-model-alias",
+        "disable-cooling", "passthrough-headers",
+        "tls", "pprof", "claude-header-defaults", "payload",
       ] as const;
 
       const yamlChanges: Record<string, unknown> = {};
@@ -328,12 +335,7 @@ export default function ConfigPage() {
         const oldVal = originalConfig[key];
         const newVal = config[key];
         if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
-          // For oauth-model-alias, strip the _id fields
-          if (key === "oauth-model-alias") {
-            yamlChanges[key] = stripOAuthIds(config)["oauth-model-alias"];
-          } else {
-            yamlChanges[key] = newVal;
-          }
+          yamlChanges[key] = newVal;
         }
       }
 

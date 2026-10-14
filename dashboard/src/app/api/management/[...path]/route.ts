@@ -61,6 +61,7 @@ const ALLOWED_MANAGEMENT_PATHS = new Set<string>([
   "force-model-prefix",
   "request-retry",
   "max-retry-interval",
+  "max-retry-credentials",
 
   // Quota exceeded behavior
   "quota-exceeded/switch-project",

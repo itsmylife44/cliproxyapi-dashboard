@@ -74,6 +74,7 @@ export const API_ENDPOINTS = {
     USAGE_STATISTICS_ENABLED: "/api/management/usage-statistics-enabled",
     REQUEST_RETRY: "/api/management/request-retry",
     MAX_RETRY_INTERVAL: "/api/management/max-retry-interval",
+    MAX_RETRY_CREDENTIALS: "/api/management/max-retry-credentials",
     REQUEST_LOG: "/api/management/request-log",
     WS_AUTH: "/api/management/ws-auth",
     FORCE_MODEL_PREFIX: "/api/management/force-model-prefix",

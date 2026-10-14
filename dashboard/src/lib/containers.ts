@@ -101,6 +101,29 @@ export function parseRestartInfo(
   };
 }
 
+/**
+ * Extracts the Docker Hub registry digest (`sha256:...`) for `repo` from
+ * `docker image inspect --format '{{json .RepoDigests}}'` output.
+ * Returns null when there is no matching entry or the output is unparseable.
+ */
+export function parseRepoDigest(repoDigestsJson: string, repo: string): string | null {
+  let entries: unknown;
+  try {
+    entries = JSON.parse(repoDigestsJson);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(entries)) return null;
+
+  for (const entry of entries) {
+    if (typeof entry !== "string") continue;
+    const [name = "", digest] = entry.split("@");
+    const bareName = name.replace(/^(docker\.io|index\.docker\.io|registry-1\.docker\.io)\//, "");
+    if (bareName === repo && digest?.startsWith("sha256:")) return digest;
+  }
+  return null;
+}
+
 export function parseServiceLabels(
   labels: Record<string, string>,
 ): { project?: string; service?: string; version?: string } {

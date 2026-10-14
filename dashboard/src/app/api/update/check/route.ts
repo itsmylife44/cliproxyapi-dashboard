@@ -5,6 +5,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { logger } from "@/lib/logger";
 import { updateCheckCache, CACHE_TTL } from "@/lib/cache";
+import { parseRepoDigest } from "@/lib/containers";
 
 const execFileAsync = promisify(execFile);
 
@@ -52,6 +53,21 @@ async function getDockerHubTags(skipCache = false): Promise<DockerHubTag[]> {
   return tags;
 }
 
+async function getRegistryDigest(imageId: string): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync("docker", [
+      "image",
+      "inspect",
+      imageId,
+      "--format",
+      "{{json .RepoDigests}}",
+    ]);
+    return parseRepoDigest(stdout.trim(), "eceasy/cli-proxy-api");
+  } catch {
+    return null;
+  }
+}
+
 async function getCurrentImageDigest(): Promise<{ version: string; digest: string; fullDigest: string }> {
   try {
     const { stdout } = await execFileAsync("docker", [
@@ -61,13 +77,16 @@ async function getCurrentImageDigest(): Promise<{ version: string; digest: strin
       "{{.Config.Image}} {{.Image}}",
     ]);
     
-    const [image, fullDigest] = stdout.trim().split(" ");
-    if (!image || !fullDigest) {
+    const [image, imageId] = stdout.trim().split(" ");
+    if (!image || !imageId) {
       return { version: "unknown", digest: "unknown", fullDigest: "unknown" };
     }
     const [, imageTag] = image.split(":");
     const tagVersion = imageTag ?? "latest";
-    const cleanDigest = fullDigest.replace("sha256:", "");
+    // .Image is the local config ID on the classic overlay2 store, so prefer the
+    // registry digest, which matches Docker Hub on every image store.
+    const registryDigest = await getRegistryDigest(imageId);
+    const cleanDigest = (registryDigest ?? imageId).replace("sha256:", "");
     
     return { 
       version: tagVersion, 

@@ -29,6 +29,9 @@ interface KeyUsage {
     longContextInputTokens: number;
     longContextOutputTokens: number;
     longContextCachedTokens: number;
+    peakInputTokens: number;
+    peakOutputTokens: number;
+    peakCachedTokens: number;
   }>;
 }
 
@@ -68,6 +71,9 @@ function buildCostBreakdown(keys: Record<string, KeyUsage>, customPricing: Recor
     longContextInputTokens: number;
     longContextOutputTokens: number;
     longContextCachedTokens: number;
+    peakInputTokens: number;
+    peakOutputTokens: number;
+    peakCachedTokens: number;
     totalTokens: number;
     requests: number;
   }> = {};
@@ -82,6 +88,9 @@ function buildCostBreakdown(keys: Record<string, KeyUsage>, customPricing: Recor
           longContextInputTokens: 0,
           longContextOutputTokens: 0,
           longContextCachedTokens: 0,
+          peakInputTokens: 0,
+          peakOutputTokens: 0,
+          peakCachedTokens: 0,
           totalTokens: 0,
           requests: 0,
         };
@@ -92,6 +101,9 @@ function buildCostBreakdown(keys: Record<string, KeyUsage>, customPricing: Recor
       modelAgg[model].longContextInputTokens += data.longContextInputTokens;
       modelAgg[model].longContextOutputTokens += data.longContextOutputTokens;
       modelAgg[model].longContextCachedTokens += data.longContextCachedTokens;
+      modelAgg[model].peakInputTokens += data.peakInputTokens;
+      modelAgg[model].peakOutputTokens += data.peakOutputTokens;
+      modelAgg[model].peakCachedTokens += data.peakCachedTokens;
       modelAgg[model].totalTokens += data.totalTokens;
       modelAgg[model].requests += data.totalRequests;
     }
@@ -100,21 +112,26 @@ function buildCostBreakdown(keys: Record<string, KeyUsage>, customPricing: Recor
   return Object.entries(modelAgg)
     .map(([model, data]) => {
       const price = resolveModelPrice(model, customPricing);
-      // The long-context subset was bucketed per request server-side; the
-      // remainder is the short-context tier.
+      // The long-context and peak subsets were bucketed per request
+      // server-side (disjoint); the remainder is the standard tier.
       const estimatedCost = price
         ? calculateTieredCost(
             {
-              inputTokens: data.inputTokens - data.longContextInputTokens,
-              outputTokens: data.outputTokens - data.longContextOutputTokens,
-              cachedTokens: data.cachedTokens - data.longContextCachedTokens,
+              inputTokens: data.inputTokens - data.longContextInputTokens - data.peakInputTokens,
+              outputTokens: data.outputTokens - data.longContextOutputTokens - data.peakOutputTokens,
+              cachedTokens: data.cachedTokens - data.longContextCachedTokens - data.peakCachedTokens,
             },
             {
               inputTokens: data.longContextInputTokens,
               outputTokens: data.longContextOutputTokens,
               cachedTokens: data.longContextCachedTokens,
             },
-            price
+            price,
+            {
+              inputTokens: data.peakInputTokens,
+              outputTokens: data.peakOutputTokens,
+              cachedTokens: data.peakCachedTokens,
+            }
           )
         : 0;
       return {

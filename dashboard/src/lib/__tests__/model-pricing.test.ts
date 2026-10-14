@@ -4,6 +4,7 @@ import {
   calculateCost,
   calculateTieredCost,
   isLongContextPrompt,
+  isPeakRequest,
   resolveModelPrice,
   type ModelPrice,
 } from "../model-pricing";
@@ -637,5 +638,121 @@ describe("calculateCost", () => {
 
   it("charges nothing for cache reads when there are none", () => {
     expect(calculateCost(500_000, 0, price)).toBe(5);
+  });
+});
+
+describe("OpenCode Go models (#236)", () => {
+  it("prices the four models and their opencode-go/ IDs", () => {
+    const cases: Array<[string, number, number, number, "separate" | "included"]> = [
+      ["deepseek-v4.1-flash", 0.15, 0.6, 0.003, "included"],
+      ["glm-5.3", 1.4, 4.4, 0.26, "included"],
+      ["kimi-k3", 3, 15, 0.3, "included"],
+      ["qwen3.8-max", 2, 6, 0.25, "separate"],
+    ];
+    for (const [id, input, output, cacheRead, accounting] of cases) {
+      for (const model of [id, `opencode-go/${id}`]) {
+        const price = resolveModelPrice(model);
+        expect(price?.inputPer1M, model).toBe(input);
+        expect(price?.outputPer1M, model).toBe(output);
+        expect(price?.cacheReadPer1M, model).toBe(cacheRead);
+        expect(price?.cacheAccounting ?? "separate", model).toBe(accounting);
+        expect(price?.exactMatchOnly, model).toBe(true);
+      }
+    }
+  });
+
+  it("keeps differently priced siblings unpriced", () => {
+    for (const model of ["glm-5.3-flash", "kimi-k3-1", "kimi-k3-256k", "qwen3.8-max-prime"]) {
+      expect(resolveModelPrice(model), model).toBeNull();
+    }
+  });
+
+  it("bills glm-5.3 cached tokens inside inputTokens", () => {
+    const price = resolveModelPrice("glm-5.3");
+    if (!price) throw new Error("glm-5.3 must be priced");
+    expect(calculateCost(262_701, 940, price, 261_952)).toBeCloseTo(0.0733, 4);
+  });
+
+  it("bills qwen3.8-max cached tokens on top of inputTokens", () => {
+    const price = resolveModelPrice("qwen3.8-max");
+    if (!price) throw new Error("qwen3.8-max must be priced");
+    expect(calculateCost(1_000, 100, price, 10_000)).toBeCloseTo(0.0051, 6);
+  });
+
+  it("bills deepseek-v4.1-flash at the off-peak or peak rate", () => {
+    const price = resolveModelPrice("deepseek-v4.1-flash");
+    if (!price) throw new Error("deepseek-v4.1-flash must be priced");
+    const buckets = { inputTokens: 32_109_020, outputTokens: 172_274, cachedTokens: 31_496_320 };
+
+    expect(calculateTieredCost(buckets, EMPTY_BUCKETS, price)).toBeCloseTo(0.2898, 4);
+    expect(calculateTieredCost(EMPTY_BUCKETS, EMPTY_BUCKETS, price, buckets)).toBeCloseTo(0.5795, 4);
+  });
+});
+
+describe("peak-hour pricing", () => {
+  const deepseek = resolveModelPrice("deepseek-v4.1-flash");
+
+  // 2026-09-14 is a Monday, 2026-09-19 a Saturday.
+  const cases: Array<[string, boolean]> = [
+    ["2026-09-14T00:59:59Z", false],
+    ["2026-09-14T01:00:00Z", true],
+    ["2026-09-14T03:59:59Z", true],
+    ["2026-09-14T04:00:00Z", false],
+    ["2026-09-14T05:59:59Z", false],
+    ["2026-09-14T06:00:00Z", true],
+    ["2026-09-14T09:59:59Z", true],
+    ["2026-09-14T10:00:00Z", false],
+    ["2026-09-18T02:00:00Z", true],
+    ["2026-09-19T02:00:00Z", false],
+    ["2026-09-20T07:00:00Z", false],
+  ];
+
+  it("evaluates the window boundaries in UTC", () => {
+    for (const [iso, peak] of cases) {
+      expect(isPeakRequest(new Date(iso), deepseek), iso).toBe(peak);
+    }
+  });
+
+  it("does not depend on the server timezone", () => {
+    const originalTz = process.env.TZ;
+    try {
+      for (const tz of ["Asia/Shanghai", "America/Los_Angeles"]) {
+        process.env.TZ = tz;
+        // Sanity check: local getters really are shifted in this zone.
+        expect(new Date("2026-09-14T01:00:00Z").getHours(), tz).not.toBe(1);
+        for (const [iso, peak] of cases) {
+          expect(isPeakRequest(new Date(iso), deepseek), `${tz} ${iso}`).toBe(peak);
+        }
+      }
+    } finally {
+      if (originalTz === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTz;
+    }
+  });
+
+  it("never treats a model without a peak schedule as peak", () => {
+    const monday = new Date("2026-09-14T02:00:00Z");
+    expect(isPeakRequest(monday, resolveModelPrice("glm-5.3"))).toBe(false);
+    expect(isPeakRequest(monday, resolveModelPrice("claude-opus-5"))).toBe(false);
+    expect(isPeakRequest(monday, null)).toBe(false);
+  });
+
+  it("bills peak tokens at standard rates when the model has no peak schedule", () => {
+    const price = resolveModelPrice("glm-5.3");
+    if (!price) throw new Error("glm-5.3 must be priced");
+    const buckets = { inputTokens: 100_000, outputTokens: 1_000, cachedTokens: 50_000 };
+    expect(calculateTieredCost(EMPTY_BUCKETS, EMPTY_BUCKETS, price, buckets)).toBeCloseTo(
+      calculateCost(100_000, 1_000, price, 50_000),
+      10
+    );
+  });
+
+  it("prices a mixed peak/off-peak batch per bucket, not at one rate", () => {
+    const price = resolveModelPrice("deepseek-v4.1-flash");
+    if (!price) throw new Error("deepseek-v4.1-flash must be priced");
+    const offPeak = { inputTokens: 1_000_000, outputTokens: 0, cachedTokens: 0 };
+    const peak = { inputTokens: 1_000_000, outputTokens: 0, cachedTokens: 0 };
+    // 1M at $0.15 + 1M at $0.30.
+    expect(calculateTieredCost(offPeak, EMPTY_BUCKETS, price, peak)).toBeCloseTo(0.45, 10);
   });
 });

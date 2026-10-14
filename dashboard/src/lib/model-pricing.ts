@@ -39,6 +39,36 @@ const XAI_LONG_CONTEXT_MIN_TOKENS = 200_000;
 /** First prompt size billed at OpenAI long-context rates ("more than 272k"). */
 const OPENAI_LONG_CONTEXT_MIN_TOKENS = 272_001;
 
+/**
+ * Rates for requests started inside a model's peak hours. The schedule is in
+ * UTC so the tier never depends on the server's timezone.
+ */
+export interface PeakPrice {
+  /** UTC days of the week the windows apply on (0 = Sunday … 6 = Saturday). */
+  weekdaysUtc: number[];
+  /** UTC hour windows as `[start, end)`: the start hour is peak, the end hour is not. */
+  hoursUtc: Array<[number, number]>;
+  /** USD per 1M input tokens */
+  inputPer1M: number;
+  /** USD per 1M cached (cache read) input tokens */
+  cacheReadPer1M: number;
+  /** USD per 1M output tokens */
+  outputPer1M: number;
+}
+
+/**
+ * DeepSeek peak hours: 01:00–04:00 and 06:00–10:00 UTC, Monday to Friday.
+ * ponytail: Chinese public holidays are off-peak at DeepSeek but billed as peak
+ * here, since there is no holiday calendar; add one if the gap matters.
+ */
+const DEEPSEEK_PEAK_HOURS: Pick<PeakPrice, "weekdaysUtc" | "hoursUtc"> = {
+  weekdaysUtc: [1, 2, 3, 4, 5],
+  hoursUtc: [
+    [1, 4],
+    [6, 10],
+  ],
+};
+
 export interface ModelPrice {
   /** Display name for the model family */
   displayName: string;
@@ -66,6 +96,12 @@ export interface ModelPrice {
   cacheAccounting?: "separate" | "included";
   /** Rates for requests whose prompt reaches LONG_CONTEXT_THRESHOLD_TOKENS. */
   longContext?: LongContextPrice;
+  /**
+   * Rates for requests started during peak hours. A request that is also
+   * long-context is billed at the long-context rates only (see
+   * `calculateTieredCost`).
+   */
+  peak?: PeakPrice;
   /**
    * Restricts this entry to an exact model ID. Set for documented aliases and
    * dated snapshots (`gpt-5.6` → GPT-5.6 Sol, `grok-code-fast-1`, …) so an
@@ -555,6 +591,57 @@ export const DEFAULT_MODEL_PRICING: Record<string, ModelPrice> = {
     },
     provider: "xAI",
   },
+
+  // ── OpenCode Go ────────────────────────────────────────────
+  // Rates from https://opencode.ai/docs/go/ ("Usage limits"), checked against
+  // the vendors' pages. Cache accounting follows the endpoint CLIProxyAPI
+  // parses, not the vendor: DeepSeek, GLM and Kimi are served on
+  // /v1/chat/completions (ParseOpenAIUsage → cached ⊆ input), Qwen only on
+  // /v1/messages (ParseClaudeUsage → cached reported separately).
+  // Exact IDs only: siblings such as `glm-5.3-flash` or `qwen3.8-max-prime`
+  // are sold at other rates and must stay unpriced.
+  "deepseek-v4.1-flash": {
+    displayName: "DeepSeek V4.1 Flash",
+    inputPer1M: 0.15,
+    outputPer1M: 0.6,
+    cacheReadPer1M: 0.003,
+    cacheAccounting: "included",
+    exactMatchOnly: true,
+    peak: {
+      ...DEEPSEEK_PEAK_HOURS,
+      inputPer1M: 0.3,
+      cacheReadPer1M: 0.006,
+      outputPer1M: 1.2,
+    },
+    provider: "DeepSeek",
+  },
+  "glm-5.3": {
+    displayName: "GLM-5.3",
+    inputPer1M: 1.4,
+    outputPer1M: 4.4,
+    cacheReadPer1M: 0.26,
+    cacheAccounting: "included",
+    exactMatchOnly: true,
+    provider: "Zhipu AI",
+  },
+  "kimi-k3": {
+    displayName: "Kimi K3",
+    inputPer1M: 3,
+    outputPer1M: 15,
+    cacheReadPer1M: 0.3,
+    cacheAccounting: "included",
+    exactMatchOnly: true,
+    provider: "Moonshot AI",
+  },
+  "qwen3.8-max": {
+    displayName: "Qwen3.8 Max",
+    inputPer1M: 2,
+    outputPer1M: 6,
+    cacheReadPer1M: 0.25,
+    cacheAccounting: "separate",
+    exactMatchOnly: true,
+    provider: "Alibaba",
+  },
 };
 
 const LOCALSTORAGE_KEY = "cliproxy-custom-pricing";
@@ -667,6 +754,18 @@ export function isLongContextPrompt(
 }
 
 /**
+ * Whether a request started inside its model's peak hours. Uses UTC getters
+ * only, so the result never depends on the server's timezone. CLIProxyAPI
+ * records `timestamp` at request start.
+ */
+export function isPeakRequest(timestamp: Date, price: ModelPrice | null | undefined): boolean {
+  const peak = price?.peak;
+  if (!peak || !peak.weekdaysUtc.includes(timestamp.getUTCDay())) return false;
+  const hour = timestamp.getUTCHours();
+  return peak.hoursUtc.some(([start, end]) => hour >= start && hour < end);
+}
+
+/**
  * Calculate estimated cost for a set of tokens.
  *
  * The cache-read rate falls back to `inputPer1M` when the provider publishes no
@@ -711,51 +810,40 @@ export interface TokenBuckets {
   cachedTokens: number;
 }
 
+const EMPTY_BUCKETS: TokenBuckets = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
+
+/** `price` with its standard rates swapped for a tier's rates, if it has that tier. */
+function withTierRates(price: ModelPrice, tier: LongContextPrice | PeakPrice | undefined): ModelPrice {
+  if (!tier) return price;
+  return {
+    ...price,
+    inputPer1M: tier.inputPer1M,
+    cacheReadPer1M: tier.cacheReadPer1M,
+    outputPer1M: tier.outputPer1M,
+  };
+}
+
 /**
- * Cost for a model split into short-context and long-context buckets.
+ * Cost for a model split into disjoint standard, long-context and peak buckets.
  *
- * The long-context tier is chosen per request before aggregation, because
- * providers bill the *whole* request at the higher rate once its prompt reaches
- * the threshold — it cannot be derived from a summed model total.
+ * Both tiers are chosen per request before aggregation, because providers bill
+ * the *whole* request at the tier's rate — it cannot be derived from a summed
+ * model total. A request that is both long-context and peak belongs to the
+ * long-context bucket only, so the tiers never stack. A model without a given
+ * tier bills that bucket at its standard rates.
  */
 export function calculateTieredCost(
-  shortContext: TokenBuckets,
+  standard: TokenBuckets,
   longContext: TokenBuckets,
-  price: ModelPrice
+  price: ModelPrice,
+  peak: TokenBuckets = EMPTY_BUCKETS
 ): number {
-  const shortCost = calculateCost(
-    shortContext.inputTokens,
-    shortContext.outputTokens,
-    price,
-    shortContext.cachedTokens
-  );
-
-  if (!price.longContext) {
-    return (
-      shortCost +
-      calculateCost(
-        longContext.inputTokens,
-        longContext.outputTokens,
-        price,
-        longContext.cachedTokens
-      )
-    );
-  }
-
-  const longPrice: ModelPrice = {
-    ...price,
-    inputPer1M: price.longContext.inputPer1M,
-    cacheReadPer1M: price.longContext.cacheReadPer1M,
-    outputPer1M: price.longContext.outputPer1M,
-  };
+  const bucketCost = (buckets: TokenBuckets, rates: ModelPrice) =>
+    calculateCost(buckets.inputTokens, buckets.outputTokens, rates, buckets.cachedTokens);
   return (
-    shortCost +
-    calculateCost(
-      longContext.inputTokens,
-      longContext.outputTokens,
-      longPrice,
-      longContext.cachedTokens
-    )
+    bucketCost(standard, price) +
+    bucketCost(longContext, withTierRates(price, price.longContext)) +
+    bucketCost(peak, withTierRates(price, price.peak))
   );
 }
 

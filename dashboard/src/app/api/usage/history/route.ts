@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { usageCache } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
-import { isLongContextPrompt, resolveModelPrice } from "@/lib/model-pricing";
+import { isLongContextPrompt, isPeakRequest, resolveModelPrice } from "@/lib/model-pricing";
 
 // Cache for 5 seconds to allow frequent polling without overwhelming the database
 // The frontend polls every 60 seconds, so 5s cache won't cause missed updates
@@ -39,6 +39,14 @@ interface KeyUsage {
     longContextInputTokens: number;
     longContextOutputTokens: number;
     longContextCachedTokens: number;
+    /**
+     * Subset from requests started in the model's UTC peak hours. Disjoint
+     * from the long-context subset: a long-context request is never counted
+     * here, so the two tiers never stack.
+     */
+    peakInputTokens: number;
+    peakOutputTokens: number;
+    peakCachedTokens: number;
   }>;
 }
 
@@ -230,7 +238,7 @@ export async function GET(request: NextRequest) {
     let totalSuccessCount = 0;
     let totalFailureCount = 0;
 
-    // Long-context thresholds are per model; resolve each model once. Only the
+    // Long-context thresholds and peak hours are per model; resolve each model once. Only the
     // built-in table is available server-side (user overrides live in the
     // browser), which is what the bucket split is based on.
     const modelPrices = new Map<string, ReturnType<typeof resolveModelPrice>>();
@@ -290,6 +298,9 @@ export async function GET(request: NextRequest) {
           longContextInputTokens: 0,
           longContextOutputTokens: 0,
           longContextCachedTokens: 0,
+          peakInputTokens: 0,
+          peakOutputTokens: 0,
+          peakCachedTokens: 0,
         };
       }
       const modelUsage = keyUsage.models[modelName];
@@ -301,10 +312,16 @@ export async function GET(request: NextRequest) {
 
       // Tier selection happens on the individual request, not on the model sum,
       // and uses that model's own threshold (xAI 200k, OpenAI >272k).
-      if (isLongContextPrompt(record.inputTokens, priceForModel(modelName))) {
+      // Peak hours are likewise decided per request, from its UTC start time.
+      const price = priceForModel(modelName);
+      if (isLongContextPrompt(record.inputTokens, price)) {
         modelUsage.longContextInputTokens += record.inputTokens;
         modelUsage.longContextOutputTokens += record.outputTokens;
         modelUsage.longContextCachedTokens += record.cachedTokens;
+      } else if (isPeakRequest(record.timestamp, price)) {
+        modelUsage.peakInputTokens += record.inputTokens;
+        modelUsage.peakOutputTokens += record.outputTokens;
+        modelUsage.peakCachedTokens += record.cachedTokens;
       }
 
       // Daily aggregation for charts (use server local timezone, not UTC)

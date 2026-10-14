@@ -172,16 +172,14 @@ jobs:
 
           echo "Done"
 
-  # Build each platform natively in parallel — no QEMU emulation needed.
-  # amd64 on self-hosted (Hetzner), arm64 on GitHub's native ARM runner.
-  # self-hosted is only reachable via push to main or workflow_dispatch (write access) — never add PR triggers here.
+  # Build each platform natively in parallel on GitHub-hosted runners — no QEMU emulation needed.
   build:
     strategy:
       fail-fast: true
       matrix:
         include:
           - platform: linux/amd64
-            runner: self-hosted
+            runner: ubuntu-24.04
             suffix: amd64
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
@@ -196,7 +194,6 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ needs.resolve.outputs.sha }}
-          clean: true
           persist-credentials: false
 
       - name: Log in to GHCR

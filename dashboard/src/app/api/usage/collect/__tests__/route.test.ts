@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+import yaml from "js-yaml";
 
 const prismaMock = vi.hoisted(() => ({
   collectorState: {
@@ -43,14 +44,34 @@ function queueEntries(count: number, offset: number) {
 }
 
 function jsonResponse(body: unknown) {
-  return { ok: true, status: 200, json: () => Promise.resolve(body), body: { cancel: vi.fn() } };
+  return { ok: true, status: 200, json: () => Promise.resolve(body), body: { cancel: vi.fn(() => Promise.resolve()) } };
+}
+
+/** CLIProxyAPI's config.yaml; PUT replaces it, GET /config reports its retention (upstream default 60). */
+let configYaml = "";
+let configPuts: string[] = [];
+let failConfigPut = false;
+
+function serveConfig(url: string, init?: RequestInit) {
+  if (url.endsWith("/config")) {
+    const retention = Number((yaml.load(configYaml) as Record<string, unknown>)["redis-usage-queue-retention-seconds"]);
+    return Promise.resolve(jsonResponse({ "redis-usage-queue-retention-seconds": retention > 0 ? retention : 60 }));
+  }
+  if (init?.method === "PUT") {
+    configPuts.push(String(init.body));
+    if (failConfigPut) return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}), body: { cancel: vi.fn(() => Promise.resolve()) } });
+    configYaml = String(init.body);
+    return Promise.resolve(jsonResponse({ ok: true }));
+  }
+  return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(configYaml), body: { cancel: vi.fn() } });
 }
 
 /** Simulates CLIProxyAPI's drain-on-read queue holding `total` records. */
 function serveQueue(total: number) {
   let remaining = queueEntries(total, 0);
-  fetchMock.mockImplementation((url: string) => {
+  fetchMock.mockImplementation((url: string, init?: RequestInit) => {
     if (url.includes("/auth-files")) return Promise.resolve(jsonResponse({ files: [] }));
+    if (url.includes("/config")) return serveConfig(url, init);
     const count = Number(new URL(url).searchParams.get("count"));
     const batch = remaining.slice(0, count);
     remaining = remaining.slice(count);
@@ -69,6 +90,10 @@ function cronRequest() {
 describe("POST /api/usage/collect", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetModules(); // the retention check is memoized per process
+    configYaml = "port: 8317\nredis-usage-queue-retention-seconds: 3600\n";
+    configPuts = [];
+    failConfigPut = false;
   });
 
   it("drains a queue larger than one batch in a single run (620 -> 500 + 120)", async () => {
@@ -87,8 +112,9 @@ describe("POST /api/usage/collect", () => {
   });
 
   it("keeps already-popped records when a follow-up read fails", async () => {
-    fetchMock.mockImplementation((url: string) => {
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
       if (url.includes("/auth-files")) return Promise.resolve(jsonResponse({ files: [] }));
+      if (url.includes("/config")) return serveConfig(url, init);
       const queueCalls = fetchMock.mock.calls.filter(([u]) => String(u).includes("/usage-queue"));
       if (queueCalls.length === 1) return Promise.resolve(jsonResponse(queueEntries(500, 0)));
       return Promise.reject(new Error("connection reset"));
@@ -112,5 +138,64 @@ describe("POST /api/usage/collect", () => {
     expect(body.processed).toBe(3);
     const queueCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes("/usage-queue"));
     expect(queueCalls).toHaveLength(1);
+  });
+
+  describe("usage-queue retention", () => {
+    it("raises a retention below 3600 with one config.yaml write, once per process", async () => {
+      configYaml = "port: 8317\napi-keys:\n  - sk-a\nredis-usage-queue-retention-seconds: 60\n";
+      serveQueue(3);
+      const { POST } = await import("../route");
+
+      const first = await (await POST(cronRequest())).json();
+      await POST(cronRequest());
+
+      expect(first.processed).toBe(3);
+      expect(configPuts).toHaveLength(1);
+      expect(yaml.load(configYaml)).toEqual({
+        port: 8317,
+        "api-keys": ["sk-a"],
+        "redis-usage-queue-retention-seconds": 3600,
+      });
+      const configReads = fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/config"));
+      expect(configReads).toHaveLength(1);
+    });
+
+    it("adds the key at its v8 path on a v8 config", async () => {
+      configYaml = "config-version: 8\nobservability:\n  usage:\n    usage-statistics-enabled: true\n";
+      serveQueue(0);
+      const { POST } = await import("../route");
+
+      await POST(cronRequest());
+
+      expect(yaml.load(configYaml)).toEqual({
+        "config-version": 8,
+        observability: { usage: { "usage-statistics-enabled": true, "redis-usage-queue-retention-seconds": 3600 } },
+      });
+    });
+
+    it("never lowers a retention of 3600 or more", async () => {
+      configYaml = "redis-usage-queue-retention-seconds: 7200\n";
+      serveQueue(0);
+      const { POST } = await import("../route");
+
+      await POST(cronRequest());
+
+      expect(configPuts).toHaveLength(0);
+      expect(configYaml).toBe("redis-usage-queue-retention-seconds: 7200\n");
+    });
+
+    it("keeps collecting when the write fails, and retries on the next run", async () => {
+      configYaml = "redis-usage-queue-retention-seconds: 60\n";
+      failConfigPut = true;
+      serveQueue(3);
+      const { POST } = await import("../route");
+
+      const res = await POST(cronRequest());
+      await POST(cronRequest());
+
+      expect(res.status).toBe(200);
+      expect((await res.json()).processed).toBe(3);
+      expect(configPuts).toHaveLength(2);
+    });
   });
 });

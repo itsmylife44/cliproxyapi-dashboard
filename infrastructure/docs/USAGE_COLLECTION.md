@@ -14,8 +14,9 @@ CLIProxyAPI Dashboard includes an **automated usage collection system** that tra
 > redis-usage-queue-retention-seconds: 3600    # upstream default 60 drops records before the collector runs
 > ```
 > CLIProxyAPI discards queued records older than the retention (max 3600 s). New installs get both
-> from the template; `./rebuild.sh` adds the retention to an existing `config.yaml` when it is missing
-> or still at the default 60.
+> from the template. On existing installs the first collector run after a dashboard start raises a
+> lower or missing retention to 3600 with one `config.yaml` write through the management API (a
+> higher value is never lowered; a failed write is logged and retried on the next run).
 
 ## Architecture
 
@@ -70,10 +71,11 @@ usage-collector:
 **Process:**
 1. Authenticates request using `COLLECTOR_API_KEY`
 2. Acquires singleton lock (prevents concurrent collections)
-3. Drains the CLIProxyAPI usage queue (`GET /v0/management/usage-queue?count=500`), repeating until a batch returns fewer than 500 records (at most 20 batches per run; the rest waits for the next run)
-4. Maps API keys to users in the dashboard
-5. Deduplicates and batch-inserts into PostgreSQL
-6. Updates collection status and timestamps
+3. Once per dashboard process, raises CLIProxyAPI's usage-queue retention to 3600 s if it is lower
+4. Drains the CLIProxyAPI usage queue (`GET /v0/management/usage-queue?count=500`), repeating until a batch returns fewer than 500 records (at most 20 batches per run; the rest waits for the next run)
+5. Maps API keys to users in the dashboard
+6. Deduplicates and batch-inserts into PostgreSQL
+7. Updates collection status and timestamps
 
 ## Environment Variables
 

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { randomUUID, timingSafeEqual } from "crypto";
 import { Errors } from "@/lib/errors";
+import { mergeConfigYaml } from "@/lib/config-yaml";
 
 const CLIPROXYAPI_MANAGEMENT_URL =
   process.env.CLIPROXYAPI_MANAGEMENT_URL ||
@@ -45,6 +46,52 @@ function extractQueueEntries(responseJson: unknown): unknown[] | null {
           null
         : null;
   return Array.isArray(rawEntries) ? rawEntries : null;
+}
+
+const QUEUE_RETENTION_KEY = "redis-usage-queue-retention-seconds";
+// Upstream maximum. The default (60 s) drops records before the 5-minute collector runs.
+const MIN_QUEUE_RETENTION_SECONDS = 3600;
+let queueRetentionEnsured = false;
+
+/**
+ * Existing installs keep their own config.yaml, so the template's retention never
+ * reaches them. Raise it once per process with a single config.yaml write (never
+ * lower it). Failures only log: collection must not depend on this.
+ */
+async function ensureUsageQueueRetention(runId: string): Promise<void> {
+  if (queueRetentionEnsured) return;
+  const headers = { Authorization: `Bearer ${MANAGEMENT_API_KEY}` };
+  const signal = () => AbortSignal.timeout(10_000);
+  try {
+    const configRes = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/config`, { headers, signal: signal() });
+    if (!configRes.ok) throw new Error(`GET /config returned ${configRes.status}`);
+    const config: unknown = await configRes.json();
+    const current =
+      typeof config === "object" && config !== null
+        ? Number((config as Record<string, unknown>)[QUEUE_RETENTION_KEY])
+        : Number.NaN;
+    if (current >= MIN_QUEUE_RETENTION_SECONDS) {
+      queueRetentionEnsured = true;
+      return;
+    }
+
+    const yamlRes = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/config.yaml`, { headers, signal: signal() });
+    if (!yamlRes.ok) throw new Error(`GET /config.yaml returned ${yamlRes.status}`);
+    const merged = mergeConfigYaml(await yamlRes.text(), { [QUEUE_RETENTION_KEY]: MIN_QUEUE_RETENTION_SECONDS });
+    const putRes = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/config.yaml`, {
+      method: "PUT",
+      headers: { ...headers, "Content-Type": "text/yaml" },
+      body: merged,
+      signal: signal(),
+    });
+    await putRes.body?.cancel().catch(() => undefined);
+    if (!putRes.ok) throw new Error(`PUT /config.yaml returned ${putRes.status}`);
+
+    queueRetentionEnsured = true;
+    logger.info({ runId, from: current, to: MIN_QUEUE_RETENTION_SECONDS }, "Raised CLIProxyAPI usage-queue retention");
+  } catch (error) {
+    logger.warn({ err: error, runId }, "Could not ensure usage-queue retention; collecting anyway");
+  }
 }
 
 function markCollectorError(runId: string, errorMessage: string): Promise<void> {
@@ -242,6 +289,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await ensureUsageQueueRetention(runId);
+
     let usageResponse: Response;
     let authFilesResponse: Response | null = null;
     try {

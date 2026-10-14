@@ -56,6 +56,7 @@ const V8_PATHS: Record<string, string[]> = {
   "error-logs-max-files": ["observability", "logs", "error-logs-max-files"],
   "request-log": ["observability", "logs", "request-log"],
   "usage-statistics-enabled": ["observability", "usage", "usage-statistics-enabled"],
+  "redis-usage-queue-retention-seconds": ["observability", "usage", "redis-usage-queue-retention-seconds"],
   "request-retry": ["routing", "retry", "request-retry"],
   "max-retry-interval": ["routing", "retry", "max-retry-interval"],
   "max-retry-credentials": ["routing", "retry", "max-retry-credentials"],

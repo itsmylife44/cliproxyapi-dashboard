@@ -86,6 +86,9 @@ const ALLOWED_MANAGEMENT_PATHS = new Set<string>([
   "oauth-excluded-models",
   "oauth-model-alias",
 
+  // Plugins (read-only list)
+  "plugins",
+
   // Vertex
   "vertex/import",
 

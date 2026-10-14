@@ -77,6 +77,7 @@ export default function SettingsPage() {
   const t = useTranslations('settings');
   const tc = useTranslations('common');
   const tb = useTranslations('backup');
+  const tu = useTranslations('updateOverlay');
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
 
@@ -196,7 +197,10 @@ export default function SettingsPage() {
         }, 10000);
       } else {
         const data = await res.json();
-        showToast(extractApiError(data, t('errorUpdateFailed')), "error");
+        const message = data?.error?.code === "PROXY_VERSION_PIN_UNAVAILABLE"
+          ? tu('errorVersionPinUnavailable')
+          : extractApiError(data, t('errorUpdateFailed'));
+        showToast(message, "error");
       }
     } catch {
       showToast(t('toastNetworkErrorUpdate'), 'error');

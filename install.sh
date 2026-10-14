@@ -913,6 +913,17 @@ EOF
     log_success ".env file created"
 fi
 
+# The dashboard container (UID 1001) pins the CLIProxyAPI version in .env when an
+# admin switches versions in the UI. Skipped if UID 1001 is a real host account,
+# which would then own the secrets; version switching stays off until fixed by hand.
+if [ $DASHBOARD_ONLY -eq 0 ]; then
+    if getent passwd 1001 > /dev/null; then
+        log_warning "UID 1001 exists on this host; in-app CLIProxyAPI version switching stays off (see docs/ENV.md, CLIPROXYAPI_IMAGE_TAG)"
+    else
+        chown 1001 "$ENV_FILE"
+    fi
+fi
+
 echo ""
 
 # ============================================================================

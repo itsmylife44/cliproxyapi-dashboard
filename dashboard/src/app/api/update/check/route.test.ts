@@ -120,6 +120,25 @@ describe("GET /api/update/check", () => {
     expect(body.currentVersion).toBe("v6.1.0");
   });
 
+  it("reports the pinned tag as the current version and offers newer releases", async () => {
+    mockDocker("eceasy/cli-proxy-api:v6.1.0", LOCAL_CONFIG_ID, [`eceasy/cli-proxy-api@${HUB_OLDER}`]);
+
+    const { body } = await callRoute();
+
+    expect(body.currentVersion).toBe("v6.1.0");
+    expect(body.latestVersion).toBe("v6.2.0");
+    expect(body.updateAvailable).toBe(true);
+  });
+
+  it("reports no update when the pinned tag is the newest release", async () => {
+    mockDocker("eceasy/cli-proxy-api:v6.2.0", LOCAL_CONFIG_ID, [`eceasy/cli-proxy-api@${HUB_LATEST}`]);
+
+    const { body } = await callRoute();
+
+    expect(body.currentVersion).toBe("v6.2.0");
+    expect(body.updateAvailable).toBe(false);
+  });
+
   it("falls back to .Image when the image has no RepoDigests", async () => {
     mockDocker("eceasy/cli-proxy-api:latest", HUB_OLDER, []);
 

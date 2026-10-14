@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import useSWR from "swr";
+import { useTranslations } from "next-intl";
 import { extractApiError } from "@/lib/utils";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { useAuth } from "@/hooks/use-auth";
@@ -46,6 +47,7 @@ function setDismissedVersion(version: string): void {
 export function useProxyUpdateCheck() {
   const { user } = useAuth();
   const isAdmin = user?.isAdmin ?? false;
+  const t = useTranslations("updateOverlay");
   const [showPopup, setShowPopup] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
@@ -97,7 +99,11 @@ export function useProxyUpdateCheck() {
 
         if (!res.ok) {
           const data = await res.json();
-          throw new Error(extractApiError(data, "Update failed"));
+          throw new Error(
+            data?.error?.code === "PROXY_VERSION_PIN_UNAVAILABLE"
+              ? t("errorVersionPinUnavailable")
+              : extractApiError(data, "Update failed")
+          );
         }
 
         if (updateInfo?.latestVersion) {
@@ -114,7 +120,7 @@ export function useProxyUpdateCheck() {
         setIsUpdating(false);
       }
     },
-    [updateInfo]
+    [updateInfo, t]
   );
 
   return {

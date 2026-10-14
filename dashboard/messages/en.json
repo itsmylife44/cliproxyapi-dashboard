@@ -1149,6 +1149,7 @@
     "updateComplete": "Update complete",
     "updateError": "Update failed",
     "retryButton": "Retry",
+    "errorVersionPinUnavailable": "Version switching is turned off: the dashboard cannot write the stack .env file, so the next docker compose up would undo the switch. Mount infrastructure/.env writable at /opt/cliproxyapi/host.env (see docs/ENV.md, CLIPROXYAPI_IMAGE_TAG), or set CLIPROXYAPI_IMAGE_TAG in .env yourself.",
     "labelDashboard": "Dashboard",
     "labelProxy": "CLIProxyAPI",
     "titleUpdating": "Updating {label}",

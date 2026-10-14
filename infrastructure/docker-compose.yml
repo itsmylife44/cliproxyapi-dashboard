@@ -34,8 +34,9 @@ services:
       start_period: 10s
 
   # CLIProxyAPI Service — requires ./config/config.yaml with `port: 8317` (OAuth URLs fail if unset)
+  # Version: CLIPROXYAPI_IMAGE_TAG in .env (default below is the tested release); the in-app updater rewrites it.
   cliproxyapi:
-    image: eceasy/cli-proxy-api:latest
+    image: eceasy/cli-proxy-api:${CLIPROXYAPI_IMAGE_TAG:-v8.0.29}
     container_name: cliproxyapi
     restart: unless-stopped
     # Resource limits (calibrated from real usage: ~25MiB actual)
@@ -175,6 +176,8 @@ services:
       - ./.env
     volumes:
       - ${INSTALL_DIR:-.}/infrastructure:/opt/cliproxyapi/infrastructure:ro
+      # Writable so the in-app updater can pin CLIPROXYAPI_IMAGE_TAG (must stay owned by UID 1001)
+      - ./.env:/opt/cliproxyapi/host.env
       - backup_data:/app/backups
     depends_on:
       postgres:

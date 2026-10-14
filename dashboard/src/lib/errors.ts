@@ -94,6 +94,9 @@ export const ERROR_CODE = {
   /** Provider operation failed */
   PROVIDER_ERROR: "PROVIDER_ERROR",
 
+  /** The host .env that pins the CLIProxyAPI image is not mounted writable */
+  PROXY_VERSION_PIN_UNAVAILABLE: "PROXY_VERSION_PIN_UNAVAILABLE",
+
   // ============================================
   // INTERNAL_* - Server Errors
   // ============================================

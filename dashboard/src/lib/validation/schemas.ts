@@ -3,6 +3,7 @@ import {
   PASSWORD_MIN_LENGTH,
   PASSWORD_MAX_LENGTH,
 } from "@/lib/auth/validation";
+import { DOCKER_TAG_PATTERN } from "@/lib/proxy-image-pin";
 
 // ============================================================================
 // MODEL PREFERENCES
@@ -355,8 +356,6 @@ export const ConfirmActionSchema = z.object({
     message: "Confirmation required: set confirm to true",
   }),
 });
-
-const DOCKER_TAG_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/;
 
 export const UpdateProxySchema = z.object({
   version: z

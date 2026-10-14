@@ -1149,6 +1149,7 @@
     "updateComplete": "Update abgeschlossen",
     "updateError": "Update fehlgeschlagen",
     "retryButton": "Erneut versuchen",
+    "errorVersionPinUnavailable": "Versionswechsel ist deaktiviert: Das Dashboard kann die .env-Datei des Stacks nicht schreiben, daher würde das nächste docker compose up den Wechsel rückgängig machen. Binde infrastructure/.env beschreibbar unter /opt/cliproxyapi/host.env ein (siehe docs/ENV.md, CLIPROXYAPI_IMAGE_TAG) oder setze CLIPROXYAPI_IMAGE_TAG selbst in der .env.",
     "labelDashboard": "Dashboard",
     "labelProxy": "CLIProxyAPI",
     "titleUpdating": "{label} wird aktualisiert",

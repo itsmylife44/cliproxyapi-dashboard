@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+import { mkdtemp, readFile, writeFile } from "fs/promises";
+import { tmpdir } from "os";
+import path from "path";
 
 vi.mock("server-only", () => ({}));
 
@@ -71,10 +74,20 @@ async function postUpdate(version: string) {
   return { status: res.status, body: await res.json() };
 }
 
+const ENV_BEFORE = "# stack\nTZ=UTC\nCLIPROXYAPI_IMAGE_TAG=v8.0.29\nJWT_SECRET=s3cret\n";
+let envFile: string;
+
+function dockerCalls(): string[][] {
+  return dockerMock.mock.calls.map(([args]) => args as string[]);
+}
+
 describe("POST /api/update", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     vi.resetModules();
+    envFile = path.join(await mkdtemp(path.join(tmpdir(), "update-")), ".env");
+    await writeFile(envFile, ENV_BEFORE);
+    vi.stubEnv("CLIPROXYAPI_HOST_ENV_FILE", envFile);
     verifySessionMock.mockResolvedValue({ userId: "admin" });
     findUniqueMock.mockResolvedValue({ isAdmin: true });
     dockerMock.mockImplementation(fakeDocker);
@@ -91,5 +104,60 @@ describe("POST /api/update", () => {
     }
     expect(run.join(" ")).not.toContain("org.opencontainers");
     expect(run.at(-1)).toBe("eceasy/cli-proxy-api:v8.0.28");
+  });
+
+  it("refuses before touching docker when the host env file is not mounted", async () => {
+    vi.stubEnv("CLIPROXYAPI_HOST_ENV_FILE", "/nonexistent/host.env");
+
+    const { status, body } = await postUpdate("v8.0.28");
+
+    expect(status).toBe(409);
+    expect(body.error.code).toBe("PROXY_VERSION_PIN_UNAVAILABLE");
+    expect(dockerCalls()).toEqual([]);
+  });
+
+  it("pins the chosen tag in the env file after pulling it, before recreating", async () => {
+    const order: string[] = [];
+    dockerMock.mockImplementation((args: string[]) => {
+      if (args[0] === "pull" || args[0] === "run") order.push(args[0]);
+      return fakeDocker(args);
+    });
+
+    const { status } = await postUpdate("v8.0.28");
+
+    expect(status).toBe(200);
+    expect(order).toEqual(["pull", "run"]);
+    expect(await readFile(envFile, "utf8")).toBe(ENV_BEFORE.replace("v8.0.29", "v8.0.28"));
+  });
+
+  it("restores the previous image and env line when the new container fails to start", async () => {
+    dockerMock.mockImplementation((args: string[]) => {
+      if (args[0] === "run" && args.at(-1) === "eceasy/cli-proxy-api:v8.0.28") {
+        throw new Error("port already allocated");
+      }
+      return fakeDocker(args);
+    });
+
+    const { status } = await postUpdate("v8.0.28");
+
+    expect(status).toBe(500);
+    expect(runCalls().map((args) => args.at(-1))).toEqual([
+      "eceasy/cli-proxy-api:v8.0.28",
+      "eceasy/cli-proxy-api:v8.0.29",
+    ]);
+    expect(await readFile(envFile, "utf8")).toBe(ENV_BEFORE);
+  });
+
+  it("leaves the container and env file alone when the pull fails", async () => {
+    dockerMock.mockImplementation((args: string[]) => {
+      if (args[0] === "pull") throw new Error("manifest unknown");
+      return fakeDocker(args);
+    });
+
+    const { status } = await postUpdate("v9.9.9");
+
+    expect(status).toBe(500);
+    expect(dockerCalls().filter((args) => args[0] === "rm" || args[0] === "run")).toEqual([]);
+    expect(await readFile(envFile, "utf8")).toBe(ENV_BEFORE);
   });
 });

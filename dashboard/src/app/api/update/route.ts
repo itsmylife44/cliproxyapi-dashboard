@@ -25,6 +25,8 @@ interface ContainerConfig {
   networks: string[];
   ports: string[];
   restartPolicy: string;
+  /** compose's own labels, so `docker compose` keeps treating the container as its service */
+  composeLabels: string[];
 }
 
 function getCommandErrorText(error: unknown): string {
@@ -59,6 +61,9 @@ async function getContainerConfig(): Promise<ContainerConfig> {
     networks: Object.keys(inspect.NetworkSettings?.Networks || {}),
     ports,
     restartPolicy: hostConfig.RestartPolicy?.Name || "unless-stopped",
+    composeLabels: Object.entries((config.Labels || {}) as Record<string, string>)
+      .filter(([key]) => key.startsWith("com.docker.compose."))
+      .map(([key, value]) => `${key}=${value}`),
   };
 }
 
@@ -72,6 +77,7 @@ function buildRunArgs(cfg: ContainerConfig, imageTag: string): string[] {
   for (const vol of cfg.volumes) { args.push("-v", vol); }
   for (const port of cfg.ports) { args.push("-p", port); }
   for (const net of cfg.networks) { args.push("--network", net); }
+  for (const label of cfg.composeLabels) { args.push("--label", label); }
 
   args.push(
     "--health-cmd", "wget --no-verbose --tries=1 -O /dev/null http://localhost:8317/",

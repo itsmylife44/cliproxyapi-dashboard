@@ -16,10 +16,13 @@ on:
         description: "Existing tag to build (only for 'build-existing-tag', e.g. dashboard-v0.1.50)"
         required: false
 
-permissions:
-  contents: write
-  pull-requests: write
-  packages: write
+# Least privilege: each job grants only what it needs.
+permissions: {}
+
+# Overlapping releases race on GHCR tags and the version.json push — queue them, never cancel.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}/dashboard
@@ -31,12 +34,15 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.action == 'create-release' }}
+    permissions:
+      contents: write
+      pull-requests: write
     outputs:
       release_created: ${{ steps.resolve.outputs.release_created }}
       tag_name: ${{ steps.resolve.outputs.tag_name }}
       version: ${{ steps.resolve.outputs.version }}
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
         id: release
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -50,9 +56,11 @@ jobs:
           RP_TAG_NAME: ${{ steps.release.outputs['dashboard--tag_name'] || steps.release.outputs.tag_name }}
           RP_VERSION: ${{ steps.release.outputs['dashboard--version'] || steps.release.outputs.version }}
         run: |
-          echo "release_created=${RP_RELEASE_CREATED}" >> "$GITHUB_OUTPUT"
-          echo "tag_name=${RP_TAG_NAME}" >> "$GITHUB_OUTPUT"
-          echo "version=${RP_VERSION}" >> "$GITHUB_OUTPUT"
+          {
+            echo "release_created=${RP_RELEASE_CREATED}"
+            echo "tag_name=${RP_TAG_NAME}"
+            echo "version=${RP_VERSION}"
+          } >> "$GITHUB_OUTPUT"
 
           if [ "${RP_RELEASE_CREATED}" = "true" ]; then
             echo "✅ Release created: ${RP_TAG_NAME} (${RP_VERSION})"
@@ -60,29 +68,92 @@ jobs:
             echo "ℹ️ No release created — Release Please PR opened/updated. Merge the PR, then run this workflow again."
           fi
 
-  tag-contributors:
+  # Resolve the tag to build (new release or the requested existing tag), its commit,
+  # and whether it is the newest release. Everything downstream uses these outputs.
+  resolve:
     runs-on: ubuntu-latest
     needs: release-please
     if: >-
       always() &&
       (needs.release-please.outputs.release_created == 'true' ||
-       (github.event.inputs.action == 'build-existing-tag' && github.event.inputs.tag_name != ''))
+       github.event.inputs.action == 'build-existing-tag')
+    permissions:
+      contents: read
+    outputs:
+      tag_name: ${{ steps.resolve.outputs.tag_name }}
+      version: ${{ steps.resolve.outputs.version }}
+      sha: ${{ steps.resolve.outputs.sha }}
+      is_latest: ${{ steps.resolve.outputs.is_latest }}
+    steps:
+      - name: Resolve tag, commit and latest
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTION: ${{ github.event.inputs.action }}
+          INPUT_TAG: ${{ github.event.inputs.tag_name }}
+          RP_TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          if [ "$ACTION" = "build-existing-tag" ]; then
+            TAG="$INPUT_TAG"
+          else
+            TAG="$RP_TAG"
+          fi
+          if [[ ! "$TAG" =~ ^dashboard-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::tag_name must match dashboard-vX.Y.Z"
+            exit 1
+          fi
+
+          # Commit the tag points to (commits/{ref} dereferences annotated tags).
+          SHA=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TAG}" --jq .sha)
+
+          # Only the newest release may move :latest and version.json.
+          # Fails closed: if the latest release can't be read, the job fails.
+          LATEST=$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)
+          if [ "$(printf '%s\n%s\n' "$LATEST" "$TAG" | sort -V | tail -n1)" = "$TAG" ]; then
+            IS_LATEST=true
+          else
+            IS_LATEST=false
+          fi
+
+          {
+            echo "tag_name=${TAG}"
+            echo "version=${TAG#dashboard-v}"
+            echo "sha=${SHA}"
+            echo "is_latest=${IS_LATEST}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Tag ${TAG} -> ${SHA} (latest release: ${LATEST}, is_latest=${IS_LATEST})"
+
+  tag-contributors:
+    runs-on: ubuntu-latest
+    needs: resolve
+    if: ${{ !cancelled() && needs.resolve.result == 'success' }}
     continue-on-error: true
+    permissions:
+      contents: write
     steps:
       - name: Add contributors to release notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ needs.release-please.outputs.tag_name || github.event.inputs.tag_name }}
+          TAG_NAME: ${{ needs.resolve.outputs.tag_name }}
         run: |
-          PREV_TAG=$(gh api "repos/${{ github.repository }}/releases" \
-            --jq "[.[] | select(.tag_name != \"${TAG_NAME}\")] | first | .tag_name" 2>&1) || PREV_TAG=""
+          CURRENT_BODY=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG_NAME}" --jq '.body')
+          if printf '%s\n' "$CURRENT_BODY" | grep -q '^## Contributors'; then
+            echo "Contributors section already present, skipping"
+            exit 0
+          fi
 
-          if [ -z "$PREV_TAG" ] || echo "$PREV_TAG" | grep -q "Not Found"; then
+          # Previous release = the one right before TAG_NAME in version order
+          # (correct for rebuilds of older tags too, not just the newest one).
+          PREV_TAG=$( { gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --paginate --jq '.[].tag_name'; echo "$TAG_NAME"; } \
+            | grep -E '^dashboard-v[0-9]+\.[0-9]+\.[0-9]+$' | sort -uV \
+            | awk -v t="$TAG_NAME" '$0 == t { print p; exit } { p = $0 }')
+
+          if [ -z "$PREV_TAG" ]; then
             echo "No previous release found, skipping"
             exit 0
           fi
 
-          CONTRIBUTORS=$(gh api "repos/${{ github.repository }}/compare/${PREV_TAG}...${TAG_NAME}" \
+          CONTRIBUTORS=$(gh api "repos/${GITHUB_REPOSITORY}/compare/${PREV_TAG}...${TAG_NAME}" \
             --jq '[.commits[].author.login // empty] | unique | map(select(. != "github-actions[bot]" and . != "dependabot[bot]" and . != "renovate[bot]")) | map("@" + .) | join(", ")' 2>/dev/null || echo "")
 
           if [ -z "$CONTRIBUTORS" ]; then
@@ -90,10 +161,9 @@ jobs:
             exit 0
           fi
 
-          CURRENT_BODY=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG_NAME}" --jq '.body')
           NEW_BODY=$(printf '%s\n\n## Contributors\n\nThank you to the following contributors: %s' "${CURRENT_BODY}" "${CONTRIBUTORS}")
 
-          gh api "repos/${{ github.repository }}/releases/tags/${TAG_NAME}" \
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG_NAME}" \
             -X PATCH \
             -f body="${NEW_BODY}"
 
@@ -101,6 +171,7 @@ jobs:
 
   # Build each platform natively in parallel — no QEMU emulation needed.
   # amd64 on self-hosted (Hetzner), arm64 on GitHub's native ARM runner.
+  # self-hosted is only reachable via workflow_dispatch (write access) — never add PR triggers here.
   build:
     strategy:
       fail-fast: true
@@ -113,59 +184,50 @@ jobs:
             runner: ubuntu-24.04-arm
             suffix: arm64
     runs-on: ${{ matrix.runner }}
-    needs: [release-please]
-    if: >-
-      always() &&
-      (needs.release-please.outputs.release_created == 'true' ||
-       (github.event.inputs.action == 'build-existing-tag' && github.event.inputs.tag_name != ''))
+    needs: resolve
+    if: ${{ !cancelled() && needs.resolve.result == 'success' }}
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
+          ref: ${{ needs.resolve.outputs.sha }}
           clean: true
-
-      - name: Resolve version
-        id: version
-        run: |
-          if [ "${{ github.event.inputs.action }}" = "build-existing-tag" ]; then
-            TAG="${{ github.event.inputs.tag_name }}"
-          else
-            TAG="${{ needs.release-please.outputs.tag_name }}"
-          fi
-          VERSION=$(echo "$TAG" | sed 's/^.*v//')
-          echo "tag_name=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          persist-credentials: false
 
       - name: Log in to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Build and push by digest
         id: build
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: ./dashboard
           file: ./dashboard/Dockerfile
           platforms: ${{ matrix.platform }}
           no-cache: true
           build-args: |
-            DASHBOARD_VERSION=${{ steps.version.outputs.tag_name }}
+            DASHBOARD_VERSION=${{ needs.resolve.outputs.tag_name }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           rm -rf /tmp/digests
           mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
+          touch "/tmp/digests/${DIGEST#sha256:}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: digest-${{ matrix.suffix }}
           path: /tmp/digests/*
@@ -175,30 +237,21 @@ jobs:
   # Merge per-platform images into a single multi-arch manifest.
   merge:
     runs-on: ubuntu-latest
-    needs: [release-please, build]
-    if: ${{ always() && !cancelled() && needs.build.result == 'success' }}
+    needs: [resolve, build]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - name: Resolve version
-        id: version
-        run: |
-          if [ "${{ github.event.inputs.action }}" = "build-existing-tag" ]; then
-            TAG="${{ github.event.inputs.tag_name }}"
-          else
-            TAG="${{ needs.release-please.outputs.tag_name }}"
-          fi
-          VERSION=$(echo "$TAG" | sed 's/^.*v//')
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "tag_name=${TAG}" >> "$GITHUB_OUTPUT"
-
       - name: Download digests
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: /tmp/digests
           pattern: digest-*
           merge-multiple: true
 
       - name: Log in to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -206,55 +259,53 @@ jobs:
 
       - name: Create and push manifest
         working-directory: /tmp/digests
+        env:
+          VERSION: ${{ needs.resolve.outputs.version }}
+          SHA: ${{ needs.resolve.outputs.sha }}
+          IS_LATEST: ${{ needs.resolve.outputs.is_latest }}
         run: |
-          TAGS="-t ${{ env.IMAGE }}:${{ steps.version.outputs.version }}"
-          TAGS="$TAGS -t ${{ env.IMAGE }}:latest"
-          TAGS="$TAGS -t ${{ env.IMAGE }}:sha-${GITHUB_SHA::7}"
+          TAGS="-t ${IMAGE}:${VERSION}"
+          TAGS="$TAGS -t ${IMAGE}:sha-${SHA::7}"
+          # Rebuilding an older tag must not move :latest backwards.
+          if [ "$IS_LATEST" = "true" ]; then
+            TAGS="$TAGS -t ${IMAGE}:latest"
+          fi
 
           SOURCES=""
           for digest in *; do
-            SOURCES="$SOURCES ${{ env.IMAGE }}@sha256:$digest"
+            SOURCES="$SOURCES ${IMAGE}@sha256:$digest"
           done
 
           echo "📦 Creating multi-arch manifest..."
-          echo "   Tags: ${{ steps.version.outputs.version }}, latest, sha-${GITHUB_SHA::7}"
+          echo "   Tags: $TAGS"
           echo "   Sources: $SOURCES"
 
+          # shellcheck disable=SC2086 # word splitting is intended
           docker buildx imagetools create $TAGS $SOURCES
 
   # Update version.json so dashboards can check for updates without GitHub API rate limits.
+  # Only for the newest release — rebuilding an older tag must not advertise it as the update.
   update-version-json:
     runs-on: ubuntu-latest
-    needs: [release-please, merge]
+    needs: [resolve, merge]
     if: >-
-      always() &&
+      !cancelled() &&
       needs.merge.result == 'success' &&
-      (needs.release-please.outputs.release_created == 'true' ||
-       (github.event.inputs.action == 'build-existing-tag' && github.event.inputs.tag_name != ''))
+      needs.resolve.outputs.is_latest == 'true'
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: main
-
-      - name: Resolve version
-        id: version
-        run: |
-          if [ "${{ github.event.inputs.action }}" = "build-existing-tag" ]; then
-            TAG="${{ github.event.inputs.tag_name }}"
-          else
-            TAG="${{ needs.release-please.outputs.tag_name }}"
-          fi
-          VERSION=$(echo "$TAG" | sed 's/^.*v//')
-          echo "tag_name=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Update version.json
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ steps.version.outputs.tag_name }}
-          VERSION: ${{ steps.version.outputs.version }}
+          TAG_NAME: ${{ needs.resolve.outputs.tag_name }}
+          VERSION: ${{ needs.resolve.outputs.version }}
         run: |
-          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME}"
+          RELEASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG_NAME}"
           RELEASE_NOTES=$(gh release view "${TAG_NAME}" --json body -q .body 2>/dev/null | head -c 2000 || echo "")
 
           jq -n \
@@ -266,10 +317,12 @@ jobs:
             > version.json
 
       - name: Commit version.json
+        env:
+          VERSION: ${{ needs.resolve.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add version.json
           git diff --staged --quiet && echo "No changes to commit" && exit 0
-          git commit -m "chore: update version.json to ${{ steps.version.outputs.version }}"
+          git commit -m "chore: update version.json to ${VERSION}"
           git push

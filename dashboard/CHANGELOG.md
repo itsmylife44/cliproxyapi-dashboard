@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.86](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.85...dashboard-v0.1.86) (2026-10-14)
+
+
+### Features
+
+* **pricing:** price OpenCode Go models and bill DeepSeek peak hours ([#236](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/236)) ([55fa96b](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/55fa96bcdcf5d5c978b392d47e43515ed90f820c))
+
+
+### Bug Fixes
+
+* **update:** compare proxy registry digest, not local image ID ([#241](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/241)) ([0952116](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/0952116e4d5a63507e0c89b0bd532fbb12c62b5c))
+
 ## [0.1.85](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.84...dashboard-v0.1.85) (2026-10-02)
 
 

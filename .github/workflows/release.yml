@@ -167,9 +167,8 @@ jobs:
 
           NEW_BODY=$(printf '%s\n\n## Contributors\n\nThank you to the following contributors: %s' "${CURRENT_BODY}" "${CONTRIBUTORS}")
 
-          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG_NAME}" \
-            -X PATCH \
-            -f body="${NEW_BODY}"
+          # PATCH only exists on /releases/{id}, not /releases/tags/{tag}; gh release edit resolves the id.
+          gh release edit "${TAG_NAME}" --repo "${GITHUB_REPOSITORY}" --notes "${NEW_BODY}"
 
           echo "Done"
 

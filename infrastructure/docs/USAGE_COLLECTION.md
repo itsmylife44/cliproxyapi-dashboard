@@ -13,10 +13,11 @@ CLIProxyAPI Dashboard includes an **automated usage collection system** that tra
 > usage-statistics-enabled: true               # otherwise nothing is queued
 > redis-usage-queue-retention-seconds: 3600    # upstream default 60 drops records before the collector runs
 > ```
-> CLIProxyAPI discards queued records older than the retention (max 3600 s). New installs get both
-> from the template. On existing installs the first collector run after a dashboard start raises a
-> lower or missing retention to 3600 with one `config.yaml` write through the management API (a
-> higher value is never lowered; a failed write is logged and retried on the next run).
+> CLIProxyAPI discards queued records older than the retention (max 3600 s). The template sets only
+> `usage-statistics-enabled`; the retention is set by the collector on every install: its first run
+> after a dashboard start raises a lower or missing retention to 3600 with one `config.yaml` write
+> through the management API (a higher value is never lowered; a failed write is logged and retried
+> on the next run).
 
 ## Architecture
 

@@ -8,7 +8,6 @@ import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { mergeConfigYaml } from "@/lib/config-yaml";
 import AgentConfigEditor from "@/components/config/agent-config-editor";
 import ConfigPreview from "@/components/config/config-preview";
-import yaml from "js-yaml";
 import { useTranslations } from 'next-intl';
 
 export interface StreamingConfig {
@@ -581,11 +580,7 @@ export default function ConfigPage() {
     const handleEmergencyProxyReset = async () => {
       setResettingProxy(true);
       try {
-        const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
-          method: "PUT",
-          headers: { "Content-Type": "text/yaml" },
-          body: yaml.dump({ "proxy-url": "" }, { lineWidth: -1, noRefs: true, quotingType: '"', forceQuotes: true }),
-        });
+        const res = await fetch(API_ENDPOINTS.MANAGEMENT.PROXY_URL, { method: "DELETE" });
 
         if (res.ok) {
           showToast(t('toastProxyCleared'), "success");

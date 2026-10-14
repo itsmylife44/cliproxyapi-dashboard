@@ -130,10 +130,12 @@ For full plugin documentation, see [opencode-cliproxyapi-sync](https://github.co
 
 The dashboard automatically collects usage statistics from CLIProxyAPI every 5 minutes using a dedicated cron service.
 
+CLIProxyAPI only queues usage when `usage-statistics-enabled: true`, and drops queued records after `redis-usage-queue-retention-seconds` (upstream default 60 s). The config template sets `3600`; `./rebuild.sh` adds it to an existing `config.yaml` that lacks it. Local stacks (`setup-local.sh`) have no collector service; collect from the Usage page.
+
 ### How It Works
 
 1. **Usage Collector Service**: Runs as a Docker container with cron job
-2. **Collection Endpoint**: `POST /api/usage/collect` fetches data from CLIProxyAPI
+2. **Collection Endpoint**: `POST /api/usage/collect` drains the CLIProxyAPI usage queue in batches of 500 until it is empty
 3. **Data Storage**: Usage records stored in PostgreSQL with deduplication
 4. **Dashboard Display**: View statistics on the Usage page
 

@@ -6,6 +6,28 @@ set -e
 
 cd "$(dirname "$0")/infrastructure"
 
+# Installs keep their own config/config.yaml (CLIProxyAPI rewrites it), so the
+# template's usage-queue retention never reaches them. Upstream defaults to 60 s,
+# which drops usage records before the 5-minute collector runs. Set 3600 when the
+# key is missing or still at the default 60; any other value is left alone.
+# Called while the proxy is stopped: one in-place write (keeps the bind-mounted inode).
+ensure_usage_queue_retention() {
+    local file="$1" key="redis-usage-queue-retention-seconds" tmp
+    [ -f "$file" ] || return 0
+    tmp="$(mktemp)"
+    if grep -qE "^[[:space:]]*${key}:" "$file"; then
+        sed -E "s/^([[:space:]]*${key}:)[[:space:]]*(60)?[[:space:]]*$/\1 3600/" "$file" > "$tmp"
+    else
+        # Root key also works in v8-layout files; upstream nests it on its next write.
+        { cat "$file"; [ -z "$(tail -c1 "$file")" ] || echo; echo "${key}: 3600"; } > "$tmp"
+    fi
+    if ! cmp -s "$file" "$tmp"; then
+        cat "$tmp" > "$file"
+        echo "Set ${key}: 3600 in $file"
+    fi
+    rm -f "$tmp"
+}
+
 echo "=== CLIProxyAPI Dashboard Update ==="
 echo ""
 
@@ -23,6 +45,7 @@ else
     echo ""
     echo "[2/3] Stopping and removing old containers..."
     docker compose down
+    ensure_usage_queue_retention config/config.yaml
 
     echo ""
     echo "[3/3] Starting fresh containers..."

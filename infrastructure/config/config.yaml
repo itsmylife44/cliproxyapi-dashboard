@@ -82,6 +82,9 @@ commercial-mode: false
 # Enable in-memory usage statistics aggregation
 # Set to true for production monitoring, false to reduce memory overhead.
 usage-statistics-enabled: true
+# How long queued usage records survive before the dashboard collects them.
+# Upstream default is 60 s (max 3600); the collector runs every 5 minutes.
+redis-usage-queue-retention-seconds: 3600
 # ============================================================================
 # PROXY & NETWORKING
 # ============================================================================

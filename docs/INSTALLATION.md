@@ -64,7 +64,7 @@ The installer will:
 5. Pull the pre-built dashboard image from GHCR
 6. Create `infrastructure/.env` with all required configuration
 7. Create a systemd service for automatic startup on boot
-8. Set up automated usage collection service (cron-based)
+8. Set up automated usage collection (the `usage-collector` container; a host crontab entry from older installs is removed)
 9. Optionally set up automated daily or weekly backups
 
 ### Post-Installation

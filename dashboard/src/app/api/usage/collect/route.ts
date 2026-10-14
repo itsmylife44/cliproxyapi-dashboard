@@ -14,6 +14,8 @@ const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
 const COLLECTOR_API_KEY = process.env.COLLECTOR_API_KEY;
 
 const BATCH_SIZE = 500;
+// Caps one run at 10k records; anything left stays queued for the next run.
+const MAX_QUEUE_BATCHES = 20;
 const LATENCY_BACKFILL_BATCH_SIZE = 100;
 const COLLECTOR_LEASE_STALE_MS = 15 * 60 * 1000;
 
@@ -21,6 +23,29 @@ const COLLECTOR_LEASE_STALE_MS = 15 * 60 * 1000;
 // drain-on-read queue at `/usage-queue`. Each GET returns the events
 // recorded since the previous read, then empties the queue server-side.
 // The response is a flat array of QueueEntry objects.
+
+function fetchUsageQueueBatch(): Promise<Response> {
+  return fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/usage-queue?count=${BATCH_SIZE}`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+    signal: AbortSignal.timeout(30_000),
+  });
+}
+
+// /usage-queue returns a flat array. Be defensive about wrapped shapes
+// that some intermediates may add (e.g. {queue: [...]} or {events: [...]}).
+function extractQueueEntries(responseJson: unknown): unknown[] | null {
+  const rawEntries: unknown =
+    Array.isArray(responseJson)
+      ? responseJson
+      : typeof responseJson === "object" && responseJson !== null
+        ? (responseJson as Record<string, unknown>).queue ??
+          (responseJson as Record<string, unknown>).events ??
+          (responseJson as Record<string, unknown>).usage ??
+          null
+        : null;
+  return Array.isArray(rawEntries) ? rawEntries : null;
+}
 
 function markCollectorError(runId: string, errorMessage: string): Promise<void> {
   return prisma.collectorState
@@ -221,11 +246,7 @@ export async function POST(request: NextRequest) {
     let authFilesResponse: Response | null = null;
     try {
       [usageResponse, authFilesResponse] = await Promise.all([
-        fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/usage-queue?count=${BATCH_SIZE}`, {
-          method: "GET",
-          headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-          signal: AbortSignal.timeout(30_000),
-        }),
+        fetchUsageQueueBatch(),
         fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/auth-files`, {
           method: "GET",
           headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
@@ -282,20 +303,9 @@ export async function POST(request: NextRequest) {
     }
 
     const responseJson: unknown = await usageResponse.json();
+    const rawEntries = extractQueueEntries(responseJson);
 
-    // /usage-queue returns a flat array. Be defensive about wrapped shapes
-    // that some intermediates may add (e.g. {queue: [...]} or {events: [...]}).
-    const rawEntries: unknown =
-      Array.isArray(responseJson)
-        ? responseJson
-        : typeof responseJson === "object" && responseJson !== null
-          ? (responseJson as Record<string, unknown>).queue ??
-            (responseJson as Record<string, unknown>).events ??
-            (responseJson as Record<string, unknown>).usage ??
-            null
-          : null;
-
-    if (!Array.isArray(rawEntries)) {
+    if (!rawEntries) {
       logger.error(
         { response: JSON.stringify(responseJson).slice(0, 200) },
         "Unexpected usage-queue response format from CLIProxyAPI"
@@ -305,6 +315,24 @@ export async function POST(request: NextRequest) {
     }
 
     const entries = rawEntries.filter(isUsageQueueEntry);
+
+    // Each read pops up to BATCH_SIZE records, so keep reading until a short
+    // batch. Records already popped are gone upstream: a failing follow-up
+    // read ends the loop but still persists what we have.
+    let lastBatchSize = rawEntries.length;
+    for (let batches = 1; lastBatchSize >= BATCH_SIZE && batches < MAX_QUEUE_BATCHES; batches++) {
+      const nextResponse = await fetchUsageQueueBatch().catch(() => null);
+      const nextEntries = nextResponse?.ok
+        ? extractQueueEntries(await nextResponse.json().catch(() => null))
+        : null;
+      if (!nextEntries) {
+        await nextResponse?.body?.cancel().catch(() => undefined);
+        logger.warn({ runId, status: nextResponse?.status }, "Follow-up usage-queue read failed; persisting records collected so far");
+        break;
+      }
+      entries.push(...nextEntries.filter(isUsageQueueEntry));
+      lastBatchSize = nextEntries.length;
+    }
 
     const syncResult = await syncKeysToCliProxyApi();
     if (!syncResult.ok) {

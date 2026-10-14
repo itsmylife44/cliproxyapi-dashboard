@@ -8,10 +8,19 @@ CLIProxyAPI Dashboard includes an **automated usage collection system** that tra
 
 > **Key Point**: Usage data is collected every 5 minutes by a dedicated cron service and displayed in the Dashboard's Usage page.
 
+> **Required CLIProxyAPI settings** (`infrastructure/config/config.yaml`):
+> ```yaml
+> usage-statistics-enabled: true               # otherwise nothing is queued
+> redis-usage-queue-retention-seconds: 3600    # upstream default 60 drops records before the collector runs
+> ```
+> CLIProxyAPI discards queued records older than the retention (max 3600 s). New installs get both
+> from the template; `./rebuild.sh` adds the retention to an existing `config.yaml` when it is missing
+> or still at the default 60.
+
 ## Architecture
 
 ```
-CLIProxyAPI (in-memory stats)
+CLIProxyAPI (usage queue, kept for redis-usage-queue-retention-seconds)
     ↓ every 5 minutes
 Usage Collector Service (cron)
     ↓ fetches via Management API
@@ -61,7 +70,7 @@ usage-collector:
 **Process:**
 1. Authenticates request using `COLLECTOR_API_KEY`
 2. Acquires singleton lock (prevents concurrent collections)
-3. Fetches current usage from CLIProxyAPI Management API
+3. Drains the CLIProxyAPI usage queue (`GET /v0/management/usage-queue?count=500`), repeating until a batch returns fewer than 500 records (at most 20 batches per run; the rest waits for the next run)
 4. Maps API keys to users in the dashboard
 5. Deduplicates and batch-inserts into PostgreSQL
 6. Updates collection status and timestamps
@@ -314,7 +323,7 @@ The usage collector service is very lightweight:
 
 - **CPU**: ~0.1 cores (mostly idle)
 - **Memory**: ~64MB (Alpine + curl + cron)
-- **Network**: Minimal (one API call every 5 minutes)
+- **Network**: Minimal (one queue read per 500 queued records, every 5 minutes)
 
 ### Data Storage
 
@@ -331,6 +340,8 @@ The default 5-minute interval balances:
 - **Data freshness**: Recent activity visible quickly
 - **Resource efficiency**: Not overwhelming CLIProxyAPI
 - **Deduplication**: Sufficient time for request completion
+
+Keep the interval well below `redis-usage-queue-retention-seconds` (max 3600 s): records older than the retention are dropped before they are collected.
 
 To change frequency, modify the cron schedule in docker-compose.yml:
 
@@ -371,17 +382,17 @@ Modify the collector service cron schedule:
 ```bash
 # Edit docker-compose.yml, line ~210:
 echo '*/1 * * * *' # Every minute
-echo '*/10 * * * *' # Every 10 minutes  
-echo '0 * * * *'   # Hourly
-echo '0 0 * * *'   # Daily
+echo '*/10 * * * *' # Every 10 minutes
 ```
+
+Intervals of an hour or more lose data: the queue keeps records for at most 3600 s.
 
 ### Collection Timeout
 
 The collection endpoint has built-in timeouts:
 
 - **Singleton lock**: 15 minutes maximum
-- **CLIProxyAPI fetch**: 10 seconds
+- **CLIProxyAPI fetch**: 30 seconds per request
 - **Database operations**: No explicit timeout (relies on Prisma)
 
 ### Batch Processing
@@ -394,7 +405,7 @@ Large usage datasets are processed in batches:
 
 ## Migration from Legacy System
 
-If you're upgrading from an older version that used host machine cron:
+If you're upgrading from an older version that used host machine cron, re-running `install.sh` removes the old entry. To remove it by hand:
 
 ### Remove Old Cron Job
 

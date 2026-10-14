@@ -29,7 +29,7 @@ In `docker-compose.yml`, port 8317 is bound to `127.0.0.1:8317:8317`, which mean
 - The port is only accessible from localhost
 - External requests cannot reach it directly
 - All API traffic is routed through Caddy (ports 80/443)
-- Management API endpoints (`/v0/management/*`) are blocked by Caddy for public access
+- Management API endpoints (`/v0/management/*`, `/v8/management/*`, any `/v<N>/management`) are blocked by Caddy for public access
 
 This design ensures:
 1. All API requests go through Caddy's security headers and HTTPS

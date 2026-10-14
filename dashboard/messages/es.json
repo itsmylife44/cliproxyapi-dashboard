@@ -1144,6 +1144,7 @@
     "updateComplete": "Actualización completa",
     "updateError": "Actualización fallida",
     "retryButton": "Reintentar",
+    "errorVersionPinUnavailable": "El cambio de versión está desactivado: el panel no puede escribir el archivo .env del stack, así que el siguiente docker compose up desharía el cambio. Monta infrastructure/.env con escritura en /opt/cliproxyapi/host.env (consulta docs/ENV.md, CLIPROXYAPI_IMAGE_TAG) o define CLIPROXYAPI_IMAGE_TAG en .env tú mismo.",
     "labelDashboard": "Panel",
     "labelProxy": "CLIProxyAPI",
     "titleUpdating": "Actualizando {label}",

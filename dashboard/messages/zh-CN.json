@@ -1149,6 +1149,7 @@
     "updateComplete": "更新完成",
     "updateError": "更新失败",
     "retryButton": "重试",
+    "errorVersionPinUnavailable": "版本切换已关闭：仪表盘无法写入堆栈的 .env 文件，下一次 docker compose up 会撤销切换。请将 infrastructure/.env 以可写方式挂载到 /opt/cliproxyapi/host.env（参见 docs/ENV.md 中的 CLIPROXYAPI_IMAGE_TAG），或自行在 .env 中设置 CLIPROXYAPI_IMAGE_TAG。",
     "labelDashboard": "仪表盘",
     "labelProxy": "CLIProxyAPI",
     "titleUpdating": "正在更新 {label}",

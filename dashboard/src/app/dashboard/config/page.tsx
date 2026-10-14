@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { mergeConfigYaml, readAuthDir } from "@/lib/config-yaml";
+import { planConfigSave } from "@/lib/config-save-plan";
 import AgentConfigEditor from "@/components/config/agent-config-editor";
 import ConfigPreview from "@/components/config/config-preview";
 import { useTranslations } from 'next-intl';
@@ -232,35 +233,6 @@ export default function ConfigPage() {
     await executeSave();
   };
 
-  // Map of config fields to their dedicated Management API endpoints.
-  // Fields with dedicated endpoints are updated individually (safer, no full config overwrite).
-  // Fields without endpoints fall back to config.yaml update (only for those specific fields).
-  const FIELD_ENDPOINTS: Record<string, string> = {
-    "proxy-url": API_ENDPOINTS.MANAGEMENT.PROXY_URL,
-    "debug": API_ENDPOINTS.MANAGEMENT.DEBUG,
-    "logging-to-file": API_ENDPOINTS.MANAGEMENT.LOGGING_TO_FILE,
-    "logs-max-total-size-mb": API_ENDPOINTS.MANAGEMENT.LOGS_MAX_TOTAL_SIZE_MB,
-    "error-logs-max-files": API_ENDPOINTS.MANAGEMENT.ERROR_LOGS_MAX_FILES,
-    "usage-statistics-enabled": API_ENDPOINTS.MANAGEMENT.USAGE_STATISTICS_ENABLED,
-    "request-retry": API_ENDPOINTS.MANAGEMENT.REQUEST_RETRY,
-    "max-retry-interval": API_ENDPOINTS.MANAGEMENT.MAX_RETRY_INTERVAL,
-    "max-retry-credentials": API_ENDPOINTS.MANAGEMENT.MAX_RETRY_CREDENTIALS,
-    "request-log": API_ENDPOINTS.MANAGEMENT.REQUEST_LOG,
-    "ws-auth": API_ENDPOINTS.MANAGEMENT.WS_AUTH,
-    "force-model-prefix": API_ENDPOINTS.MANAGEMENT.FORCE_MODEL_PREFIX,
-  };
-
-  // Nested field endpoints (e.g., quota-exceeded.switch-project)
-  const NESTED_FIELD_ENDPOINTS: Record<string, Record<string, string>> = {
-    "quota-exceeded": {
-      "switch-project": API_ENDPOINTS.MANAGEMENT.QUOTA_EXCEEDED_SWITCH_PROJECT,
-      "switch-preview-model": API_ENDPOINTS.MANAGEMENT.QUOTA_EXCEEDED_SWITCH_PREVIEW_MODEL,
-    },
-    "routing": {
-      "strategy": API_ENDPOINTS.MANAGEMENT.ROUTING_STRATEGY,
-    },
-  };
-
   const executeSave = async () => {
     if (!config || !originalConfig) return;
 
@@ -270,99 +242,42 @@ export default function ConfigPage() {
       const errors: string[] = [];
       let successCount = 0;
 
-      // Helper to update a single field via its dedicated endpoint
-      const updateField = async (endpoint: string, value: unknown, body: unknown = { value }): Promise<boolean> => {
+      // At most one management write per save (see planConfigSave).
+      for (const write of planConfigSave(stripOAuthIds(originalConfig), stripOAuthIds(config))) {
         try {
-          const res = await fetch(endpoint, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          });
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            errors.push(`${endpoint}: ${errData.error || res.statusText}`);
-            return false;
-          }
-          return true;
-        } catch (error) {
-          errors.push(`${endpoint}: ${getErrorMessage(error)}`);
-          return false;
-        }
-      };
-
-      // Check each top-level field for changes
-      for (const key of Object.keys(FIELD_ENDPOINTS) as (keyof Config)[]) {
-        const oldVal = originalConfig[key];
-        const newVal = config[key];
-        const endpoint = FIELD_ENDPOINTS[key];
-        if (!endpoint || JSON.stringify(oldVal) === JSON.stringify(newVal)) {
-          continue;
-        }
-        const success = await updateField(endpoint, newVal);
-        if (success) successCount++;
-      }
-
-      // Check nested fields (quota-exceeded)
-      for (const [parentKey, subFields] of Object.entries(NESTED_FIELD_ENDPOINTS)) {
-        const oldParent = originalConfig[parentKey as keyof Config] as Record<string, unknown> | undefined;
-        const newParent = config[parentKey as keyof Config] as Record<string, unknown> | undefined;
-        if (oldParent && newParent) {
-          for (const [subKey, endpoint] of Object.entries(subFields)) {
-            if (JSON.stringify(oldParent[subKey]) !== JSON.stringify(newParent[subKey])) {
-              const success = await updateField(endpoint, newParent[subKey]);
-              if (success) successCount++;
+          if (write.kind === "endpoint") {
+            const res = await fetch(write.endpoint, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(write.body),
+            });
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              errors.push(`${write.endpoint}: ${errData.error || res.statusText}`);
+            } else {
+              successCount++;
             }
+            continue;
           }
-        }
-      }
 
-      // oauth-model-alias PUT takes the raw provider map as body, not { value }.
-      if (JSON.stringify(originalConfig["oauth-model-alias"]) !== JSON.stringify(config["oauth-model-alias"])) {
-        const aliases = stripOAuthIds(config)["oauth-model-alias"] ?? {};
-        if (await updateField(API_ENDPOINTS.MANAGEMENT.OAUTH_MODEL_ALIAS, aliases, aliases)) successCount++;
-      }
-
-      // For fields without dedicated endpoints, we need to use config.yaml
-      // But ONLY send those specific fields that changed and don't have endpoints
-      const fieldsWithoutEndpoints = [
-        "auth-dir", "streaming", "commercial-mode",
-        "disable-cooling", "passthrough-headers",
-        "tls", "pprof", "claude-header-defaults", "payload",
-      ] as const;
-
-      const yamlChanges: Record<string, unknown> = {};
-      for (const key of fieldsWithoutEndpoints) {
-        const oldVal = originalConfig[key];
-        const newVal = config[key];
-        if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
-          yamlChanges[key] = newVal;
-        }
-      }
-
-      // If there are fields that need config.yaml update, merge and write
-      if (Object.keys(yamlChanges).length > 0) {
-        try {
           const rawYamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML);
           if (!rawYamlRes.ok) {
             errors.push(t('failedToFetchYaml'));
+            continue;
+          }
+          const mergedYaml = mergeConfigYaml(await rawYamlRes.text(), write.changes);
+          const yamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
+            method: "PUT",
+            headers: { "Content-Type": "text/yaml" },
+            body: mergedYaml,
+          });
+          if (!yamlRes.ok) {
+            errors.push(t('failedToSaveYaml'));
           } else {
-            const rawYaml = await rawYamlRes.text();
-            const mergedYaml = mergeConfigYaml(rawYaml, yamlChanges);
-
-            const yamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
-              method: "PUT",
-              headers: { "Content-Type": "text/yaml" },
-              body: mergedYaml,
-            });
-
-            if (!yamlRes.ok) {
-              errors.push(t('failedToSaveYaml'));
-            } else {
-              successCount += Object.keys(yamlChanges).length;
-            }
+            successCount += Object.keys(write.changes).length;
           }
         } catch (error) {
-          errors.push(`Failed to update config.yaml: ${getErrorMessage(error)}`);
+          errors.push(getErrorMessage(error));
         }
       }
 

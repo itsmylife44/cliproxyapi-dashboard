@@ -49,6 +49,20 @@ const V8_PATHS: Record<string, string[]> = {
   pprof: ["observability", "pprof"],
   "claude-header-defaults": ["upstream", "claude", "header-defaults"],
   payload: ["requests", "payload"],
+  "proxy-url": ["requests", "proxy-url"],
+  debug: ["observability", "logs", "debug"],
+  "logging-to-file": ["observability", "logs", "logging-to-file"],
+  "logs-max-total-size-mb": ["observability", "logs", "logs-max-total-size-mb"],
+  "error-logs-max-files": ["observability", "logs", "error-logs-max-files"],
+  "request-log": ["observability", "logs", "request-log"],
+  "usage-statistics-enabled": ["observability", "usage", "usage-statistics-enabled"],
+  "request-retry": ["routing", "retry", "request-retry"],
+  "max-retry-interval": ["routing", "retry", "max-retry-interval"],
+  "max-retry-credentials": ["routing", "retry", "max-retry-credentials"],
+  "force-model-prefix": ["routing", "force-model-prefix"],
+  "ws-auth": ["oauth", "providers", "aistudio", "ws-auth"],
+  "oauth-model-alias": ["oauth", "model-alias"],
+  // quota-exceeded.* and routing.strategy live on roots shared with the legacy layout.
 };
 
 function mergeValue(target: ConfigYamlObject, key: string, value: unknown): void {

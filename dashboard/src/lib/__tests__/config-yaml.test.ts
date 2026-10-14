@@ -174,6 +174,63 @@ describe("mergeConfigYaml on a v8-layout config.yaml", () => {
     expect(merged).not.toHaveProperty("pprof");
   });
 
+  it("maps endpoint-backed fields to their v8 paths and leaves shared roots in place", () => {
+    const raw = [
+      "config-version: 8",
+      "routing:",
+      "  strategy: round-robin",
+      "  retry:",
+      "    request-retry: 3",
+      "quota-exceeded:",
+      "  switch-project: false",
+      "  switch-preview-model: false",
+      "",
+    ].join("\n");
+    const merged = parseConfigYaml(
+      mergeConfigYaml(raw, {
+        "proxy-url": "",
+        debug: true,
+        "logging-to-file": true,
+        "logs-max-total-size-mb": 10,
+        "error-logs-max-files": 5,
+        "usage-statistics-enabled": true,
+        "request-retry": 5,
+        "max-retry-interval": 30,
+        "max-retry-credentials": 7,
+        "request-log": true,
+        "ws-auth": true,
+        "force-model-prefix": true,
+        "oauth-model-alias": { codex: [{ name: "gpt-5", alias: "x" }] },
+        "quota-exceeded": { "switch-project": true },
+        routing: { strategy: "fill-first" },
+      })
+    );
+    expect(merged).toEqual({
+      "config-version": 8,
+      routing: {
+        strategy: "fill-first",
+        "force-model-prefix": true,
+        retry: { "request-retry": 5, "max-retry-interval": 30, "max-retry-credentials": 7 },
+      },
+      "quota-exceeded": { "switch-project": true, "switch-preview-model": false },
+      requests: { "proxy-url": "" },
+      observability: {
+        logs: {
+          debug: true,
+          "logging-to-file": true,
+          "logs-max-total-size-mb": 10,
+          "error-logs-max-files": 5,
+          "request-log": true,
+        },
+        usage: { "usage-statistics-enabled": true },
+      },
+      oauth: {
+        "model-alias": { codex: [{ name: "gpt-5", alias: "x" }] },
+        providers: { aistudio: { "ws-auth": true } },
+      },
+    });
+  });
+
   it("keeps legacy files on legacy root keys", () => {
     const merged = parseConfigYaml(mergeConfigYaml("passthrough-headers: false\n", { "passthrough-headers": true }));
     expect(merged).toEqual({ "passthrough-headers": true });

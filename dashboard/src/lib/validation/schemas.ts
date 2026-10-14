@@ -358,11 +358,11 @@ export const ConfirmActionSchema = z.object({
 });
 
 export const UpdateProxySchema = z.object({
+  // A concrete tag: "latest" (or no version) would pin CLIPROXYAPI_IMAGE_TAG=latest and unpin the stack.
   version: z
     .string()
-    .default("latest")
-    .refine((v) => v === "latest" || DOCKER_TAG_PATTERN.test(v), {
-      message: "Invalid version format",
+    .refine((v) => v !== "latest" && DOCKER_TAG_PATTERN.test(v), {
+      message: "Version must be a concrete image tag, not \"latest\"",
     }),
   confirm: z.literal(true, {
     message: "Confirmation required: set confirm to true",

@@ -167,7 +167,7 @@ export default function SettingsPage() {
     return () => controller.abort();
   }, [fetchProxyUpdateInfo, fetchDashboardUpdateInfo, fetchSyncTokens]);
 
-  const confirmProxyUpdate = (version: string = "latest") => {
+  const confirmProxyUpdate = (version: string) => {
     setPendingProxyVersion(version);
     setShowConfirmProxyUpdate(true);
   };

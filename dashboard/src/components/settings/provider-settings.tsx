@@ -30,7 +30,7 @@ interface ProviderSettingsProps {
   dashboardUpdateInfo: DashboardUpdateInfo | null;
   dashboardUpdateLoading: boolean;
   dashboardUpdating: boolean;
-  onConfirmProxyUpdate: (version?: string) => void;
+  onConfirmProxyUpdate: (version: string) => void;
   onConfirmDashboardUpdate: () => void;
   onRefreshProxyUpdate: () => void;
   onRefreshDashboardUpdate: () => void;
@@ -93,7 +93,7 @@ export function ProviderSettings({
 
             <div className="flex flex-col sm:flex-row flex-wrap gap-2">
               <Button
-                onClick={() => onConfirmProxyUpdate("latest")}
+                onClick={() => onConfirmProxyUpdate(proxyUpdateInfo.latestVersion)}
                 disabled={proxyUpdating || !proxyUpdateInfo.updateAvailable}
               >
                 {proxyUpdating ? t('buttonUpdating') : proxyUpdateInfo.updateAvailable ? t('buttonUpdateToLatest') : t('buttonUpToDate')}

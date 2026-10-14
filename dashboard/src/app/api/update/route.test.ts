@@ -63,7 +63,7 @@ function runCalls(): string[][] {
   return dockerMock.mock.calls.map(([args]) => args as string[]).filter((args) => args[0] === "run");
 }
 
-async function postUpdate(version: string) {
+async function postUpdate(version?: string) {
   const { POST } = await import("./route");
   const res = await POST(
     new NextRequest("http://localhost/api/update", {
@@ -104,6 +104,17 @@ describe("POST /api/update", () => {
     }
     expect(run.join(" ")).not.toContain("org.opencontainers");
     expect(run.at(-1)).toBe("eceasy/cli-proxy-api:v8.0.28");
+  });
+
+  it.each([
+    ["no version", undefined],
+    ["latest", "latest"],
+  ])("rejects %s instead of unpinning the image", async (_label, version) => {
+    const { status } = await postUpdate(version);
+
+    expect(status).toBe(400);
+    expect(dockerCalls()).toEqual([]);
+    expect(await readFile(envFile, "utf8")).toBe(ENV_BEFORE);
   });
 
   it("refuses before touching docker when the host env file is not mounted", async () => {

@@ -1,7 +1,11 @@
 name: Release
 
 on:
-  # Manual trigger only — no automatic releases on push
+  # Every push to main lets Release Please open/update the release PR. Nothing is
+  # released until that PR is merged — the merge push then tags, builds and publishes.
+  push:
+    branches: [main]
+  # Manual fallback: re-run Release Please, or rebuild an existing tag.
   workflow_dispatch:
     inputs:
       action:
@@ -29,11 +33,11 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  # Run Release Please to create/update a release PR, then merge and tag.
-  # Only runs when action is 'create-release'.
+  # Run Release Please: opens/updates the release PR, or tags the release once it is merged.
+  # Runs on every push to main and on a manual 'create-release'.
   release-please:
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.action == 'create-release' }}
+    if: ${{ github.event_name == 'push' || github.event.inputs.action == 'create-release' }}
     permissions:
       contents: write
       pull-requests: write
@@ -65,7 +69,7 @@ jobs:
           if [ "${RP_RELEASE_CREATED}" = "true" ]; then
             echo "✅ Release created: ${RP_TAG_NAME} (${RP_VERSION})"
           else
-            echo "ℹ️ No release created — Release Please PR opened/updated. Merge the PR, then run this workflow again."
+            echo "ℹ️ No release created — Release Please PR opened/updated. Merging it releases automatically."
           fi
 
   # Resolve the tag to build (new release or the requested existing tag), its commit,
@@ -171,7 +175,7 @@ jobs:
 
   # Build each platform natively in parallel — no QEMU emulation needed.
   # amd64 on self-hosted (Hetzner), arm64 on GitHub's native ARM runner.
-  # self-hosted is only reachable via workflow_dispatch (write access) — never add PR triggers here.
+  # self-hosted is only reachable via push to main or workflow_dispatch (write access) — never add PR triggers here.
   build:
     strategy:
       fail-fast: true

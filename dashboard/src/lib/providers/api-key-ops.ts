@@ -230,6 +230,63 @@ export async function contributeKey(
   }
 }
 
+type KeyRemovalPlan =
+  | { ok: false; error: string }
+  | { ok: true; request: { url: string; init: RequestInit } | null };
+
+/**
+ * Finds the upstream entry holding the key with `keyHash` and builds the
+ * request that removes exactly that entry. `request` is null when no entry matches.
+ */
+function planKeyRemoval(
+  endpoint: string,
+  provider: Provider,
+  rawKeys: unknown,
+  keyHash: string
+): KeyRemovalPlan {
+  const init: RequestInit = {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+  };
+
+  if (provider === PROVIDER.OPENAI_COMPAT) {
+    if (!isOpenAICompatArray(rawKeys)) {
+      return { ok: false, error: "Invalid OpenAI compatibility response" };
+    }
+    for (const providerEntry of rawKeys) {
+      const keyEntry = providerEntry["api-key-entries"].find(
+        (entry) => hashProviderKey(entry["api-key"]) === keyHash
+      );
+      if (keyEntry) {
+        return {
+          ok: true,
+          request: { url: `${endpoint}?api-key=${encodeURIComponent(keyEntry["api-key"])}`, init },
+        };
+      }
+    }
+    return { ok: true, request: null };
+  }
+
+  if (!isApiKeyArray(rawKeys)) {
+    return { ok: false, error: `Invalid ${provider} response` };
+  }
+  const match = rawKeys.find((entry) => hashProviderKey(entry["api-key"]) === keyHash);
+  if (!match) {
+    return { ok: true, request: null };
+  }
+  // Upstream rejects api-key alone when several entries share the key; base-url
+  // selects this entry (an empty value matches entries that have none).
+  const baseUrl =
+    "base-url" in match && typeof match["base-url"] === "string" ? match["base-url"] : "";
+  return {
+    ok: true,
+    request: {
+      url: `${endpoint}?api-key=${encodeURIComponent(match["api-key"])}&base-url=${encodeURIComponent(baseUrl)}`,
+      init,
+    },
+  };
+}
+
 export async function removeKey(
   userId: string,
   keyHash: string,
@@ -293,53 +350,24 @@ export async function removeKey(
       return { ok: false, error: "Invalid Management API response" };
     }
 
-    const rawKeys = getData[responseKey];
-
-    let matchingKey: string | null = null;
-
-    if (ownership.provider === PROVIDER.OPENAI_COMPAT) {
-      if (!isOpenAICompatArray(rawKeys)) {
-        return { ok: false, error: "Invalid OpenAI compatibility response" };
-      }
-
-      for (const providerEntry of rawKeys) {
-        for (const keyEntry of providerEntry["api-key-entries"]) {
-          const candidateHash = hashProviderKey(keyEntry["api-key"]);
-          if (candidateHash === keyHash) {
-            matchingKey = keyEntry["api-key"];
-            break;
-          }
-        }
-        if (matchingKey) break;
-      }
-    } else {
-      if (!isApiKeyArray(rawKeys)) {
-        return { ok: false, error: `Invalid ${ownership.provider} response` };
-      }
-
-      for (const keyEntry of rawKeys) {
-        const candidateHash = hashProviderKey(keyEntry["api-key"]);
-        if (candidateHash === keyHash) {
-          matchingKey = keyEntry["api-key"];
-          break;
-        }
-      }
+    const plan = planKeyRemoval(
+      endpoint,
+      ownership.provider as Provider,
+      getData[responseKey],
+      keyHash
+    );
+    if (!plan.ok) {
+      return { ok: false, error: plan.error };
     }
 
-     if (!matchingKey) {
+     if (!plan.request) {
        await prisma.providerKeyOwnership.delete({ where: { keyHash } });
        return { ok: false, error: "Key not found in Management API (orphan record removed)" };
      }
 
      let deleteRes: Response;
      try {
-       deleteRes = await fetchWithTimeout(
-         `${endpoint}?api-key=${encodeURIComponent(matchingKey)}`,
-         {
-           method: "DELETE",
-           headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-         }
-       );
+       deleteRes = await fetchWithTimeout(plan.request.url, plan.request.init);
 } catch (fetchError) {
         if (fetchError instanceof Error && fetchError.name === "AbortError") {
           logger.error({
@@ -425,51 +453,18 @@ export async function removeKeyByAdmin(
       return { ok: false, error: "Invalid Management API response" };
     }
 
-    const rawKeys = getData[responseKey];
-    let matchingKey: string | null = null;
-
-    if (provider === PROVIDER.OPENAI_COMPAT) {
-      if (!isOpenAICompatArray(rawKeys)) {
-        return { ok: false, error: "Invalid OpenAI compatibility response" };
-      }
-
-      for (const providerEntry of rawKeys) {
-        for (const keyEntry of providerEntry["api-key-entries"]) {
-          const candidateHash = hashProviderKey(keyEntry["api-key"]);
-          if (candidateHash === keyHash) {
-            matchingKey = keyEntry["api-key"];
-            break;
-          }
-        }
-        if (matchingKey) break;
-      }
-    } else {
-      if (!isApiKeyArray(rawKeys)) {
-        return { ok: false, error: `Invalid ${provider} response` };
-      }
-
-      for (const keyEntry of rawKeys) {
-        const candidateHash = hashProviderKey(keyEntry["api-key"]);
-        if (candidateHash === keyHash) {
-          matchingKey = keyEntry["api-key"];
-          break;
-        }
-      }
+    const plan = planKeyRemoval(endpoint, provider, getData[responseKey], keyHash);
+    if (!plan.ok) {
+      return { ok: false, error: plan.error };
     }
 
-     if (!matchingKey) {
+     if (!plan.request) {
        return { ok: false, error: "Key not found in Management API" };
      }
 
      let deleteRes: Response;
      try {
-       deleteRes = await fetchWithTimeout(
-         `${endpoint}?api-key=${encodeURIComponent(matchingKey)}`,
-         {
-           method: "DELETE",
-           headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-         }
-       );
+       deleteRes = await fetchWithTimeout(plan.request.url, plan.request.init);
 } catch (fetchError) {
         if (fetchError instanceof Error && fetchError.name === "AbortError") {
           logger.error({

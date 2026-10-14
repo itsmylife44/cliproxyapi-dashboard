@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   count: vi.fn(),
   create: vi.fn(),
   deleteMany: vi.fn(),
+  findUnique: vi.fn(),
+  delete: vi.fn(),
   fetchWithTimeout: vi.fn(),
 }));
 
@@ -15,6 +17,8 @@ vi.mock("@/lib/db", () => ({
       count: mocks.count,
       create: mocks.create,
       deleteMany: mocks.deleteMany,
+      findUnique: mocks.findUnique,
+      delete: mocks.delete,
     },
   },
 }));
@@ -51,8 +55,9 @@ vi.mock("@/lib/providers/management-api", () => ({
   isOpenAICompatArray: (value: unknown) => Array.isArray(value),
 }));
 
-import { contributeKey } from "../api-key-ops";
+import { contributeKey, removeKey, removeKeyByAdmin } from "../api-key-ops";
 import { PROVIDER } from "../constants";
+import { hashProviderKey } from "../hash";
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -143,5 +148,55 @@ describe("contributeKey", () => {
       error: "Management API did not persist the key",
     });
     expect(mocks.deleteMany).toHaveBeenCalledOnce();
+  });
+});
+
+describe("key removal", () => {
+  // Same key configured twice (manual config edit); upstream answers 400
+  // "multiple items match api-key; base-url is required" without base-url.
+  const sharedKey = "sk-ant-shared";
+  const duplicateClaudeEntries = {
+    "claude-api-key": [
+      { "api-key": sharedKey, "base-url": "https://a.example/v1" },
+      { "api-key": sharedKey, "base-url": "https://b.example/v1" },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.delete.mockResolvedValue({});
+    mocks.findUnique.mockResolvedValue({
+      keyHash: hashProviderKey(sharedKey),
+      userId: "user-1",
+      provider: PROVIDER.CLAUDE,
+    });
+  });
+
+  const deleteUrl = () => mocks.fetchWithTimeout.mock.calls[1]?.[0];
+
+  it("removeKey sends the matched entry's base-url", async () => {
+    mocks.fetchWithTimeout
+      .mockResolvedValueOnce(jsonResponse(duplicateClaudeEntries))
+      .mockResolvedValueOnce(jsonResponse({ status: "ok" }));
+
+    const result = await removeKey("user-1", hashProviderKey(sharedKey), false);
+
+    expect(result).toEqual({ ok: true });
+    expect(deleteUrl()).toBe(
+      "http://management.test/claude-api-key?api-key=sk-ant-shared&base-url=https%3A%2F%2Fa.example%2Fv1",
+    );
+  });
+
+  it("removeKeyByAdmin sends the matched entry's base-url", async () => {
+    mocks.fetchWithTimeout
+      .mockResolvedValueOnce(jsonResponse(duplicateClaudeEntries))
+      .mockResolvedValueOnce(jsonResponse({ status: "ok" }));
+
+    const result = await removeKeyByAdmin(hashProviderKey(sharedKey), PROVIDER.CLAUDE);
+
+    expect(result).toEqual({ ok: true });
+    expect(deleteUrl()).toBe(
+      "http://management.test/claude-api-key?api-key=sk-ant-shared&base-url=https%3A%2F%2Fa.example%2Fv1",
+    );
   });
 });

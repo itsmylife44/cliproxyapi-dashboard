@@ -127,6 +127,28 @@ describe("mergeConfigYaml", () => {
     expect(merged).toContain("new-field: new-value");
     expect(merged).toContain("debug: false");
   });
+
+  it("persists removal of an oauth-model-alias provider in a multi-field merge", () => {
+    const rawYaml = [
+      "debug: false",
+      "oauth-model-alias:",
+      "  gemini-cli:",
+      "    - name: gemini-2.5-pro",
+      "      alias: g25",
+      "  codex:",
+      "    - name: gpt-5",
+      "      alias: g5",
+      "",
+    ].join("\n");
+    const merged = parseConfigYaml(
+      mergeConfigYaml(rawYaml, {
+        debug: true,
+        "oauth-model-alias": { codex: [{ name: "gpt-5", alias: "g5" }] },
+      })
+    );
+    expect(merged["oauth-model-alias"]).toEqual({ codex: [{ name: "gpt-5", alias: "g5" }] });
+    expect(merged.debug).toBe(true);
+  });
 });
 
 describe("mergeConfigYaml on a v8-layout config.yaml", () => {
@@ -229,6 +251,33 @@ describe("mergeConfigYaml on a v8-layout config.yaml", () => {
         providers: { aistudio: { "ws-auth": true } },
       },
     });
+  });
+
+  it("persists removal of an oauth-model-alias provider in a multi-field merge", () => {
+    const raw = [
+      "config-version: 8",
+      "oauth:",
+      "  auth-dir: /data/auths",
+      "  model-alias:",
+      "    gemini-cli:",
+      "      - name: gemini-2.5-pro",
+      "        alias: g25",
+      "    codex:",
+      "      - name: gpt-5",
+      "        alias: g5",
+      "",
+    ].join("\n");
+    const merged = parseConfigYaml(
+      mergeConfigYaml(raw, {
+        debug: true,
+        "oauth-model-alias": { codex: [{ name: "gpt-5", alias: "g5" }] },
+      })
+    );
+    expect(merged.oauth).toEqual({
+      "auth-dir": "/data/auths",
+      "model-alias": { codex: [{ name: "gpt-5", alias: "g5" }] },
+    });
+    expect(merged).not.toHaveProperty("oauth-model-alias");
   });
 
   it("keeps legacy files on legacy root keys", () => {

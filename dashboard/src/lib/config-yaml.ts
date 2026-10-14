@@ -66,29 +66,33 @@ const V8_PATHS: Record<string, string[]> = {
   // quota-exceeded.* and routing.strategy live on roots shared with the legacy layout.
 };
 
-function mergeValue(target: ConfigYamlObject, key: string, value: unknown): void {
-  const current = target[key];
-  target[key] = isPlainObject(value) && isPlainObject(current) ? { ...current, ...value } : value;
+// Fields the editor owns wholesale: replace, so removed keys stay removed (upstream
+// PUT /oauth-model-alias replaces too). Other objects are edited key by key and
+// shallow-merged so YAML keys GET /config omits survive.
+const REPLACE_FIELDS = new Set(["oauth-model-alias"]);
+
+function setPath(target: ConfigYamlObject, path: string[], value: unknown, replace: boolean): ConfigYamlObject {
+  const [head, ...rest] = path as [string, ...string[]];
+  const current = target[head];
+  if (rest.length > 0) {
+    return { ...target, [head]: setPath(isPlainObject(current) ? current : {}, rest, value, replace) };
+  }
+  const merge = !replace && isPlainObject(value) && isPlainObject(current);
+  return { ...target, [head]: merge ? { ...current, ...value } : value };
 }
 
 export function mergeConfigYaml(rawYaml: string, changes: ConfigYamlObject): string {
-  const mergedConfig = parseConfigYaml(rawYaml);
+  let mergedConfig = parseConfigYaml(rawYaml);
   const isV8 = mergedConfig["config-version"] === 8;
 
   for (const [key, value] of Object.entries(changes)) {
     const v8Path = isV8 ? V8_PATHS[key] : undefined;
-    if (!v8Path) {
-      mergeValue(mergedConfig, key, value);
-      continue;
+    mergedConfig = setPath(mergedConfig, v8Path ?? [key], value, REPLACE_FIELDS.has(key));
+    if (v8Path) {
+      const { [key]: _legacy, ...rest } = mergedConfig;
+      void _legacy;
+      mergedConfig = rest;
     }
-
-    let parent = mergedConfig;
-    for (const segment of v8Path.slice(0, -1)) {
-      const next = parent[segment];
-      parent = parent[segment] = isPlainObject(next) ? next : {};
-    }
-    mergeValue(parent, v8Path[v8Path.length - 1] ?? key, value);
-    delete mergedConfig[key];
   }
 
   return yaml.dump(mergedConfig, { lineWidth: -1, noRefs: true });

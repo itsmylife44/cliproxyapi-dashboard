@@ -130,7 +130,7 @@ For full plugin documentation, see [opencode-cliproxyapi-sync](https://github.co
 
 The dashboard automatically collects usage statistics from CLIProxyAPI every 5 minutes using a dedicated cron service.
 
-CLIProxyAPI only queues usage when `usage-statistics-enabled: true`, and drops queued records after `redis-usage-queue-retention-seconds` (upstream default 60 s). The config template sets `3600`. On existing installs the first collector run after a dashboard start raises a lower or missing value to `3600` with one `config.yaml` write through the management API; it never lowers a higher value. Local stacks (`setup-local.sh`) have no collector service; collect from the Usage page.
+CLIProxyAPI only queues usage when `usage-statistics-enabled: true`, and drops queued records after `redis-usage-queue-retention-seconds` (upstream default 60 s). The dashboard handles this itself: the first collector run after a dashboard start raises a lower or missing value to `3600` with one `config.yaml` write through the management API; it never lowers a higher value. Local stacks (`setup-local.sh`) have no collector service; collect from the Usage page.
 
 ### How It Works
 

@@ -73,11 +73,8 @@ const ALLOWED_MANAGEMENT_PATHS = new Set<string>([
   // Auth files
   "auth-files",
   "auth-files/models",
-  "auth-files/quota-groups",
   "auth-files/download",
   "auth-files/status",
-  "auth-files/quota-groups/manual",
-  "auth-files/quota-groups/auto/clear",
   "auth-files/fields",
 
   // Providers
@@ -88,7 +85,6 @@ const ALLOWED_MANAGEMENT_PATHS = new Set<string>([
   "oauth-callback",
   "oauth-excluded-models",
   "oauth-model-alias",
-  "oauth-quota-groups",
 
   // Vertex
   "vertex/import",

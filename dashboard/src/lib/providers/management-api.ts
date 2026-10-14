@@ -101,23 +101,6 @@ export interface OAuthAccountWithOwnership {
   status: "active" | "error" | "disabled" | string;
   statusMessage: string | null;
   unavailable: boolean;
-  quotaGroups?: OAuthAccountQuotaGroupState[];
-}
-
-export interface OAuthAccountQuotaGroupState {
-  authId: string;
-  groupId: string;
-  label: string;
-  effectiveStatus: string;
-  manualSuspended: boolean;
-  manualReason: string | null;
-  autoSuspendedUntil: string | null;
-  autoReason: string | null;
-  sourceModel: string | null;
-  sourceProvider: string | null;
-  resetTimeSource: string | null;
-  updatedAt: string | null;
-  updatedBy: string | null;
 }
 
 export interface ListOAuthResult {

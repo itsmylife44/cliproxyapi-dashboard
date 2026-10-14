@@ -89,6 +89,20 @@ export const API_ENDPOINTS = {
     // OAuth
     OAUTH_EXCLUDED_MODELS: "/api/management/oauth-excluded-models",
     OAUTH_MODEL_ALIAS: "/api/management/oauth-model-alias",
+    OAUTH_AUTH_URL: {
+      CLAUDE: "/api/management/anthropic-auth-url?is_webui=true",
+      GEMINI_CLI: "/api/management/gemini-cli-auth-url?project_id=ALL&is_webui=true",
+      CODEX: "/api/management/codex-auth-url?is_webui=true",
+      XAI: "/api/management/xai-auth-url?is_webui=true",
+      ANTIGRAVITY: "/api/management/antigravity-auth-url?is_webui=true",
+      KIMI: "/api/management/kimi-auth-url?is_webui=true",
+      KIMI_AI: "/api/management/kimi-ai-auth-url?is_webui=true",
+      DEVIN: "/api/management/devin-auth-url?is_webui=true",
+      META: "/api/management/meta-auth-url?is_webui=true",
+      COPILOT: "/api/management/copilot-auth-url?is_webui=true",
+      KIRO: "/api/management/kiro-auth-url?is_webui=true",
+      CURSOR: "/api/management/cursor-auth-url?is_webui=true",
+    },
 
     // Auth files
     AUTH_FILES: "/api/management/auth-files",

@@ -1644,6 +1644,18 @@
     "hooks": "Ganchos (Hooks)",
     "disabledCount": "{count} desactivados",
     "hookGroupStats": "({disabled}/{total} desactivados)",
+    "hookGroups": {
+      "context": "Contexto",
+      "recovery": "Recuperación",
+      "notification": "Notificaciones",
+      "validation": "Validación",
+      "guards": "Protecciones",
+      "output": "Salida",
+      "injection": "Inyección",
+      "automation": "Automatización",
+      "environment": "Entorno",
+      "planning": "Planificación"
+    },
     "sisyphusAgent": "Agente Sisyphus",
     "sisyphusDisabled": "Desactivado",
     "defaultBuilderEnabled": "Constructor por Defecto Activado",

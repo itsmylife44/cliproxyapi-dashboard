@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyPreset,
-  buildOhMyOpenCodeConfig,
   UPSTREAM_AGENT_CHAINS,
   UPSTREAM_CATEGORY_CHAINS,
 } from "../config-generators/oh-my-opencode";
 import { getBundledOhMyOpenCodePresets } from "../config-generators/oh-my-opencode-presets";
 import { validateFullConfig } from "../config-generators/oh-my-opencode-types";
+import { buildOhMyOpenCodeConfig } from "./helpers/omo-schema-guard";
 import { buildSlimConfig } from "./helpers/slim-schema-guard";
 import { deprecatedOmoKeys, upstreamSchemaErrors } from "./helpers/upstream-schema";
 

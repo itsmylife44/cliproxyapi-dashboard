@@ -1649,6 +1649,18 @@
     "hooks": "钩子",
     "disabledCount": "已禁用 {count} 个",
     "hookGroupStats": "（已禁用 {disabled}/{total} 个）",
+    "hookGroups": {
+      "context": "上下文",
+      "recovery": "恢复",
+      "notification": "通知",
+      "validation": "校验",
+      "guards": "防护",
+      "output": "输出",
+      "injection": "注入",
+      "automation": "自动化",
+      "environment": "环境",
+      "planning": "规划"
+    },
     "sisyphusAgent": "Sisyphus 智能体",
     "sisyphusDisabled": "禁用",
     "defaultBuilderEnabled": "启用默认构建智能体",

@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { applyPreset, buildOhMyOpenCodeConfig, getMissingPresetModels } from "../config-generators/oh-my-opencode";
+import { applyPreset, getMissingPresetModels } from "../config-generators/oh-my-opencode";
 import type { OhMyOpenCodePreset } from "../config-generators/oh-my-opencode-types";
 import { validateFullConfig } from "../config-generators/oh-my-opencode-types";
 import { AgentConfigOverridesSchema } from "../validation/schemas";
+import { buildOhMyOpenCodeConfig } from "./helpers/omo-schema-guard";
 import { deprecatedOmoKeys } from "./helpers/upstream-schema";
 
 vi.mock("server-only", () => ({}));

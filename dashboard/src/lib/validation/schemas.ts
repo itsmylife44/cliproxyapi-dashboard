@@ -52,6 +52,10 @@ const AgentConfigEntrySchema = z.object({
         test: PermissionValueSchema.optional(),
       }),
     ]).optional(),
+    webfetch: PermissionValueSchema.optional(),
+    task: PermissionValueSchema.optional(),
+    doom_loop: PermissionValueSchema.optional(),
+    external_directory: PermissionValueSchema.optional(),
   }).optional(),
   providerOptions: z.record(z.string(), z.unknown()).optional(),
   thinking: z.object({
@@ -63,6 +67,7 @@ const AgentConfigEntrySchema = z.object({
     reasoning: z.string().optional(),
     variant: z.string().optional(),
   }).optional(),
+  displayName: z.string().optional(),
 });
 
 const CategoryConfigEntrySchema = z.object({
@@ -72,6 +77,9 @@ const CategoryConfigEntrySchema = z.object({
   temperature: z.number().min(0).max(2).optional(),
   description: z.string().optional(),
   fallback_models: z.array(z.string()).optional(),
+  max_tokens: z.number().int().positive().optional(),
+  provider_options: z.record(z.string(), z.unknown()).optional(),
+  warn_unavailable: z.boolean().optional(),
 });
 
 const TmuxConfigSchema = z.object({
@@ -80,6 +88,7 @@ const TmuxConfigSchema = z.object({
   main_pane_size: z.number().optional(),
   main_pane_min_width: z.number().optional(),
   agent_pane_min_width: z.number().optional(),
+  isolation: z.enum(["inline", "window", "session"]).optional(),
 });
 
 const BackgroundTaskConfigSchema = z.object({
@@ -87,10 +96,13 @@ const BackgroundTaskConfigSchema = z.object({
   staleTimeoutMs: z.number().optional(),
   providerConcurrency: z.record(z.string(), z.number()).optional(),
   modelConcurrency: z.record(z.string(), z.number()).optional(),
+  maxLiveDescendantsPerRoot: z.number().int().nonnegative().optional(),
+  taskCleanupDelayMs: z.number().min(60000).optional(),
 });
 
 const BrowserAutomationConfigSchema = z.object({
   provider: z.string().optional(),
+  playwright_mcp_args: z.array(z.string()).optional(),
 });
 
 const SisyphusAgentConfigSchema = z.object({
@@ -98,6 +110,7 @@ const SisyphusAgentConfigSchema = z.object({
   default_builder_enabled: z.boolean().optional(),
   planner_enabled: z.boolean().optional(),
   replace_plan: z.boolean().optional(),
+  tdd: z.boolean().optional(),
 });
 
 const GitMasterConfigSchema = z.object({
@@ -108,6 +121,7 @@ const GitMasterConfigSchema = z.object({
 const ExperimentalConfigSchema = z.object({
   aggressive_truncation: z.boolean().optional(),
   task_system: z.boolean().optional(),
+  disable_live_parent_wake_routing: z.boolean().optional(),
 });
 
 const LocalMcpEntrySchema = z.object({
@@ -147,6 +161,19 @@ export const AgentConfigOverridesSchema = z.object({
    hashline_edit: z.boolean().optional(),
    defaultModel: z.string().min(1).max(200).optional(),
    experimental: ExperimentalConfigSchema.optional(),
+  agent_order: z.array(z.string()).optional(),
+  agent_definitions: z.array(z.string()).optional(),
+  disabled_providers: z.array(z.string()).optional(),
+  telemetry: z.boolean().optional(),
+  // Shape is checked upstream; validateFullConfig keeps these as size-bounded opaque objects.
+  goal: z.record(z.string(), z.unknown()).optional(),
+  i18n: z.record(z.string(), z.unknown()).optional(),
+  monitor: z.record(z.string(), z.unknown()).optional(),
+  team_mode: z.record(z.string(), z.unknown()).optional(),
+  keyword_detector: z.record(z.string(), z.unknown()).optional(),
+  tui: z.record(z.string(), z.unknown()).optional(),
+  ulw_execute: z.record(z.string(), z.unknown()).optional(),
+  default_mode: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const AgentConfigSchema = z.object({

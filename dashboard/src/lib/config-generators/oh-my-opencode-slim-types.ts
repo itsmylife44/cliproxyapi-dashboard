@@ -8,7 +8,7 @@
  * @see https://github.com/alvinunreal/oh-my-opencode-slim
  */
 
-import { isRecord } from "@/lib/utils";
+import { boundedObject, boundedStrings, isRecord, oneOf } from "@/lib/utils";
 
 // ============================================================================
 // CONSTANTS
@@ -352,19 +352,6 @@ function validateAgentConfig(entryObj: Record<string, unknown>): SlimAgentConfig
   const permission = validatePermission(entryObj.permission);
   if (permission) entry.permission = permission;
   return entry;
-}
-
-function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | undefined {
-  return (allowed as readonly unknown[]).includes(value) ? (value as T) : undefined;
-}
-
-function boundedStrings(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  return value.slice(0, 50).filter((v): v is string => typeof v === "string" && v.length <= 256);
-}
-
-function boundedObject(value: unknown): Record<string, unknown> | undefined {
-  return isRecord(value) && JSON.stringify(value).length <= 8192 ? value : undefined;
 }
 
 function validatePermission(value: unknown): SlimPermission | undefined {

@@ -7,7 +7,7 @@ import { ConfigSubscriber } from "@/components/config-subscriber";
 import { verifySession } from "@/lib/auth/session";
 import { getManagementUrl, getProxyBaseUrl } from "@/lib/management-url";
 import { prisma } from "@/lib/db";
-import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
+import { validateFullConfig, type OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { buildAvailableModelIds, fetchProxyModels } from "@/lib/config-generators/shared";
 import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits, inferModelDefinition } from "@/lib/config-generators/opencode";
@@ -152,8 +152,8 @@ export default async function QuickStartPage() {
     : (modelPreference?.excludedModels ?? []);
   
   // Use publisher's overrides for model selection, but keep subscriber's MCPs
-  const publisherOverrides = (publisherAgentOverride?.overrides ?? {}) as OhMyOpenCodeFullConfig;
-  const subscriberOverrides = (agentOverride?.overrides ?? {}) as OhMyOpenCodeFullConfig;
+  const publisherOverrides = validateFullConfig(publisherAgentOverride?.overrides);
+  const subscriberOverrides = validateFullConfig(agentOverride?.overrides);
   const agentOverrides: OhMyOpenCodeFullConfig = isSubscriber
     ? { ...publisherOverrides, mcpServers: subscriberOverrides.mcpServers, customPlugins: subscriberOverrides.customPlugins }
     : subscriberOverrides;

@@ -5,6 +5,8 @@
  * oh-my-opencode optional configuration sections.
  */
 
+import { isRecord } from "@/lib/utils";
+
 import type { McpEntry } from "./opencode";
 
 // ============================================================================
@@ -42,14 +44,11 @@ export interface GitMasterConfig {
   include_co_authored_by?: boolean;
 }
 
-export interface LspEntry {
-  command: string[];
-  extensions?: string[];
-}
+export type PermissionValue = "ask" | "allow" | "deny";
 
 export interface AgentPermissionConfig {
-  edit?: "allow" | "deny" | "prompt";
-  bash?: { git?: "allow" | "deny" | "prompt"; test?: "allow" | "deny" | "prompt" } | "allow" | "deny" | "prompt";
+  edit?: PermissionValue;
+  bash?: { git?: PermissionValue; test?: PermissionValue } | PermissionValue;
 }
 
 export interface AgentThinkingConfig {
@@ -100,7 +99,6 @@ export interface OhMyOpenCodeFullConfig {
   browser_automation_engine?: BrowserAutomationConfig;
   sisyphus_agent?: SisyphusAgentConfig;
   git_master?: GitMasterConfig;
-  lsp?: Record<string, LspEntry>;
   mcpServers?: McpEntry[];
   customPlugins?: string[];
   configSchemaVersion?: number;
@@ -138,14 +136,17 @@ export const AVAILABLE_AGENTS = [
 
 export const AVAILABLE_SKILLS = [
   "playwright",
-  "agent-browser",
-  "frontend-ui-ux",
   "git-master",
 ] as const;
 
+/** OMO 5.x `disabled_commands` enum; any other value fails upstream schema validation. */
 export const AVAILABLE_COMMANDS = [
-  "init-deep",
-  "start-work",
+  "goal",
+  "refactor",
+  "ulw-execute",
+  "stop-continuation",
+  "remove-ai-slops",
+  "hyperplan",
 ] as const;
 
 export const TMUX_LAYOUTS = [
@@ -156,10 +157,23 @@ export const TMUX_LAYOUTS = [
   "even-vertical",
 ] as const;
 
+/** OMO 5.x `browser_automation_engine.provider` enum. */
 export const BROWSER_PROVIDERS = [
   "playwright",
-  "agent-browser",
+  "dev-browser",
+  "playwright-cli",
 ] as const;
+
+/** Names OMO 5.x no longer has; stored legacy values are dropped so they are never emitted. */
+const REMOVED_SKILLS = new Set(["agent-browser", "frontend-ui-ux"]);
+const REMOVED_HOOKS = new Set([
+  "context-window-monitor",
+  "session-recovery",
+  "thinking-block-validator",
+  "grep-output-truncator",
+  "ralph-loop",
+  "start-work",
+]);
 
 // ============================================================================
 // HOOK_GROUPS - Hooks grouped by functionality
@@ -167,12 +181,10 @@ export const BROWSER_PROVIDERS = [
 
 export const HOOK_GROUPS = {
   context: [
-    "context-window-monitor",
     "compaction-context-injector",
     "preemptive-compaction",
   ],
   recovery: [
-    "session-recovery",
     "anthropic-context-window-limit-recovery",
     "edit-error-recovery",
     "delegate-task-retry",
@@ -185,11 +197,9 @@ export const HOOK_GROUPS = {
   ],
   validation: [
     "comment-checker",
-    "thinking-block-validator",
     "empty-task-response-detector",
   ],
   output: [
-    "grep-output-truncator",
     "tool-output-truncator",
   ],
   injection: [
@@ -202,8 +212,6 @@ export const HOOK_GROUPS = {
     "keyword-detector",
     "agent-usage-reminder",
     "auto-slash-command",
-    "ralph-loop",
-    "start-work",
   ],
   environment: [
     "non-interactive-env",
@@ -227,6 +235,45 @@ export function canonicalizeCategories<T>(
   if (!categories || !("deep" in categories)) return categories;
   const { deep, ...rest } = categories;
   return { "deep-low": deep, ...rest };
+}
+
+/** Reads a stored permission value; legacy `prompt` (never valid upstream) becomes `ask`. */
+function readPermissionValue(value: unknown): PermissionValue | undefined {
+  if (value === "prompt") return "ask";
+  return value === "ask" || value === "allow" || value === "deny" ? value : undefined;
+}
+
+/** Reads a stored agent permission block, dropping invalid values. */
+export function readPermissionConfig(value: unknown): AgentPermissionConfig | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const permission: AgentPermissionConfig = {};
+  const edit = readPermissionValue(value.edit);
+  if (edit) {
+    permission.edit = edit;
+  }
+
+  const bash = readPermissionValue(value.bash);
+  if (bash) {
+    permission.bash = bash;
+  } else if (isRecord(value.bash)) {
+    const bashPermission: NonNullable<Exclude<AgentPermissionConfig["bash"], string>> = {};
+    const git = readPermissionValue(value.bash.git);
+    if (git) {
+      bashPermission.git = git;
+    }
+    const test = readPermissionValue(value.bash.test);
+    if (test) {
+      bashPermission.test = test;
+    }
+    if (Object.keys(bashPermission).length > 0) {
+      permission.bash = bashPermission;
+    }
+  }
+
+  return Object.keys(permission).length > 0 ? permission : undefined;
 }
 
 // ============================================================================
@@ -262,46 +309,8 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
           const fallbacks = entryObj.fallback_models.filter((v: unknown): v is string => typeof v === "string");
           if (fallbacks.length > 0) entry.fallback_models = fallbacks;
         }
-        if (entryObj.permission && typeof entryObj.permission === "object" && !Array.isArray(entryObj.permission)) {
-          const permissionObj = entryObj.permission as Record<string, unknown>;
-          const permission: AgentPermissionConfig = {};
-
-          if (
-            permissionObj.edit === "allow" ||
-            permissionObj.edit === "deny" ||
-            permissionObj.edit === "prompt"
-          ) {
-            permission.edit = permissionObj.edit;
-          }
-
-          if (
-            permissionObj.bash === "allow" ||
-            permissionObj.bash === "deny" ||
-            permissionObj.bash === "prompt"
-          ) {
-            permission.bash = permissionObj.bash;
-          } else if (
-            permissionObj.bash &&
-            typeof permissionObj.bash === "object" &&
-            !Array.isArray(permissionObj.bash)
-          ) {
-            const bashObj = permissionObj.bash as Record<string, unknown>;
-            const bashPermission: NonNullable<Exclude<AgentPermissionConfig["bash"], string>> = {};
-            if (bashObj.git === "allow" || bashObj.git === "deny" || bashObj.git === "prompt") {
-              bashPermission.git = bashObj.git;
-            }
-            if (bashObj.test === "allow" || bashObj.test === "deny" || bashObj.test === "prompt") {
-              bashPermission.test = bashObj.test;
-            }
-            if (Object.keys(bashPermission).length > 0) {
-              permission.bash = bashPermission;
-            }
-          }
-
-          if (Object.keys(permission).length > 0) {
-            entry.permission = permission;
-          }
-        }
+        const permission = readPermissionConfig(entryObj.permission);
+        if (permission) entry.permission = permission;
         if (entryObj.thinking && typeof entryObj.thinking === "object" && !Array.isArray(entryObj.thinking)) {
           const thinkingObj = entryObj.thinking as Record<string, unknown>;
           if (thinkingObj.type === "enabled" || thinkingObj.type === "disabled") {
@@ -384,21 +393,21 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
   // Validate disabled_skills array
   if (Array.isArray(obj.disabled_skills)) {
     result.disabled_skills = obj.disabled_skills.filter(
-      (v): v is string => typeof v === "string"
+      (v): v is string => typeof v === "string" && !REMOVED_SKILLS.has(v)
     );
   }
 
   // Validate disabled_hooks array
   if (Array.isArray(obj.disabled_hooks)) {
     result.disabled_hooks = obj.disabled_hooks.filter(
-      (v): v is string => typeof v === "string"
+      (v): v is string => typeof v === "string" && !REMOVED_HOOKS.has(v)
     );
   }
 
   // Validate disabled_commands array
   if (Array.isArray(obj.disabled_commands)) {
     result.disabled_commands = obj.disabled_commands.filter(
-      (v): v is string => typeof v === "string"
+      (v): v is string => typeof v === "string" && (AVAILABLE_COMMANDS as readonly string[]).includes(v)
     );
   }
 
@@ -506,7 +515,7 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
     const browserObj = obj.browser_automation_engine as Record<string, unknown>;
     const browserConfig: BrowserAutomationConfig = {};
 
-    if (typeof browserObj.provider === "string") {
+    if (typeof browserObj.provider === "string" && (BROWSER_PROVIDERS as readonly string[]).includes(browserObj.provider)) {
       browserConfig.provider = browserObj.provider;
     }
 
@@ -566,42 +575,6 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
       result.git_master = gitConfig;
     }
   }
-
-   // Validate lsp config
-   if (
-     obj.lsp &&
-     typeof obj.lsp === "object" &&
-     !Array.isArray(obj.lsp)
-   ) {
-     const lspObj = obj.lsp as Record<string, unknown>;
-     const lspConfig: Record<string, LspEntry> = {};
-
-     for (const [key, value] of Object.entries(lspObj)) {
-       if (!value || typeof value !== "object" || Array.isArray(value)) continue;
-       const entryObj = value as Record<string, unknown>;
-
-       // Validate required command field
-       if (!Array.isArray(entryObj.command)) continue;
-       const command = entryObj.command.filter((c): c is string => typeof c === "string");
-       if (command.length === 0) continue;
-
-       const entry: LspEntry = { command };
-
-       // Validate optional extensions field
-       if (Array.isArray(entryObj.extensions)) {
-         const extensions = entryObj.extensions.filter((e): e is string => typeof e === "string");
-         if (extensions.length > 0) {
-           entry.extensions = extensions;
-         }
-       }
-
-       lspConfig[key] = entry;
-     }
-
-     if (Object.keys(lspConfig).length > 0) {
-       result.lsp = lspConfig;
-     }
-   }
 
    if (Array.isArray(obj.mcpServers)) {
      const mcpServers: McpEntry[] = [];

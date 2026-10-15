@@ -385,10 +385,6 @@ export function buildOhMyOpenCodeConfig(
 
   config.git_master = { commit_footer: false, include_co_authored_by: false, ...overrides?.git_master };
 
-  if (overrides?.lsp && Object.keys(overrides.lsp).length > 0) {
-    config.lsp = overrides.lsp;
-  }
-
   if (overrides?.hashline_edit !== undefined) config.hashline_edit = overrides.hashline_edit;
 
   if (overrides?.experimental && Object.keys(overrides.experimental).length > 0) {

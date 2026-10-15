@@ -23,7 +23,6 @@ import {
   DisabledMcpsSection,
   GitMasterSection,
   HooksSection,
-  LspServersSection,
   SisyphusSection,
   AdvancedOptionsSection,
   TmuxSection,
@@ -56,8 +55,6 @@ interface ToggleSectionsProps {
   onBrowserProviderChange: (provider: string) => void;
   onMcpAdd: (mcp: string) => boolean;
   onMcpRemove: (mcp: string) => void;
-  onLspAdd: (language: string, command: string, extensions: string) => boolean;
-  onLspRemove: (language: string) => void;
 }
 
 export function ToggleSections({
@@ -85,8 +82,6 @@ export function ToggleSections({
   onBrowserProviderChange,
   onMcpAdd,
   onMcpRemove,
-  onLspAdd,
-  onLspRemove,
 }: ToggleSectionsProps) {
   const t = useTranslations('ohMyOpenCode');
   const [showAgents, setShowAgents] = useState(false);
@@ -102,9 +97,6 @@ export function ToggleSections({
   const [showBrowser, setShowBrowser] = useState(false);
   const [showMcps, setShowMcps] = useState(false);
   const [mcpInput, setMcpInput] = useState("");
-  const [lspLanguage, setLspLanguage] = useState("");
-  const [lspCommand, setLspCommand] = useState("");
-  const [lspExtensions, setLspExtensions] = useState("");
 
   const toggleHookGroup = (group: HookGroupName) => {
     const newExpanded = new Set(expandedHookGroups);
@@ -123,29 +115,8 @@ export function ToggleSections({
     }
   };
 
-  const handleLspAdd = () => {
-    const shouldClear = onLspAdd(lspLanguage, lspCommand, lspExtensions);
-    if (shouldClear) {
-      setLspLanguage("");
-      setLspCommand("");
-      setLspExtensions("");
-    }
-  };
-
   return (
     <>
-      <LspServersSection
-        overrides={overrides}
-        lspLanguage={lspLanguage}
-        lspCommand={lspCommand}
-        lspExtensions={lspExtensions}
-        onLspLanguageChange={setLspLanguage}
-        onLspCommandChange={setLspCommand}
-        onLspExtensionsChange={setLspExtensions}
-        onLspAdd={handleLspAdd}
-        onLspRemove={onLspRemove}
-      />
-
       <div className="border-t border-white/5 pt-4">
         <div className="flex flex-col md:flex-row gap-3">
           <div className="flex-1 space-y-3">

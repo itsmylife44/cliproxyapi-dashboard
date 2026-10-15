@@ -208,6 +208,34 @@ describe("oh-my-opencode config", () => {
     });
   });
 
+  it("drops values removed in OMO 5.x from saved config and keeps valid ones", () => {
+    const validated = validateFullConfig({
+      disabled_commands: ["init-deep", "start-work", "hyperplan"],
+      disabled_skills: ["agent-browser", "frontend-ui-ux", "playwright"],
+      disabled_hooks: ["context-window-monitor", "session-recovery", "thinking-block-validator",
+        "grep-output-truncator", "ralph-loop", "start-work", "comment-checker"],
+      browser_automation_engine: { provider: "agent-browser" },
+      lsp: { typescript: { command: ["typescript-language-server", "--stdio"] } },
+    });
+
+    expect(validated).toEqual({
+      disabled_commands: ["hyperplan"],
+      disabled_skills: ["playwright"],
+      disabled_hooks: ["comment-checker"],
+    });
+  });
+
+  it("reads a stored prompt permission as ask", () => {
+    const validated = validateFullConfig({
+      agents: { oracle: { permission: { edit: "prompt", bash: { git: "prompt", test: "deny" } } } },
+      categories: {},
+    });
+
+    expect(validated.agents?.oracle?.permission).toEqual({ edit: "ask", bash: { git: "ask", test: "deny" } });
+    expect(validateFullConfig({ agents: { oracle: { permission: { bash: "prompt" } } } }).agents?.oracle?.permission)
+      .toEqual({ bash: "ask" });
+  });
+
   it("honours a deep-high model override", () => {
     const config = buildOhMyOpenCodeConfig(["gpt-6-astra", "gpt-5.6-sol"], {
       categories: { "deep-high": { model: "gpt-5.6-sol" } },

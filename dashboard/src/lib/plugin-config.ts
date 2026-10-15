@@ -40,6 +40,8 @@ export function toPluginConfigDraft(fields: PluginConfigField[], config: unknown
   );
 }
 
+const DECIMAL = /^[+-]?(\d+(\.\d*)?|\.\d+)$/;
+
 /** Typed value of one form input; `undefined` = left empty, i.e. use the plugin default. */
 function parseInput(field: PluginConfigField, raw: string | boolean): { value: unknown } | { error: PluginConfigFieldError } {
   if (typeof raw === "boolean") return { value: raw };
@@ -47,8 +49,9 @@ function parseInput(field: PluginConfigField, raw: string | boolean): { value: u
   switch (field.type) {
     case "number":
     case "integer": {
+      // Plain decimals only: Number() would also take hex, exponents and binary/octal literals.
+      if (!DECIMAL.test(raw.trim())) return { error: "invalidNumber" };
       const n = Number(raw);
-      if (!Number.isFinite(n)) return { error: "invalidNumber" };
       return field.type === "integer" && !Number.isInteger(n) ? { error: "invalidInteger" } : { value: n };
     }
     case "array":

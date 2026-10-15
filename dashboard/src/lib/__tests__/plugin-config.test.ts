@@ -167,6 +167,26 @@ describe("plugin settings draft and diff", () => {
     expect(diffPluginConfig(FIELDS, CONFIG, { ...draft, models: '{"a": 1}' }).errors.models).toBe("notArray");
   });
 
+  it.each(["0x10", "1e3", "0b11", "0o7", "Infinity", "1_000", "1 2", "12abc", "--1", "."])(
+    "rejects the non-decimal number %j",
+    (raw) => {
+      const draft = { ...toPluginConfigDraft(FIELDS, CONFIG), ratio: raw, retries: raw };
+      expect(diffPluginConfig(FIELDS, CONFIG, draft).errors).toEqual({ ratio: "invalidNumber", retries: "invalidNumber" });
+    }
+  );
+
+  it("accepts plain decimals, signed and with surrounding spaces", () => {
+    const draft = { ...toPluginConfigDraft(FIELDS, CONFIG), ratio: " -0.25 ", retries: "+7" };
+    expect(diffPluginConfig(FIELDS, CONFIG, draft)).toEqual({ patch: { ratio: -0.25, retries: 7 }, errors: {} });
+    expect(diffPluginConfig(FIELDS, CONFIG, { ...draft, ratio: ".75" }).patch.ratio).toBe(0.75);
+  });
+
+  it("treats a whitespace-only number as empty, never as 0", () => {
+    const draft = { ...toPluginConfigDraft(FIELDS, CONFIG), ratio: " \t ", retries: "\n" };
+    // ratio was stored: clear it; retries was not: nothing to send.
+    expect(diffPluginConfig(FIELDS, CONFIG, draft)).toEqual({ patch: { ratio: null }, errors: {} });
+  });
+
   it("deletes a stored key when its field is emptied, so the plugin default applies again", () => {
     const draft = { ...toPluginConfigDraft(FIELDS, CONFIG), token: "", ratio: " ", models: "", base_url: "" };
 

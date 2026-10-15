@@ -1,4 +1,4 @@
-import { isRecord } from "@/lib/config-generators/shared";
+import { isRecord } from "@/lib/utils";
 import { extractApiError } from "@/lib/utils";
 
 /** One plugin from CLIProxyAPI's GET /plugin-store, with display strings decoded. */

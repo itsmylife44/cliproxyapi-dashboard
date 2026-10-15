@@ -22,7 +22,7 @@ export type PluginConfigDraft = Record<string, string | boolean>;
 export type PluginConfigFieldError = "invalidNumber" | "invalidInteger" | "invalidJson" | "notArray" | "notObject";
 
 /** The value the plugin runs with: the stored key, else the field default. */
-function effective(field: PluginConfigField, config: unknown): unknown {
+function valueInUse(field: PluginConfigField, config: unknown): unknown {
   const stored = isRecord(config) ? config[field.name] : undefined;
   const value = stored ?? field.default;
   return field.type === "boolean" ? value === true : value;
@@ -31,7 +31,7 @@ function effective(field: PluginConfigField, config: unknown): unknown {
 export function toPluginConfigDraft(fields: PluginConfigField[], config: unknown): PluginConfigDraft {
   return Object.fromEntries(
     fields.map((field) => {
-      const value = effective(field, config);
+      const value = valueInUse(field, config);
       if (typeof value === "boolean") return [field.name, value];
       if (value === undefined || value === null) return [field.name, ""];
       if (field.type === "array" || field.type === "object") return [field.name, JSON.stringify(value, null, 2)];
@@ -89,7 +89,7 @@ export function diffPluginConfig(
       errors[field.name] = parsed.error;
     } else if (parsed.value === undefined) {
       if (isRecord(config) && config[field.name] != null) patch[field.name] = null;
-    } else if (JSON.stringify(parsed.value) !== JSON.stringify(effective(field, config))) {
+    } else if (JSON.stringify(parsed.value) !== JSON.stringify(valueInUse(field, config))) {
       patch[field.name] = parsed.value;
     }
   }

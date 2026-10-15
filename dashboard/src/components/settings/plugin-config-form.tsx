@@ -31,12 +31,12 @@ export function PluginConfigForm({ fields, config, busy, onSave, onCancel }: Plu
 
   if (fields.length === 0) return null;
 
-  const set = (name: string, value: string | boolean) => {
+  const updateDraftField = (name: string, value: string | boolean) => {
     setDraft((prev) => ({ ...prev, [name]: value }));
     setUnchanged(false);
   };
 
-  const save = () => {
+  const submitChanges = () => {
     const result = diffPluginConfig(fields, config, draft);
     setErrors(result.errors);
     if (Object.keys(result.errors).length > 0) return;
@@ -47,17 +47,17 @@ export function PluginConfigForm({ fields, config, busy, onSave, onCancel }: Plu
     onSave(result.patch);
   };
 
-  const control = (field: PluginConfigField) => {
+  const renderFieldInput = (field: PluginConfigField) => {
     const value = draft[field.name];
     switch (field.type) {
       case "boolean":
-        return <Toggle enabled={value === true} disabled={busy} onChange={(next) => set(field.name, next)} />;
+        return <Toggle enabled={value === true} disabled={busy} onChange={(next) => updateDraftField(field.name, next)} />;
       case "enum":
         return (
           <Select
             value={String(value)}
             disabled={busy}
-            onChange={(next) => set(field.name, next)}
+            onChange={(next) => updateDraftField(field.name, next)}
             options={[{ value: "", label: t("configUnset") }, ...field.enumValues.map((v) => ({ value: v, label: v }))]}
           />
         );
@@ -67,7 +67,7 @@ export function PluginConfigForm({ fields, config, busy, onSave, onCancel }: Plu
           <textarea
             value={String(value)}
             disabled={busy}
-            onChange={(e) => set(field.name, e.target.value)}
+            onChange={(e) => updateDraftField(field.name, e.target.value)}
             spellCheck={false}
             aria-invalid={errors[field.name] !== undefined}
             className="h-28 w-full rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 font-mono text-xs text-[var(--text-primary)] focus:border-blue-400/50 focus:outline-none focus:ring-1 focus:ring-blue-400/30 transition-colors resize-y"
@@ -79,7 +79,7 @@ export function PluginConfigForm({ fields, config, busy, onSave, onCancel }: Plu
             name={`plugin-config-${field.name}`}
             value={String(value)}
             disabled={busy}
-            onChange={(next) => set(field.name, next)}
+            onChange={(next) => updateDraftField(field.name, next)}
             spellCheck={false}
           />
         );
@@ -91,7 +91,7 @@ export function PluginConfigForm({ fields, config, busy, onSave, onCancel }: Plu
       <p className="text-xs text-[var(--text-muted)]">{t("configEmptyHint")}</p>
       {fields.map((field) => (
         <ConfigField key={field.name} label={field.name} description={field.description || undefined}>
-          {control(field)}
+          {renderFieldInput(field)}
           {errors[field.name] && (
             <p role="alert" className="mt-1 text-xs text-red-600">{t(`configErrors.${errors[field.name]}`)}</p>
           )}
@@ -99,7 +99,7 @@ export function PluginConfigForm({ fields, config, busy, onSave, onCancel }: Plu
       ))}
       {unchanged && <p className="text-xs text-[var(--text-muted)]">{t("configNoChanges")}</p>}
       <div className="flex gap-2">
-        <Button disabled={busy} onClick={save}>{t("configSave")}</Button>
+        <Button disabled={busy} onClick={submitChanges}>{t("configSave")}</Button>
         <Button variant="ghost" disabled={busy} onClick={onCancel}>{t("configCancel")}</Button>
       </div>
     </div>

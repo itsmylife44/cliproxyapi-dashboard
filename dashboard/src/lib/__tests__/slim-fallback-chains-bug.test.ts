@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSlimConfig } from "../config-generators/oh-my-opencode-slim";
-import type { OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
+import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
 
 function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfig>): OhMyOpenCodeSlimFullConfig {
   expect(config).not.toBeNull();
@@ -128,14 +128,14 @@ describe("buildSlimConfig - advanced field preservation", () => {
   });
 
   it("drops stored retry_on_empty / timeoutMs, which slim's strict fallback block rejects", () => {
-    const overrides: OhMyOpenCodeSlimFullConfig = {
+    const overrides = validateSlimConfig({
       fallback: {
         enabled: true,
         retry_on_empty: true,
         timeoutMs: 5000,
         retryDelayMs: 250,
       },
-    };
+    });
 
     const config = buildSlimConfig(available, overrides);
     const generated = expectGeneratedConfig(config);

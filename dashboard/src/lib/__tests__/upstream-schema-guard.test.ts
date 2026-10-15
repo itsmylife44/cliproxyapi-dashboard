@@ -39,8 +39,6 @@ describe("upstream schema guard: slim", () => {
       agents: { oracle: { model: "model-b" } },
       fallback: {
         enabled: true,
-        timeoutMs: 15000,
-        retry_on_empty: true,
         chains: { orchestrator: ["model-b", "external/model-x"], oracle: ["model-a"] },
       },
     });

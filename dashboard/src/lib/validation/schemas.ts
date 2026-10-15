@@ -174,29 +174,10 @@ const SlimAgentEntrySchema = z.object({
   options: z.record(z.string(), z.unknown()).optional(),
 });
 
-const SlimManualPlanEntrySchema = z.object({
-  primary: z.string(),
-  fallback1: z.string(),
-  fallback2: z.string(),
-  fallback3: z.string(),
-});
-
 const SlimFallbackSchema = z.object({
   enabled: z.boolean().optional(),
-  timeoutMs: z.number().min(0).optional(),
   retryDelayMs: z.number().min(0).optional(),
-  retry_on_empty: z.boolean().optional(),
   chains: z.record(z.string(), z.array(z.string()).min(1)).optional(),
-});
-
-const SlimTmuxSchema = z.object({
-  enabled: z.boolean().optional(),
-  layout: z.enum(["main-horizontal", "main-vertical", "tiled", "even-horizontal", "even-vertical"]).optional(),
-  main_pane_size: z.number().min(20).max(80).optional(),
-});
-
-const SlimBackgroundSchema = z.object({
-  maxConcurrentStarts: z.number().min(1).max(50).optional(),
 });
 
 const SlimCouncillorEntrySchema = z.object({
@@ -205,29 +186,13 @@ const SlimCouncillorEntrySchema = z.object({
   prompt: z.string().optional(),
 });
 
-const SlimCouncilPresetMasterOverrideSchema = z.object({
-  model: z.string().optional(),
-  variant: z.string().optional(),
-  prompt: z.string().optional(),
-}).refine(
-  (value) => value.model !== undefined || value.variant !== undefined || value.prompt !== undefined,
-  "Council master override must include at least one of model, variant, or prompt",
-);
-
 const SlimCouncilPresetSchema = z.object({
   councillors: z.record(z.string(), SlimCouncillorEntrySchema),
-  master: SlimCouncilPresetMasterOverrideSchema.optional(),
 });
 
 const SlimCouncilSchema = z.object({
-  master: SlimCouncilPresetMasterOverrideSchema.optional(),
   presets: z.record(z.string(), SlimCouncilPresetSchema).optional(),
-  master_timeout: z.number().min(0).optional(),
-  councillors_timeout: z.number().min(0).optional(),
   default_preset: z.string().optional(),
-  master_fallback: z.array(z.string()).optional(),
-  councillor_execution_mode: z.enum(["parallel", "serial"]).optional(),
-  councillor_retries: z.number().int().min(0).max(5).optional(),
 });
 
 const SlimPresetSchema = z.record(z.string(), SlimAgentEntrySchema);
@@ -246,35 +211,19 @@ const SlimInterviewSchema = z.object({
   dashboard: z.boolean().optional(),
 });
 
-const SlimTodoContinuationSchema = z.object({
-  maxContinuations: z.number().min(1).max(50).optional(),
-  cooldownMs: z.number().min(0).max(30000).optional(),
-  autoEnable: z.boolean().optional(),
-  autoEnableThreshold: z.number().min(1).max(50).optional(),
-});
-
-const SlimWebsearchSchema = z.object({
-  provider: z.enum(["exa", "tavily"]).optional(),
-});
-
+// Keys slim 3.x removed (manualPlan, tmux, council.master, ...) are not listed; z.object strips them,
+// so legacy payloads are still accepted.
 const SlimConfigOverridesSchema = z.object({
   preset: z.string().optional(),
   presets: z.record(z.string(), SlimPresetSchema).optional(),
   setDefaultAgent: z.boolean().optional(),
-  scoringEngineVersion: z.enum(["v1", "v2-shadow", "v2"]).optional(),
-  balanceProviderUsage: z.boolean().optional(),
-  manualPlan: z.record(z.string(), SlimManualPlanEntrySchema).optional(),
   agents: z.record(z.string(), SlimAgentEntrySchema).optional(),
   disabled_agents: z.array(z.string()).optional(),
   disabled_mcps: z.array(z.string()).optional(),
-  tmux: SlimTmuxSchema.optional(),
   multiplexer: SlimMultiplexerSchema.optional(),
-  background: SlimBackgroundSchema.optional(),
   fallback: SlimFallbackSchema.optional(),
   council: SlimCouncilSchema.optional(),
   interview: SlimInterviewSchema.optional(),
-  todoContinuation: SlimTodoContinuationSchema.optional(),
-  websearch: SlimWebsearchSchema.optional(),
 });
 
 export const SlimAgentConfigSchema = z.object({

@@ -2,8 +2,8 @@
  * Oh-My-OpenCode-Slim Configuration Generator
  *
  * Generates oh-my-opencode-slim plugin configs with the full presets system.
- * Supports named presets, multiplexer (tmux+zellij), interview, todoContinuation,
- * provider-specific options, and all council features.
+ * Supports named presets, multiplexer, interview, provider-specific options and council.
+ * Keys slim 3.x removed are never emitted, even if still stored.
  *
  * @see https://github.com/alvinunreal/oh-my-opencode-slim
  */
@@ -16,7 +16,6 @@ import {
 import { SLIM_SCHEMA_URL } from "./upstream/plugins";
 import {
   SLIM_AGENTS,
-  SLIM_MANUAL_PLAN_AGENTS,
   toUpstreamNames,
   type OhMyOpenCodeSlimFullConfig,
   type SlimAgentConfig,
@@ -302,27 +301,6 @@ export function buildSlimConfig(
 
   // Scalar settings
   if (overrides?.setDefaultAgent !== undefined) config.setDefaultAgent = overrides.setDefaultAgent;
-  if (overrides?.scoringEngineVersion) config.scoringEngineVersion = overrides.scoringEngineVersion;
-  if (overrides?.balanceProviderUsage !== undefined) config.balanceProviderUsage = overrides.balanceProviderUsage;
-
-  // Manual plan — passthrough external models, prefix available ones
-  // Only valid for the 6 manual plan agents (excludes council)
-  if (overrides?.manualPlan && Object.keys(overrides.manualPlan).length > 0) {
-    const filteredPlan: Record<string, { primary: string; fallback1: string; fallback2: string; fallback3: string }> = {};
-    for (const [agent, entry] of Object.entries(overrides.manualPlan)) {
-      // Only include valid manual plan agents (excludes council)
-      if (!(SLIM_MANUAL_PLAN_AGENTS as readonly string[]).includes(agent)) continue;
-      filteredPlan[agent] = {
-        primary: prefixModel(entry.primary, availableModels),
-        fallback1: prefixModel(entry.fallback1, availableModels),
-        fallback2: prefixModel(entry.fallback2, availableModels),
-        fallback3: prefixModel(entry.fallback3, availableModels),
-      };
-    }
-    if (Object.keys(filteredPlan).length > 0) {
-      config.manualPlan = filteredPlan;
-    }
-  }
 
   // Disabled MCPs
   if (overrides?.disabled_mcps?.length) config.disabled_mcps = overrides.disabled_mcps;
@@ -330,7 +308,7 @@ export function buildSlimConfig(
   // Disabled agents
   if (overrides?.disabled_agents?.length) config.disabled_agents = overrides.disabled_agents;
 
-  // Multiplexer (new unified config) — takes precedence over tmux
+  // Multiplexer
   if (overrides?.multiplexer) {
     config.multiplexer = {
       type: "auto",
@@ -338,18 +316,6 @@ export function buildSlimConfig(
       main_pane_size: 60,
       ...overrides.multiplexer,
     };
-  } else if (overrides?.tmux) {
-    // Legacy tmux config — convert to multiplexer
-    config.multiplexer = {
-      type: overrides.tmux.enabled ? "tmux" : "none",
-      layout: overrides.tmux.layout ?? "main-vertical",
-      main_pane_size: overrides.tmux.main_pane_size ?? 60,
-    };
-  }
-
-  // Background
-  if (overrides?.background) {
-    config.background = { maxConcurrentStarts: 10, ...overrides.background };
   }
 
   // Fallback — `chains` are folded into agent models above. Slim's `fallback` is strict, so only
@@ -390,22 +356,6 @@ export function buildSlimConfig(
       port: 0,
       ...overrides.interview,
     };
-  }
-
-  // Todo continuation config
-  if (overrides?.todoContinuation) {
-    config.todoContinuation = {
-      maxContinuations: 5,
-      cooldownMs: 3000,
-      autoEnable: false,
-      autoEnableThreshold: 4,
-      ...overrides.todoContinuation,
-    };
-  }
-
-  // Websearch config
-  if (overrides?.websearch) {
-    config.websearch = { ...overrides.websearch };
   }
 
   return config;

@@ -112,12 +112,12 @@ export function QuickStartConfigSection({
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-semibold text-red-600 shrink-0">{t("firstTimeSetup")}</span>
                   <code className="text-xs font-mono select-all truncate text-red-600">
-                    bunx oh-my-opencode-slim@latest install --no-tui --skills=no
+                    bunx oh-my-opencode-slim@latest install --no-tui
                   </code>
                   <span className="text-[10px] text-red-600/70 shrink-0">{t("runOnce")}</span>
                 </div>
                 <p className="text-[10px] text-red-600/50">
-                  {t("registersAgentsPrefix")} <code className="text-red-600/60">--skills=yes</code> {t("registersAgentsSuffix")}
+                  {t("registersAgentsPrefix")} <code className="text-red-600/60">~/.config/opencode/oh-my-opencode-slim.jsonc</code> {t("registersAgentsSuffix")}
                 </p>
               </div>
             )}

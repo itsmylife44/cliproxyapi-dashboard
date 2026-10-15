@@ -23,7 +23,7 @@ const localStorageMock = (() => {
   };
 })();
 
-Object.defineProperty(global, "localStorage", { value: localStorageMock, writable: true });
+Object.defineProperty(global, "localStorage", { value: localStorageMock, writable: true, configurable: true });
 
 beforeEach(() => {
   localStorageMock.clear();
@@ -79,6 +79,36 @@ describe("addDismissedId", () => {
     addDismissedId("user123", "health-db");
     const result = getDismissedIds("user123");
     expect(result.size).toBe(1);
+  });
+});
+
+describe("blocked storage", () => {
+  it("never throws when localStorage access throws (e.g. blocked site data)", () => {
+    localStorageMock.getItem.mockImplementationOnce(() => {
+      throw new Error("SecurityError");
+    });
+    expect(getDismissedIds("user123").size).toBe(0);
+
+    localStorageMock.setItem.mockImplementationOnce(() => {
+      throw new Error("QuotaExceededError");
+    });
+    expect(() => addDismissedId("user123", "omo-settings")).not.toThrow();
+  });
+
+  it("never throws when reading the localStorage global itself throws", () => {
+    const original = Object.getOwnPropertyDescriptor(global, "localStorage")!;
+    Object.defineProperty(global, "localStorage", {
+      configurable: true,
+      get() {
+        throw new Error("SecurityError");
+      },
+    });
+    try {
+      expect(getDismissedIds("user123").size).toBe(0);
+      expect(() => addDismissedId("user123", "omo-settings")).not.toThrow();
+    } finally {
+      Object.defineProperty(global, "localStorage", original);
+    }
   });
 });
 

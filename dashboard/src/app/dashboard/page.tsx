@@ -14,6 +14,8 @@ import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extrac
 import type { ConfigData } from "@/lib/config-generators/shared";
 import { resolveOwnedByDisplay } from "@/lib/providers/model-grouping";
 import { LazyDashboardMiniCharts } from "@/components/lazy-dashboard-mini-charts";
+import { OmoSettingsNotice } from "@/components/omo-settings-notice";
+import { shouldShowOmoSettingsNotice } from "@/lib/config-generators/upstream/plugins";
 import { getTranslations } from 'next-intl/server';
 import { PROVIDER_CONFIG_KEYS } from "@/lib/providers/constants";
 
@@ -157,6 +159,12 @@ export default async function QuickStartPage() {
   const agentOverrides: OhMyOpenCodeFullConfig = isSubscriber
     ? { ...publisherOverrides, mcpServers: subscriberOverrides.mcpServers, customPlugins: subscriberOverrides.customPlugins }
     : subscriberOverrides;
+  // Same plugin merge as the sync bundle: subscribers get publisher plugins plus their own.
+  // ponytail: ignores backup-imported frozenConfig (rare); reuse the bundle's merge if that matters.
+  const syncedPlugins = isSubscriber
+    ? [...(publisherOverrides.customPlugins ?? []), ...(subscriberOverrides.customPlugins ?? [])]
+    : subscriberOverrides.customPlugins;
+  const showOmoNotice = session !== null && shouldShowOmoSettingsNotice(syncedPlugins, hasSyncActive);
 
   // Slim overrides — validate from DB, subscriber inherits publisher's if non-empty
   const publisherSlimOverrides = publisherAgentOverride?.slimOverrides
@@ -333,6 +341,8 @@ export default async function QuickStartPage() {
           </div>
         </div>
       </section>
+
+      {showOmoNotice && <OmoSettingsNotice userId={session.userId} />}
 
       <section id="overview" className="scroll-mt-24">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">

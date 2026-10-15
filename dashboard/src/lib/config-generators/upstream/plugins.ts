@@ -46,3 +46,8 @@ export function resolvePluginList(customPlugins: string[]): string[] {
   else plugins.add(OMO_PLUGIN);
   return Array.from(plugins).sort();
 }
+
+/** Sync users on OMO, whose settings OMO ≥4.19.3 ignored until sync plugin 1.5.0 (#295). */
+export function shouldShowOmoSettingsNotice(customPlugins: string[] | undefined, hasSyncActive: boolean): boolean {
+  return hasSyncActive && resolvePluginList(customPlugins ?? []).includes(OMO_PLUGIN);
+}

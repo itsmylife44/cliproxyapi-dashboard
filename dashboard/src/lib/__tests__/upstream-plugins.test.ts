@@ -4,6 +4,7 @@ import { buildSlimConfig } from "./helpers/slim-schema-guard";
 import {
   OMO_PLUGIN,
   resolvePluginList,
+  shouldShowOmoSettingsNotice,
   SLIM_PLUGIN,
   SYNC_PLUGIN,
 } from "../config-generators/upstream/plugins";
@@ -46,5 +47,17 @@ describe("resolvePluginList (sync bundle)", () => {
       OMO_PLUGIN,
       SYNC_PLUGIN,
     ]);
+  });
+});
+
+describe("shouldShowOmoSettingsNotice", () => {
+  it("shows for sync users on OMO, including the default plugin list", () => {
+    expect(shouldShowOmoSettingsNotice(undefined, true)).toBe(true);
+    expect(shouldShowOmoSettingsNotice(["oh-my-openagent@latest"], true)).toBe(true);
+  });
+
+  it("hides for slim users and for users without a sync token", () => {
+    expect(shouldShowOmoSettingsNotice(["oh-my-opencode-slim@latest"], true)).toBe(false);
+    expect(shouldShowOmoSettingsNotice([], false)).toBe(false);
   });
 });

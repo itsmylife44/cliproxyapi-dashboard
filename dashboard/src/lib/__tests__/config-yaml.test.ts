@@ -118,6 +118,12 @@ describe("mergeConfigYaml", () => {
     ).toThrow(/root value is not a YAML mapping/);
   });
 
+  it("flips plugins.enabled without dropping installed plugin configs", () => {
+    const yaml = "plugins:\n  enabled: false\n  dir: plugins\n  configs:\n    gemini-cli:\n      enabled: true\n";
+    const merged = parseConfigYaml(mergeConfigYaml(yaml, { plugins: { enabled: true } }));
+    expect(merged.plugins).toEqual({ enabled: true, dir: "plugins", configs: { "gemini-cli": { enabled: true } } });
+  });
+
   it("adds new keys that did not exist in the original YAML", () => {
     const rawYaml = "debug: false\n";
     const merged = mergeConfigYaml(rawYaml, {

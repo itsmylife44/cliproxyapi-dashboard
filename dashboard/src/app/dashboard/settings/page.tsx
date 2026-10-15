@@ -10,6 +10,7 @@ import { TelegramSettings } from "@/components/settings/telegram-settings";
 import { ProviderSettings } from "@/components/settings/provider-settings";
 import { PasswordSettings } from "@/components/settings/password-settings";
 import { BackupSettings } from "@/components/settings/backup-settings";
+import { PluginSettings } from "@/components/settings/plugin-settings";
 import { useTranslations } from 'next-intl';
 
 type SettingsTab = "general" | "backup";
@@ -435,6 +436,8 @@ export default function SettingsPage() {
           <DeployDashboard />
         </div>
       </section>
+
+      <PluginSettings />
 
       <ConfirmDialog
         isOpen={showConfirmProxyUpdate}

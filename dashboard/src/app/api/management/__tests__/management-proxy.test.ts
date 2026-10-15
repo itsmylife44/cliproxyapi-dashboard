@@ -21,12 +21,14 @@ vi.mock("@/lib/env", () => ({
   },
 }));
 
-import { GET, POST } from "../[...path]/route";
+import { DELETE, GET, PATCH, POST } from "../[...path]/route";
 
 const PROXIED = { error: "upstream-response" };
 
-function callRoute(method: "GET" | "POST", path: string[], url = "http://localhost/api/management") {
-  const handler = method === "GET" ? GET : POST;
+const HANDLERS = { GET, POST, PATCH, DELETE };
+
+function callRoute(method: keyof typeof HANDLERS, path: string[], url = "http://localhost/api/management") {
+  const handler = HANDLERS[method];
   const request = new NextRequest(`${url}/${path.join("/")}`, { method });
   return handler(request, { params: Promise.resolve({ path }) });
 }
@@ -92,6 +94,33 @@ describe("management proxy allowlist", () => {
     const response = await callRoute("GET", ["xai-auth-url"]);
 
     expect(response.status).toBe(401);
+    expect(mocks.fetchWithRetry).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["GET", ["plugin-store"]],
+    ["POST", ["plugin-store", "gemini-cli", "install"]],
+    ["PATCH", ["plugins", "gemini-cli", "enabled"]],
+    ["DELETE", ["plugins", "gemini-cli"]],
+  ] as const)("proxies plugin management %s %s for admins", async (method, path) => {
+    const response = await callRoute(method, [...path]);
+
+    expect(response.status).toBe(200);
+    expect(String(mocks.fetchWithRetry.mock.calls[0]?.[0])).toContain(`/v0/management/${path.join("/")}`);
+  });
+
+  it("forwards the store source on plugin install", async () => {
+    await callRoute("POST", ["plugin-store", "gemini-cli", "install"], "http://localhost/api/management?source=official");
+
+    expect(String(mocks.fetchWithRetry.mock.calls[0]?.[0])).toContain("install?source=official");
+  });
+
+  it("forbids non-admins from installing plugins", async () => {
+    mocks.findUnique.mockResolvedValue({ isAdmin: false });
+
+    const response = await callRoute("POST", ["plugin-store", "gemini-cli", "install"]);
+
+    expect(response.status).toBe(403);
     expect(mocks.fetchWithRetry).not.toHaveBeenCalled();
   });
 });

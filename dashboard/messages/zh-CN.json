@@ -304,6 +304,8 @@
       "loading": "正在加载插件商店…",
       "loadFailed": "无法加载插件商店",
       "unsupported": "此 CLIProxyAPI 构建无法加载插件（无插件构建）。请使用标准 Docker 镜像或支持插件的构建以使用插件。",
+      "volumeMissing": "下次重新创建 CLIProxyAPI 容器时，已安装的插件将会丢失：此安装的 docker-compose.yml 没有持久化的插件卷。请在服务器上的仓库根目录中运行一次：",
+      "volumeMissingDocs": "查看更新指南",
       "actionFailed": "插件操作失败",
       "settleTimeout": "{names} 未能在 30 秒内完成加载或卸载。请检查 CLIProxyAPI 日志，然后重新加载此页面。",
       "globalLabel": "加载插件",

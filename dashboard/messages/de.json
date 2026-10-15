@@ -304,6 +304,8 @@
       "loading": "Plugin-Store wird geladen…",
       "loadFailed": "Plugin-Store konnte nicht geladen werden",
       "unsupported": "Dieser CLIProxyAPI-Build kann keine Plugins laden (No-Plugin-Build). Verwende das Standard-Docker-Image oder einen Build mit Plugin-Unterstützung, um Plugins zu nutzen.",
+      "volumeMissing": "Installierte Plugins gehen verloren, sobald der CLIProxyAPI-Container neu erstellt wird: Die docker-compose.yml dieser Installation hat kein persistentes Plugin-Volume. Führe dies einmalig auf dem Server im Repository-Root aus:",
+      "volumeMissingDocs": "Zur Update-Anleitung",
       "actionFailed": "Plugin-Aktion fehlgeschlagen",
       "settleTimeout": "{names} wurde nicht innerhalb von 30 Sekunden geladen bzw. entladen. Prüfe die CLIProxyAPI-Logs und lade die Seite neu.",
       "globalLabel": "Plugins laden",

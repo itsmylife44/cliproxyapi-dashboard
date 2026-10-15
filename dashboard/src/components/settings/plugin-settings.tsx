@@ -17,6 +17,7 @@ import {
   parsePluginStore,
   pluginErrorMessage,
   pluginsSupported,
+  pluginsVolumeMissing,
   waitForPluginState,
   type PluginRow,
   type PluginStoreView,
@@ -27,6 +28,9 @@ import {
 // that lands during the previous reload (router-for-me/CLIProxyAPI#6631), and plugins
 // load in that reload. After every write, actions stay locked until the affected plugins
 // settle and for at least PLUGIN_SETTLE_MIN_MS (see waitForPluginState).
+
+const VOLUME_FIX_COMMAND = "git fetch && git checkout origin/main -- rebuild.sh && ./rebuild.sh";
+const UPDATING_DOCS_URL = "https://github.com/itsmylife44/cliproxyapi-dashboard/blob/main/docs/INSTALLATION.md#updating";
 
 async function readJson(res: Response): Promise<unknown> {
   return res.json().catch(() => null);
@@ -40,6 +44,7 @@ export function PluginSettings() {
   const [view, setView] = useState<PluginStoreView | null>(null);
   const [hidden, setHidden] = useState(false);
   const [unsupported, setUnsupported] = useState(false);
+  const [volumeMissing, setVolumeMissing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [settling, setSettling] = useState<string[]>([]);
@@ -89,7 +94,9 @@ export function PluginSettings() {
   }, [t, loadFields]);
 
   useEffect(() => {
-    if (isAdmin) void load();
+    if (!isAdmin) return;
+    // After the store load, so the warning never flashes before the unsupported notice.
+    void load().then(() => pluginsVolumeMissing()).then(setVolumeMissing);
   }, [isAdmin, load]);
 
   /** Resolves true once the write succeeded (whether or not the plugins settled in time). */
@@ -208,6 +215,17 @@ export function PluginSettings() {
       </div>
 
       {unsupported && <p className="text-sm text-amber-700">{t("unsupported")}</p>}
+      {volumeMissing && !unsupported && (
+        <div className="space-y-2 rounded-sm border border-amber-500/40 p-4 text-sm text-amber-700">
+          <p>{t("volumeMissing")}</p>
+          <code className="block overflow-x-auto rounded-sm bg-[var(--surface-muted)] px-2 py-1 font-mono text-xs text-[var(--text-primary)]">
+            {VOLUME_FIX_COMMAND}
+          </code>
+          <a href={UPDATING_DOCS_URL} target="_blank" rel="noopener noreferrer" className="text-xs underline">
+            {t("volumeMissingDocs")}
+          </a>
+        </div>
+      )}
       {loadError && <p className="text-sm text-red-600">{loadError}</p>}
       {!view && !loadError && !unsupported && <p className="text-sm text-[var(--text-muted)]">{t("loading")}</p>}
 

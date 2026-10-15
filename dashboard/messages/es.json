@@ -304,6 +304,8 @@
       "loading": "Cargando la tienda de plugins…",
       "loadFailed": "No se pudo cargar la tienda de plugins",
       "unsupported": "Esta compilación de CLIProxyAPI no puede cargar plugins (compilación sin plugins). Usa la imagen de Docker estándar o una compilación con soporte de plugins para usarlos.",
+      "volumeMissing": "Los plugins instalados se perderán la próxima vez que se vuelva a crear el contenedor de CLIProxyAPI: el docker-compose.yml de esta instalación no tiene un volumen persistente para plugins. Ejecuta esto una vez en el servidor, desde la raíz del repositorio:",
+      "volumeMissingDocs": "Leer la guía de actualización",
       "actionFailed": "La acción del plugin falló",
       "settleTimeout": "{names} no terminó de cargarse o descargarse en 30 segundos. Revisa los logs de CLIProxyAPI y luego recarga esta página.",
       "globalLabel": "Cargar plugins",

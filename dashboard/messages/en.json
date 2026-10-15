@@ -303,6 +303,7 @@
       "sectionDescription": "Install, enable and remove plugins from the CLIProxyAPI plugin store. Some providers (for example Gemini CLI or GitHub Copilot) are only available as plugins.",
       "loading": "Loading plugin store…",
       "loadFailed": "Could not load the plugin store",
+      "unsupported": "This CLIProxyAPI build cannot load plugins (no-plugin build). Use the standard Docker image or a plugin-enabled build to use plugins.",
       "actionFailed": "Plugin action failed",
       "settleTimeout": "{names} did not finish loading or unloading within 30 seconds. Check the CLIProxyAPI logs, then reload this page.",
       "globalLabel": "Load plugins",

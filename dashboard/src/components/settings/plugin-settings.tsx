@@ -16,6 +16,7 @@ import { PluginConfigForm } from "@/components/settings/plugin-config-form";
 import {
   parsePluginStore,
   pluginErrorMessage,
+  pluginsSupported,
   waitForPluginState,
   type PluginRow,
   type PluginStoreView,
@@ -38,6 +39,7 @@ export function PluginSettings() {
   const isAdmin = useAuth().user?.isAdmin === true;
   const [view, setView] = useState<PluginStoreView | null>(null);
   const [hidden, setHidden] = useState(false);
+  const [unsupported, setUnsupported] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [settling, setSettling] = useState<string[]>([]);
@@ -64,6 +66,11 @@ export function PluginSettings() {
       // The management proxy is admin-only for these routes.
       if (res.status === 401 || res.status === 403) {
         setHidden(true);
+        return null;
+      }
+      if (!pluginsSupported(res)) {
+        setUnsupported(true);
+        setView(null);
         return null;
       }
       const data = await readJson(res);
@@ -200,8 +207,9 @@ export function PluginSettings() {
         <p className="text-xs text-[var(--text-muted)]">{t("sectionDescription")}</p>
       </div>
 
+      {unsupported && <p className="text-sm text-amber-700">{t("unsupported")}</p>}
       {loadError && <p className="text-sm text-red-600">{loadError}</p>}
-      {!view && !loadError && <p className="text-sm text-[var(--text-muted)]">{t("loading")}</p>}
+      {!view && !loadError && !unsupported && <p className="text-sm text-[var(--text-muted)]">{t("loading")}</p>}
 
       {view && (
         <>

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { parsePluginStore, pluginErrorMessage, waitForPluginState, type PluginStoreView } from "@/lib/plugin-store";
+import { parsePluginStore, pluginErrorMessage, pluginsSupported, waitForPluginState, type PluginStoreView } from "@/lib/plugin-store";
 
 // Shape of GET /plugin-store on CLIProxyAPI v8.0.29 (runtime-checked); strings arrive html.EscapeString'd.
 const entry = {
@@ -174,5 +174,17 @@ describe("waitForPluginState", () => {
     );
 
     expect(result.pending).toEqual(["gemini-cli"]);
+  });
+});
+
+describe("pluginsSupported", () => {
+  it.each([
+    ["0", false],
+    ["1", true],
+    [null, true],
+  ] as const)("X-CPA-SUPPORT-PLUGIN %s -> %s", (value, expected) => {
+    const headers = new Headers(value === null ? {} : { "X-CPA-SUPPORT-PLUGIN": value });
+
+    expect(pluginsSupported(new Response(null, { headers }))).toBe(expected);
   });
 });

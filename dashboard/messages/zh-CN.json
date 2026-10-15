@@ -303,6 +303,7 @@
       "sectionDescription": "从 CLIProxyAPI 插件商店安装、启用和移除插件。部分提供商（例如 Gemini CLI 或 GitHub Copilot）仅以插件形式提供。",
       "loading": "正在加载插件商店…",
       "loadFailed": "无法加载插件商店",
+      "unsupported": "此 CLIProxyAPI 构建无法加载插件（无插件构建）。请使用标准 Docker 镜像或支持插件的构建以使用插件。",
       "actionFailed": "插件操作失败",
       "settleTimeout": "{names} 未能在 30 秒内完成加载或卸载。请检查 CLIProxyAPI 日志，然后重新加载此页面。",
       "globalLabel": "加载插件",

@@ -22,18 +22,15 @@ describe("buildSlimConfig – fallback chains behavior", () => {
       },
     });
 
-    expect(config).not.toBeNull();
-    const fallback = (config as Record<string, unknown>).fallback as Record<string, unknown>;
-    expect(fallback).toBeDefined();
+    const generated = expectGeneratedConfig(config);
+    expect(generated.fallback).not.toHaveProperty("chains");
 
-    const chains = fallback.chains as Record<string, string[]> | undefined;
-
-    // Both chains should be present
-    expect(chains).toBeDefined();
-    // Available models get prefixed
-    expect(chains!.oracle).toEqual(["cliproxyapi/model-a", "cliproxyapi/model-b"]);
+    // Chains land after the auto-picked primary; available models get prefixed
+    const oracle = generated.presets?.cliproxyapi?.oracle?.model as string[];
+    expect(oracle.slice(-2)).toEqual(["cliproxyapi/model-a", "cliproxyapi/model-b"]);
     // External models are passed through as-is (not prefixed)
-    expect(chains!.orchestrator).toEqual(["model-x", "model-y"]);
+    const orchestrator = generated.presets?.cliproxyapi?.orchestrator?.model as string[];
+    expect(orchestrator.slice(-2)).toEqual(["model-x", "model-y"]);
   });
 
   it("should preserve chains with all external models", () => {
@@ -49,15 +46,11 @@ describe("buildSlimConfig – fallback chains behavior", () => {
       },
     });
 
-    expect(config).not.toBeNull();
-    const fallback = (config as Record<string, unknown>).fallback as Record<string, unknown>;
-    expect(fallback).toBeDefined();
-    
-    const chains = fallback.chains as Record<string, string[]> | undefined;
-    // External models are passed through as-is
-    expect(chains).toBeDefined();
-    expect(chains!.orchestrator).toEqual(["model-x"]);
-    expect(chains!.oracle).toEqual(["model-y"]);
+    const generated = expectGeneratedConfig(config);
+    expect(generated.fallback).not.toHaveProperty("chains");
+    // External models are passed through as-is, after the primary
+    expect(generated.presets?.cliproxyapi?.orchestrator?.model).toEqual(["cliproxyapi/model-a", "model-x"]);
+    expect(generated.presets?.cliproxyapi?.oracle?.model).toEqual(["cliproxyapi/model-a", "model-y"]);
   });
 });
 

@@ -7,6 +7,7 @@ import {
   UPSTREAM_CATEGORY_CHAINS,
 } from "../config-generators/oh-my-opencode";
 import { getBundledOhMyOpenCodePresets } from "../config-generators/oh-my-opencode-presets";
+import { buildSlimConfig } from "../config-generators/oh-my-opencode-slim";
 import { upstreamSchemaErrors } from "./helpers/upstream-schema";
 
 const ALL_CHAIN_MODELS = [
@@ -29,4 +30,22 @@ describe("upstream schema guard: OMO", () => {
       expect(upstreamSchemaErrors("omo", config)).toEqual([]);
     },
   );
+});
+
+describe("upstream schema guard: slim", () => {
+  it("a config with stored fallback chains validates against the vendored schema", () => {
+    const config = buildSlimConfig(["model-a", "model-b"], {
+      presets: { cliproxyapi: { orchestrator: { model: ["model-a", { id: "model-b", variant: "high" }] } } },
+      agents: { oracle: { model: "model-b" } },
+      fallback: {
+        enabled: true,
+        timeoutMs: 15000,
+        retry_on_empty: true,
+        chains: { orchestrator: ["model-b", "external/model-x"], oracle: ["model-a"] },
+      },
+    });
+
+    expect(config).not.toBeNull();
+    expect(upstreamSchemaErrors("slim", config)).toEqual([]);
+  });
 });

@@ -512,6 +512,7 @@ function parseCodexQuota(data: CodexWhamUsageResponse): QuotaGroup[] {
     groups.push({
       id: `${key}-window`,
       label,
+      windowSeconds: window.limit_window_seconds,
       remainingFraction,
       resetTime,
       models: [

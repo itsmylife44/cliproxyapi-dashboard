@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import type { QuotaGroup } from "@/lib/model-first-monitoring";
-import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
 
 vi.mock("@/lib/auth/session", () => ({
   verifySession: vi.fn(() => ({ userId: "test-user" })),
@@ -825,18 +824,17 @@ describe("GET /api/quota - Claude limits[] parsing (issue #230)", () => {
   });
 });
 
+describe("GET /api/quota - Codex window duration", () => {
+  beforeEach(() => vi.clearAllMocks());
 
-describe("Codex window classification regression", () => {
-  it("keeps a primary weekly window long-term after the real quota parser", async () => {
-    vi.clearAllMocks();
+  it.each(["primary", "secondary"])("preserves the %s window duration from the account service", async (key) => {
     fetchMock
       .mockResolvedValueOnce({ ok: true, json: async () => ({ files: [{ auth_index: 41, provider: "codex", name: "codex-synthetic.json", disabled: false, status: "active" }] }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ status_code: 200, body: { rate_limit: { primary_window: { limit_window_seconds: 604800, used_percent: 25, reset_at: 1792108800 } } } }) });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ status_code: 200, body: { rate_limit: { [`${key}_window`]: { limit_window_seconds: 604800, used_percent: 25, reset_at: 1792108800 } } } }) });
     const { GET } = await import("./route");
     const response = await GET(new NextRequest("http://localhost/api/quota"));
     expect(response.status).toBe(200);
     const data = await response.json();
-    expect(data.accounts[0].groups[0]).toMatchObject({ id: "primary-window", label: "168h Window", remainingFraction: 0.75 });
-    expect(isShortTermQuotaWindow(data.accounts[0].groups[0], data.accounts[0].groups)).toBe(false);
+    expect(data.accounts[0].groups[0]).toMatchObject({ id: `${key}-window`, windowSeconds: 604800, label: "168h Window", remainingFraction: 0.75 });
   });
 });

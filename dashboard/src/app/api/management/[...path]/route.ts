@@ -8,6 +8,7 @@ import { logger } from "@/lib/logger";
 import { fetchWithRetry } from "@/lib/fetch-utils";
 import { getManagementUrl } from "@/lib/management-url";
 import { ERROR_CODE, apiError } from "@/lib/errors";
+import { PLUGIN_SUPPORT_HEADER } from "@/lib/plugin-store";
 
 const BACKEND_API_URL = getManagementUrl();
 const MANAGEMENT_API_KEY = env.MANAGEMENT_API_KEY;
@@ -360,11 +361,17 @@ async function proxyRequest(
       "Proxy request completed"
     );
 
+    const responseHeaders: Record<string, string> = {
+      "Content-Type": responseContentType || "application/json",
+    };
+    const pluginSupport = response.headers.get(PLUGIN_SUPPORT_HEADER);
+    if (pluginSupport !== null) {
+      responseHeaders[PLUGIN_SUPPORT_HEADER] = pluginSupport;
+    }
+
     return new NextResponse(responseData, {
       status: response.status,
-      headers: {
-        "Content-Type": responseContentType || "application/json",
-      },
+      headers: responseHeaders,
     });
   } catch (error) {
     logger.error({ err: error, method, path: rawPath, userId: session.userId, durationMs: Date.now() - startedAt }, "Proxy request error");

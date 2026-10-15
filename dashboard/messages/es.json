@@ -303,6 +303,7 @@
       "sectionDescription": "Instala, activa y elimina plugins de la tienda de plugins de CLIProxyAPI. Algunos proveedores (por ejemplo Gemini CLI o GitHub Copilot) solo están disponibles como plugins.",
       "loading": "Cargando la tienda de plugins…",
       "loadFailed": "No se pudo cargar la tienda de plugins",
+      "unsupported": "Esta compilación de CLIProxyAPI no puede cargar plugins (compilación sin plugins). Usa la imagen de Docker estándar o una compilación con soporte de plugins para usarlos.",
       "actionFailed": "La acción del plugin falló",
       "settleTimeout": "{names} no terminó de cargarse o descargarse en 30 segundos. Revisa los logs de CLIProxyAPI y luego recarga esta página.",
       "globalLabel": "Cargar plugins",

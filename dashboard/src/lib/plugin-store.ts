@@ -1,5 +1,13 @@
 import { decodeHtmlEntities, extractApiError, isRecord } from "@/lib/utils";
 
+/** CLIProxyAPI v8 sends `1|0` on every management response; `0` = built without cgo, can never load a plugin. */
+export const PLUGIN_SUPPORT_HEADER = "X-CPA-SUPPORT-PLUGIN";
+
+/** Only an explicit `0` means unsupported; older CLIProxyAPI sends no header. */
+export function pluginsSupported(res: Response): boolean {
+  return res.headers.get(PLUGIN_SUPPORT_HEADER) !== "0";
+}
+
 /** One plugin from CLIProxyAPI's GET /plugin-store, with display strings decoded. */
 export interface PluginRow {
   id: string;

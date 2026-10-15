@@ -1,6 +1,7 @@
 import bundledPresetData from "./oh-my-opencode-presets.json";
 
 import { fetchWithRetry } from "@/lib/fetch-utils";
+import { isRecord } from "@/lib/utils";
 
 import {
   type AgentConfigEntry,
@@ -16,9 +17,6 @@ const DEFAULT_PRESETS_SOURCE_URL =
   process.env.OH_MY_OPENCODE_PRESETS_SOURCE_URL ||
   `https://raw.githubusercontent.com/${DEFAULT_PRESETS_REPO}/main/dashboard/src/lib/config-generators/oh-my-opencode-presets.json`;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function hasMeaningfulConfig(config: OhMyOpenCodeFullConfig): boolean {
   return Object.values(config).some((value) => {

@@ -304,6 +304,7 @@
       "loading": "正在加载插件商店…",
       "loadFailed": "无法加载插件商店",
       "actionFailed": "插件操作失败",
+      "settleTimeout": "{names} 未能在 30 秒内完成加载或卸载。请检查 CLIProxyAPI 日志，然后重新加载此页面。",
       "globalLabel": "加载插件",
       "globalHelp": "仅在此开关开启时运行已安装的插件。更改会在几秒内生效，无需重启。",
       "confirmEnableTitle": "加载插件？",
@@ -318,6 +319,7 @@
       "statusActive": "已启用",
       "statusNotLoaded": "已安装，未加载",
       "statusDisabled": "已停用",
+      "statusApplying": "正在应用…",
       "install": "安装",
       "update": "更新到 {version}",
       "enable": "启用",
@@ -328,7 +330,23 @@
       "toastInstalled": "已安装 {name}",
       "toastEnabled": "已启用 {name}",
       "toastDisabled": "已停用 {name}",
-      "toastUninstalled": "已卸载 {name}"
+      "toastUninstalled": "已卸载 {name}",
+      "settings": "设置",
+      "hideSettings": "隐藏设置",
+      "configLoadFailed": "无法加载插件设置",
+      "configEmptyHint": "字段留空即使用插件默认值。列表和对象以 JSON 格式编辑。",
+      "configUnset": "插件默认值",
+      "configSave": "保存设置",
+      "configCancel": "取消",
+      "configNoChanges": "没有更改。",
+      "toastConfigSaved": "已保存 {name} 的设置",
+      "configErrors": {
+        "invalidNumber": "请输入数字。",
+        "invalidInteger": "请输入整数。",
+        "invalidJson": "不是有效的 JSON。",
+        "notArray": "请输入 JSON 列表，例如 [\"a\", \"b\"]。",
+        "notObject": "请输入 JSON 对象，例如 {\"key\": \"value\"}。"
+      }
     }
   },
   "apiKeys": {

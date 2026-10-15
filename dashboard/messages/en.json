@@ -304,6 +304,7 @@
       "loading": "Loading plugin store…",
       "loadFailed": "Could not load the plugin store",
       "actionFailed": "Plugin action failed",
+      "settleTimeout": "{names} did not finish loading or unloading within 30 seconds. Check the CLIProxyAPI logs, then reload this page.",
       "globalLabel": "Load plugins",
       "globalHelp": "Installed plugins run only while this is on. Changes apply in a few seconds without a restart.",
       "confirmEnableTitle": "Load plugins?",
@@ -318,6 +319,7 @@
       "statusActive": "Active",
       "statusNotLoaded": "Installed, not loaded",
       "statusDisabled": "Disabled",
+      "statusApplying": "Applying…",
       "install": "Install",
       "update": "Update to {version}",
       "enable": "Enable",
@@ -328,7 +330,23 @@
       "toastInstalled": "{name} installed",
       "toastEnabled": "{name} enabled",
       "toastDisabled": "{name} disabled",
-      "toastUninstalled": "{name} uninstalled"
+      "toastUninstalled": "{name} uninstalled",
+      "settings": "Settings",
+      "hideSettings": "Hide settings",
+      "configLoadFailed": "Could not load the plugin settings",
+      "configEmptyHint": "Leave a field empty to use the plugin's default. Lists and objects are edited as JSON.",
+      "configUnset": "Plugin default",
+      "configSave": "Save settings",
+      "configCancel": "Cancel",
+      "configNoChanges": "Nothing changed.",
+      "toastConfigSaved": "{name} settings saved",
+      "configErrors": {
+        "invalidNumber": "Enter a number.",
+        "invalidInteger": "Enter a whole number.",
+        "invalidJson": "This is not valid JSON.",
+        "notArray": "Enter a JSON list, for example [\"a\", \"b\"].",
+        "notObject": "Enter a JSON object, for example {\"key\": \"value\"}."
+      }
     }
   },
   "apiKeys": {
@@ -933,7 +951,7 @@
     "collectionNeverRan": "Never collected",
     "collectedJustNow": "Collected just now",
     "collectedMinutesAgo": "Collected {count}m ago",
-    "collectedHoursAgo": "Collected {count}h ago", 
+    "collectedHoursAgo": "Collected {count}h ago",
     "collectedDaysAgo": "Collected {count}d ago",
     "collectionFailed": "Collection failed",
     "triggerCollection": "Collect Now",

@@ -304,6 +304,7 @@
       "loading": "Plugin-Store wird geladen…",
       "loadFailed": "Plugin-Store konnte nicht geladen werden",
       "actionFailed": "Plugin-Aktion fehlgeschlagen",
+      "settleTimeout": "{names} wurde nicht innerhalb von 30 Sekunden geladen bzw. entladen. Prüfe die CLIProxyAPI-Logs und lade die Seite neu.",
       "globalLabel": "Plugins laden",
       "globalHelp": "Installierte Plugins laufen nur, solange dies aktiv ist. Änderungen greifen nach wenigen Sekunden ohne Neustart.",
       "confirmEnableTitle": "Plugins laden?",
@@ -318,6 +319,7 @@
       "statusActive": "Aktiv",
       "statusNotLoaded": "Installiert, nicht geladen",
       "statusDisabled": "Deaktiviert",
+      "statusApplying": "Wird angewendet…",
       "install": "Installieren",
       "update": "Auf {version} aktualisieren",
       "enable": "Aktivieren",
@@ -328,7 +330,23 @@
       "toastInstalled": "{name} installiert",
       "toastEnabled": "{name} aktiviert",
       "toastDisabled": "{name} deaktiviert",
-      "toastUninstalled": "{name} deinstalliert"
+      "toastUninstalled": "{name} deinstalliert",
+      "settings": "Einstellungen",
+      "hideSettings": "Einstellungen ausblenden",
+      "configLoadFailed": "Plugin-Einstellungen konnten nicht geladen werden",
+      "configEmptyHint": "Lass ein Feld leer, um den Standardwert des Plugins zu verwenden. Listen und Objekte werden als JSON bearbeitet.",
+      "configUnset": "Plugin-Standard",
+      "configSave": "Einstellungen speichern",
+      "configCancel": "Abbrechen",
+      "configNoChanges": "Nichts geändert.",
+      "toastConfigSaved": "Einstellungen von {name} gespeichert",
+      "configErrors": {
+        "invalidNumber": "Gib eine Zahl ein.",
+        "invalidInteger": "Gib eine ganze Zahl ein.",
+        "invalidJson": "Das ist kein gültiges JSON.",
+        "notArray": "Gib eine JSON-Liste ein, zum Beispiel [\"a\", \"b\"].",
+        "notObject": "Gib ein JSON-Objekt ein, zum Beispiel {\"key\": \"value\"}."
+      }
     }
   },
   "apiKeys": {
@@ -467,7 +485,7 @@
     "oauthStep1Popup": "Melden Sie sich an und autorisieren Sie im Popup-Fenster.",
     "oauthStep2": "Nach der Autorisierung kann die Seite nicht geladen werden (das ist normal).",
     "oauthStep3": "Unser Server läuft remote, daher kann die OAuth-Weiterleitung ihn nicht direkt erreichen. Kopieren Sie die VOLLSTÄNDIGE URL aus der Adressleiste.",
-    "oauthStep4": "F\u00FCgen Sie die URL unten ein und best\u00E4tigen Sie.",
+    "oauthStep4": "Fügen Sie die URL unten ein und bestätigen Sie.",
     "oauthPasteCallbackLabel": "Callback-URL einfügen",
     "oauthDeviceAuthTitle": "Geräteautorisierung",
     "oauthDeviceStep1Popup": "Ein Browser-Fenster mit der Autorisierungsseite wurde geöffnet.",

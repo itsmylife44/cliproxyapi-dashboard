@@ -1,6 +1,7 @@
 import "server-only";
 import { logger } from "@/lib/logger";
-import { fetchWithTimeout, isRecord, MANAGEMENT_API_KEY, MANAGEMENT_BASE_URL } from "./management-api";
+import { isRecord } from "@/lib/utils";
+import { fetchWithTimeout, MANAGEMENT_API_KEY, MANAGEMENT_BASE_URL } from "./management-api";
 
 /**
  * OAuth providers served by CLIProxyAPI plugins that are installed and active

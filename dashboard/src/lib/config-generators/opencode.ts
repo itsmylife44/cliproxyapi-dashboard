@@ -1,9 +1,9 @@
+import { isRecord } from "@/lib/utils";
 import {
-  isRecord,
   type ProxyModel,
 } from "./shared";
 import { modelsDevCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";
-import { getManagementUrl } from "@/lib/management-url";
+import { getConfiguredManagementUrl, getManagementUrl } from "@/lib/management-url";
 
 export type { OAuthAccount, ConfigData } from "./shared";
 
@@ -13,7 +13,8 @@ export function getProxyUrl(): string {
     return apiUrl;
   }
 
-  const managementUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL?.trim();
+  // Client-facing URL: empty when unset, never the internal Docker default.
+  const managementUrl = getConfiguredManagementUrl();
   if (!managementUrl) {
     return "";
   }

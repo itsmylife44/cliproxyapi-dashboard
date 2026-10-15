@@ -1,3 +1,4 @@
+import { isRecord } from "@/lib/utils";
 export interface OAuthAccount {
   id: string;
   name: string;
@@ -13,9 +14,6 @@ export interface ConfigData {
   "openai-compatibility"?: unknown;
   "oauth-model-alias"?: unknown;
 }
-
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
 
 export interface ProxyModel {
   id: string;

@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "@/lib/env";
+import { getManagementUrl } from "@/lib/management-url";
 import { logger } from "@/lib/logger";
 import { invalidateProxyModelsCache } from "@/lib/cache";
 
@@ -55,7 +56,7 @@ export async function syncCustomProviderToProxy(
   operation: "create" | "update",
   prefetchedConfig?: ManagementProviderEntry[]
 ): Promise<SyncResult> {
-  const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
+  const managementUrl = getManagementUrl();
   const secretKey = env.MANAGEMENT_API_KEY;
 
   if (!secretKey) {

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
-import { mergeConfigYaml, readAuthDir } from "@/lib/config-yaml";
+import { readAuthDir } from "@/lib/config-yaml";
+import { writeConfigYamlChanges } from "@/lib/config-yaml-write";
 import { planConfigSave } from "@/lib/config-save-plan";
 import AgentConfigEditor from "@/components/config/agent-config-editor";
 import ConfigPreview from "@/components/config/config-preview";
@@ -260,19 +261,9 @@ export default function ConfigPage() {
             continue;
           }
 
-          const rawYamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML);
-          if (!rawYamlRes.ok) {
-            errors.push(t('failedToFetchYaml'));
-            continue;
-          }
-          const mergedYaml = mergeConfigYaml(await rawYamlRes.text(), write.changes);
-          const yamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
-            method: "PUT",
-            headers: { "Content-Type": "text/yaml" },
-            body: mergedYaml,
-          });
+          const { step, res: yamlRes } = await writeConfigYamlChanges(write.changes);
           if (!yamlRes.ok) {
-            errors.push(t('failedToSaveYaml'));
+            errors.push(step === "read" ? t('failedToFetchYaml') : t('failedToSaveYaml'));
           } else {
             successCount += Object.keys(write.changes).length;
           }

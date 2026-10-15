@@ -3,12 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/env", () => ({
   env: {
-    CLIPROXYAPI_MANAGEMENT_URL: "http://cliproxyapi:8317/v0/management",
     MANAGEMENT_API_KEY: "test-management-key-16",
   },
 }));
 vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn() } }));
 
+import { getManagementUrl } from "@/lib/management-url";
 import { listEnabledPluginOAuthProviders } from "../plugins";
 
 function stubPlugins(body: unknown, status = 200) {
@@ -46,7 +46,7 @@ describe("listEnabledPluginOAuthProviders", () => {
     });
 
     await expect(listEnabledPluginOAuthProviders()).resolves.toEqual(["gemini-cli", "copilot"]);
-    expect(String(fetchMock.mock.calls[0]?.[0])).toBe("http://cliproxyapi:8317/v0/management/plugins");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`${getManagementUrl()}/plugins`);
   });
 
   it("returns nothing when the plugin system is disabled (stock config)", async () => {

@@ -6,13 +6,13 @@ import { hashProviderKey, maskProviderKey } from "./hash";
 import { PROVIDER, PROVIDER_ENDPOINT, type Provider } from "./constants";
 import { getMaxProviderKeysPerUser } from "./settings";
 import { invalidateUsageCaches, invalidateProxyModelsCache } from "@/lib/cache";
+import { isRecord } from "@/lib/utils";
 import {
   providerMutex,
   fetchWithTimeout,
   MANAGEMENT_BASE_URL,
   MANAGEMENT_API_KEY,
   FETCH_TIMEOUT_MS,
-  isRecord,
   isApiKeyArray,
   isOpenAICompatArray,
   type ContributeKeyResult,

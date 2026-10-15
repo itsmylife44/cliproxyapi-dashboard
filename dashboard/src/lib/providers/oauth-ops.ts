@@ -5,12 +5,12 @@ import { Prisma } from "@/generated/prisma/client";
 import { canonicalizeOAuthProvider, type OAuthProvider } from "./constants";
 import { normalizeImportedOAuthCredential } from "./oauth-import-normalization";
 import { invalidateUsageCaches, invalidateProxyModelsCache } from "@/lib/cache";
+import { isRecord } from "@/lib/utils";
 import {
   fetchWithTimeout,
   MANAGEMENT_BASE_URL,
   MANAGEMENT_API_KEY,
   FETCH_TIMEOUT_MS,
-  isRecord,
   type ContributeOAuthResult,
   type RemoveOAuthResult,
   type ListOAuthResult,

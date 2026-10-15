@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getManagementUrl, getProxyBaseUrl } from "@/lib/management-url";
+import { getConfiguredManagementUrl, getManagementUrl, getProxyBaseUrl } from "@/lib/management-url";
 
 describe("getManagementUrl", () => {
   afterEach(() => {
@@ -14,6 +14,22 @@ describe("getManagementUrl", () => {
   it("falls back to the bundled CLIProxyAPI service URL when unset", () => {
     vi.stubEnv("CLIPROXYAPI_MANAGEMENT_URL", "");
     expect(getManagementUrl()).toBe("http://cliproxyapi:8317/v0/management");
+  });
+});
+
+describe("getConfiguredManagementUrl", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("returns the trimmed CLIPROXYAPI_MANAGEMENT_URL when set", () => {
+    vi.stubEnv("CLIPROXYAPI_MANAGEMENT_URL", " http://proxy.internal:9000/v0/management ");
+    expect(getConfiguredManagementUrl()).toBe("http://proxy.internal:9000/v0/management");
+  });
+
+  it("returns undefined when unset or blank, without the bundled default", () => {
+    vi.stubEnv("CLIPROXYAPI_MANAGEMENT_URL", "  ");
+    expect(getConfiguredManagementUrl()).toBeUndefined();
   });
 });
 

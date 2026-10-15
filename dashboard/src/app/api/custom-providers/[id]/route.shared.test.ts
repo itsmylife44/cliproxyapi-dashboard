@@ -9,7 +9,6 @@ vi.mock("@/lib/env", () => ({
     DATABASE_URL: "postgres://",
     JWT_SECRET: "x",
     MANAGEMENT_API_KEY: "x",
-    CLIPROXYAPI_MANAGEMENT_URL: "http://proxy/v0/management",
   },
 }));
 

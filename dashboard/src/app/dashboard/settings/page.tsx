@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/toast";
 import { DeployDashboard } from "@/components/deploy-dashboard";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { extractApiError } from "@/lib/utils";
+import { ERROR_CODE } from "@/lib/error-codes";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { TelegramSettings } from "@/components/settings/telegram-settings";
 import { ProviderSettings } from "@/components/settings/provider-settings";
@@ -198,7 +199,7 @@ export default function SettingsPage() {
         }, 10000);
       } else {
         const data = await res.json();
-        const message = data?.error?.code === "PROXY_VERSION_PIN_UNAVAILABLE"
+        const message = data?.error?.code === ERROR_CODE.PROXY_VERSION_PIN_UNAVAILABLE
           ? tu('errorVersionPinUnavailable')
           : extractApiError(data, t('errorUpdateFailed'));
         showToast(message, "error");

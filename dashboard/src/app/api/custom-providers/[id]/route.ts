@@ -8,6 +8,7 @@ import { z } from "zod";
 import { invalidateProxyModelsCache } from "@/lib/cache";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { env } from "@/lib/env";
+import { getManagementUrl } from "@/lib/management-url";
 import { logger } from "@/lib/logger";
 import { syncCustomProviderToProxy } from "@/lib/providers/custom-provider-sync";
 import { Errors, apiSuccess } from "@/lib/errors";
@@ -186,7 +187,7 @@ export async function PATCH(
       }
 
       if (!keyResolved) {
-        const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
+        const managementUrl = getManagementUrl();
         const secretKey = env.MANAGEMENT_API_KEY;
 
         if (secretKey) {
@@ -319,7 +320,7 @@ export async function DELETE(
       ipAddress: extractIpAddress(request),
     });
 
-    const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
+    const managementUrl = getManagementUrl();
     const secretKey = env.MANAGEMENT_API_KEY;
 
     let syncStatus: "ok" | "failed" = "ok";

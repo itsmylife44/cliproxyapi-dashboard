@@ -1,4 +1,5 @@
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { isRecord } from "@/lib/utils";
 
 type ConfigObject = Record<string, unknown>;
 
@@ -38,7 +39,6 @@ const MERGE_ONLY_FIELDS = [
 ];
 
 const isChanged = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
-const isObject = (v: unknown): v is ConfigObject => v !== null && typeof v === "object" && !Array.isArray(v);
 
 /**
  * At most one management write per save. Upstream reloads asynchronously after each
@@ -63,10 +63,10 @@ export function planConfigSave(originalConfig: object, currentConfig: object): C
   for (const [parentKey, subFields] of Object.entries(NESTED_FIELD_ENDPOINTS)) {
     const oldParent = original[parentKey];
     const newParent = current[parentKey];
-    if (!isObject(oldParent) || !isObject(newParent)) continue;
+    if (!isRecord(oldParent) || !isRecord(newParent)) continue;
     for (const [subKey, endpoint] of Object.entries(subFields)) {
       if (!isChanged(oldParent[subKey], newParent[subKey])) continue;
-      const parentChanges = isObject(changes[parentKey]) ? changes[parentKey] : {};
+      const parentChanges = isRecord(changes[parentKey]) ? changes[parentKey] : {};
       changes[parentKey] = { ...parentChanges, [subKey]: newParent[subKey] };
       endpointWrites.push({ kind: "endpoint", endpoint, body: { value: newParent[subKey] } });
     }

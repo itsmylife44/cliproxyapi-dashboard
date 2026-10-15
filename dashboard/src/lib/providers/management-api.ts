@@ -1,5 +1,7 @@
 import "server-only";
 import { env } from "@/lib/env";
+import { getManagementUrl } from "@/lib/management-url";
+import { isRecord } from "@/lib/utils";
 
 /**
  * SINGLE-INSTANCE CONSTRAINT WARNING
@@ -42,7 +44,7 @@ export class AsyncMutex {
 
 export const providerMutex = new AsyncMutex();
 
-export const MANAGEMENT_BASE_URL = env.CLIPROXYAPI_MANAGEMENT_URL;
+export const MANAGEMENT_BASE_URL = getManagementUrl();
 export const MANAGEMENT_API_KEY = env.MANAGEMENT_API_KEY;
 export const FETCH_TIMEOUT_MS = 10000; // 10 second timeout for all Management API calls
 
@@ -131,10 +133,6 @@ export interface ToggleOAuthResult {
   ok: boolean;
   disabled?: boolean;
   error?: string;
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function isApiKeyArray(value: unknown): value is Array<{ "api-key": string }> {

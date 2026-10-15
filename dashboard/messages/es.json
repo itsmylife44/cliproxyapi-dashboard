@@ -304,6 +304,7 @@
       "loading": "Cargando la tienda de plugins…",
       "loadFailed": "No se pudo cargar la tienda de plugins",
       "actionFailed": "La acción del plugin falló",
+      "settleTimeout": "{names} no terminó de cargarse o descargarse en 30 segundos. Revisa los logs de CLIProxyAPI y luego recarga esta página.",
       "globalLabel": "Cargar plugins",
       "globalHelp": "Los plugins instalados solo se ejecutan mientras esto esté activo. Los cambios se aplican en unos segundos sin reiniciar.",
       "confirmEnableTitle": "¿Cargar plugins?",
@@ -318,6 +319,7 @@
       "statusActive": "Activo",
       "statusNotLoaded": "Instalado, no cargado",
       "statusDisabled": "Desactivado",
+      "statusApplying": "Aplicando…",
       "install": "Instalar",
       "update": "Actualizar a {version}",
       "enable": "Activar",
@@ -328,7 +330,23 @@
       "toastInstalled": "{name} instalado",
       "toastEnabled": "{name} activado",
       "toastDisabled": "{name} desactivado",
-      "toastUninstalled": "{name} desinstalado"
+      "toastUninstalled": "{name} desinstalado",
+      "settings": "Ajustes",
+      "hideSettings": "Ocultar ajustes",
+      "configLoadFailed": "No se pudieron cargar los ajustes del plugin",
+      "configEmptyHint": "Deja un campo vacío para usar el valor predeterminado del plugin. Las listas y los objetos se editan como JSON.",
+      "configUnset": "Predeterminado del plugin",
+      "configSave": "Guardar ajustes",
+      "configCancel": "Cancelar",
+      "configNoChanges": "No hay cambios.",
+      "toastConfigSaved": "Ajustes de {name} guardados",
+      "configErrors": {
+        "invalidNumber": "Introduce un número.",
+        "invalidInteger": "Introduce un número entero.",
+        "invalidJson": "No es un JSON válido.",
+        "notArray": "Introduce una lista JSON, por ejemplo [\"a\", \"b\"].",
+        "notObject": "Introduce un objeto JSON, por ejemplo {\"key\": \"value\"}."
+      }
     }
   },
   "apiKeys": {

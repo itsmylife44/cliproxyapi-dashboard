@@ -82,6 +82,34 @@ describe("isShortTermQuotaWindow", () => {
     });
   });
 
+  describe("provider-reported window duration", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-10-16T00:00:00Z"));
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it.each([
+      ["primary-window", 18000, true],
+      ["secondary-window", 18000, true],
+      ["primary-window", 90000, false],
+      ["secondary-window", 90000, false],
+      ["primary-window", 604800, false],
+      ["secondary-window", 604800, false],
+    ] as const)("classifies %s with %i seconds independently of its label", (id, windowSeconds, expected) => {
+      // A translated label carries no "5h"/"weekly" hint, so only the duration can decide.
+      expect(isShortTermQuotaWindow({
+        id, label: "套餐窗口", windowSeconds, resetTime: "2026-10-16T01:00:00Z",
+      })).toBe(expected);
+    });
+
+    it.each([undefined, 0, -1, Number.NaN])("retains legacy ID rules without a valid duration (%s)", (windowSeconds) => {
+      expect(isShortTermQuotaWindow({
+        id: "primary-window", label: "Primary Window", windowSeconds, resetTime: null,
+      })).toBe(true);
+    });
+  });
+
   it("treats windows without markers or reset time as long-term", () => {
     expect(
       isShortTermQuotaWindow({

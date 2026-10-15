@@ -823,3 +823,75 @@ describe("GET /api/quota - Claude limits[] parsing (issue #230)", () => {
     expect(groups.find((group) => group.id === "seven-day")?.severity).toBeUndefined();
   });
 });
+
+describe("GET /api/quota - Codex window duration", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  async function fetchCodexGroup(key: string, limitWindowSeconds: unknown): Promise<QuotaGroup> {
+    const authFilesResponse = {
+      files: [
+        {
+          auth_index: 41,
+          provider: "codex",
+          name: "codex-synthetic.json",
+          disabled: false,
+          status: "active",
+        },
+      ],
+    };
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(authFilesResponse),
+        body: { cancel: vi.fn() },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            status_code: 200,
+            body: {
+              rate_limit: {
+                [`${key}_window`]: {
+                  limit_window_seconds: limitWindowSeconds,
+                  used_percent: 25,
+                  reset_at: 1792108800,
+                },
+              },
+            },
+          }),
+        body: { cancel: vi.fn() },
+      });
+
+    const { GET } = await import("./route");
+    const response = await GET(new NextRequest("http://localhost/api/quota"));
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    return data.accounts[0].groups[0];
+  }
+
+  it.each(["primary", "secondary"])("preserves the %s window duration from the account service", async (key) => {
+    const group = await fetchCodexGroup(key, 604800);
+    expect(group).toMatchObject({
+      id: `${key}-window`,
+      windowSeconds: 604800,
+      label: "168h Window",
+      remainingFraction: 0.75,
+    });
+  });
+
+  it("parses a numeric-string duration so label and classification agree", async () => {
+    const group = await fetchCodexGroup("primary", "604800");
+    expect(group.windowSeconds).toBe(604800);
+    expect(group.label).toBe("168h Window");
+  });
+
+  it.each([null, 0, "abc"])("drops an invalid duration (%s) and keeps the positional label", async (value) => {
+    const group = await fetchCodexGroup("primary", value);
+    expect(group.windowSeconds).toBeUndefined();
+    expect(group.label).toBe("Primary Window");
+  });
+});

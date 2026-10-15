@@ -471,7 +471,7 @@ async function fetchAntigravityQuota(authIndex: string): Promise<AntigravityQuot
 }
 
 interface CodexRateWindow {
-  limit_window_seconds?: number;
+  limit_window_seconds?: number | string | null;
   used_percent?: number;
   reset_at?: number;
 }
@@ -505,13 +505,19 @@ function parseCodexQuota(data: CodexWhamUsageResponse): QuotaGroup[] {
     const resetTime = window.reset_at
       ? new Date(window.reset_at * 1000).toISOString()
       : null;
-    const label = window.limit_window_seconds
-      ? formatWindowLabel(window.limit_window_seconds)
+    // Normalize once so the label and the capacity classifier always agree on the duration.
+    const parsedWindowSeconds = Number(window.limit_window_seconds);
+    const windowSeconds = Number.isFinite(parsedWindowSeconds) && parsedWindowSeconds > 0
+      ? parsedWindowSeconds
+      : undefined;
+    const label = windowSeconds
+      ? formatWindowLabel(windowSeconds)
       : `${key.charAt(0).toUpperCase() + key.slice(1)} Window`;
 
     groups.push({
       id: `${key}-window`,
       label,
+      windowSeconds,
       remainingFraction,
       resetTime,
       models: [

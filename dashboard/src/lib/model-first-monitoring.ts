@@ -26,6 +26,7 @@ export interface QuotaModel {
 export interface QuotaGroup {
   id: string;
   label: string;
+  windowSeconds?: number;
   remainingFraction?: number | null;
   resetTime: string | null;
   models: QuotaModel[];

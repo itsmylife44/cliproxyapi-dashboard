@@ -2,10 +2,12 @@ const HOUR_MS = 60 * 60 * 1000;
 const SHORT_TERM_CLUSTER_WINDOW_MS = 6 * HOUR_MS;
 const SHORT_TERM_CLUSTER_MIN_SPREAD_MS = 12 * HOUR_MS;
 const SHORT_TERM_RESET_FALLBACK_MS = 24 * HOUR_MS;
+const SHORT_TERM_MAX_WINDOW_MS = 24 * HOUR_MS;
 
 export interface QuotaWindowLike {
   id: string;
   label: string;
+  windowSeconds?: number;
   resetTime: string | null;
 }
 
@@ -45,6 +47,10 @@ export function isShortTermQuotaWindow(
   group: QuotaWindowLike,
   siblingGroups: readonly QuotaWindowLike[] = []
 ): boolean {
+  // Provider-reported duration takes precedence over display labels and ID heuristics.
+  if (typeof group.windowSeconds === "number" && Number.isFinite(group.windowSeconds) && group.windowSeconds > 0) {
+    return group.windowSeconds * 1000 <= SHORT_TERM_MAX_WINDOW_MS;
+  }
   const id = group.id.toLowerCase();
   if (id === "seven-day" || id.startsWith("seven-day-")) {
     return false;

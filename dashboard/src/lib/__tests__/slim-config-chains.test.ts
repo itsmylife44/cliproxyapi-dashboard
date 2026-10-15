@@ -144,7 +144,7 @@ describe("buildSlimConfig – preset and global override semantics", () => {
     expect(generated.agents?.oracle).toEqual({ variant: "high" });
   });
 
-  it("preserves council master overrides without a model", () => {
+  it("emits council presets but not the master slim 3.x removed", () => {
     const config = buildSlimConfig(available, {
       council: {
         master: {
@@ -162,10 +162,8 @@ describe("buildSlimConfig – preset and global override semantics", () => {
     });
 
     const generated = expectGeneratedConfig(config);
-    expect(generated.council).toBeDefined();
-    expect(generated.council?.master).toEqual({
-      variant: "high-precision",
-      prompt: "Coordinate the council.",
+    expect(generated.council).toEqual({
+      presets: { default: { alpha: { model: "cliproxyapi/model-a" } } },
     });
   });
 

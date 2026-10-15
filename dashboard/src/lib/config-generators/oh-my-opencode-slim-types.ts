@@ -36,7 +36,6 @@ export const SLIM_MANUAL_PLAN_AGENTS = [
 export const SLIM_INTERNAL_AGENTS = [
   "observer",
   "councillor",
-  "council-master",
 ] as const;
 
 export type SlimAgentName = (typeof SLIM_AGENTS)[number];
@@ -59,27 +58,17 @@ export const SLIM_COUNCILLOR_EXECUTION_MODES = ["parallel", "serial"] as const;
 
 export const SLIM_WEBSEARCH_PROVIDERS = ["exa", "tavily"] as const;
 
-/** Default MCPs per agent (as per oh-my-opencode-slim docs) */
-export const SLIM_DEFAULT_MCPS: Record<SlimAgentName, string[]> = {
-  orchestrator: ["*"],
-  librarian: ["websearch", "context7", "grep_app"],
-  designer: [],
-  oracle: [],
-  explorer: [],
-  fixer: [],
-  council: [],
-};
+// Upstream renamed skill `cartography` → `codemap` (1.0.0) and MCP `grep_app` → `gh_grep` (2.0.0).
+const RENAMED_SKILLS_AND_MCPS = new Map([["cartography", "codemap"], ["grep_app", "gh_grep"]]);
 
-/** Default skills per agent (as per oh-my-opencode-slim docs) */
-export const SLIM_DEFAULT_SKILLS: Record<SlimAgentName, string[]> = {
-  orchestrator: ["cartography"],
-  oracle: ["simplify"],
-  designer: ["agent-browser"],
-  explorer: [],
-  librarian: [],
-  fixer: [],
-  council: [],
-};
+/** Translates stored skill/MCP names (incl. `!name` exclusions) to their current upstream names, deduped. */
+export function toUpstreamNames(names: string[]): string[] {
+  return [...new Set(names.map((name) => {
+    const negated = name.startsWith("!");
+    const renamed = RENAMED_SKILLS_AND_MCPS.get(negated ? name.slice(1) : name);
+    return renamed === undefined ? name : `${negated ? "!" : ""}${renamed}`;
+  }))];
+}
 
 // ============================================================================
 // INTERFACES
@@ -130,7 +119,6 @@ export interface SlimPreset {
   // Allow explicit advanced agent configs
   observer?: SlimAgentConfig;
   councillor?: SlimAgentConfig;
-  "council-master"?: SlimAgentConfig;
   // Allow any other advanced agent keys
   [key: string]: SlimAgentConfig | undefined;
 }

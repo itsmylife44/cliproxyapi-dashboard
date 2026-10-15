@@ -548,7 +548,7 @@ export function SlimToggleSections({
               className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
             />
           </div>
-          {council.master && (!council.presets || Object.keys(council.presets).length === 0) && (
+          {Object.keys(council).length > 0 && Object.keys(council.presets ?? {}).length === 0 && (
             <p className="text-[11px] text-amber-600/90">{t("councilIncompleteHint")}</p>
           )}
           <div className="space-y-1">

@@ -16,9 +16,8 @@ import {
 import { SLIM_SCHEMA_URL } from "./upstream/plugins";
 import {
   SLIM_AGENTS,
-  SLIM_DEFAULT_MCPS,
-  SLIM_DEFAULT_SKILLS,
   SLIM_MANUAL_PLAN_AGENTS,
+  toUpstreamNames,
   type OhMyOpenCodeSlimFullConfig,
   type SlimAgentConfig,
   type SlimModelConfig,
@@ -123,19 +122,9 @@ function buildAgentEntry(
   // Apply other overrides
   if (override?.temperature !== undefined) entry.temperature = override.temperature;
   
-  // Skills — use override if explicitly provided (even empty array), else defaults
-  if (override?.skills !== undefined) {
-    entry.skills = [...override.skills]; // Clone to prevent mutation
-  } else if (SLIM_DEFAULT_SKILLS[agent as keyof typeof SLIM_DEFAULT_SKILLS]?.length) {
-    entry.skills = [...SLIM_DEFAULT_SKILLS[agent as keyof typeof SLIM_DEFAULT_SKILLS]];
-  }
-
-  // MCPs — use override if explicitly provided (even empty array), else defaults
-  if (override?.mcps !== undefined) {
-    entry.mcps = [...override.mcps]; // Clone to prevent mutation
-  } else if (SLIM_DEFAULT_MCPS[agent as keyof typeof SLIM_DEFAULT_MCPS]?.length) {
-    entry.mcps = [...SLIM_DEFAULT_MCPS[agent as keyof typeof SLIM_DEFAULT_MCPS]];
-  }
+  // Skills/MCPs — only what the user set (even an empty array); otherwise upstream defaults apply
+  if (override?.skills !== undefined) entry.skills = toUpstreamNames(override.skills);
+  if (override?.mcps !== undefined) entry.mcps = toUpstreamNames(override.mcps);
 
   // Provider-specific options
   if (override?.options && Object.keys(override.options).length > 0) {
@@ -146,10 +135,12 @@ function buildAgentEntry(
 }
 
 function normalizeExplicitAgentConfig(
+  agentKey: string,
   override: SlimAgentConfig | undefined,
   availableModels: string[],
 ): SlimAgentConfig | null {
-  if (!override) return null;
+  // Upstream removed `council-master` (1.0.0); emitting it would register a bogus custom subagent.
+  if (!override || agentKey === "council-master") return null;
 
   const entry: SlimAgentConfig = {};
 
@@ -158,8 +149,8 @@ function normalizeExplicitAgentConfig(
   }
   if (override.temperature !== undefined) entry.temperature = override.temperature;
   if (override.variant !== undefined) entry.variant = override.variant;
-  if (override.skills !== undefined) entry.skills = [...override.skills];
-  if (override.mcps !== undefined) entry.mcps = [...override.mcps];
+  if (override.skills !== undefined) entry.skills = toUpstreamNames(override.skills);
+  if (override.mcps !== undefined) entry.mcps = toUpstreamNames(override.mcps);
   if (override.options && Object.keys(override.options).length > 0) {
     entry.options = override.options;
   }
@@ -257,7 +248,7 @@ export function buildSlimConfig(
       // Preserve explicitly configured advanced agents without inventing defaults for them.
       for (const [agentKey, agentConfig] of Object.entries(presetOverride ?? {})) {
         if (SLIM_AGENTS.includes(agentKey as typeof SLIM_AGENTS[number])) continue;
-        const normalized = normalizeExplicitAgentConfig(agentConfig, availableModels);
+        const normalized = normalizeExplicitAgentConfig(agentKey, agentConfig, availableModels);
         if (normalized) {
           presetOut[agentKey] = normalized;
         }
@@ -274,7 +265,7 @@ export function buildSlimConfig(
     if (overrides?.agents && Object.keys(overrides.agents).length > 0) {
       const rootAgents: Record<string, SlimAgentConfig> = Object.create(null);
       for (const [agentKey, agentConfig] of Object.entries(overrides.agents)) {
-        const normalized = normalizeExplicitAgentConfig(agentConfig, availableModels);
+        const normalized = normalizeExplicitAgentConfig(agentKey, agentConfig, availableModels);
         if (normalized) {
           rootAgents[agentKey] = normalized;
         }
@@ -298,7 +289,7 @@ export function buildSlimConfig(
 
     for (const [agentKey, agentConfig] of Object.entries(explicitAgents)) {
       if (SLIM_AGENTS.includes(agentKey as typeof SLIM_AGENTS[number])) continue;
-      const normalized = normalizeExplicitAgentConfig(agentConfig, availableModels);
+      const normalized = normalizeExplicitAgentConfig(agentKey, agentConfig, availableModels);
       if (normalized) {
         generatedAgents[agentKey] = normalized;
       }
@@ -368,67 +359,26 @@ export function buildSlimConfig(
     config.fallback = { enabled, retryDelayMs };
   }
 
-  // Council — prefix model IDs, validate availability
-  if (overrides?.council) {
-    const rawCouncil = overrides.council;
-    const council: Record<string, unknown> = Object.create(null);
-
-    // Master
-    if (rawCouncil.master) {
-      const master: Record<string, unknown> = Object.create(null);
-      if (rawCouncil.master.model !== undefined) {
-        master.model = prefixModel(rawCouncil.master.model, availableModels);
-      }
-      if (rawCouncil.master.variant !== undefined) master.variant = rawCouncil.master.variant;
-      if (rawCouncil.master.prompt !== undefined) master.prompt = rawCouncil.master.prompt;
-      if (Object.keys(master).length > 0) {
-        council.master = master;
-      }
+  // Council — upstream requires `presets`; `master`, per-preset `master` and the timeout/fallback/
+  // execution/retry scalars were removed (1.0.0–2.2.5), so they are not emitted.
+  const councilPresets: Record<string, Record<string, Record<string, unknown>>> = Object.create(null);
+  for (const [pName, preset] of Object.entries(overrides?.council?.presets ?? {})) {
+    const presetOut: Record<string, Record<string, unknown>> = Object.create(null);
+    for (const [cName, cConfig] of Object.entries(preset.councillors)) {
+      presetOut[cName] = {
+        model: prefixModel(cConfig.model, availableModels),
+        ...(cConfig.variant !== undefined && { variant: cConfig.variant }),
+        ...(cConfig.prompt !== undefined && { prompt: cConfig.prompt }),
+      };
     }
-
-    // Council presets
-    if (rawCouncil.presets && Object.keys(rawCouncil.presets).length > 0) {
-      const presets: Record<string, Record<string, unknown>> = Object.create(null);
-      for (const [pName, preset] of Object.entries(rawCouncil.presets)) {
-        const presetOut: Record<string, unknown> = Object.create(null);
-        for (const [cName, cConfig] of Object.entries(preset.councillors)) {
-          const entry: Record<string, unknown> = Object.create(null);
-          entry.model = prefixModel(cConfig.model, availableModels);
-          if (cConfig.variant !== undefined) entry.variant = cConfig.variant;
-          if (cConfig.prompt !== undefined) entry.prompt = cConfig.prompt;
-          presetOut[cName] = entry;
-        }
-        if (preset.master) {
-          const mo: Record<string, unknown> = Object.create(null);
-          if (preset.master.model !== undefined) {
-            mo.model = prefixModel(preset.master.model, availableModels);
-          }
-          if (preset.master.variant !== undefined) mo.variant = preset.master.variant;
-          if (preset.master.prompt !== undefined) mo.prompt = preset.master.prompt;
-          if (Object.keys(mo).length > 0) presetOut.master = mo;
-        }
-        if (Object.keys(presetOut).length > 0) presets[pName] = presetOut;
-      }
-      if (Object.keys(presets).length > 0) council.presets = presets;
-    }
-
-    // Scalar council fields
-    if (rawCouncil.master_timeout !== undefined) council.master_timeout = rawCouncil.master_timeout;
-    if (rawCouncil.councillors_timeout !== undefined) council.councillors_timeout = rawCouncil.councillors_timeout;
-    if (rawCouncil.default_preset !== undefined) council.default_preset = rawCouncil.default_preset;
-    if (rawCouncil.councillor_execution_mode !== undefined) council.councillor_execution_mode = rawCouncil.councillor_execution_mode;
-    if (rawCouncil.councillor_retries !== undefined) council.councillor_retries = rawCouncil.councillor_retries;
-
-    // Master fallback — prefix available models, passthrough external
-    if (rawCouncil.master_fallback?.length) {
-      const prefixed = rawCouncil.master_fallback.map((m) => prefixModel(m, availableModels));
-      if (prefixed.length > 0) council.master_fallback = prefixed;
-    }
-
-    // Only emit council if it has both master AND presets (schema requirement)
-    if (council.master && council.presets && Object.keys(council.presets).length > 0) {
-      config.council = council;
-    }
+    if (Object.keys(presetOut).length > 0) councilPresets[pName] = presetOut;
+  }
+  if (Object.keys(councilPresets).length > 0) {
+    const defaultPreset = overrides?.council?.default_preset;
+    config.council = {
+      presets: councilPresets,
+      ...(defaultPreset !== undefined && { default_preset: defaultPreset }),
+    };
   }
 
   // Interview config

@@ -3,19 +3,11 @@
 import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button";
 
-interface DashboardUpdateInfo {
-  currentVersion: string;
-  latestVersion: string;
-  updateAvailable: boolean;
-  availableVersions: string[];
-  releaseUrl: string | null;
-  releaseNotes: string | null;
-}
-
 interface PasswordSettingsProps {
   cliProxyVersion: string | null;
   cliProxyLoading: boolean;
-  dashboardUpdateInfo: DashboardUpdateInfo | null;
+  dashboardVersion?: string;
+  isAdmin: boolean;
   revokingSessions: boolean;
   onConfirmRevokeSessions: () => void;
 }
@@ -23,7 +15,8 @@ interface PasswordSettingsProps {
 export function PasswordSettings({
   cliProxyVersion,
   cliProxyLoading,
-  dashboardUpdateInfo,
+  dashboardVersion,
+  isAdmin,
   revokingSessions,
   onConfirmRevokeSessions,
 }: PasswordSettingsProps) {
@@ -35,13 +28,15 @@ export function PasswordSettings({
         <p className="text-xs text-[var(--text-muted)]">{t('sectionDescription')}</p>
       </div>
 
-      <div className="space-y-3 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('sessionControlTitle')}</h3>
-        <p className="text-sm text-[var(--text-muted)]">{t('sessionControlDescription')}</p>
-        <Button variant="danger" onClick={onConfirmRevokeSessions} disabled={revokingSessions}>
-          {revokingSessions ? t('buttonRevoking') : t('buttonForceLogout')}
-        </Button>
-      </div>
+      {isAdmin && (
+        <div className="space-y-3 rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('sessionControlTitle')}</h3>
+          <p className="text-sm text-[var(--text-muted)]">{t('sessionControlDescription')}</p>
+          <Button variant="danger" onClick={onConfirmRevokeSessions} disabled={revokingSessions}>
+            {revokingSessions ? t('buttonRevoking') : t('buttonForceLogout')}
+          </Button>
+        </div>
+      )}
 
       <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <h3 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">{t('systemInfoTitle')}</h3>
@@ -65,14 +60,16 @@ export function PasswordSettings({
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between text-[var(--text-secondary)]">
               <span>{t('dashboardVersionLabel')}</span>
-              <span className="font-mono">{dashboardUpdateInfo?.currentVersion || t('dashboardVersionFallback')}</span>
+              <span className="font-mono">{dashboardVersion || t('dashboardVersionFallback')}</span>
             </div>
-            <div className="flex items-center justify-between text-[var(--text-secondary)]">
-              <span>{t('cliProxyApiLabel')}</span>
-              <span className="font-mono">
-                {cliProxyLoading ? t('cliProxyLoading') : cliProxyVersion || t('cliProxyUnknown')}
-              </span>
-            </div>
+            {isAdmin && (
+              <div className="flex items-center justify-between text-[var(--text-secondary)]">
+                <span>{t('cliProxyApiLabel')}</span>
+                <span className="font-mono">
+                  {cliProxyLoading ? t('cliProxyLoading') : cliProxyVersion || t('cliProxyUnknown')}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -93,7 +93,19 @@ export function diffPluginConfig(
   return { patch, errors };
 }
 
-/** Settings schema per plugin id from GET /plugins. Upstream fills it only for loaded plugins. */
+/** Reverses upstream's htmlsanitize.JSONValue: every string value (not key) is escaped. */
+function decodeJsonValue(value: unknown): unknown {
+  if (typeof value === "string") return decodeHtmlEntities(value);
+  if (Array.isArray(value)) return value.map(decodeJsonValue);
+  if (isRecord(value)) return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, decodeJsonValue(v)]));
+  return value;
+}
+
+/**
+ * Settings schema per plugin id from GET /plugins. Upstream fills it only for loaded plugins.
+ * Name, enum values and default arrive html-escaped; the config PATCH stores the body verbatim
+ * and the plugin matches its own raw values, so decode once here, for display and for saving.
+ */
 export function parsePluginConfigFields(data: unknown): Record<string, PluginConfigField[]> {
   const result: Record<string, PluginConfigField[]> = {};
   if (!isRecord(data) || !Array.isArray(data.plugins)) return result;
@@ -102,10 +114,12 @@ export function parsePluginConfigFields(data: unknown): Record<string, PluginCon
     const fields = p.config_fields.flatMap((f): PluginConfigField[] =>
       isRecord(f) && typeof f.name === "string" && f.name && isFieldType(f.type)
         ? [{
-            name: f.name,
+            name: decodeHtmlEntities(f.name),
             type: f.type,
-            default: f.default ?? undefined,
-            enumValues: Array.isArray(f.enum_values) ? f.enum_values.filter((v): v is string => typeof v === "string") : [],
+            default: decodeJsonValue(f.default ?? undefined),
+            enumValues: Array.isArray(f.enum_values)
+              ? f.enum_values.filter((v): v is string => typeof v === "string").map(decodeHtmlEntities)
+              : [],
             description: decodeHtmlEntities(f.description),
           }]
         : []

@@ -7,6 +7,7 @@ import { Errors } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/lib/logger";
+import { isRecord } from "@/lib/utils";
 
 const PROVIDERS = {
   CLAUDE: "claude",
@@ -68,8 +69,6 @@ interface AuthFileEntry {
   email?: string;
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
 
 const isProvider = (value: unknown): value is Provider =>
   Object.values(PROVIDERS).includes(value as Provider);

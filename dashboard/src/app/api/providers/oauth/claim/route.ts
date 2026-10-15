@@ -6,11 +6,11 @@ import { Errors } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/lib/logger";
+import { isRecord } from "@/lib/utils";
 import {
   fetchWithTimeout,
   MANAGEMENT_BASE_URL,
   MANAGEMENT_API_KEY,
-  isRecord,
 } from "@/lib/providers/management-api";
 import { canonicalizeOAuthProvider } from "@/lib/providers/constants";
 

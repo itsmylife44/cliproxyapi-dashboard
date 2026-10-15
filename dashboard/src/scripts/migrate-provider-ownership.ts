@@ -16,6 +16,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { canonicalizeOAuthProvider } from "@/lib/providers/constants";
 import { getManagementUrl } from "@/lib/management-url";
+import { isRecord } from "@/lib/utils";
 
 const PROVIDER = {
   CLAUDE: "claude",
@@ -64,8 +65,6 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter });
 const isDryRun = process.argv.includes("--dry-run");
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
 
 async function fetchManagementJson(endpoint: string): Promise<unknown> {
   try {

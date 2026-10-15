@@ -1,5 +1,4 @@
-import { isRecord } from "@/lib/utils";
-import { decode } from "@/lib/plugin-store";
+import { decodeHtmlEntities, isRecord } from "@/lib/utils";
 
 const FIELD_TYPES = ["string", "number", "integer", "boolean", "enum", "array", "object"] as const;
 export type PluginConfigFieldType = (typeof FIELD_TYPES)[number];
@@ -107,7 +106,7 @@ export function parsePluginConfigFields(data: unknown): Record<string, PluginCon
             type: f.type,
             default: f.default ?? undefined,
             enumValues: Array.isArray(f.enum_values) ? f.enum_values.filter((v): v is string => typeof v === "string") : [],
-            description: decode(f.description),
+            description: decodeHtmlEntities(f.description),
           }]
         : []
     );

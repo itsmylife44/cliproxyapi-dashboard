@@ -1,5 +1,4 @@
-import { isRecord } from "@/lib/utils";
-import { extractApiError } from "@/lib/utils";
+import { decodeHtmlEntities, extractApiError, isRecord } from "@/lib/utils";
 
 /** One plugin from CLIProxyAPI's GET /plugin-store, with display strings decoded. */
 export interface PluginRow {
@@ -27,13 +26,6 @@ export interface PluginStoreView {
   sourceErrors: string[];
 }
 
-const ENTITIES: Record<string, string> = { "&lt;": "<", "&gt;": ">", "&#39;": "'", "&#34;": '"', "&amp;": "&" };
-
-/** Reverses Go's html.EscapeString, which upstream applies to every store display string. */
-export function decode(value: unknown): string {
-  return typeof value === "string" ? value.replace(/&(lt|gt|#39|#34|amp);/g, (m) => ENTITIES[m] ?? m) : "";
-}
-
 export function parsePluginStore(data: unknown): PluginStoreView {
   if (!isRecord(data)) return { pluginsEnabled: false, rows: [], sourceErrors: [] };
   const entries = Array.isArray(data.plugins) ? data.plugins : [];
@@ -44,13 +36,13 @@ export function parsePluginStore(data: unknown): PluginStoreView {
       isRecord(p) && typeof p.id === "string" && p.id
         ? [{
             id: p.id,
-            sourceId: decode(p.source_id),
-            name: decode(p.name) || p.id,
-            description: decode(p.description),
-            author: decode(p.author),
-            version: decode(p.version),
-            installedVersion: decode(p.installed_version),
-            tags: Array.isArray(p.tags) ? p.tags.map(decode).filter(Boolean) : [],
+            sourceId: decodeHtmlEntities(p.source_id),
+            name: decodeHtmlEntities(p.name) || p.id,
+            description: decodeHtmlEntities(p.description),
+            author: decodeHtmlEntities(p.author),
+            version: decodeHtmlEntities(p.version),
+            installedVersion: decodeHtmlEntities(p.installed_version),
+            tags: Array.isArray(p.tags) ? p.tags.map(decodeHtmlEntities).filter(Boolean) : [],
             installed: p.installed === true,
             enabled: p.enabled === true,
             active: p.effective_enabled === true && p.registered === true,
@@ -60,14 +52,14 @@ export function parsePluginStore(data: unknown): PluginStoreView {
         : []
     ),
     sourceErrors: errors.flatMap((e) =>
-      isRecord(e) ? [`${decode(e.source_name) || decode(e.source_id)}: ${decode(e.message)}`] : []
+      isRecord(e) ? [`${decodeHtmlEntities(e.source_name) || decodeHtmlEntities(e.source_id)}: ${decodeHtmlEntities(e.message)}`] : []
     ),
   };
 }
 
 /** Upstream plugin errors are `{error: code, message}`; the message is the useful part. */
 export function pluginErrorMessage(data: unknown, fallback: string): string {
-  return isRecord(data) && typeof data.message === "string" && data.message ? decode(data.message) : extractApiError(data, fallback);
+  return isRecord(data) && typeof data.message === "string" && data.message ? decodeHtmlEntities(data.message) : extractApiError(data, fallback);
 }
 
 /** Plugins an action should leave settled, and the global switch state it should leave behind. */

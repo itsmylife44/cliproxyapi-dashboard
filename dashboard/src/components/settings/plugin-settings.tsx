@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Toggle } from "@/components/config/config-fields";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { writeConfigYamlChanges } from "@/lib/config-yaml";
@@ -26,6 +27,8 @@ async function readJson(res: Response): Promise<unknown> {
 export function PluginSettings() {
   const t = useTranslations("settings.plugins");
   const { showToast } = useToast();
+  // Admin-only: gate on the session so non-admins never see the section while the store loads.
+  const isAdmin = useAuth().user?.isAdmin === true;
   const [view, setView] = useState<PluginStoreView | null>(null);
   const [hidden, setHidden] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -55,8 +58,8 @@ export function PluginSettings() {
   }, [t]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (isAdmin) void load();
+  }, [isAdmin, load]);
 
   const run = async (action: () => Promise<Response>, success: string) => {
     setBusy(true);
@@ -117,7 +120,7 @@ export function PluginSettings() {
       .sort((a, b) => Number(b.installed) - Number(a.installed) || a.name.localeCompare(b.name));
   }, [view, filter]);
 
-  if (hidden) return null;
+  if (!isAdmin || hidden) return null;
 
   const statusLabel = (row: PluginRow) =>
     row.active ? t("statusActive") : row.installed ? (row.enabled ? t("statusNotLoaded") : t("statusDisabled")) : null;

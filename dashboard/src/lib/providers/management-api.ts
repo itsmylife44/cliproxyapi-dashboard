@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "@/lib/env";
+import { getManagementUrl } from "@/lib/management-url";
 
 /**
  * SINGLE-INSTANCE CONSTRAINT WARNING
@@ -42,7 +43,7 @@ export class AsyncMutex {
 
 export const providerMutex = new AsyncMutex();
 
-export const MANAGEMENT_BASE_URL = env.CLIPROXYAPI_MANAGEMENT_URL;
+export const MANAGEMENT_BASE_URL = getManagementUrl();
 export const MANAGEMENT_API_KEY = env.MANAGEMENT_API_KEY;
 export const FETCH_TIMEOUT_MS = 10000; // 10 second timeout for all Management API calls
 

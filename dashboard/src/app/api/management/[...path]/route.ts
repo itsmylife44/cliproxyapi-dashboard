@@ -6,8 +6,9 @@ import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { fetchWithRetry } from "@/lib/fetch-utils";
+import { getManagementUrl } from "@/lib/management-url";
 
-const BACKEND_API_URL = env.CLIPROXYAPI_MANAGEMENT_URL;
+const BACKEND_API_URL = getManagementUrl();
 const MANAGEMENT_API_KEY = env.MANAGEMENT_API_KEY;
 const FETCH_TIMEOUT_MS = 30_000;
 const RESPONSE_SIZE_LIMIT_BYTES = 10 * 1024 * 1024;

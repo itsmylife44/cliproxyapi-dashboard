@@ -220,6 +220,15 @@ export const HOOK_GROUPS = {
 
 export type HookGroupName = keyof typeof HOOK_GROUPS;
 
+/** OMO 5.x renamed `deep` to `deep-low`; an explicitly stored `deep-low` wins over a legacy `deep`. */
+export function canonicalizeCategories<T>(
+  categories: Record<string, T> | undefined,
+): Record<string, T> | undefined {
+  if (!categories || !("deep" in categories)) return categories;
+  const { deep, ...rest } = categories;
+  return { "deep-low": deep, ...rest };
+}
+
 // ============================================================================
 // VALIDATION FUNCTION
 // ============================================================================
@@ -361,7 +370,7 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
       }
     }
     if (Object.keys(validatedCategories).length > 0) {
-      result.categories = validatedCategories;
+      result.categories = canonicalizeCategories(validatedCategories);
     }
   }
 

@@ -128,50 +128,93 @@ describe("oh-my-opencode config", () => {
     });
   });
 
-  it("resolves models from fallback chains", () => {
-    const config = buildOhMyOpenCodeConfig(["gpt-5-nano", "claude-haiku-4.5", "gemini-3-flash", "k2p5"]);
+  it("resolves models from the 5.1.33 chains, skipping models the proxy doesn't serve", () => {
+    const config = buildOhMyOpenCodeConfig(["claude-haiku-5-5", "deepseek-flash", "minimax-m2.7", "claude-opus-4-6"]);
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
     const agents = typedConfig.agents as Record<string, { model: string; fallback_models?: string[] }>;
     const categories = typedConfig.categories as Record<string, { model: string; fallback_models?: string[] }>;
 
-    // explore chain: grok-code-fast-1 → minimax-m2.7-highspeed → minimax-m2.7 → claude-haiku-4.5 → gpt-5-nano
-    const explore = agents.explore;
-    expect(explore).toBeDefined();
-    expect(explore!.model).toBe("cliproxyapi/claude-haiku-4.5");
-    expect(explore!.fallback_models).toContain("cliproxyapi/gpt-5-nano");
+    // explore/librarian: kimi-for-coding-highspeed → gpt-6-luna-fast → claude-haiku-5-5 → deepseek-flash → qwen3.7-plus → minimax-m2.7
+    for (const agent of ["explore", "librarian"]) {
+      expect(agents[agent]).toEqual({
+        model: "cliproxyapi/claude-haiku-5-5",
+        fallback_models: ["cliproxyapi/deepseek-flash", "cliproxyapi/minimax-m2.7"],
+      });
+    }
 
-    // librarian chain: minimax-m2.7 → minimax-m2.7-highspeed → claude-haiku-4.5 → gpt-5-nano
-    const librarian = agents.librarian;
-    expect(librarian).toBeDefined();
-    expect(librarian!.model).toBe("cliproxyapi/claude-haiku-4.5");
+    // quick: gpt-6-luna-fast → claude-haiku-5-5 → deepseek-flash → qwen3.6-flash → minimax-m3 → minimax-m2.7 → …
+    expect(categories.quick).toEqual({
+      model: "cliproxyapi/claude-haiku-5-5",
+      fallback_models: ["cliproxyapi/deepseek-flash", "cliproxyapi/minimax-m2.7"],
+    });
 
-    // quick category: gpt-5.4-mini → claude-haiku-4.5 → gemini-3-flash → minimax-m2.7 → gpt-5-nano
-    const quick = categories.quick;
-    expect(quick).toBeDefined();
-    expect(quick!.model).toBe("cliproxyapi/claude-haiku-4.5");
-    expect(quick!.fallback_models).toContain("cliproxyapi/gemini-3-flash");
-
-    // writing category: gemini-3-flash → kimi-k2.5 → claude-sonnet-4.6 → minimax-m2.7
-    const writing = categories.writing;
-    expect(writing).toBeDefined();
-    expect(writing!.model).toBe("cliproxyapi/gemini-3-flash");
+    // writing is Claude-only: claude-opus-5-5 → claude-opus-4-6
+    expect(categories.writing).toEqual({ model: "cliproxyapi/claude-opus-4-6" });
   });
 
   it("auto-generates fallback_models from chain when no override", () => {
-    const config = buildOhMyOpenCodeConfig(["claude-opus-4.6", "gpt-5.4", "glm-5", "k2p5"]);
+    const config = buildOhMyOpenCodeConfig(["kimi-k3", "gpt-5.6-sol", "glm-5.2", "claude-opus-4.6"]);
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
     const agents = typedConfig.agents as Record<string, { model: string; fallback_models?: string[] }>;
-    const sisyphus = agents.sisyphus;
 
-    // sisyphus chain: claude-opus-4.6 → kimi-k2.5 → k2p5 → gpt-5.4 → glm-5 → big-pickle
-    expect(sisyphus).toBeDefined();
-    expect(sisyphus!.model).toBe("cliproxyapi/claude-opus-4.6");
-    expect(sisyphus!.fallback_models).toContain("cliproxyapi/k2p5");
-    expect(sisyphus!.fallback_models).toContain("cliproxyapi/gpt-5.4");
-    expect(sisyphus!.fallback_models).toContain("cliproxyapi/glm-5");
+    // sisyphus: claude-opus-5-5 → kimi-k3 → gpt-5.6-sol → glm-5.2 → big-pickle
+    expect(agents.sisyphus).toEqual({
+      model: "cliproxyapi/kimi-k3",
+      fallback_models: ["cliproxyapi/gpt-5.6-sol", "cliproxyapi/glm-5.2"],
+    });
+  });
 
+  it("emits the deep-low and deep-high categories with their 5.1.33 chains, never deep", () => {
+    const config = buildOhMyOpenCodeConfig(["gpt-6.1-sol-fast", "gpt-5.6-sol", "gpt-6-astra"]);
+    const categories = (config as Record<string, unknown>).categories as Record<string, unknown>;
+
+    // deep-low: gpt-6.1-sol → gpt-6.1-sol-fast → gpt-5.6-sol → gpt-5.6-sol-fast
+    expect(categories["deep-low"]).toEqual({
+      model: "cliproxyapi/gpt-6.1-sol-fast",
+      fallback_models: ["cliproxyapi/gpt-5.6-sol"],
+    });
+    // deep-high: gpt-6-astra
+    expect(categories["deep-high"]).toEqual({ model: "cliproxyapi/gpt-6-astra" });
+    expect(categories).not.toHaveProperty("deep");
+  });
+
+  it("emits a stored deep category as deep-low", () => {
+    const config = buildOhMyOpenCodeConfig(["gpt-6.1-sol", "gpt-5.6-sol"], {
+      categories: { deep: { model: "gpt-5.6-sol", temperature: 0.3 } },
+    });
+    const categories = (config as Record<string, unknown>).categories as Record<string, unknown>;
+
+    expect(categories["deep-low"]).toEqual({ model: "cliproxyapi/gpt-5.6-sol", temperature: 0.3 });
+    expect(categories).not.toHaveProperty("deep");
+  });
+
+  it("prefers a stored deep-low over a stored legacy deep", () => {
+    const config = buildOhMyOpenCodeConfig(["gpt-6.1-sol", "gpt-5.6-sol"], {
+      categories: { deep: { model: "gpt-6.1-sol" }, "deep-low": { model: "gpt-5.6-sol" } },
+    });
+    const categories = (config as Record<string, unknown>).categories as Record<string, { model: string }>;
+
+    expect(categories["deep-low"]?.model).toBe("cliproxyapi/gpt-5.6-sol");
+  });
+
+  it("maps a stored deep category to deep-low when validating saved config", () => {
+    const validated = validateFullConfig({ categories: { deep: { model: "gpt-5.6-sol" }, quick: "gpt-6-luna-fast" } });
+
+    expect(validated.categories).toEqual({
+      "deep-low": { model: "gpt-5.6-sol" },
+      quick: { model: "gpt-6-luna-fast" },
+    });
+  });
+
+  it("honours a deep-high model override", () => {
+    const config = buildOhMyOpenCodeConfig(["gpt-6-astra", "gpt-5.6-sol"], {
+      categories: { "deep-high": { model: "gpt-5.6-sol" } },
+    });
+    const categories = (config as Record<string, unknown>).categories as Record<string, { model: string }>;
+
+    expect(categories["deep-high"]?.model).toBe("cliproxyapi/gpt-5.6-sol");
   });
 
   it("returns null when no models available", () => {
@@ -180,8 +223,8 @@ describe("oh-my-opencode config", () => {
   });
 
   it("computes override fallback from override position, not chain start", () => {
-    const config = buildOhMyOpenCodeConfig(["claude-opus-4.6", "k2p5", "gpt-5.4", "glm-5"], {
-      agents: { sisyphus: { model: "k2p5" } },
+    const config = buildOhMyOpenCodeConfig(["claude-opus-5-5", "kimi-k3", "gpt-5.6-sol", "glm-5.2"], {
+      agents: { sisyphus: { model: "kimi-k3" } },
     });
 
     expect(config).not.toBeNull();
@@ -190,16 +233,13 @@ describe("oh-my-opencode config", () => {
     const sisyphus = agents.sisyphus;
 
     expect(sisyphus).toBeDefined();
-    expect(sisyphus!.model).toBe("cliproxyapi/k2p5");
-    expect(sisyphus!.fallback_models).toContain("cliproxyapi/gpt-5.4");
-    expect(sisyphus!.fallback_models).toContain("cliproxyapi/glm-5");
-    expect(sisyphus!.fallback_models).not.toContain("cliproxyapi/claude-opus-4.6");
-    expect(sisyphus!.fallback_models).not.toContain("cliproxyapi/k2p5");
+    expect(sisyphus!.model).toBe("cliproxyapi/kimi-k3");
+    expect(sisyphus!.fallback_models).toEqual(["cliproxyapi/gpt-5.6-sol", "cliproxyapi/glm-5.2"]);
   });
 
   it("computes category override fallback from override position", () => {
-    const config = buildOhMyOpenCodeConfig(["gemini-3.1-pro", "glm-5", "claude-opus-4.6", "k2p5"], {
-      categories: { "visual-engineering": { model: "glm-5" } },
+    const config = buildOhMyOpenCodeConfig(["claude-fable-5-1", "claude-opus-5-5", "kimi-k3"], {
+      categories: { "visual-engineering": { model: "claude-opus-5-5" } },
     });
 
     expect(config).not.toBeNull();
@@ -208,10 +248,8 @@ describe("oh-my-opencode config", () => {
     const visualEngineering = categories["visual-engineering"];
 
     expect(visualEngineering).toBeDefined();
-    expect(visualEngineering!.model).toBe("cliproxyapi/glm-5");
-    expect(visualEngineering!.fallback_models).toContain("cliproxyapi/claude-opus-4.6");
-    expect(visualEngineering!.fallback_models).toContain("cliproxyapi/k2p5");
-    expect(visualEngineering!.fallback_models).not.toContain("cliproxyapi/gemini-3.1-pro");
+    expect(visualEngineering!.model).toBe("cliproxyapi/claude-opus-5-5");
+    expect(visualEngineering!.fallback_models).toEqual(["cliproxyapi/kimi-k3"]);
   });
 
   it("uses no fallbacks when override model is not in chain", () => {
@@ -358,19 +396,19 @@ describe("oh-my-opencode config", () => {
     });
 
     it("uses chain-resolved model when override is unavailable but chain has match", () => {
-      const config = buildOhMyOpenCodeConfig(["k2p5"], {
+      const config = buildOhMyOpenCodeConfig(["kimi-k3"], {
         agents: { sisyphus: { model: "gpt-5.4" } },
       });
 
-      // Override (gpt-5.4) not in available; but k2p5 IS in sisyphus chain
-      // Expected: agents.sisyphus.model equals "cliproxyapi/k2p5" (chain fallback used)
+      // Override (gpt-5.4) not in available; but kimi-k3 IS in sisyphus chain
+      // Expected: agents.sisyphus.model equals "cliproxyapi/kimi-k3" (chain fallback used)
       // This tests EXISTING behavior — should PASS both before and after the fix
       expect(config).not.toBeNull();
       const typedConfig = config as Record<string, unknown>;
       const agents = typedConfig.agents as Record<string, { model: string }>;
       const sisyphus = agents.sisyphus;
       expect(sisyphus).toBeDefined();
-      expect(sisyphus!.model).toBe("cliproxyapi/k2p5");
+      expect(sisyphus!.model).toBe("cliproxyapi/kimi-k3");
     });
   });
 

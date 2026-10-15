@@ -1723,7 +1723,18 @@
     "councilMasterTimeoutLabel": "Tiempo de espera maestro (ms)",
     "councilCouncillorsTimeoutLabel": "Tiempo de espera de consejeros (ms)",
     "councilRetriesLabel": "Reintentos",
-    "configureTooltip": "Configura variante, temperatura y más"
+    "configureTooltip": "Configura variante, temperatura y más",
+    "categoryRoles": {
+      "visual-engineering": "Trabajo de UI",
+      "ultrabrain": "Lógica compleja",
+      "deep-low": "Resolución profunda de problemas",
+      "deep-high": "Resolución profunda de problemas (escalada)",
+      "artistry": "Trabajo creativo",
+      "quick": "Tareas triviales",
+      "unspecified-low": "General, poco esfuerzo",
+      "unspecified-high": "General, mucho esfuerzo",
+      "writing": "Documentación"
+    }
   },
   "ohMyOpenCodeSlim": {
     "apiKeyRequiredTitle": "Clave API Obligatoria",

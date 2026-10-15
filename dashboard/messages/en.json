@@ -1728,7 +1728,18 @@
     "councilMasterTimeoutLabel": "Master timeout (ms)",
     "councilCouncillorsTimeoutLabel": "Councillors timeout (ms)",
     "councilRetriesLabel": "Retries",
-    "configureTooltip": "Configure variant, temperature, and more"
+    "configureTooltip": "Configure variant, temperature, and more",
+    "categoryRoles": {
+      "visual-engineering": "UI work",
+      "ultrabrain": "Hard logic",
+      "deep-low": "Deep problem solving",
+      "deep-high": "Deep problem solving (escalation)",
+      "artistry": "Creative work",
+      "quick": "Trivial tasks",
+      "unspecified-low": "Low effort general",
+      "unspecified-high": "High effort general",
+      "writing": "Documentation"
+    }
   },
   "ohMyOpenCodeSlim": {
     "apiKeyRequiredTitle": "API Key Required",

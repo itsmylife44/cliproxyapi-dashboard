@@ -1728,7 +1728,18 @@
     "councilMasterTimeoutLabel": "Master-Zeitlimit (ms)",
     "councilCouncillorsTimeoutLabel": "Councillors-Zeitlimit (ms)",
     "councilRetriesLabel": "Wiederholungen",
-    "configureTooltip": "Variante, Temperatur und mehr konfigurieren"
+    "configureTooltip": "Variante, Temperatur und mehr konfigurieren",
+    "categoryRoles": {
+      "visual-engineering": "UI-Arbeit",
+      "ultrabrain": "Schwierige Logik",
+      "deep-low": "Tiefgehende Problemlösung",
+      "deep-high": "Tiefgehende Problemlösung (Eskalation)",
+      "artistry": "Kreative Arbeit",
+      "quick": "Triviale Aufgaben",
+      "unspecified-low": "Allgemein, geringer Aufwand",
+      "unspecified-high": "Allgemein, hoher Aufwand",
+      "writing": "Dokumentation"
+    }
   },
   "ohMyOpenCodeSlim": {
     "apiKeyRequiredTitle": "API-Schlüssel erforderlich",

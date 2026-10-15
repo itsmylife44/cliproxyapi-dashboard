@@ -30,6 +30,20 @@ describe("upstream schema guard: OMO", () => {
       expect(upstreamSchemaErrors("omo", config)).toEqual([]);
     },
   );
+
+  it.each(BUILT_IN_PRESETS.map((preset) => [preset.name, preset] as const))(
+    "built-in preset %s only uses 5.1.33 chain models and categories",
+    (_name, preset) => {
+      const { agents = {}, categories = {} } = preset.config;
+      const models = [
+        ...Object.values(agents).flatMap((entry) => [entry.model, entry.ultrawork?.model]),
+        ...Object.values(categories).map((entry) => entry.model),
+      ].filter((m): m is string => typeof m === "string");
+
+      expect(models.filter((m) => !ALL_CHAIN_MODELS.includes(m))).toEqual([]);
+      expect(Object.keys(categories).filter((c) => !(c in UPSTREAM_CATEGORY_CHAINS))).toEqual([]);
+    },
+  );
 });
 
 describe("upstream schema guard: slim", () => {

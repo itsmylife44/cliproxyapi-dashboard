@@ -36,7 +36,6 @@ describe("parsePluginStore", () => {
         author: "Luis Pater",
         version: "1.0.5",
         installedVersion: "1.0.4",
-        homepage: "https://github.com/x/y?a=1&b=2",
         tags: ["Provider"],
         installed: true,
         enabled: true,

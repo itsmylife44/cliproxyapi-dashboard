@@ -10,7 +10,6 @@ export interface PluginRow {
   author: string;
   version: string;
   installedVersion: string;
-  homepage: string;
   tags: string[];
   installed: boolean;
   /** plugins.configs.<id>.enabled */
@@ -49,7 +48,6 @@ export function parsePluginStore(data: unknown): PluginStoreView {
             author: decode(p.author),
             version: decode(p.version),
             installedVersion: decode(p.installed_version),
-            homepage: decode(p.homepage),
             tags: Array.isArray(p.tags) ? p.tags.map(decode).filter(Boolean) : [],
             installed: p.installed === true,
             enabled: p.enabled === true,

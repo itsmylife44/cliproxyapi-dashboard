@@ -1,8 +1,8 @@
 # CLIProxyAPI plugin management API (research)
 
-Status: research only, no code changed. Date 2026-10-15. Everything below was read in the Go source of
+Status: research for #253, implemented on branch `fix/cliproxyapi-v8-followups`. Date 2026-10-15. Everything below was read in the Go source of
 **v8.0.29** (`5fc580b1d72d87a7bcfe5cfb6f479c1aea5625b3`, same SHA as in
-[cliproxyapi-upstream-api-drift.md](./cliproxyapi-upstream-api-drift.md)). No runtime test was done.
+[cliproxyapi-upstream-api-drift.md](./cliproxyapi-upstream-api-drift.md)). The key claims were then runtime-checked; see [Verification](#verification-2026-10-15).
 
 Source abbreviations (every link is pinned to that SHA):
 

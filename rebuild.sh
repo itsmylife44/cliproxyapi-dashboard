@@ -14,7 +14,12 @@ echo ""
 # track it, and the pull that untracks it would abort or delete it. Park the live
 # file during the pull: mv keeps the inode, so the running container is unaffected.
 CONFIG=infrastructure/config/config.yaml
-if git rev-parse --git-dir > /dev/null 2>&1; then
+# A run killed mid-pull leaves the live config parked: put it back first.
+if [ -f "$CONFIG.keep" ] && [ ! -f "$CONFIG" ]; then
+    mv "$CONFIG.keep" "$CONFIG"
+fi
+# Only a checkout without .git skips the update; any other git failure stops here.
+if [ -e .git ]; then
     echo "[0] Updating repository..."
     PARKED=0
     if git ls-files --error-unmatch "$CONFIG" > /dev/null 2>&1; then

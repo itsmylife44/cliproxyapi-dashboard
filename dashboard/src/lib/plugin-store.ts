@@ -74,23 +74,36 @@ export function pluginErrorMessage(data: unknown, fallback: string): string {
 export interface PluginTarget {
   ids: string[];
   pluginsEnabled?: boolean;
+  /** An update is done only once the store reports this installed version. */
+  installedVersion?: string;
 }
 
-/** Ids from the target whose load state does not yet match their switches. */
+/** Ids from the target whose load state (or installed version) does not yet match. */
 function unsettled(view: PluginStoreView, target: PluginTarget): string[] {
   if (target.pluginsEnabled !== undefined && view.pluginsEnabled !== target.pluginsEnabled) return target.ids;
   return target.ids.filter((id) => {
     const row = view.rows.find((r) => r.id === id);
-    return row !== undefined && row.loaded !== (view.pluginsEnabled && row.installed && row.enabled);
+    if (row === undefined) return false;
+    if (target.installedVersion !== undefined && row.installedVersion !== target.installedVersion) return true;
+    return row.loaded !== (view.pluginsEnabled && row.installed && row.enabled);
   });
 }
+
+/**
+ * Least time actions stay locked after any plugin config write. A write that lands while
+ * upstream still reloads the previous one can roll it back (router-for-me/CLIProxyAPI#6631):
+ * the reload re-reads config.yaml after a 150 ms file-watch debounce and a 1 s server-update
+ * debounce. Writes 1.5 s apart survived in the issue's repro; 2 s adds margin over that.
+ */
+export const PLUGIN_SETTLE_MIN_MS = 2000;
 
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
  * Upstream answers plugin writes before its async hot reload loads or unloads the library,
- * so poll the store until every target plugin is loaded exactly when its switches say so.
- * `pending` lists the ids still unsettled when `timeoutMs` ran out (empty on success).
+ * so poll the store until every target plugin is loaded exactly when its switches say so,
+ * and for at least PLUGIN_SETTLE_MIN_MS. `pending` lists the ids still unsettled when
+ * `timeoutMs` ran out (empty on success).
  */
 export async function waitForPluginState(
   fetchView: () => Promise<PluginStoreView | null>,
@@ -99,11 +112,11 @@ export async function waitForPluginState(
 ): Promise<{ view: PluginStoreView | null; pending: string[] }> {
   let view: PluginStoreView | null = null;
   let pending = target.ids;
-  for (let waited = 0; waited < timeoutMs; waited += intervalMs) {
+  for (let waited = intervalMs; waited <= timeoutMs; waited += intervalMs) {
     await sleep(intervalMs);
     view = (await fetchView()) ?? view;
     pending = view ? unsettled(view, target) : target.ids;
-    if (pending.length === 0) break;
+    if (pending.length === 0 && waited >= PLUGIN_SETTLE_MIN_MS) break;
   }
   return { view, pending };
 }

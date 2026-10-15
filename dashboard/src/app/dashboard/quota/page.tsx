@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { QuotaToolbar } from "@/components/quota/quota-toolbar";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
-import { capacityQuotaGroups, isShortTermQuotaWindow } from "@/lib/quota-window-classification";
+import { calcProviderSummary, type ProviderSummary } from "@/lib/quota/provider-summary";
 import {
   enrichModelFirstGroup,
   isModelFirstAccount,
@@ -17,9 +17,7 @@ import {
   isModelFirstProviderQuotaUnverified,
   normalizeFraction,
   summarizeModelFirstProvider,
-  type ModelFirstProviderSummary,
   type QuotaAccount,
-  type QuotaMonitorMode,
   type QuotaResponse,
 } from "@/lib/model-first-monitoring";
 import { formatRelativeTime } from "@/lib/format-relative-time";
@@ -43,24 +41,6 @@ import { QuotaDetails } from "@/components/quota/quota-details";
 import { QuotaAlerts } from "@/components/quota/quota-alerts";
 
 export const QUOTA_ACCOUNTS_PAGE_SIZE = 25;
-
-interface WindowCapacity {
-  id: string;
-  label: string;
-  capacity: number;
-  resetTime: string | null;
-  isShortTerm: boolean;
-}
-
-interface ProviderSummary {
-  provider: string;
-  monitorMode: QuotaMonitorMode;
-  totalAccounts: number;
-  healthyAccounts: number;
-  errorAccounts: number;
-  windowCapacities: WindowCapacity[];
-  modelFirstSummary?: ModelFirstProviderSummary;
-}
 
 function matchesSelectedProvider(provider: string, selected: QuotaQueryProvider): boolean {
   if (selected === "all") return true;
@@ -123,101 +103,6 @@ export function filterQuotaAccounts(accounts: QuotaAccount[], query: QuotaQueryS
       matchesQuotaSearch(account, query.q) &&
       matchesQuotaStatus(account, query.status)
   );
-}
-
-function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
-  const totalAccounts = accounts.length;
-  const healthy = accounts
-    .filter((account) => account.supported && !account.error && account.groups && account.groups.length > 0)
-    .map((account) => ({ ...account, groups: capacityQuotaGroups(account.provider, account.groups ?? []) }));
-  const errorAccounts = totalAccounts - healthy.length;
-  const modelFirst = healthy.length > 0 && healthy.every((account) => isModelFirstAccount(account));
-
-  if (modelFirst) {
-    return {
-      provider: accounts[0]?.provider ?? "unknown",
-      monitorMode: "model-first",
-      totalAccounts,
-      healthyAccounts: healthy.length,
-      errorAccounts,
-      windowCapacities: [],
-      modelFirstSummary: summarizeModelFirstProvider(healthy),
-    };
-  }
-
-  const allWindowIds = new Set<string>();
-  for (const account of healthy) {
-    for (const group of account.groups ?? []) {
-      if (group.id !== "extra-usage") allWindowIds.add(group.id);
-    }
-  }
-
-  const windowCapacities: WindowCapacity[] = [];
-
-  for (const windowId of allWindowIds) {
-    const relevantAccounts = healthy.filter((account) =>
-      account.groups?.some((group) => group.id === windowId)
-    );
-    if (relevantAccounts.length === 0) continue;
-
-    const scores = relevantAccounts
-      .map((account) => {
-        const group = account.groups?.find((candidate) => candidate.id === windowId);
-        return normalizeFraction(group?.remainingFraction);
-      })
-      .filter((score): score is number => score !== null);
-
-    if (scores.length === 0) {
-      continue;
-    }
-
-    const exhaustedProduct = scores.reduce((product, score) => product * (1 - score), 1);
-    const capacity = 1 - exhaustedProduct;
-
-    let earliestReset: string | null = null;
-    let minResetTime = Infinity;
-    let label = "";
-    let isShortTerm = false;
-
-    for (const account of relevantAccounts) {
-      const group = account.groups?.find((candidate) => candidate.id === windowId);
-      if (group) {
-        if (!label) {
-          label = group.label;
-          isShortTerm = isShortTermQuotaWindow(group, account.groups ?? []);
-        }
-        if (group.resetTime) {
-          const timestamp = new Date(group.resetTime).getTime();
-          if (timestamp < minResetTime) {
-            minResetTime = timestamp;
-            earliestReset = group.resetTime;
-          }
-        }
-      }
-    }
-
-    windowCapacities.push({
-      id: windowId,
-      label,
-      capacity: Math.max(0, Math.min(1, capacity)),
-      resetTime: earliestReset,
-      isShortTerm,
-    });
-  }
-
-  windowCapacities.sort((left, right) => {
-    if (left.isShortTerm !== right.isShortTerm) return left.isShortTerm ? 1 : -1;
-    return left.label.localeCompare(right.label);
-  });
-
-  return {
-    provider: accounts[0]?.provider ?? "unknown",
-    monitorMode: "window-based",
-    totalAccounts,
-    healthyAccounts: healthy.length,
-    errorAccounts,
-    windowCapacities,
-  };
 }
 
 function calcOverallCapacity(

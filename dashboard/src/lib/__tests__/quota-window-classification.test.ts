@@ -97,6 +97,7 @@ describe("isShortTermQuotaWindow", () => {
       ["primary-window", 604800, false],
       ["secondary-window", 604800, false],
     ] as const)("classifies %s with %i seconds independently of its label", (id, windowSeconds, expected) => {
+      // A translated label carries no "5h"/"weekly" hint, so only the duration can decide.
       expect(isShortTermQuotaWindow({
         id, label: "套餐窗口", windowSeconds, resetTime: "2026-10-16T01:00:00Z",
       })).toBe(expected);

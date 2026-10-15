@@ -1,3 +1,4 @@
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { decodeHtmlEntities, extractApiError, isRecord } from "@/lib/utils";
 
 /** CLIProxyAPI v8 sends `1|0` on every management response; `0` = built without cgo, can never load a plugin. */
@@ -6,6 +7,32 @@ export const PLUGIN_SUPPORT_HEADER = "X-CPA-SUPPORT-PLUGIN";
 /** Only an explicit `0` means unsupported; older CLIProxyAPI sends no header. */
 export function pluginsSupported(res: Response): boolean {
   return res.headers.get(PLUGIN_SUPPORT_HEADER) !== "0";
+}
+
+/** Where the 0.1.87+ compose files mount the persistent `cliproxyapi_plugins` volume. */
+const PLUGINS_MOUNT = "/CLIProxyAPI/plugins";
+
+/**
+ * True only when the CLIProxyAPI container is readable and has no mount on PLUGINS_MOUNT
+ * (old compose: plugins live in the writable layer and vanish on recreate). Any failure → false.
+ */
+export async function pluginsVolumeMissing(): Promise<boolean> {
+  try {
+    const listRes = await fetch(API_ENDPOINTS.CONTAINERS.LIST);
+    const list: unknown = listRes.ok ? await listRes.json() : null;
+    const container = Array.isArray(list)
+      ? list.find((c): c is { name: string } => isRecord(c) && c.displayName === "CLIProxyAPI" && typeof c.name === "string")
+      : undefined;
+    if (!container) return false;
+
+    const res = await fetch(`${API_ENDPOINTS.CONTAINERS.BASE}/${encodeURIComponent(container.name)}/details`);
+    const details: unknown = res.ok ? await res.json() : null;
+    // The details route answers 200 `{ available: false }` when docker inspect fails.
+    if (!isRecord(details) || !Array.isArray(details.mounts)) return false;
+    return !details.mounts.some((m) => isRecord(m) && m.destination === PLUGINS_MOUNT);
+  } catch {
+    return false;
+  }
 }
 
 /** One plugin from CLIProxyAPI's GET /plugin-store, with display strings decoded. */

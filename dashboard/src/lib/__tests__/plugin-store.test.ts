@@ -1,5 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
-import { parsePluginStore, pluginErrorMessage, pluginsSupported, waitForPluginState, type PluginStoreView } from "@/lib/plugin-store";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  parsePluginStore,
+  pluginErrorMessage,
+  pluginsSupported,
+  pluginsVolumeMissing,
+  waitForPluginState,
+  type PluginStoreView,
+} from "@/lib/plugin-store";
 
 // Shape of GET /plugin-store on CLIProxyAPI v8.0.29 (runtime-checked); strings arrive html.EscapeString'd.
 const entry = {
@@ -186,5 +193,59 @@ describe("pluginsSupported", () => {
     const headers = new Headers(value === null ? {} : { "X-CPA-SUPPORT-PLUGIN": value });
 
     expect(pluginsSupported(new Response(null, { headers }))).toBe(expected);
+  });
+});
+
+describe("pluginsVolumeMissing", () => {
+  // Answers GET /api/containers/list, then GET /api/containers/<name>/details.
+  function stubDocker(list: Response | Error, details?: Response | Error) {
+    const fetchMock = vi.fn(async (url: string) => {
+      const res = url === "/api/containers/list" ? list : details;
+      if (!res || res instanceof Error) throw res ?? new Error(`unexpected ${url}`);
+      return res;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+  const stack = () =>
+    json([
+      { name: "cliproxyapi-postgres", displayName: "PostgreSQL" },
+      { name: "cliproxyapi", displayName: "CLIProxyAPI" },
+    ]);
+  const mounts = (...destinations: Array<[string, string]>) =>
+    json({
+      success: true,
+      mounts: destinations.map(([type, destination]) => ({ type, source: "/x", destination, readOnly: false })),
+    });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("warns when the CLIProxyAPI container has no plugins mount", async () => {
+    const fetchMock = stubDocker(stack(), mounts(["bind", "/CLIProxyAPI/config.yaml"], ["volume", "/root/.cli-proxy-api"]));
+
+    expect(await pluginsVolumeMissing()).toBe(true);
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/containers/cliproxyapi/details");
+  });
+
+  it.each(["volume", "bind"])("stays quiet when the plugins dir is a %s mount", async (type) => {
+    stubDocker(stack(), mounts(["bind", "/CLIProxyAPI/config.yaml"], [type, "/CLIProxyAPI/plugins"]));
+
+    expect(await pluginsVolumeMissing()).toBe(false);
+  });
+
+  it.each([
+    ["the list is forbidden", () => [json({ error: "Forbidden" }, 403)]],
+    ["the list request throws", () => [new Error("offline")]],
+    ["docker is unreachable", () => [json({ error: "Failed to list containers" }, 500)]],
+    ["CLIProxyAPI is not in the stack", () => [json([{ name: "cliproxyapi-postgres", displayName: "PostgreSQL" }])]],
+    ["docker inspect fails", () => [stack(), json({ available: false, reason: "no such container" })]],
+    ["the details request throws", () => [stack(), new Error("offline")]],
+  ] as Array<[string, () => [Response | Error, (Response | Error)?]]>)("stays quiet when %s", async (_, responses) => {
+    stubDocker(...responses());
+
+    expect(await pluginsVolumeMissing()).toBe(false);
   });
 });

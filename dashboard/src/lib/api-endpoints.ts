@@ -128,6 +128,7 @@ export const API_ENDPOINTS = {
   AGENT_CONFIG_SLIM: "/api/agent-config-slim",
   OH_MY_OPENCODE_PRESETS: "/api/oh-my-opencode/presets",
   CONTAINERS: {
+    BASE: "/api/containers",
     LIST: "/api/containers/list",
   },
   RESTART: "/api/restart",

@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Toggle } from "@/components/config/config-fields";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
-import { writeConfigYamlChanges } from "@/lib/config-yaml";
+import { writeConfigYamlChanges } from "@/lib/config-yaml-write";
 import { isRecord } from "@/lib/utils";
 import { parsePluginConfigFields, type PluginConfigField } from "@/lib/plugin-config";
 import { PluginConfigForm } from "@/components/settings/plugin-config-form";

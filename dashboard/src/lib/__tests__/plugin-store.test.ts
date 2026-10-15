@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { parsePluginStore, pluginErrorMessage } from "@/lib/plugin-store";
+import { describe, expect, it, vi } from "vitest";
+import { parsePluginStore, pluginErrorMessage, waitForPluginState, type PluginStoreView } from "@/lib/plugin-store";
 
 // Shape of GET /plugin-store on CLIProxyAPI v8.0.29 (runtime-checked); strings arrive html.EscapeString'd.
 const entry = {
@@ -40,9 +40,15 @@ describe("parsePluginStore", () => {
         installed: true,
         enabled: true,
         active: true,
+        loaded: true,
         updateAvailable: true,
       },
     ]);
+  });
+
+  it("keeps a plugin loaded while the global switch turn-off is still unloading it", () => {
+    const view = parsePluginStore({ plugins_enabled: false, plugins: [{ ...entry, effective_enabled: false }] });
+    expect(view.rows[0]).toMatchObject({ active: false, loaded: true });
   });
 
   it("decodes &amp;lt; only once", () => {
@@ -76,5 +82,66 @@ describe("pluginErrorMessage", () => {
   it("falls back to the error code, then to the fallback", () => {
     expect(pluginErrorMessage({ error: "plugin_not_found" }, "Failed")).toBe("plugin_not_found");
     expect(pluginErrorMessage(null, "Failed")).toBe("Failed");
+  });
+});
+
+describe("waitForPluginState", () => {
+  // Store snapshots in the order CLIProxyAPI v8.0.29 reports them after a write (runtime-checked).
+  const snapshot = (pluginsEnabled: boolean, registered: boolean, enabled = true): PluginStoreView =>
+    parsePluginStore({
+      plugins_enabled: pluginsEnabled,
+      plugins: [{ ...entry, enabled, registered, effective_enabled: pluginsEnabled && enabled && registered }],
+    });
+  const polls = (...views: PluginStoreView[]) => {
+    let i = 0;
+    return async () => views[Math.min(i++, views.length - 1)] ?? null;
+  };
+  const noSleep = async () => {};
+
+  it("keeps polling until the plugin is loaded", async () => {
+    const fetchView = polls(snapshot(true, false), snapshot(true, false), snapshot(true, true));
+    const result = await waitForPluginState(fetchView, { ids: ["gemini-cli"] }, { sleep: noSleep });
+
+    expect(result.pending).toEqual([]);
+    expect(result.view?.rows[0]?.active).toBe(true);
+  });
+
+  it("gives up after the timeout and reports the plugins that never loaded", async () => {
+    const fetchView = vi.fn(polls(snapshot(true, false)));
+    const result = await waitForPluginState(fetchView, { ids: ["gemini-cli"] }, { intervalMs: 1000, timeoutMs: 3000, sleep: noSleep });
+
+    expect(result.pending).toEqual(["gemini-cli"]);
+    expect(fetchView).toHaveBeenCalledTimes(3);
+  });
+
+  it("waits for the unload after the global switch turns off", async () => {
+    // The switch flips in the store at once; the library detaches ~250 ms later.
+    const fetchView = vi.fn(polls(snapshot(false, true), snapshot(false, false)));
+    const result = await waitForPluginState(fetchView, { ids: ["gemini-cli"], pluginsEnabled: false }, { sleep: noSleep });
+
+    expect(result.pending).toEqual([]);
+    expect(fetchView).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not count the old switch state as settled", async () => {
+    const fetchView = vi.fn(polls(snapshot(false, false), snapshot(true, true)));
+    const result = await waitForPluginState(fetchView, { ids: ["gemini-cli"], pluginsEnabled: true }, { sleep: noSleep });
+
+    expect(result.pending).toEqual([]);
+    expect(fetchView).toHaveBeenCalledTimes(2);
+  });
+
+  it("settles a disabled plugin once it is unloaded", async () => {
+    const fetchView = vi.fn(polls(snapshot(true, true, false), snapshot(true, false, false)));
+    const result = await waitForPluginState(fetchView, { ids: ["gemini-cli"] }, { sleep: noSleep });
+
+    expect(result.pending).toEqual([]);
+    expect(fetchView).toHaveBeenCalledTimes(2);
+  });
+
+  it("waits at least one interval before the first read, so the reload can start", async () => {
+    const sleep = vi.fn(noSleep);
+    await waitForPluginState(polls(snapshot(true, true)), { ids: ["gemini-cli"] }, { intervalMs: 1000, sleep });
+    expect(sleep).toHaveBeenCalledWith(1000);
   });
 });

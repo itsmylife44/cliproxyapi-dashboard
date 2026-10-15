@@ -347,6 +347,12 @@ Replace `example.com` with your actual domain.
 
 ### 5. Configure CLIProxyAPI
 
+Create the runtime config from the tracked template (CLIProxyAPI rewrites this file, so git does not track it):
+
+```bash
+cp infrastructure/config/config.example.yaml infrastructure/config/config.yaml
+```
+
 API keys and AI providers can be configured through the Dashboard UI after first login. Alternatively, you can edit `infrastructure/config/config.yaml` directly.
 
 ### 6. Create Systemd Service
@@ -395,4 +401,21 @@ Or manually:
 ```bash
 cd infrastructure
 docker compose up -d --wait
+```
+
+## Updating
+
+From the repository root:
+
+```bash
+./rebuild.sh                   # git pull + pull images + restart the stack
+./rebuild.sh --dashboard-only  # git pull + pull the dashboard image + restart the dashboard
+```
+
+The admin-panel deploy webhook only updates the dashboard image. Repo files (compose, Caddyfile, scripts) change only through `./rebuild.sh`.
+
+**One time, on installs from before `config.yaml` was untracked:** older `rebuild.sh` versions do not run git, and a plain `git pull` either aborts or deletes `infrastructure/config/config.yaml`. Fetch the new script first; it keeps your config in place:
+
+```bash
+git fetch && git checkout origin/main -- rebuild.sh && ./rebuild.sh
 ```

@@ -4,11 +4,8 @@ import { fetchWithRetry } from "@/lib/fetch-utils";
 import { isRecord } from "@/lib/utils";
 
 import {
-  type AgentConfigEntry,
-  type AgentThinkingConfig,
   type OhMyOpenCodeFullConfig,
   type OhMyOpenCodePreset,
-  readPermissionConfig,
   validateFullConfig,
 } from "./oh-my-opencode-types";
 
@@ -52,53 +49,6 @@ function pruneEmptyEntries(config: OhMyOpenCodeFullConfig): OhMyOpenCodeFullConf
   };
 }
 
-function readThinkingConfig(value: unknown): AgentThinkingConfig | undefined {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-
-  const type = value.type;
-  if (type !== "enabled" && type !== "disabled") {
-    return undefined;
-  }
-
-  const thinking: AgentThinkingConfig = { type };
-  if (typeof value.budgetTokens === "number" && value.budgetTokens >= 0) {
-    thinking.budgetTokens = value.budgetTokens;
-  }
-
-  return thinking;
-}
-
-function mergeAgentExtras(rawConfig: unknown, validatedConfig: OhMyOpenCodeFullConfig): OhMyOpenCodeFullConfig {
-  if (!isRecord(rawConfig) || !isRecord(rawConfig.agents) || !validatedConfig.agents) {
-    return validatedConfig;
-  }
-
-  const mergedAgents: Record<string, AgentConfigEntry> = { ...validatedConfig.agents };
-
-  for (const [agentName, rawEntry] of Object.entries(rawConfig.agents)) {
-    if (!isRecord(rawEntry) || !mergedAgents[agentName]) {
-      continue;
-    }
-
-    const permission = readPermissionConfig(rawEntry.permission);
-    const thinking = readThinkingConfig(rawEntry.thinking);
-
-    if (!permission && !thinking) {
-      continue;
-    }
-
-    mergedAgents[agentName] = {
-      ...mergedAgents[agentName],
-      ...(permission ? { permission } : {}),
-      ...(thinking ? { thinking } : {}),
-    };
-  }
-
-  return { ...validatedConfig, agents: mergedAgents };
-}
-
 export function validatePresetList(raw: unknown): OhMyOpenCodePreset[] {
   if (!Array.isArray(raw)) {
     return [];
@@ -117,9 +67,7 @@ export function validatePresetList(raw: unknown): OhMyOpenCodePreset[] {
       return [];
     }
 
-    const validatedConfig = pruneEmptyEntries(
-      mergeAgentExtras(config, validateFullConfig(config))
-    );
+    const validatedConfig = pruneEmptyEntries(validateFullConfig(config));
     if (!hasMeaningfulConfig(validatedConfig)) {
       return [];
     }

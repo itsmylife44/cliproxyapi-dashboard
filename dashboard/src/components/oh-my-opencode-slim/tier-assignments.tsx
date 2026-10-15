@@ -102,7 +102,8 @@ export function SlimTierAssignments({
                       modelSourceMap={modelSourceMap}
                       onSelect={(value) => onAgentModelChange(name, value)}
                       extraFields={{
-                        variant: config.variant,
+                        reasoning: config.variant,
+                        reasoningKey: "variant",
                         temperature: config.temperature,
                         thirdField: config.mcps?.join(", ") ?? "",
                         thirdFieldKey: "mcps",

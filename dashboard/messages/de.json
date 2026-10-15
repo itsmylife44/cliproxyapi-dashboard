@@ -1722,7 +1722,7 @@
     "councilMasterTimeoutLabel": "Master-Zeitlimit (ms)",
     "councilCouncillorsTimeoutLabel": "Councillors-Zeitlimit (ms)",
     "councilRetriesLabel": "Wiederholungen",
-    "configureTooltip": "Variante, Temperatur und mehr konfigurieren",
+    "configureTooltip": "Modelleinstellungen konfigurieren",
     "categoryRoles": {
       "visual-engineering": "UI-Arbeit",
       "ultrabrain": "Schwierige Logik",

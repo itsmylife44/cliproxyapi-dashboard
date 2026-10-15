@@ -1717,7 +1717,7 @@
     "councilMasterTimeoutLabel": "Tiempo de espera maestro (ms)",
     "councilCouncillorsTimeoutLabel": "Tiempo de espera de consejeros (ms)",
     "councilRetriesLabel": "Reintentos",
-    "configureTooltip": "Configura variante, temperatura y más",
+    "configureTooltip": "Configura los ajustes del modelo",
     "categoryRoles": {
       "visual-engineering": "Trabajo de UI",
       "ultrabrain": "Lógica compleja",

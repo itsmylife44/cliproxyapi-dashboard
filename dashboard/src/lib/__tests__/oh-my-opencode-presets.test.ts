@@ -7,7 +7,7 @@ describe("oh-my-opencode presets", () => {
     vi.clearAllMocks();
   });
 
-  it("keeps permission and thinking fields from preset sources", () => {
+  it("keeps permission and moves legacy thinking under providerOptions from preset sources", () => {
     const presets = validatePresetList([
       {
         name: "custom",
@@ -34,9 +34,8 @@ describe("oh-my-opencode presets", () => {
       edit: "allow",
       bash: { git: "allow", test: "allow" },
     });
-    expect(preset!.config.agents?.oracle?.thinking).toEqual({
-      type: "enabled",
-      budgetTokens: 120000,
+    expect(preset!.config.agents?.oracle?.providerOptions).toEqual({
+      thinking: { type: "enabled", budgetTokens: 120000 },
     });
   });
 

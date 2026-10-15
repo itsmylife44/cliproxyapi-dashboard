@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import useSWR from "swr";
 import { useTranslations } from "next-intl";
 import { extractApiError } from "@/lib/utils";
+import { ERROR_CODE } from "@/lib/error-codes";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -100,7 +101,7 @@ export function useProxyUpdateCheck() {
         if (!res.ok) {
           const data = await res.json();
           throw new Error(
-            data?.error?.code === "PROXY_VERSION_PIN_UNAVAILABLE"
+            data?.error?.code === ERROR_CODE.PROXY_VERSION_PIN_UNAVAILABLE
               ? t("errorVersionPinUnavailable")
               : extractApiError(data, "Update failed")
           );

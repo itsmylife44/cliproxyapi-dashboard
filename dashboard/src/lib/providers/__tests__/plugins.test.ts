@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/env", () => ({
   env: {
-    CLIPROXYAPI_MANAGEMENT_URL: "http://cliproxyapi:8317/v0/management",
     MANAGEMENT_API_KEY: "test-management-key-16",
   },
 }));

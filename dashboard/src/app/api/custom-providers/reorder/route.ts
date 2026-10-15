@@ -6,6 +6,7 @@ import { Errors } from "@/lib/errors";
 import { ReorderCustomProvidersSchema } from "@/lib/validation/schemas";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { env } from "@/lib/env";
+import { getManagementUrl } from "@/lib/management-url";
 import { invalidateProxyModelsCache } from "@/lib/cache";
 import { logger } from "@/lib/logger";
 import { isUserAdmin } from "@/lib/auth/admin";
@@ -96,7 +97,7 @@ export async function PUT(request: NextRequest) {
 
     let syncStatus: "ok" | "failed" = "ok";
 
-    const managementUrl = env.CLIPROXYAPI_MANAGEMENT_URL;
+    const managementUrl = getManagementUrl();
     const secretKey = env.MANAGEMENT_API_KEY;
 
     // Defensive: MANAGEMENT_API_KEY is required in env.ts, but guard matches existing routes

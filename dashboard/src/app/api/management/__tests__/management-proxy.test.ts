@@ -16,7 +16,6 @@ vi.mock("@/lib/logger", () => ({
 vi.mock("@/lib/fetch-utils", () => ({ fetchWithRetry: mocks.fetchWithRetry }));
 vi.mock("@/lib/env", () => ({
   env: {
-    CLIPROXYAPI_MANAGEMENT_URL: "http://cliproxyapi:8317/v0/management",
     MANAGEMENT_API_KEY: "test-management-key-16",
   },
 }));

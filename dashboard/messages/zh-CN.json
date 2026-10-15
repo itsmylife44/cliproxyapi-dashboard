@@ -1728,7 +1728,18 @@
     "councilMasterTimeoutLabel": "主持模型超时（毫秒）",
     "councilCouncillorsTimeoutLabel": "议事成员超时（毫秒）",
     "councilRetriesLabel": "重试次数",
-    "configureTooltip": "配置变体、温度等参数"
+    "configureTooltip": "配置变体、温度等参数",
+    "categoryRoles": {
+      "visual-engineering": "UI 工作",
+      "ultrabrain": "复杂逻辑",
+      "deep-low": "深度问题解决",
+      "deep-high": "深度问题解决（升级）",
+      "artistry": "创意工作",
+      "quick": "简单任务",
+      "unspecified-low": "一般任务（低投入）",
+      "unspecified-high": "一般任务（高投入）",
+      "writing": "文档"
+    }
   },
   "ohMyOpenCodeSlim": {
     "apiKeyRequiredTitle": "需要 API 密钥",

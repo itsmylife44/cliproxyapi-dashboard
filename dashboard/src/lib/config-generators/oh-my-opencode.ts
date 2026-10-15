@@ -1,6 +1,7 @@
-import type {
-  OhMyOpenCodeFullConfig,
-  OhMyOpenCodePreset,
+import {
+  canonicalizeCategories,
+  type OhMyOpenCodeFullConfig,
+  type OhMyOpenCodePreset,
 } from "./oh-my-opencode-types";
 import { OMO_SCHEMA_URL } from "./upstream/plugins";
 
@@ -21,29 +22,39 @@ function stripVariant(id: string): string {
   return id.replace(/\s*\([^)]*\)\s*$/, "");
 }
 
+// Mirrors upstream 5.1.33 packages/model-core/src/{agent,category}-model-requirements.ts (model ids
+// only, exact duplicates removed; providers and per-rung reasoning are dropped). `minimax-m3` and
+// `MiniMax-M3` are distinct upstream ids (different providers), so both stay.
 export const UPSTREAM_AGENT_CHAINS: Record<string, string[]> = {
-  sisyphus: ["claude-opus-4.6", "kimi-k2.5", "k2p5", "gpt-5.4", "glm-5", "big-pickle"],
-  hephaestus: ["gpt-5.4"],
-  oracle: ["gpt-5.4", "gemini-3.1-pro", "claude-opus-4.6", "glm-5"],
-  prometheus: ["claude-opus-4.6", "gpt-5.4", "glm-5", "gemini-3.1-pro"],
-  metis: ["claude-opus-4.6", "gpt-5.4", "glm-5", "k2p5"],
-  momus: ["gpt-5.4", "claude-opus-4.6", "gemini-3.1-pro", "glm-5"],
-  atlas: ["claude-sonnet-4.6", "kimi-k2.5", "gpt-5.4", "minimax-m2.7"],
-  librarian: ["minimax-m2.7", "minimax-m2.7-highspeed", "claude-haiku-4.5", "gpt-5-nano"],
-  explore: ["grok-code-fast-1", "minimax-m2.7-highspeed", "minimax-m2.7", "claude-haiku-4.5", "gpt-5-nano"],
-  "multimodal-looker": ["gpt-5.4", "kimi-k2.5", "glm-4.6v", "gpt-5-nano"],
-  "sisyphus-junior": ["claude-sonnet-4.6", "kimi-k2.5", "gpt-5.4", "minimax-m2.7", "big-pickle"],
+  sisyphus: ["claude-opus-5-5", "kimi-k3", "gpt-5.6-sol", "glm-5.2", "big-pickle"],
+  hephaestus: ["gpt-6-sol", "gpt-5.6-sol"],
+  oracle: ["gpt-5.6-sol", "gemini-3.1-pro", "claude-opus-5-5", "glm-5.2"],
+  prometheus: ["claude-fable-5-1", "claude-opus-5-5", "kimi-k3"],
+  metis: ["claude-fable-5-1", "claude-opus-5-5", "kimi-k3"],
+  momus: ["gpt-6-astra", "claude-opus-5-5", "gemini-3.1-pro", "glm-5.2"],
+  atlas: ["claude-sonnet-5", "kimi-k3", "gpt-5.6-sol", "minimax-m3", "MiniMax-M3", "minimax-m2.7"],
+  librarian: ["kimi-for-coding-highspeed", "gpt-6-luna-fast", "claude-haiku-5-5", "deepseek-flash", "qwen3.7-plus", "minimax-m2.7"],
+  explore: ["kimi-for-coding-highspeed", "gpt-6-luna-fast", "claude-haiku-5-5", "deepseek-flash", "qwen3.7-plus", "minimax-m2.7"],
+  "multimodal-looker": ["gpt-5.6-sol", "kimi-k3", "glm-4.6v", "gpt-5-nano"],
+  "sisyphus-junior": ["claude-sonnet-5", "kimi-k3", "gpt-5.6-sol", "minimax-m3", "MiniMax-M3", "minimax-m2.7", "big-pickle"],
 };
 
 export const UPSTREAM_CATEGORY_CHAINS: Record<string, string[]> = {
-  "visual-engineering": ["gemini-3.1-pro", "glm-5", "claude-opus-4.6", "k2p5"],
-  ultrabrain: ["gpt-5.4", "gemini-3.1-pro", "claude-opus-4.6", "glm-5"],
-  deep: ["gpt-5.4", "claude-opus-4.6", "gemini-3.1-pro"],
-  artistry: ["gemini-3.1-pro", "claude-opus-4.6", "gpt-5.4"],
-  quick: ["gpt-5.4-mini", "claude-haiku-4.5", "gemini-3-flash", "minimax-m2.7", "gpt-5-nano"],
-  "unspecified-low": ["claude-sonnet-4.6", "gpt-5.3-codex", "kimi-k2.5", "gemini-3-flash", "minimax-m2.7"],
-  "unspecified-high": ["claude-opus-4.6", "gpt-5.4", "glm-5", "k2p5", "kimi-k2.5"],
-  writing: ["gemini-3-flash", "kimi-k2.5", "claude-sonnet-4.6", "minimax-m2.7"],
+  "visual-engineering": ["claude-fable-5-1", "claude-opus-5-5", "kimi-k3"],
+  ultrabrain: ["gpt-6-astra", "gpt-5.6-sol"],
+  "deep-low": ["gpt-6.1-sol", "gpt-6.1-sol-fast", "gpt-5.6-sol", "gpt-5.6-sol-fast"],
+  "deep-high": ["gpt-6-astra"],
+  artistry: ["claude-fable-5-1", "claude-opus-5-5", "kimi-k3"],
+  quick: [
+    "gpt-6-luna-fast", "claude-haiku-5-5", "deepseek-flash", "qwen3.6-flash", "minimax-m3", "minimax-m2.7",
+    "grok-4.20-0309-non-reasoning", "glm-5.3-flash", "mimo-v2.6-flash",
+  ],
+  "unspecified-low": [
+    "claude-sonnet-5-5", "mimo-v2.6-pro", "grok-4.7", "gpt-6.1-sol", "gpt-5.6-sol", "claude-sonnet-5",
+    "qwen3.8-max-preview", "deepseek-v4-pro", "mimo-v2.5-pro",
+  ],
+  "unspecified-high": ["claude-opus-5-5", "glm-5.3", "kimi-k3"],
+  writing: ["claude-opus-5-5", "claude-opus-4-6"],
 };
 
 interface ChainResolution {
@@ -114,17 +125,6 @@ export const AGENT_ROLE_LABELS: Record<string, string> = {
   "multimodal-looker": "Vision",
   momus: "Reviewer",
   "sisyphus-junior": "Lightweight executor",
-};
-
-export const CATEGORY_ROLE_LABELS: Record<string, string> = {
-  "visual-engineering": "UI work",
-  ultrabrain: "Hard logic",
-  deep: "Deep problem solving",
-  artistry: "Creative work",
-  quick: "Trivial tasks",
-  "unspecified-low": "Low effort general",
-  "unspecified-high": "High effort general",
-  writing: "Documentation",
 };
 
 export type TierLevel = 1 | 2 | 3 | 4;
@@ -210,7 +210,8 @@ export const AGENT_ROLES: Record<string, { tier: TierLevel; label: string }> = {
 export const CATEGORY_ROLES: Record<string, { tier: TierLevel; label: string }> = {
   "visual-engineering": { tier: 4, label: "UI work" },
   ultrabrain: { tier: 1, label: "Hard logic" },
-  deep: { tier: 1, label: "Deep problem solving" },
+  "deep-low": { tier: 1, label: "Deep problem solving" },
+  "deep-high": { tier: 1, label: "Deep problem solving (escalation)" },
   artistry: { tier: 4, label: "Creative work" },
   quick: { tier: 3, label: "Trivial tasks" },
   "unspecified-low": { tier: 2, label: "Low effort general" },
@@ -295,9 +296,10 @@ export function buildOhMyOpenCodeConfig(
   }
 
   const categories: Record<string, ModelAssignment> = {};
+  const categoryOverrides = canonicalizeCategories(overrides?.categories);
 
   for (const [category, chain] of Object.entries(UPSTREAM_CATEGORY_CHAINS)) {
-    const categoryOverride = overrides?.categories?.[category];
+    const categoryOverride = categoryOverrides?.[category];
     const overrideModel = categoryOverride?.model;
     let entry: ModelAssignment;
 
@@ -410,8 +412,8 @@ export function applyPreset(
       ...presetConfig.agents,
     },
     categories: {
-      ...existingOverrides?.categories,
-      ...presetConfig.categories,
+      ...canonicalizeCategories(existingOverrides?.categories),
+      ...canonicalizeCategories(presetConfig.categories),
     },
     background_task: (() => {
       const base = {

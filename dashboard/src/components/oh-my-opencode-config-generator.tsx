@@ -15,7 +15,6 @@ import { useToast } from "@/components/ui/toast";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import {
   AGENT_ROLE_LABELS as AGENT_ROLES,
-  CATEGORY_ROLE_LABELS as CATEGORY_ROLES,
   UPSTREAM_AGENT_CHAINS,
   UPSTREAM_CATEGORY_CHAINS,
   resolveChain,
@@ -25,16 +24,17 @@ import {
   type ConfigData,
   type OAuthAccount,
 } from "@/lib/config-generators/oh-my-opencode";
-import type {
-  AgentConfigEntry,
-  BackgroundTaskConfig,
-  BrowserAutomationConfig,
-  CategoryConfigEntry,
-  GitMasterConfig,
-  OhMyOpenCodeFullConfig,
-  OhMyOpenCodePreset,
-  SisyphusAgentConfig,
-  TmuxConfig,
+import {
+  canonicalizeCategories,
+  type AgentConfigEntry,
+  type BackgroundTaskConfig,
+  type BrowserAutomationConfig,
+  type CategoryConfigEntry,
+  type GitMasterConfig,
+  type OhMyOpenCodeFullConfig,
+  type OhMyOpenCodePreset,
+  type SisyphusAgentConfig,
+  type TmuxConfig,
 } from "@/lib/config-generators/oh-my-opencode-types";
 
 interface OhMyOpenCodeConfigGeneratorProps {
@@ -50,7 +50,11 @@ interface OhMyOpenCodeConfigGeneratorProps {
 export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorProps) {
   const { apiKeys, proxyModelIds, excludedModels, agentOverrides: initialOverrides, modelSourceMap } = props;
   const [isExpanded, setIsExpanded] = useState(false);
-  const [overrides, setOverrides] = useState<OhMyOpenCodeFullConfig>(initialOverrides ?? { agents: {}, categories: {} });
+  const [overrides, setOverrides] = useState<OhMyOpenCodeFullConfig>(() =>
+    initialOverrides
+      ? { ...initialOverrides, categories: canonicalizeCategories(initialOverrides.categories) }
+      : { agents: {}, categories: {} },
+  );
   const [saving, setSaving] = useState(false);
   const nextIdRef = useRef(0);
   const nextId = useCallback(() => `row-${nextIdRef.current++}`, []);
@@ -588,6 +592,9 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
     label: string;
   }[] = [];
 
+  const categoryLabel = (category: string) =>
+    t.has(`categoryRoles.${category}`) ? t(`categoryRoles.${category}`) : category;
+
   for (const [category, chain] of Object.entries(UPSTREAM_CATEGORY_CHAINS)) {
     const categoryConfig = overrides?.categories?.[category] ?? {};
     const overrideModel = categoryConfig.model;
@@ -601,7 +608,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
         isUnresolved: false,
         config: categoryConfig,
         tier: overrideTier,
-        label: CATEGORY_ROLES[category] ?? category,
+        label: categoryLabel(category),
       });
     } else {
       const resolution = resolveChain(chain, availableModelIds);
@@ -615,7 +622,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
           isUnresolved: false,
           config: categoryConfig,
           tier,
-          label: CATEGORY_ROLES[category] ?? category,
+          label: categoryLabel(category),
         });
       } else {
         const model = overrideModel ?? chain[0];
@@ -629,7 +636,7 @@ export function OhMyOpenCodeConfigGenerator(props: OhMyOpenCodeConfigGeneratorPr
           isUnresolved: true,
           config: categoryConfig,
           tier: 1 as const,
-          label: CATEGORY_ROLES[category] ?? category,
+          label: categoryLabel(category),
         });
       }
     }

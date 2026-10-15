@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSlimConfig } from "../config-generators/oh-my-opencode-slim";
+import { buildSlimConfig } from "./helpers/slim-schema-guard";
 import {
   OMO_PLUGIN,
   resolvePluginList,

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildSlimConfig } from "../config-generators/oh-my-opencode-slim";
+import { buildSlimConfig } from "./helpers/slim-schema-guard";
 import { validateSlimConfig } from "../config-generators/oh-my-opencode-slim-types";
 import { SlimAgentConfigSchema } from "../validation/schemas";
 import { LEGACY_SLIM_OVERRIDES } from "./helpers/legacy-slim-overrides";

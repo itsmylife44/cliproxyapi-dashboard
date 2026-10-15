@@ -16,6 +16,7 @@ import {
 import { SLIM_SCHEMA_URL } from "./upstream/plugins";
 import {
   SLIM_AGENTS,
+  SLIM_PASSTHROUGH_KEYS,
   toUpstreamNames,
   type OhMyOpenCodeSlimFullConfig,
   type SlimAgentConfig,
@@ -109,51 +110,53 @@ function buildAgentEntry(
     model = `cliproxyapi/${picked}`;
   }
 
-  const entry: SlimAgentConfig = { model };
+  const entry: SlimAgentConfig = { model, ...(override && copyAgentFields(override, availableModels)) };
 
-  // Apply variant — use override or default from role (use !== undefined for explicit empty)
-  if (override?.variant !== undefined) {
-    entry.variant = override.variant;
-  } else if (role?.defaultVariant) {
-    entry.variant = role.defaultVariant;
-  }
-
-  // Apply other overrides
-  if (override?.temperature !== undefined) entry.temperature = override.temperature;
-  
-  // Skills/MCPs — only what the user set (even an empty array); otherwise upstream defaults apply
-  if (override?.skills !== undefined) entry.skills = toUpstreamNames(override.skills);
-  if (override?.mcps !== undefined) entry.mcps = toUpstreamNames(override.mcps);
-
-  // Provider-specific options
-  if (override?.options && Object.keys(override.options).length > 0) {
-    entry.options = override.options;
-  }
+  // Default variant from role unless the user set one (even an empty one)
+  if (entry.variant === undefined && role?.defaultVariant) entry.variant = role.defaultVariant;
 
   return entry;
 }
 
+/** Agent fields emitted exactly as stored. */
+const AGENT_PASSTHROUGH_FIELDS = [
+  "temperature",
+  "variant",
+  "inheritModelFrom",
+  "skills_add",
+  "skills_remove",
+  "skills_include_local",
+  "prompt",
+  "orchestratorPrompt",
+  "displayName",
+  "color",
+  "description",
+  "permission",
+] as const satisfies readonly (keyof SlimAgentConfig)[];
+
+/** Copies the fields the user set: models prefixed, renamed skills/MCPs translated, empty options dropped. */
+function copyAgentFields(override: SlimAgentConfig, availableModels: string[]): SlimAgentConfig {
+  const entry: Record<string, unknown> = {};
+  if (override.model !== undefined) entry.model = processModelConfig(override.model, availableModels);
+  for (const field of AGENT_PASSTHROUGH_FIELDS) {
+    if (override[field] !== undefined) entry[field] = override[field];
+  }
+  // Skills/MCPs — only what the user set (even an empty array); otherwise upstream defaults apply
+  if (override.skills !== undefined) entry.skills = toUpstreamNames(override.skills);
+  if (override.mcps !== undefined) entry.mcps = toUpstreamNames(override.mcps);
+  if (override.options && Object.keys(override.options).length > 0) entry.options = override.options;
+  return entry as SlimAgentConfig;
+}
+
 function normalizeExplicitAgentConfig(
   agentKey: string,
-  override: SlimAgentConfig | undefined,
+  override: SlimAgentConfig | string | undefined,
   availableModels: string[],
 ): SlimAgentConfig | null {
   // Upstream removed `council-master` (1.0.0); emitting it would register a bogus custom subagent.
-  if (!override || agentKey === "council-master") return null;
+  if (typeof override !== "object" || agentKey === "council-master") return null;
 
-  const entry: SlimAgentConfig = {};
-
-  if (override.model !== undefined) {
-    entry.model = processModelConfig(override.model, availableModels);
-  }
-  if (override.temperature !== undefined) entry.temperature = override.temperature;
-  if (override.variant !== undefined) entry.variant = override.variant;
-  if (override.skills !== undefined) entry.skills = toUpstreamNames(override.skills);
-  if (override.mcps !== undefined) entry.mcps = toUpstreamNames(override.mcps);
-  if (override.options && Object.keys(override.options).length > 0) {
-    entry.options = override.options;
-  }
-
+  const entry = copyAgentFields(override, availableModels);
   return Object.keys(entry).length > 0 ? entry : null;
 }
 
@@ -218,16 +221,18 @@ export function buildSlimConfig(
   };
 
   if (usePresets) {
-    const presets: Record<string, Record<string, SlimAgentConfig>> = Object.create(null);
+    const presets: Record<string, Record<string, unknown>> = Object.create(null);
     const explicitPresets = overrides?.presets ?? {};
     const presetNames = new Set<string>([activePresetName, ...Object.keys(explicitPresets)]);
 
     for (const presetName of presetNames) {
       const presetOverride = explicitPresets[presetName];
       const presetOut: Record<string, SlimAgentConfig> = Object.create(null);
+      const extendsPreset = presetOverride?.extends;
 
-      // Auto-assign the 7 primary agents for every dashboard-managed preset.
-      for (const agent of SLIM_AGENTS) {
+      // Auto-assign the 7 primary agents for every dashboard-managed preset. An extending preset
+      // only carries what the user set; everything else is inherited upstream.
+      for (const agent of extendsPreset === undefined ? SLIM_AGENTS : []) {
         const presetAgentOverride = presetOverride?.[agent];
         const rootModelFallback =
           availableModels.length === 0 && presetAgentOverride?.model === undefined
@@ -246,7 +251,7 @@ export function buildSlimConfig(
 
       // Preserve explicitly configured advanced agents without inventing defaults for them.
       for (const [agentKey, agentConfig] of Object.entries(presetOverride ?? {})) {
-        if (SLIM_AGENTS.includes(agentKey as typeof SLIM_AGENTS[number])) continue;
+        if (extendsPreset === undefined && SLIM_AGENTS.includes(agentKey as typeof SLIM_AGENTS[number])) continue;
         const normalized = normalizeExplicitAgentConfig(agentKey, agentConfig, availableModels);
         if (normalized) {
           presetOut[agentKey] = normalized;
@@ -254,7 +259,7 @@ export function buildSlimConfig(
       }
 
       foldFallbackChains(presetOut, chains, availableModels);
-      presets[presetName] = presetOut;
+      presets[presetName] = extendsPreset === undefined ? presetOut : { extends: extendsPreset, ...presetOut };
     }
 
     config.preset = activePresetName;
@@ -321,8 +326,13 @@ export function buildSlimConfig(
   // Fallback — `chains` are folded into agent models above. Slim's `fallback` is strict, so only
   // emit keys it still accepts (timeoutMs / retry_on_empty were removed upstream).
   if (overrides?.fallback) {
-    const { enabled = true, retryDelayMs = 500 } = overrides.fallback;
-    config.fallback = { enabled, retryDelayMs };
+    const { enabled = true, retryDelayMs = 500, maxRetries } = overrides.fallback;
+    config.fallback = { enabled, retryDelayMs, ...(maxRetries !== undefined && { maxRetries }) };
+  }
+
+  // Newer upstream keys the dashboard only stores (validated by validateSlimConfig)
+  for (const key of SLIM_PASSTHROUGH_KEYS) {
+    if (overrides?.[key] !== undefined) config[key] = overrides[key];
   }
 
   // Council — upstream requires `presets`; `master`, per-preset `master` and the timeout/fallback/

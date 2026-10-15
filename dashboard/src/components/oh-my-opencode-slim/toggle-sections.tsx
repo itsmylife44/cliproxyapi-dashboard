@@ -11,9 +11,13 @@ import type {
   SlimInterviewConfig,
 } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import {
+  SLIM_BUNDLED_SKILLS,
+  SLIM_DEFAULT_MAX_RETRIES,
+  SLIM_HOOKS,
   SLIM_TMUX_LAYOUTS,
   SLIM_MULTIPLEXER_TYPES,
 } from "@/lib/config-generators/oh-my-opencode-slim-types";
+import { ToggleListSection } from "@/components/oh-my-opencode/sections/toggle-list-section";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { isRecord } from "@/lib/utils";
 
@@ -151,6 +155,8 @@ export function SlimToggleSections({
   const [showDisabledAgents, setShowDisabledAgents] = useState(false);
   const [showInterview, setShowInterview] = useState(false);
   const [showRawConfig, setShowRawConfig] = useState(false);
+  const [showHooks, setShowHooks] = useState(false);
+  const [showSkills, setShowSkills] = useState(false);
   const [mcpInput, setMcpInput] = useState("");
   const [agentInput, setAgentInput] = useState("");
 
@@ -158,6 +164,12 @@ export function SlimToggleSections({
   const council = overrides.council ?? {};
   const multiplexer = overrides.multiplexer ?? {};
   const interview = overrides.interview ?? {};
+
+  const toggleDisabled = (key: "disabled_hooks" | "disabled_skills", item: string) => {
+    const current = overrides[key] ?? [];
+    const next = current.includes(item) ? current.filter((entry) => entry !== item) : [...current, item];
+    onRawOverridesChange({ ...overrides, [key]: next.length > 0 ? next : undefined });
+  };
 
   return (
     <div className="border-t border-white/5 pt-4 space-y-3">
@@ -289,6 +301,19 @@ export function SlimToggleSections({
               onChange={(event) => {
                 const next = parseInt(event.target.value, 10);
                 onFallbackChange({ ...fallback, retryDelayMs: Number.isNaN(next) ? 500 : next });
+              }}
+              className="w-24 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--text-muted)] w-24">{t("maxRetriesLabel")}</span>
+            <input
+              type="number"
+              min={0}
+              value={fallback.maxRetries ?? SLIM_DEFAULT_MAX_RETRIES}
+              onChange={(event) => {
+                const next = parseInt(event.target.value, 10);
+                onFallbackChange({ ...fallback, maxRetries: Number.isNaN(next) ? undefined : Math.max(0, next) });
               }}
               className="w-24 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
             />
@@ -455,6 +480,23 @@ export function SlimToggleSections({
           </label>
         </Section>
 
+        <ToggleListSection
+          label={t("disabledHooksSectionLabel")}
+          isExpanded={showHooks}
+          onToggleExpand={() => setShowHooks((value) => !value)}
+          items={SLIM_HOOKS}
+          disabledItems={overrides.disabled_hooks ?? []}
+          onItemToggle={(hook) => toggleDisabled("disabled_hooks", hook)}
+        />
+
+        <ToggleListSection
+          label={t("disabledSkillsSectionLabel")}
+          isExpanded={showSkills}
+          onToggleExpand={() => setShowSkills((value) => !value)}
+          items={SLIM_BUNDLED_SKILLS}
+          disabledItems={overrides.disabled_skills ?? []}
+          onItemToggle={(skill) => toggleDisabled("disabled_skills", skill)}
+        />
       </div>
 
       <Section

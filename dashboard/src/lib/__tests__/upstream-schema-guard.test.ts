@@ -8,7 +8,7 @@ import {
 } from "../config-generators/oh-my-opencode";
 import { getBundledOhMyOpenCodePresets } from "../config-generators/oh-my-opencode-presets";
 import { validateFullConfig } from "../config-generators/oh-my-opencode-types";
-import { buildSlimConfig } from "../config-generators/oh-my-opencode-slim";
+import { buildSlimConfig } from "./helpers/slim-schema-guard";
 import { upstreamSchemaErrors } from "./helpers/upstream-schema";
 
 const ALL_CHAIN_MODELS = [

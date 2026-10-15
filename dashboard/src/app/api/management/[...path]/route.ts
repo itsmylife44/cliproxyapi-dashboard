@@ -107,8 +107,12 @@ const ALLOWED_MANAGEMENT_PATH_PATTERNS = [
   /^request-log-by-id\/[a-z0-9-]+$/i,
   /^model-definitions\/[a-z0-9-]+$/i,
   /^plugin-store\/[a-z0-9._-]+\/install$/i,
-  /^plugins\/[a-z0-9._-]+(\/enabled)?$/i,
+  /^plugins\/[a-z0-9._-]+(\/enabled|\/config)?$/i,
 ];
+
+// Upstream PUT replaces the whole plugins.configs.<id> entry: it disables the plugin
+// and drops its store record. Plugin settings are saved with PATCH only.
+const PUT_FORBIDDEN_PATH = /^plugins\/[a-z0-9._-]+\/config$/i;
 
 function isAllowedManagementPath(path: string): boolean {
   return (
@@ -213,6 +217,10 @@ async function proxyRequest(
       { error: "Unauthorized" },
       { status: 401 }
     );
+  }
+
+  if (method === "PUT" && PUT_FORBIDDEN_PATH.test(normalizedPath)) {
+    return NextResponse.json({ error: "Use PATCH to change plugin settings" }, { status: 405 });
   }
 
   if (!user.isAdmin && !isNonAdminAllowedManagementRequest(method, normalizedPath)) {

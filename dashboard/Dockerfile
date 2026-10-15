@@ -24,7 +24,8 @@ ARG CLIPROXYAPI_MANAGEMENT_URL="http://127.0.0.1:8317/v0/management"
 ENV CLIPROXYAPI_MANAGEMENT_URL=${CLIPROXYAPI_MANAGEMENT_URL}
 
 RUN npx prisma generate
-RUN NODE_OPTIONS=--max-old-space-size=512 npm run build
+# The build OOMed at 512 MB on GitHub runners (0.1.87); images are built in CI, not on servers.
+RUN NODE_OPTIONS=--max-old-space-size=1536 npm run build
 
 FROM node:24-alpine AS runner
 WORKDIR /app

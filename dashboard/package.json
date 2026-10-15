@@ -49,6 +49,7 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "ajv": "^8.20.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",

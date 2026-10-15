@@ -17,6 +17,7 @@ import {
   generateConfigJson,
 } from "@/lib/config-generators/opencode";
 import { PROVIDER_CONFIG_KEYS } from "@/lib/providers/constants";
+import { isOmoPlugin, isSlimPlugin, normalizePlugin, OMO_PLUGIN, SLIM_PLUGIN, SYNC_PLUGIN } from "@/lib/config-generators/upstream/plugins";
 
 interface ApiKeyEntry {
   key: string;
@@ -47,13 +48,7 @@ function downloadFile(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-const PLUGIN_OH_MY_OPENAGENT = "oh-my-openagent@latest";
-const PLUGIN_OH_MY_OPENCODE_SLIM = "oh-my-opencode-slim@latest";
-
-const DEFAULT_PLUGINS = [
-  "opencode-cliproxyapi-sync@latest",
-  PLUGIN_OH_MY_OPENAGENT,
-];
+const DEFAULT_PLUGINS = [SYNC_PLUGIN, OMO_PLUGIN];
 
 export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   const { apiKeys, config, oauthAccounts, models: allModels, excludedModels, proxyUrl, onVariantChange } = props;
@@ -61,7 +56,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
    const [isExpanded, setIsExpanded] = useState(false);
    const [plugins, setPlugins] = useState<string[]>(DEFAULT_PLUGINS);
    const [pluginInput, setPluginInput] = useState("");
-   const omoVariant: "normal" | "slim" = plugins.includes(PLUGIN_OH_MY_OPENCODE_SLIM) ? "slim" : "normal";
+   const omoVariant: "normal" | "slim" = plugins.some(isSlimPlugin) ? "slim" : "normal";
   const [mcps, setMcps] = useState<McpEntry[]>([]);
   const [mcpName, setMcpName] = useState("");
   const [mcpType, setMcpType] = useState<"local" | "remote">("local");
@@ -91,12 +86,10 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           setMcps(data.mcpServers);
         }
         if (data.customPlugins && Array.isArray(data.customPlugins) && data.customPlugins.length > 0) {
-          const normalizedPlugins = data.customPlugins.map((p: string) =>
-            p === "opencode-cliproxyapi-sync" ? "opencode-cliproxyapi-sync@latest" : p
-          );
+          const normalizedPlugins: string[] = data.customPlugins.map(normalizePlugin);
           setPlugins(normalizedPlugins);
           // Sync variant with parent based on loaded plugins
-          const loadedVariant = normalizedPlugins.includes(PLUGIN_OH_MY_OPENCODE_SLIM) ? "slim" : "normal";
+          const loadedVariant = normalizedPlugins.some(isSlimPlugin) ? "slim" : "normal";
           onVariantChange?.(loadedVariant);
         } else {
           setPlugins(DEFAULT_PLUGINS);
@@ -200,9 +193,8 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
     });
 
   const handleOmoVariantChange = (variant: OmoVariant) => {
-    const removePlugin = variant === "slim" ? PLUGIN_OH_MY_OPENAGENT : PLUGIN_OH_MY_OPENCODE_SLIM;
-    const addPlugin = variant === "slim" ? PLUGIN_OH_MY_OPENCODE_SLIM : PLUGIN_OH_MY_OPENAGENT;
-    const filtered = plugins.filter((p) => p !== removePlugin && p !== addPlugin);
+    const addPlugin = variant === "slim" ? SLIM_PLUGIN : OMO_PLUGIN;
+    const filtered = plugins.filter((p) => !isOmoPlugin(p) && !isSlimPlugin(p));
     const insertIdx = Math.min(1, filtered.length);
     const newPlugins = [...filtered.slice(0, insertIdx), addPlugin, ...filtered.slice(insertIdx)];
     setPlugins(newPlugins);

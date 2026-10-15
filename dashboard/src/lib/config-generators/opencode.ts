@@ -1,4 +1,5 @@
 import { isRecord } from "@/lib/utils";
+import { normalizePlugin, OMO_PLUGIN, SYNC_PLUGIN } from "./upstream/plugins";
 import {
   type ProxyModel,
 } from "./shared";
@@ -350,10 +351,7 @@ export function generateConfigJson(
    }
    const configModel = resolveConfigModel(models, options);
  
-   const plugins = options?.plugins ?? [
-     "opencode-cliproxyapi-sync@latest",
-     "oh-my-openagent@latest",
-   ];
+   const plugins = Array.from(new Set((options?.plugins ?? [SYNC_PLUGIN, OMO_PLUGIN]).map(normalizePlugin)));
  
    const configObj: Record<string, unknown> = {
      $schema: "https://opencode.ai/config.json",

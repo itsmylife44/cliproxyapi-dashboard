@@ -8,7 +8,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { Toggle } from "@/components/config/config-fields";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
-import { mergeConfigYaml } from "@/lib/config-yaml";
+import { writeConfigYamlChanges } from "@/lib/config-yaml";
 import { parsePluginStore, pluginErrorMessage, type PluginRow, type PluginStoreView } from "@/lib/plugin-store";
 
 // Upstream applies config writes with an async hot reload and can roll back a write
@@ -77,16 +77,11 @@ export function PluginSettings() {
   };
 
   const setGlobal = (enabled: boolean) =>
-    run(async () => {
-      const raw = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML);
-      if (!raw.ok) return raw;
-      // No v0 endpoint for plugins.enabled; `plugins` is a shared root in both config layouts.
-      return fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
-        method: "PUT",
-        headers: { "Content-Type": "text/yaml" },
-        body: mergeConfigYaml(await raw.text(), { plugins: { enabled } }),
-      });
-    }, enabled ? t("toastGlobalOn") : t("toastGlobalOff"));
+    // No v0 endpoint for plugins.enabled; `plugins` is a shared root in both config layouts.
+    run(
+      async () => (await writeConfigYamlChanges({ plugins: { enabled } })).res,
+      enabled ? t("toastGlobalOn") : t("toastGlobalOff")
+    );
 
   const install = (row: PluginRow) =>
     run(

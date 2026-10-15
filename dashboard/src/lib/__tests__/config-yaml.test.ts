@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { mergeConfigYaml, parseConfigYaml, readAuthDir } from "@/lib/config-yaml";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mergeConfigYaml, parseConfigYaml, readAuthDir, writeConfigYamlChanges } from "@/lib/config-yaml";
 
 describe("readAuthDir", () => {
   it("reads a custom auth-dir from a legacy config.yaml", () => {
@@ -295,5 +295,37 @@ describe("mergeConfigYaml on a v8-layout config.yaml", () => {
   it("keeps legacy files on legacy root keys", () => {
     const merged = parseConfigYaml(mergeConfigYaml("passthrough-headers: false\n", { "passthrough-headers": true }));
     expect(merged).toEqual({ "passthrough-headers": true });
+  });
+});
+
+describe("writeConfigYamlChanges", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reads config.yaml, merges the changes and PUTs the result back", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("debug: false\nplugins:\n  dir: /p\n"))
+      .mockResolvedValueOnce(new Response("ok"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { step, res } = await writeConfigYamlChanges({ plugins: { enabled: true } });
+
+    expect(step).toBe("write");
+    expect(res.ok).toBe(true);
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/management/config.yaml");
+    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(url).toBe("/api/management/config.yaml");
+    expect(init).toMatchObject({ method: "PUT", headers: { "Content-Type": "text/yaml" } });
+    expect(parseConfigYaml(String(init.body))).toEqual({ debug: false, plugins: { dir: "/p", enabled: true } });
+  });
+
+  it("stops without writing when config.yaml cannot be read", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response("nope", { status: 502 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { step, res } = await writeConfigYamlChanges({ debug: true });
+
+    expect(step).toBe("read");
+    expect(res.status).toBe(502);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

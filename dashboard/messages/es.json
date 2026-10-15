@@ -330,7 +330,23 @@
       "toastInstalled": "{name} instalado",
       "toastEnabled": "{name} activado",
       "toastDisabled": "{name} desactivado",
-      "toastUninstalled": "{name} desinstalado"
+      "toastUninstalled": "{name} desinstalado",
+      "settings": "Ajustes",
+      "hideSettings": "Ocultar ajustes",
+      "configLoadFailed": "No se pudieron cargar los ajustes del plugin",
+      "configEmptyHint": "Deja un campo vacío para usar el valor predeterminado del plugin. Las listas y los objetos se editan como JSON.",
+      "configUnset": "Predeterminado del plugin",
+      "configSave": "Guardar ajustes",
+      "configCancel": "Cancelar",
+      "configNoChanges": "No hay cambios.",
+      "toastConfigSaved": "Ajustes de {name} guardados",
+      "configErrors": {
+        "invalidNumber": "Introduce un número.",
+        "invalidInteger": "Introduce un número entero.",
+        "invalidJson": "No es un JSON válido.",
+        "notArray": "Introduce una lista JSON, por ejemplo [\"a\", \"b\"].",
+        "notObject": "Introduce un objeto JSON, por ejemplo {\"key\": \"value\"}."
+      }
     }
   },
   "apiKeys": {

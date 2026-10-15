@@ -330,7 +330,23 @@
       "toastInstalled": "{name} installed",
       "toastEnabled": "{name} enabled",
       "toastDisabled": "{name} disabled",
-      "toastUninstalled": "{name} uninstalled"
+      "toastUninstalled": "{name} uninstalled",
+      "settings": "Settings",
+      "hideSettings": "Hide settings",
+      "configLoadFailed": "Could not load the plugin settings",
+      "configEmptyHint": "Leave a field empty to use the plugin's default. Lists and objects are edited as JSON.",
+      "configUnset": "Plugin default",
+      "configSave": "Save settings",
+      "configCancel": "Cancel",
+      "configNoChanges": "Nothing changed.",
+      "toastConfigSaved": "{name} settings saved",
+      "configErrors": {
+        "invalidNumber": "Enter a number.",
+        "invalidInteger": "Enter a whole number.",
+        "invalidJson": "This is not valid JSON.",
+        "notArray": "Enter a JSON list, for example [\"a\", \"b\"].",
+        "notObject": "Enter a JSON object, for example {\"key\": \"value\"}."
+      }
     }
   },
   "apiKeys": {

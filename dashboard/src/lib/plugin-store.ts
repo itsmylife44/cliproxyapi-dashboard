@@ -30,7 +30,7 @@ export interface PluginStoreView {
 const ENTITIES: Record<string, string> = { "&lt;": "<", "&gt;": ">", "&#39;": "'", "&#34;": '"', "&amp;": "&" };
 
 /** Reverses Go's html.EscapeString, which upstream applies to every store display string. */
-function decode(value: unknown): string {
+export function decode(value: unknown): string {
   return typeof value === "string" ? value.replace(/&(lt|gt|#39|#34|amp);/g, (m) => ENTITIES[m] ?? m) : "";
 }
 

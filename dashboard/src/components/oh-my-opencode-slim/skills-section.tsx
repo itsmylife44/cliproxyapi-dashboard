@@ -1,17 +1,13 @@
 "use client";
 
-import type { SlimAgentConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
+import { toUpstreamNames, type SlimAgentConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { useTranslations } from 'next-intl';
 
-/**
- * Known skills available for oh-my-opencode-slim agents.
- * These are installed via `bunx oh-my-opencode-slim@latest install --skills=yes`
- */
+/** Skills bundled with oh-my-opencode-slim that the toggles offer. */
 const KNOWN_SKILLS: Array<{ id: string; labelKey: string; descKey: string }> = [
   { id: "*", labelKey: "skillAllLabel", descKey: "skillAllDesc" },
   { id: "simplify", labelKey: "skillSimplifyLabel", descKey: "skillSimplifyDesc" },
-  { id: "cartography", labelKey: "skillCartographyLabel", descKey: "skillCartographyDesc" },
-  { id: "agent-browser", labelKey: "skillAgentBrowserLabel", descKey: "skillAgentBrowserDesc" },
+  { id: "codemap", labelKey: "skillCodemapLabel", descKey: "skillCodemapDesc" },
 ];
 
 interface AgentSkillsSectionProps {
@@ -22,7 +18,8 @@ interface AgentSkillsSectionProps {
 
 export function AgentSkillsSection({ agentName, config, onSkillsChange }: AgentSkillsSectionProps) {
   const t = useTranslations('ohMyOpenCode');
-  const currentSkills = config.skills ?? [];
+  // Toggles work on current names, so a stored legacy name is shown (and saved back) under its new one.
+  const currentSkills = toUpstreamNames(config.skills ?? []);
   const hasWildcard = currentSkills.includes("*");
 
   const isEnabled = (skillId: string) => {

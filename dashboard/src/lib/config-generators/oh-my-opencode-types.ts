@@ -5,7 +5,7 @@
  * oh-my-opencode optional configuration sections.
  */
 
-import { isRecord } from "@/lib/utils";
+import { boundedObject, boundedStrings, isRecord, oneOf } from "@/lib/utils";
 
 import type { McpEntry } from "./opencode";
 
@@ -19,6 +19,7 @@ export interface TmuxConfig {
   main_pane_size?: number;
   main_pane_min_width?: number;
   agent_pane_min_width?: number;
+  isolation?: (typeof TMUX_ISOLATIONS)[number];
 }
 
 export interface BackgroundTaskConfig {
@@ -26,10 +27,13 @@ export interface BackgroundTaskConfig {
   staleTimeoutMs?: number;
   providerConcurrency?: Record<string, number>;
   modelConcurrency?: Record<string, number>;
+  maxLiveDescendantsPerRoot?: number;
+  taskCleanupDelayMs?: number;
 }
 
 export interface BrowserAutomationConfig {
   provider?: string;
+  playwright_mcp_args?: string[];
 }
 
 export interface SisyphusAgentConfig {
@@ -37,6 +41,7 @@ export interface SisyphusAgentConfig {
   default_builder_enabled?: boolean;
   planner_enabled?: boolean;
   replace_plan?: boolean;
+  tdd?: boolean;
 }
 
 export interface GitMasterConfig {
@@ -49,6 +54,10 @@ export type PermissionValue = "ask" | "allow" | "deny";
 export interface AgentPermissionConfig {
   edit?: PermissionValue;
   bash?: { git?: PermissionValue; test?: PermissionValue } | PermissionValue;
+  webfetch?: PermissionValue;
+  task?: PermissionValue;
+  doom_loop?: PermissionValue;
+  external_directory?: PermissionValue;
 }
 
 export interface AgentUltraworkConfig {
@@ -69,6 +78,7 @@ export interface AgentConfigEntry {
   permission?: AgentPermissionConfig;
   providerOptions?: Record<string, unknown>;
   ultrawork?: AgentUltraworkConfig;
+  displayName?: string;
 }
 
 export interface CategoryConfigEntry {
@@ -77,10 +87,15 @@ export interface CategoryConfigEntry {
   temperature?: number;
   description?: string;
   fallback_models?: string[];
+  max_tokens?: number;
+  provider_options?: Record<string, unknown>;
+  warn_unavailable?: boolean;
 }
+
 export interface ExperimentalConfig {
   aggressive_truncation?: boolean;
   task_system?: boolean;
+  disable_live_parent_wake_routing?: boolean;
 }
 
 export interface OhMyOpenCodeFullConfig {
@@ -102,7 +117,41 @@ export interface OhMyOpenCodeFullConfig {
   configSchemaVersion?: number;
   hashline_edit?: boolean;
   experimental?: ExperimentalConfig;
+  agent_order?: string[];
+  agent_definitions?: string[];
+  disabled_providers?: string[];
+  telemetry?: boolean;
+  // ponytail: kept as opaque objects (size-bounded, not validated field by field); add typed
+  // validators when the dashboard grows UI for them.
+  goal?: Record<string, unknown>;
+  i18n?: Record<string, unknown>;
+  monitor?: Record<string, unknown>;
+  team_mode?: Record<string, unknown>;
+  keyword_detector?: Record<string, unknown>;
+  tui?: Record<string, unknown>;
+  ulw_execute?: Record<string, unknown>;
+  default_mode?: Record<string, unknown>;
 }
+
+const OPAQUE_KEYS = [
+  "goal",
+  "i18n",
+  "monitor",
+  "team_mode",
+  "keyword_detector",
+  "tui",
+  "ulw_execute",
+  "default_mode",
+] as const satisfies readonly (keyof OhMyOpenCodeFullConfig)[];
+
+/** Top-level keys the generator copies to the output unchanged. */
+export const OMO_PASSTHROUGH_KEYS = [
+  "agent_order",
+  "agent_definitions",
+  "disabled_providers",
+  "telemetry",
+  ...OPAQUE_KEYS,
+] as const satisfies readonly (keyof OhMyOpenCodeFullConfig)[];
 
 // ============================================================================
 // PRESETS
@@ -132,9 +181,20 @@ export const AVAILABLE_AGENTS = [
   "sisyphus-junior",
 ] as const;
 
+/** OMO 5.1.33 built-in skills; `disabled_skills` also takes any other skill name. */
 export const AVAILABLE_SKILLS = [
   "playwright",
+  "dev-browser",
+  "frontend",
   "git-master",
+  "review-work",
+  "remove-ai-slops",
+  "init-deep",
+  "debugging",
+  "security-research",
+  "security-review",
+  "visual-qa",
+  "team-mode",
 ] as const;
 
 /** OMO 5.x `disabled_commands` enum; any other value fails upstream schema validation. */
@@ -146,6 +206,8 @@ export const AVAILABLE_COMMANDS = [
   "remove-ai-slops",
   "hyperplan",
 ] as const;
+
+export const TMUX_ISOLATIONS = ["inline", "window", "session"] as const;
 
 export const TMUX_LAYOUTS = [
   "main-vertical",
@@ -173,58 +235,7 @@ const REMOVED_HOOKS = new Set([
   "start-work",
 ]);
 
-// ============================================================================
-// HOOK_GROUPS - Hooks grouped by functionality
-// ============================================================================
-
-export const HOOK_GROUPS = {
-  context: [
-    "compaction-context-injector",
-    "preemptive-compaction",
-  ],
-  recovery: [
-    "anthropic-context-window-limit-recovery",
-    "edit-error-recovery",
-    "delegate-task-retry",
-  ],
-  notification: [
-    "session-notification",
-    "background-notification",
-    "startup-toast",
-    "auto-update-checker",
-  ],
-  validation: [
-    "comment-checker",
-    "empty-task-response-detector",
-  ],
-  output: [
-    "tool-output-truncator",
-  ],
-  injection: [
-    "directory-agents-injector",
-    "directory-readme-injector",
-    "rules-injector",
-  ],
-  automation: [
-    "todo-continuation-enforcer",
-    "keyword-detector",
-    "agent-usage-reminder",
-    "auto-slash-command",
-  ],
-  environment: [
-    "non-interactive-env",
-    "interactive-bash-session",
-    "think-mode",
-    "claude-code-hooks",
-  ],
-  planning: [
-    "prometheus-md-only",
-    "sisyphus-junior-notepad",
-    "atlas",
-  ],
-} as const;
-
-export type HookGroupName = keyof typeof HOOK_GROUPS;
+export { HOOK_GROUPS, type HookGroupName } from "./oh-my-opencode-hooks";
 
 /** OMO 5.x renamed `deep` to `deep-low`; an explicitly stored `deep-low` wins over a legacy `deep`. */
 export function canonicalizeCategories<T>(
@@ -248,9 +259,9 @@ function readPermissionConfig(value: unknown): AgentPermissionConfig | undefined
   }
 
   const permission: AgentPermissionConfig = {};
-  const edit = readPermissionValue(value.edit);
-  if (edit) {
-    permission.edit = edit;
+  for (const key of ["edit", "webfetch", "task", "doom_loop", "external_directory"] as const) {
+    const rule = readPermissionValue(value[key]);
+    if (rule) permission[key] = rule;
   }
 
   const bash = readPermissionValue(value.bash);
@@ -339,6 +350,7 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
           if (ultraworkReasoning) ultrawork.reasoning = ultraworkReasoning;
           if (Object.keys(ultrawork).length > 0) entry.ultrawork = ultrawork;
         }
+        if (typeof entryObj.displayName === "string" && entryObj.displayName) entry.displayName = entryObj.displayName;
         validatedAgents[key] = entry;
       }
     }
@@ -380,6 +392,12 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
           const fallbacks = entryObj.fallback_models.filter((v: unknown): v is string => typeof v === "string");
           if (fallbacks.length > 0) entry.fallback_models = fallbacks;
         }
+        if (Number.isSafeInteger(entryObj.max_tokens) && (entryObj.max_tokens as number) > 0) {
+          entry.max_tokens = entryObj.max_tokens as number;
+        }
+        const providerOptions = boundedObject(entryObj.provider_options);
+        if (providerOptions) entry.provider_options = providerOptions;
+        if (typeof entryObj.warn_unavailable === "boolean") entry.warn_unavailable = entryObj.warn_unavailable;
         validatedCategories[key] = entry;
       }
     }
@@ -448,6 +466,9 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
       tmuxConfig.agent_pane_min_width = tmuxObj.agent_pane_min_width;
     }
 
+    const isolation = oneOf(tmuxObj.isolation, TMUX_ISOLATIONS);
+    if (isolation) tmuxConfig.isolation = isolation;
+
     if (Object.keys(tmuxConfig).length > 0) {
       result.tmux = tmuxConfig;
     }
@@ -468,6 +489,14 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
 
     if (typeof bgObj.staleTimeoutMs === "number") {
       bgConfig.staleTimeoutMs = bgObj.staleTimeoutMs;
+    }
+
+    if (Number.isSafeInteger(bgObj.maxLiveDescendantsPerRoot) && (bgObj.maxLiveDescendantsPerRoot as number) >= 0) {
+      bgConfig.maxLiveDescendantsPerRoot = bgObj.maxLiveDescendantsPerRoot as number;
+    }
+
+    if (typeof bgObj.taskCleanupDelayMs === "number" && bgObj.taskCleanupDelayMs >= 60000) {
+      bgConfig.taskCleanupDelayMs = bgObj.taskCleanupDelayMs;
     }
 
     // Validate providerConcurrency as Record<string, number>
@@ -524,6 +553,9 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
       browserConfig.provider = browserObj.provider;
     }
 
+    const playwrightMcpArgs = boundedStrings(browserObj.playwright_mcp_args);
+    if (playwrightMcpArgs?.length) browserConfig.playwright_mcp_args = playwrightMcpArgs;
+
     if (Object.keys(browserConfig).length > 0) {
       result.browser_automation_engine = browserConfig;
     }
@@ -552,6 +584,10 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
 
     if (typeof sisyphusObj.replace_plan === "boolean") {
       sisyphusConfig.replace_plan = sisyphusObj.replace_plan;
+    }
+
+    if (typeof sisyphusObj.tdd === "boolean") {
+      sisyphusConfig.tdd = sisyphusObj.tdd;
     }
 
     if (Object.keys(sisyphusConfig).length > 0) {
@@ -667,9 +703,32 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
        experimental.task_system = experimentalObj.task_system;
      }
 
+     if (typeof experimentalObj.disable_live_parent_wake_routing === "boolean") {
+       experimental.disable_live_parent_wake_routing = experimentalObj.disable_live_parent_wake_routing;
+     }
+
      if (Object.keys(experimental).length > 0) {
        result.experimental = experimental;
      }
+   }
+
+   for (const key of ["agent_definitions", "disabled_providers"] as const) {
+     const list = boundedStrings(obj[key])?.filter((v) => v.length > 0);
+     if (list?.length) result[key] = list;
+   }
+
+   if (Array.isArray(obj.agent_order)) {
+     // Upstream caps agent_order at 64 names of at most 128 chars.
+     const agentOrder = obj.agent_order.slice(0, 64)
+       .filter((v): v is string => typeof v === "string" && v.length > 0 && v.length <= 128);
+     if (agentOrder.length > 0) result.agent_order = agentOrder;
+   }
+
+   if (typeof obj.telemetry === "boolean") result.telemetry = obj.telemetry;
+
+   for (const key of OPAQUE_KEYS) {
+     const value = boundedObject(obj[key]);
+     if (value) result[key] = value;
    }
 
    return result;

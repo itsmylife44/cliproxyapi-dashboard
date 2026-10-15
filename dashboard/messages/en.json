@@ -1649,6 +1649,18 @@
     "hooks": "Hooks",
     "disabledCount": "{count} disabled",
     "hookGroupStats": "({disabled}/{total} disabled)",
+    "hookGroups": {
+      "context": "Context",
+      "recovery": "Recovery",
+      "notification": "Notifications",
+      "validation": "Validation",
+      "guards": "Guards",
+      "output": "Output",
+      "injection": "Injection",
+      "automation": "Automation",
+      "environment": "Environment",
+      "planning": "Planning"
+    },
     "sisyphusAgent": "Sisyphus Agent",
     "sisyphusDisabled": "Disabled",
     "defaultBuilderEnabled": "Default Builder Enabled",

@@ -1,5 +1,7 @@
 import {
   canonicalizeCategories,
+  OMO_PASSTHROUGH_KEYS,
+  type AgentConfigEntry,
   type OhMyOpenCodeFullConfig,
   type OhMyOpenCodePreset,
 } from "./oh-my-opencode-types";
@@ -231,6 +233,10 @@ interface ModelAssignment {
   permission?: { edit?: string; bash?: unknown };
   providerOptions?: Record<string, unknown>;
   ultrawork?: { model?: string; reasoning?: string };
+  displayName?: string;
+  max_tokens?: number;
+  provider_options?: Record<string, unknown>;
+  warn_unavailable?: boolean;
 }
 
 const withProvider = (model: string) => `cliproxyapi/${model}`;
@@ -276,6 +282,35 @@ function modelFields(
   return { models: [primary, ...fallbackModels.map(withProvider)] };
 }
 
+function buildAgentEntry(
+  chain: string[],
+  availableModels: string[],
+  override: AgentConfigEntry | undefined,
+): ModelAssignment {
+  const settings = { reasoning: override?.reasoning, temperature: override?.temperature };
+  const hasModel = chain.length > 0 || (override?.model !== undefined && availableModels.includes(override.model));
+  const entry: ModelAssignment = hasModel
+    ? modelFields(resolveAssignment(chain, availableModels, override), settings)
+    : Object.fromEntries(Object.entries(settings).filter(([, v]) => v !== undefined));
+
+  if (override?.prompt_append) entry.prompt_append = override.prompt_append;
+  if (override?.permission) entry.permission = override.permission;
+  if (override?.providerOptions) entry.providerOptions = override.providerOptions;
+  if (override?.ultrawork) {
+    const ultrawork = { ...override.ultrawork };
+    if (ultrawork.model) {
+      if (availableModels.includes(ultrawork.model)) {
+        ultrawork.model = withProvider(ultrawork.model);
+      } else {
+        delete ultrawork.model;
+      }
+    }
+    entry.ultrawork = ultrawork;
+  }
+  if (override?.displayName) entry.displayName = override.displayName;
+  return entry;
+}
+
 export function buildOhMyOpenCodeConfig(
   availableModels: string[],
   overrides?: OhMyOpenCodeFullConfig,
@@ -283,27 +318,11 @@ export function buildOhMyOpenCodeConfig(
   const agents: Record<string, ModelAssignment> = {};
 
   for (const [agent, chain] of Object.entries(UPSTREAM_AGENT_CHAINS)) {
-    const agentOverride = overrides?.agents?.[agent];
-    const entry: ModelAssignment = modelFields(resolveAssignment(chain, availableModels, agentOverride), {
-      reasoning: agentOverride?.reasoning,
-      temperature: agentOverride?.temperature,
-    });
-
-    if (agentOverride?.prompt_append) entry.prompt_append = agentOverride.prompt_append;
-    if (agentOverride?.permission) entry.permission = agentOverride.permission;
-    if (agentOverride?.providerOptions) entry.providerOptions = agentOverride.providerOptions;
-    if (agentOverride?.ultrawork) {
-      const ultrawork = { ...agentOverride.ultrawork };
-      if (ultrawork.model) {
-        if (availableModels.includes(ultrawork.model)) {
-          ultrawork.model = withProvider(ultrawork.model);
-        } else {
-          delete ultrawork.model;
-        }
-      }
-      entry.ultrawork = ultrawork;
-    }
-    agents[agent] = entry;
+    agents[agent] = buildAgentEntry(chain, availableModels, overrides?.agents?.[agent]);
+  }
+  // Custom agents (OMO 5.x accepts any key): no upstream chain, so only a served model is emitted.
+  for (const [agent, override] of Object.entries(overrides?.agents ?? {})) {
+    if (!(agent in agents)) agents[agent] = buildAgentEntry([], availableModels, override);
   }
 
   const categories: Record<string, ModelAssignment> = {};
@@ -318,6 +337,9 @@ export function buildOhMyOpenCodeConfig(
 
     if (categoryOverride?.temperature !== undefined) entry.temperature = categoryOverride.temperature;
     if (categoryOverride?.description) entry.description = categoryOverride.description;
+    if (categoryOverride?.max_tokens !== undefined) entry.max_tokens = categoryOverride.max_tokens;
+    if (categoryOverride?.provider_options) entry.provider_options = categoryOverride.provider_options;
+    if (categoryOverride?.warn_unavailable !== undefined) entry.warn_unavailable = categoryOverride.warn_unavailable;
     categories[category] = entry;
   }
 
@@ -367,6 +389,10 @@ export function buildOhMyOpenCodeConfig(
 
   if (overrides?.experimental && Object.keys(overrides.experimental).length > 0) {
     config.experimental = overrides.experimental;
+  }
+
+  for (const key of OMO_PASSTHROUGH_KEYS) {
+    if (overrides?.[key] !== undefined) config[key] = overrides[key];
   }
 
   return config;

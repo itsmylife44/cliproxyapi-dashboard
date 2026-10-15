@@ -75,7 +75,7 @@ export function HooksSection({
                   >
                     <polyline points="9 18 15 12 9 6" />
                   </svg>
-                  {groupName} {t("hookGroupStats", { disabled: disabledCount, total: hooks.length })}
+                  {t(`hookGroups.${groupName}`)} {t("hookGroupStats", { disabled: disabledCount, total: hooks.length })}
                 </button>
                 {isGroupExpanded && (
                   <div className="space-y-1 pl-4 mt-1">

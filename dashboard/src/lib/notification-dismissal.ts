@@ -2,8 +2,9 @@ export const DISMISSED_KEY_PREFIX = "header_notifications_dismissed_";
 export const MAX_DISMISSED = 100;
 
 export function getDismissedIds(userId: string): Set<string> {
-  if (typeof localStorage === "undefined") return new Set();
+  // Guard inside try: reading the localStorage global throws when site data is blocked.
   try {
+    if (typeof localStorage === "undefined") return new Set();
     const raw = localStorage.getItem(DISMISSED_KEY_PREFIX + userId);
     if (!raw) return new Set();
     return new Set(JSON.parse(raw) as string[]);
@@ -13,8 +14,8 @@ export function getDismissedIds(userId: string): Set<string> {
 }
 
 export function addDismissedId(userId: string, notificationId: string): void {
-  if (typeof localStorage === "undefined") return;
   try {
+    if (typeof localStorage === "undefined") return;
     const existing = [...getDismissedIds(userId)];
     // Add new ID, deduplicate, cap at MAX_DISMISSED (keep most recent)
     const updated = [...new Set([...existing, notificationId])];

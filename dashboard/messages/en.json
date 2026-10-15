@@ -189,6 +189,8 @@
     "claudeCodeApiKeysLink": "API Keys",
     "claudeCodePageSuffix": "page.",
     "modelSourceOAuthAlias": "OAuth Alias",
+    "omoNoticeTitle": "Your OMO settings have not been applied since OMO 4.19.3",
+    "omoNoticeBody": "Since OMO 4.19.3 (late July 2026), the agent and model settings synced from this dashboard were not applied. The sync plugin updates itself via @latest and fixes this: after your next OpenCode start, your settings apply again.",
     "quickStartTitle": "Quick Start"
   },
   "settings": {

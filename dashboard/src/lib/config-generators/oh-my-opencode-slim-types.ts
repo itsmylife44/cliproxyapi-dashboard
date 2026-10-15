@@ -454,9 +454,13 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     if (items.length > 0) result.disabled_agents = items;
   }
 
-  // multiplexer (new unified config)
-  if (obj.multiplexer && typeof obj.multiplexer === "object" && !Array.isArray(obj.multiplexer)) {
-    const muxObj = obj.multiplexer as Record<string, unknown>;
+  // multiplexer (new unified config); a legacy `tmux` block stands in when no usable multiplexer is stored.
+  // `tmux` itself is never returned, so the next save stores it in the new shape.
+  const legacyTmux =
+    obj.tmux && typeof obj.tmux === "object" && !Array.isArray(obj.tmux) ? (obj.tmux as Record<string, unknown>) : null;
+  for (const source of [obj.multiplexer, legacyTmux && { ...legacyTmux, type: legacyTmux.enabled === true ? "tmux" : "none" }]) {
+    if (result.multiplexer || !source || typeof source !== "object" || Array.isArray(source)) continue;
+    const muxObj = source as Record<string, unknown>;
     const mux: SlimMultiplexerConfig = {};
     if (typeof muxObj.type === "string" && (SLIM_MULTIPLEXER_TYPES as readonly string[]).includes(muxObj.type)) {
       mux.type = muxObj.type as SlimMultiplexerConfig["type"];

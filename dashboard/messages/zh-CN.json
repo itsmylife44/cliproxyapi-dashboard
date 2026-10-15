@@ -330,7 +330,23 @@
       "toastInstalled": "已安装 {name}",
       "toastEnabled": "已启用 {name}",
       "toastDisabled": "已停用 {name}",
-      "toastUninstalled": "已卸载 {name}"
+      "toastUninstalled": "已卸载 {name}",
+      "settings": "设置",
+      "hideSettings": "隐藏设置",
+      "configLoadFailed": "无法加载插件设置",
+      "configEmptyHint": "字段留空即使用插件默认值。列表和对象以 JSON 格式编辑。",
+      "configUnset": "插件默认值",
+      "configSave": "保存设置",
+      "configCancel": "取消",
+      "configNoChanges": "没有更改。",
+      "toastConfigSaved": "已保存 {name} 的设置",
+      "configErrors": {
+        "invalidNumber": "请输入数字。",
+        "invalidInteger": "请输入整数。",
+        "invalidJson": "不是有效的 JSON。",
+        "notArray": "请输入 JSON 列表，例如 [\"a\", \"b\"]。",
+        "notObject": "请输入 JSON 对象，例如 {\"key\": \"value\"}。"
+      }
     }
   },
   "apiKeys": {

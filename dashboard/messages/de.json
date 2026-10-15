@@ -330,7 +330,23 @@
       "toastInstalled": "{name} installiert",
       "toastEnabled": "{name} aktiviert",
       "toastDisabled": "{name} deaktiviert",
-      "toastUninstalled": "{name} deinstalliert"
+      "toastUninstalled": "{name} deinstalliert",
+      "settings": "Einstellungen",
+      "hideSettings": "Einstellungen ausblenden",
+      "configLoadFailed": "Plugin-Einstellungen konnten nicht geladen werden",
+      "configEmptyHint": "Lass ein Feld leer, um den Standardwert des Plugins zu verwenden. Listen und Objekte werden als JSON bearbeitet.",
+      "configUnset": "Plugin-Standard",
+      "configSave": "Einstellungen speichern",
+      "configCancel": "Abbrechen",
+      "configNoChanges": "Nichts geändert.",
+      "toastConfigSaved": "Einstellungen von {name} gespeichert",
+      "configErrors": {
+        "invalidNumber": "Gib eine Zahl ein.",
+        "invalidInteger": "Gib eine ganze Zahl ein.",
+        "invalidJson": "Das ist kein gültiges JSON.",
+        "notArray": "Gib eine JSON-Liste ein, zum Beispiel [\"a\", \"b\"].",
+        "notObject": "Gib ein JSON-Objekt ein, zum Beispiel {\"key\": \"value\"}."
+      }
     }
   },
   "apiKeys": {

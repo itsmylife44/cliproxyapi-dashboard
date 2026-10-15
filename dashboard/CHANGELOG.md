@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.87](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.86...dashboard-v0.1.87) (2026-10-15)
+
+
+### Features
+
+* plugin follow-ups and cleanups ([#253](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/253) tickets) ([#274](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/274)) ([d2c48db](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d2c48db04cae354af3d79879fb43748ba5041055))
+
+
+### Bug Fixes
+
+* align dashboard with CLIProxyAPI v8.0.29 ([#264](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/264)) ([0e35015](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/0e3501521f6199b3498ac34d896860c298cfc08c))
+
 ## [0.1.86](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.85...dashboard-v0.1.86) (2026-10-14)
 
 

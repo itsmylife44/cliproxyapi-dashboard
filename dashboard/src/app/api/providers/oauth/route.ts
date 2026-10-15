@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { contributeOAuthAccount, listOAuthWithOwnership } from "@/lib/providers/dual-write";
 import { listEnabledPluginOAuthProviders } from "@/lib/providers/plugins";
 import { OAUTH_PROVIDER, type OAuthProvider } from "@/lib/providers/constants";
-import { ERROR_CODE, Errors, apiError } from "@/lib/errors";
+import { ERROR_CODE, Errors, apiError, apiSuccess } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 
 interface ContributeOAuthRequest {
@@ -53,7 +53,7 @@ export async function GET() {
       return apiError(ERROR_CODE.PROVIDER_ERROR, result.error ?? "Provider error", 500);
     }
 
-    return NextResponse.json({ accounts: result.accounts, pluginOAuthProviders });
+    return apiSuccess({ accounts: result.accounts, pluginOAuthProviders });
   } catch (error) {
     return Errors.internal("GET /api/providers/oauth error", error);
   }
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       return apiError(ERROR_CODE.PROVIDER_ERROR, result.error ?? "Provider error", 500);
     }
 
-    return NextResponse.json({ id: result.id }, { status: 201 });
+    return apiSuccess({ id: result.id }, 201);
   } catch (error) {
     return Errors.internal("POST /api/providers/oauth error", error);
   }

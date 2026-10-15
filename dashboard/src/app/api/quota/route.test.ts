@@ -492,6 +492,34 @@ describe("GET /api/quota - imported provider normalization", () => {
     expect(account.groups).toBeDefined();
     expect(account.groups.length).toBeGreaterThan(0);
   });
+
+  it("infers kimi-ai, not kimi, from a kimi-ai-*.json file and skips the kimi.com quota call", async () => {
+    // Upstream resolves kimi.ai from "kimi-ai" in the file name (internal/auth/kimi/kimi.go).
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          files: [
+            {
+              auth_index: 0,
+              provider: "unknown",
+              id: "kimi-ai-user.json",
+              name: "kimi-ai-user.json",
+              disabled: false,
+              status: "active",
+            },
+          ],
+        }),
+      body: { cancel: vi.fn() },
+    });
+
+    const { GET } = await import("./route");
+    const request = new Request("http://localhost/api/quota", { headers: { cookie: "session=test" } });
+    const data = await (await GET(request as NextRequest)).json();
+
+    expect(data.accounts[0].provider).toBe("kimi-ai");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("GET /api/quota - Claude limits[] parsing (issue #230)", () => {

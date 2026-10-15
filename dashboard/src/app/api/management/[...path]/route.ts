@@ -7,6 +7,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { fetchWithRetry } from "@/lib/fetch-utils";
 import { getManagementUrl } from "@/lib/management-url";
+import { ERROR_CODE, apiError } from "@/lib/errors";
 
 const BACKEND_API_URL = getManagementUrl();
 const MANAGEMENT_API_KEY = env.MANAGEMENT_API_KEY;
@@ -220,7 +221,7 @@ async function proxyRequest(
   }
 
   if (method === "PUT" && PUT_FORBIDDEN_PATH.test(normalizedPath)) {
-    return NextResponse.json({ error: "Use PATCH to change plugin settings" }, { status: 405 });
+    return apiError(ERROR_CODE.VALIDATION_ERROR, "Use PATCH to change plugin settings", 405);
   }
 
   if (!user.isAdmin && !isNonAdminAllowedManagementRequest(method, normalizedPath)) {

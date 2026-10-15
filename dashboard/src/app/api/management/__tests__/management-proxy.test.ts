@@ -138,6 +138,9 @@ describe("management proxy allowlist", () => {
     const response = await callRoute("PUT", ["plugins", "zcode", "config"]);
 
     expect(response.status).toBe(405);
+    expect(await response.json()).toEqual({
+      error: { code: "VALIDATION_ERROR", message: "Use PATCH to change plugin settings" },
+    });
     expect(mocks.fetchWithRetry).not.toHaveBeenCalled();
   });
 });

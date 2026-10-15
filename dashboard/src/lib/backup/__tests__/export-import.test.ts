@@ -31,6 +31,10 @@ vi.mock("@/lib/db", () => ({
 import { parseBackupData, generateRestorePreview } from "../export-import";
 import type { BackupData } from "../types";
 import { BACKUP_VERSION } from "../types";
+import { buildSlimConfig } from "@/lib/config-generators/oh-my-opencode-slim";
+import { validateSlimConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
+import { LEGACY_SLIM_OVERRIDES } from "@/lib/__tests__/helpers/legacy-slim-overrides";
+import { upstreamSchemaErrors } from "@/lib/__tests__/helpers/upstream-schema";
 
 describe("parseBackupData", () => {
   const createValidBackupData = (overrides: Partial<BackupData> = {}): BackupData => ({
@@ -79,6 +83,24 @@ describe("parseBackupData", () => {
     expect(result.version).toBe(BACKUP_VERSION);
     expect(result.data).toBeDefined();
     expect(result.createdAt).toBeDefined();
+  });
+
+  it("accepts a legacy slim config containing dead keys and generates a valid config from it", () => {
+    const backup = createValidBackupData();
+    backup.data.agentModelOverrides = [{
+      id: "amo-1",
+      userId: "user-1",
+      overrides: {},
+      slimOverrides: LEGACY_SLIM_OVERRIDES,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }];
+
+    const restored = parseBackupData(JSON.stringify(backup)).data.agentModelOverrides[0];
+    const config = buildSlimConfig(["model-a", "model-b"], validateSlimConfig(restored?.slimOverrides));
+
+    expect(config).not.toHaveProperty("manualPlan");
+    expect(upstreamSchemaErrors("slim", config)).toEqual([]);
   });
 
   it("should throw on invalid JSON", () => {

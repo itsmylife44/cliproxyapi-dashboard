@@ -22,16 +22,11 @@ import {
   validateSlimConfig,
   type OhMyOpenCodeSlimFullConfig,
   type SlimAgentConfig,
-  type SlimBackgroundConfig,
   type SlimFallbackConfig,
-  type SlimTmuxConfig,
   type SlimCouncilConfig,
   type SlimPreset,
   type SlimMultiplexerConfig,
   type SlimInterviewConfig,
-  type SlimTodoContinuationConfig,
-  type SlimWebsearchConfig,
-  type SlimManualPlanEntry,
 } from "@/lib/config-generators/oh-my-opencode-slim-types";
 
 interface OhMyOpenCodeSlimConfigGeneratorProps {
@@ -47,18 +42,6 @@ interface OhMyOpenCodeSlimConfigGeneratorProps {
 type EditingScope = "agents" | "preset";
 
 const DEFAULT_PRESET_NAME = "cliproxyapi";
-
-export function applySlimTerminalOverrides(
-  overrides: OhMyOpenCodeSlimFullConfig,
-  change: { tmux: SlimTmuxConfig | undefined } | { multiplexer: SlimMultiplexerConfig | undefined },
-): OhMyOpenCodeSlimFullConfig {
-  // Legacy tmux and canonical multiplexer are mutually exclusive editor surfaces.
-  if ("tmux" in change) {
-    return { ...overrides, tmux: change.tmux, multiplexer: undefined };
-  }
-
-  return { ...overrides, multiplexer: change.multiplexer, tmux: undefined };
-}
 
 export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGeneratorProps) {
   const { apiKeys, proxyModelIds, excludedModels, slimOverrides: initialOverrides, modelSourceMap } = props;
@@ -334,14 +317,6 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
     }
   };
 
-  const handleTmuxChange = (tmux: SlimTmuxConfig | undefined) => {
-    commitOverrides(applySlimTerminalOverrides(overrides, { tmux }));
-  };
-
-  const handleBackgroundChange = (background: SlimBackgroundConfig | undefined) => {
-    commitOverrides({ ...overrides, background });
-  };
-
   const handleFallbackChange = (fallback: SlimFallbackConfig | undefined) => {
     commitOverrides({ ...overrides, fallback });
   };
@@ -365,7 +340,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
   };
 
   const handleMultiplexerChange = (multiplexer: SlimMultiplexerConfig | undefined) => {
-    commitOverrides(applySlimTerminalOverrides(overrides, { multiplexer }));
+    commitOverrides({ ...overrides, multiplexer });
   };
 
   const handleDisabledAgentAdd = (agent: string) => {
@@ -386,18 +361,6 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
     commitOverrides({ ...overrides, interview });
   };
 
-  const handleTodoContinuationChange = (todoContinuation: SlimTodoContinuationConfig | undefined) => {
-    commitOverrides({ ...overrides, todoContinuation });
-  };
-
-  const handleWebsearchChange = (websearch: SlimWebsearchConfig | undefined) => {
-    commitOverrides({ ...overrides, websearch });
-  };
-
-  const handleManualPlanChange = (manualPlan: Record<string, SlimManualPlanEntry> | undefined) => {
-    commitOverrides({ ...overrides, manualPlan });
-  };
-
   const handleRawOverridesChange = (nextRaw: unknown) => {
     if (typeof nextRaw !== "object" || nextRaw === null || Array.isArray(nextRaw)) {
       showToast(t("toastInvalidJson"), "error");
@@ -406,9 +369,8 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
     commitOverrides(nextRaw as OhMyOpenCodeSlimFullConfig);
   };
 
-  const handleScalarChange = (field: string, value: unknown) => {
-    if (!["setDefaultAgent", "scoringEngineVersion", "balanceProviderUsage"].includes(field)) return;
-    commitOverrides({ ...overrides, [field]: value } as OhMyOpenCodeSlimFullConfig);
+  const handleSetDefaultAgentChange = (setDefaultAgent: boolean) => {
+    commitOverrides({ ...overrides, setDefaultAgent });
   };
 
   if (apiKeys.length === 0) {
@@ -504,7 +466,7 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
 
   const handleDownload = () => {
     if (configJson) {
-      downloadFile(configJson, "oh-my-opencode-slim.json");
+      downloadFile(configJson, "oh-my-opencode-slim.jsonc");
     }
   };
 
@@ -665,20 +627,15 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
 
       <SlimToggleSections
         overrides={overrides}
-        onTmuxChange={handleTmuxChange}
-        onBackgroundChange={handleBackgroundChange}
         onFallbackChange={handleFallbackChange}
         onCouncilChange={handleCouncilChange}
         onDisabledMcpAdd={handleDisabledMcpAdd}
         onDisabledMcpRemove={handleDisabledMcpRemove}
-        onScalarChange={handleScalarChange}
+        onSetDefaultAgentChange={handleSetDefaultAgentChange}
         onMultiplexerChange={handleMultiplexerChange}
         onDisabledAgentAdd={handleDisabledAgentAdd}
         onDisabledAgentRemove={handleDisabledAgentRemove}
         onInterviewChange={handleInterviewChange}
-        onTodoContinuationChange={handleTodoContinuationChange}
-        onWebsearchChange={handleWebsearchChange}
-        onManualPlanChange={handleManualPlanChange}
         onRawOverridesChange={handleRawOverridesChange}
       />
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSlimConfig } from "../config-generators/oh-my-opencode-slim";
-import type { OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
+import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
 
 function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfig>): OhMyOpenCodeSlimFullConfig {
   expect(config).not.toBeNull();
@@ -145,7 +145,7 @@ describe("buildSlimConfig – preset and global override semantics", () => {
   });
 
   it("emits council presets but not the master slim 3.x removed", () => {
-    const config = buildSlimConfig(available, {
+    const config = buildSlimConfig(available, validateSlimConfig({
       council: {
         master: {
           variant: "high-precision",
@@ -159,7 +159,7 @@ describe("buildSlimConfig – preset and global override semantics", () => {
           },
         },
       },
-    });
+    }));
 
     const generated = expectGeneratedConfig(config);
     expect(generated.council).toEqual({

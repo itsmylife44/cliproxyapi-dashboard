@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSlimConfig } from "../config-generators/oh-my-opencode-slim";
-import type { OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
+import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
 import { upstreamSchemaErrors } from "./helpers/upstream-schema";
 
 const available = ["claude-opus-4-6", "gpt-5-mini"];
@@ -61,7 +61,7 @@ describe("buildSlimConfig – council", () => {
   });
 
   it("drops the council fields upstream removed", () => {
-    const config = generate({
+    const config = generate(validateSlimConfig({
       council: {
         master: { model: "claude-opus-4-6" },
         presets: {
@@ -76,7 +76,7 @@ describe("buildSlimConfig – council", () => {
         councillor_execution_mode: "serial",
         councillor_retries: 2,
       },
-    });
+    }));
 
     expect(config.council).toEqual({
       presets: { default: { alpha: { model: "cliproxyapi/gpt-5-mini" } } },
@@ -95,7 +95,7 @@ describe("buildSlimConfig – council", () => {
   });
 
   it("omits council when no preset has councillors", () => {
-    const config = generate({ council: { master: { model: "claude-opus-4-6" }, default_preset: "default" } });
+    const config = generate(validateSlimConfig({ council: { master: { model: "claude-opus-4-6" }, default_preset: "default" } }));
 
     expect(config).not.toHaveProperty("council");
   });

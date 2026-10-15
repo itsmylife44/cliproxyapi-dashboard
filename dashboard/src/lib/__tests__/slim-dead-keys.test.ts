@@ -19,12 +19,12 @@ const DEAD_TOP_LEVEL_KEYS = [
 ];
 
 describe("slim dead config keys", () => {
-  it("generator ignores dead keys present in stored config", () => {
+  it("generator drops dead keys present in stored config (legacy tmux becomes multiplexer)", () => {
     const config = buildSlimConfig(["model-a", "model-b"], validateSlimConfig(LEGACY_SLIM_OVERRIDES));
 
     expect(config).not.toBeNull();
     for (const key of DEAD_TOP_LEVEL_KEYS) expect(config).not.toHaveProperty(key);
-    expect(config).not.toHaveProperty("multiplexer");
+    expect(config?.multiplexer).toEqual({ type: "tmux", layout: "main-horizontal", main_pane_size: 55 });
     expect(config?.fallback).toEqual({ enabled: true, retryDelayMs: 500 });
     expect(config?.council).toEqual({
       presets: { default: { alpha: { model: "cliproxyapi/model-b" } } },

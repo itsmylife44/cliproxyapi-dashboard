@@ -16,6 +16,8 @@ export interface PluginRow {
   enabled: boolean;
   /** Loaded and serving: needs the global switch on and a library built for the host. */
   active: boolean;
+  /** `registered`: the host has the library loaded, whatever the switches say. */
+  loaded: boolean;
   updateAvailable: boolean;
 }
 
@@ -52,6 +54,7 @@ export function parsePluginStore(data: unknown): PluginStoreView {
             installed: p.installed === true,
             enabled: p.enabled === true,
             active: p.effective_enabled === true && p.registered === true,
+            loaded: p.registered === true,
             updateAvailable: p.update_available === true,
           }]
         : []
@@ -65,4 +68,42 @@ export function parsePluginStore(data: unknown): PluginStoreView {
 /** Upstream plugin errors are `{error: code, message}`; the message is the useful part. */
 export function pluginErrorMessage(data: unknown, fallback: string): string {
   return isRecord(data) && typeof data.message === "string" && data.message ? decode(data.message) : extractApiError(data, fallback);
+}
+
+/** Plugins an action should leave settled, and the global switch state it should leave behind. */
+export interface PluginTarget {
+  ids: string[];
+  pluginsEnabled?: boolean;
+}
+
+/** Ids from the target whose load state does not yet match their switches. */
+function unsettled(view: PluginStoreView, target: PluginTarget): string[] {
+  if (target.pluginsEnabled !== undefined && view.pluginsEnabled !== target.pluginsEnabled) return target.ids;
+  return target.ids.filter((id) => {
+    const row = view.rows.find((r) => r.id === id);
+    return row !== undefined && row.loaded !== (view.pluginsEnabled && row.installed && row.enabled);
+  });
+}
+
+const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Upstream answers plugin writes before its async hot reload loads or unloads the library,
+ * so poll the store until every target plugin is loaded exactly when its switches say so.
+ * `pending` lists the ids still unsettled when `timeoutMs` ran out (empty on success).
+ */
+export async function waitForPluginState(
+  fetchView: () => Promise<PluginStoreView | null>,
+  target: PluginTarget,
+  { intervalMs = 1000, timeoutMs = 30000, sleep = defaultSleep } = {}
+): Promise<{ view: PluginStoreView | null; pending: string[] }> {
+  let view: PluginStoreView | null = null;
+  let pending = target.ids;
+  for (let waited = 0; waited < timeoutMs; waited += intervalMs) {
+    await sleep(intervalMs);
+    view = (await fetchView()) ?? view;
+    pending = view ? unsettled(view, target) : target.ids;
+    if (pending.length === 0) break;
+  }
+  return { view, pending };
 }

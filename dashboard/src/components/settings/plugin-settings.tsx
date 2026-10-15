@@ -10,15 +10,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { Toggle } from "@/components/config/config-fields";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { writeConfigYamlChanges } from "@/lib/config-yaml";
-import { parsePluginStore, pluginErrorMessage, type PluginRow, type PluginStoreView } from "@/lib/plugin-store";
+import {
+  parsePluginStore,
+  pluginErrorMessage,
+  waitForPluginState,
+  type PluginRow,
+  type PluginStoreView,
+  type PluginTarget,
+} from "@/lib/plugin-store";
 
 // Upstream applies config writes with an async hot reload and can roll back a write
 // that lands during the previous reload (router-for-me/CLIProxyAPI#6631), and plugins
-// load in that reload. Actions stay locked until it settles, then the list refreshes.
-// ponytail: fixed delay, poll GET /plugins for `registered` if 4 s proves too short.
-const RELOAD_SETTLE_MS = 4000;
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// load in that reload. Actions stay locked until the affected plugins settle.
 
 async function readJson(res: Response): Promise<unknown> {
   return res.json().catch(() => null);
@@ -33,27 +36,31 @@ export function PluginSettings() {
   const [hidden, setHidden] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [settling, setSettling] = useState<string[]>([]);
   const [filter, setFilter] = useState("");
   const [confirmEnable, setConfirmEnable] = useState(false);
   const [confirmUninstall, setConfirmUninstall] = useState<PluginRow | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<PluginStoreView | null> => {
     try {
       const res = await fetch(API_ENDPOINTS.MANAGEMENT.PLUGIN_STORE);
       // The management proxy is admin-only for these routes.
       if (res.status === 401 || res.status === 403) {
         setHidden(true);
-        return;
+        return null;
       }
       const data = await readJson(res);
       if (!res.ok) {
         setLoadError(pluginErrorMessage(data, t("loadFailed")));
-        return;
+        return null;
       }
+      const next = parsePluginStore(data);
       setLoadError(null);
-      setView(parsePluginStore(data));
+      setView(next);
+      return next;
     } catch {
       setLoadError(t("loadFailed"));
+      return null;
     }
   }, [t]);
 
@@ -61,7 +68,7 @@ export function PluginSettings() {
     if (isAdmin) void load();
   }, [isAdmin, load]);
 
-  const run = async (action: () => Promise<Response>, success: string) => {
+  const run = async (action: () => Promise<Response>, success: string, target: PluginTarget) => {
     setBusy(true);
     try {
       const res = await action();
@@ -70,11 +77,16 @@ export function PluginSettings() {
         return;
       }
       showToast(success, "success");
-      await sleep(RELOAD_SETTLE_MS);
-      await load();
+      setSettling(target.ids);
+      const { view: settled, pending } = await waitForPluginState(load, target);
+      if (pending.length > 0) {
+        const names = pending.map((id) => settled?.rows.find((r) => r.id === id)?.name ?? id).join(", ");
+        showToast(t("settleTimeout", { names }), "error");
+      }
     } catch {
       showToast(t("actionFailed"), "error");
     } finally {
+      setSettling([]);
       setBusy(false);
     }
   };
@@ -83,7 +95,8 @@ export function PluginSettings() {
     // No v0 endpoint for plugins.enabled; `plugins` is a shared root in both config layouts.
     run(
       async () => (await writeConfigYamlChanges({ plugins: { enabled } })).res,
-      enabled ? t("toastGlobalOn") : t("toastGlobalOff")
+      enabled ? t("toastGlobalOn") : t("toastGlobalOff"),
+      { ids: (view?.rows ?? []).filter((r) => r.installed).map((r) => r.id), pluginsEnabled: enabled }
     );
 
   const install = (row: PluginRow) =>
@@ -93,7 +106,8 @@ export function PluginSettings() {
           `${API_ENDPOINTS.MANAGEMENT.PLUGIN_STORE}/${encodeURIComponent(row.id)}/install?source=${encodeURIComponent(row.sourceId)}`,
           { method: "POST" }
         ),
-      t("toastInstalled", { name: row.name })
+      t("toastInstalled", { name: row.name }),
+      { ids: [row.id] }
     );
 
   const setEnabled = (row: PluginRow, enabled: boolean) =>
@@ -104,13 +118,15 @@ export function PluginSettings() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ enabled }),
         }),
-      enabled ? t("toastEnabled", { name: row.name }) : t("toastDisabled", { name: row.name })
+      enabled ? t("toastEnabled", { name: row.name }) : t("toastDisabled", { name: row.name }),
+      { ids: [row.id] }
     );
 
   const uninstall = (row: PluginRow) =>
     run(
       () => fetch(`${API_ENDPOINTS.MANAGEMENT.PLUGINS}/${encodeURIComponent(row.id)}`, { method: "DELETE" }),
-      t("toastUninstalled", { name: row.name })
+      t("toastUninstalled", { name: row.name }),
+      { ids: [row.id] }
     );
 
   const rows = useMemo(() => {
@@ -123,7 +139,7 @@ export function PluginSettings() {
   if (!isAdmin || hidden) return null;
 
   const statusLabel = (row: PluginRow) =>
-    row.active ? t("statusActive") : row.installed ? (row.enabled ? t("statusNotLoaded") : t("statusDisabled")) : null;
+    settling.includes(row.id) ? t("statusApplying") : row.active ? t("statusActive") : row.installed ? (row.enabled ? t("statusNotLoaded") : t("statusDisabled")) : null;
 
   return (
     <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6 space-y-4">

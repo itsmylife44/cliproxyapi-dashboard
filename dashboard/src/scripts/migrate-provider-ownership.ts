@@ -15,7 +15,7 @@ import { createHash } from "crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { canonicalizeOAuthProvider } from "@/lib/providers/constants";
-import { getManagementUrl } from "@/lib/management-url";
+import { getConfiguredManagementUrl, getManagementUrl } from "@/lib/management-url";
 import { isRecord } from "@/lib/utils";
 
 const PROVIDER = {
@@ -52,7 +52,7 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-if (!process.env.CLIPROXYAPI_MANAGEMENT_URL && !process.env.MANAGEMENT_API_KEY) {
+if (!getConfiguredManagementUrl() && !process.env.MANAGEMENT_API_KEY) {
   console.warn("\n⚠️  WARNING: Management API environment variables not set");
   console.warn("   CLIPROXYAPI_MANAGEMENT_URL and MANAGEMENT_API_KEY should be configured");
   console.warn("   Migration will continue but may not fetch remote keys\n");

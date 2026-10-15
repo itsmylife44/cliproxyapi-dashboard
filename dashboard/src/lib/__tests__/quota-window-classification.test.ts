@@ -82,6 +82,22 @@ describe("isShortTermQuotaWindow", () => {
     });
   });
 
+  it.each(["primary-window", "secondary-window"])(
+    "keeps the Codex 168h %s long-term near reset",
+    (id) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-10-16T00:00:00Z"));
+      try {
+        const groups = [
+          { id, label: "168h Window", resetTime: "2026-10-16T01:00:00Z" },
+        ] as const;
+        expect(isShortTermQuotaWindow(groups[0], groups)).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
+
   it("treats windows without markers or reset time as long-term", () => {
     expect(
       isShortTermQuotaWindow({

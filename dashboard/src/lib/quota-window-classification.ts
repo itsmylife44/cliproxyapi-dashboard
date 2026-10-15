@@ -45,6 +45,8 @@ export function isShortTermQuotaWindow(
   group: QuotaWindowLike,
   siblingGroups: readonly QuotaWindowLike[] = []
 ): boolean {
+  const durationHours = group.label.match(/^(\d+)h Window$/i);
+  if (durationHours) return Number(durationHours[1]) <= 24;
   const id = group.id.toLowerCase();
   if (id === "seven-day" || id.startsWith("seven-day-")) {
     return false;

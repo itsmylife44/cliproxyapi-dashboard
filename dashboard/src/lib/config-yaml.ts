@@ -42,6 +42,7 @@ export function readAuthDir(rawYaml: string): string {
 const V8_PATHS: Record<string, string[]> = {
   "auth-dir": ["oauth", "auth-dir"],
   streaming: ["requests", "streaming"],
+  "nonstream-keepalive-interval": ["requests", "nonstream-keepalive-interval"],
   "commercial-mode": ["server", "commercial-mode"],
   "disable-cooling": ["routing", "cooldown", "disable-cooling"],
   "passthrough-headers": ["requests", "passthrough-headers"],

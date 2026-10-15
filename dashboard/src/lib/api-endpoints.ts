@@ -64,6 +64,8 @@ export const API_ENDPOINTS = {
     LOGS: "/api/management/logs",
     LATEST_VERSION: "/api/management/latest-version",
     OAUTH_CALLBACK: "/api/management/oauth-callback",
+    PLUGINS: "/api/management/plugins",
+    PLUGIN_STORE: "/api/management/plugin-store",
 
     // Config field dedicated endpoints
     PROXY_URL: "/api/management/proxy-url",

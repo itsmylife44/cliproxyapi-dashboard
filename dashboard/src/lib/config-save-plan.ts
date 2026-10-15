@@ -33,7 +33,7 @@ const NESTED_FIELD_ENDPOINTS: Record<string, Record<string, string>> = {
 };
 
 const MERGE_ONLY_FIELDS = [
-  "auth-dir", "streaming", "commercial-mode", "disable-cooling", "passthrough-headers",
+  "auth-dir", "streaming", "nonstream-keepalive-interval", "commercial-mode", "disable-cooling", "passthrough-headers",
   "tls", "pprof", "claude-header-defaults", "payload",
 ];
 

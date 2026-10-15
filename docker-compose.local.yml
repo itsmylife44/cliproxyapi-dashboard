@@ -48,6 +48,7 @@ services:
       - ./config.local.yaml:/CLIProxyAPI/config.yaml
       - cliproxyapi_auths:/root/.cli-proxy-api
       - cliproxyapi_logs:/CLIProxyAPI/logs
+      - cliproxyapi_plugins:/CLIProxyAPI/plugins
     depends_on:
       postgres:
         condition: service_healthy
@@ -156,6 +157,7 @@ volumes:
   postgres_data:
   cliproxyapi_auths:
   cliproxyapi_logs:
+  cliproxyapi_plugins:
   dashboard_backups:
 
 networks:

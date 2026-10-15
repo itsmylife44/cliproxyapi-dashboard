@@ -1,6 +1,6 @@
 # CLIProxyAPI Configuration Template
 # WARNING: This is a template with placeholder values.
-# Copy to config.yaml and replace CHANGE_ME values before deployment.
+# install.sh and rebuild.sh copy it to config.yaml (untracked) when that file is missing.
 
 # ============================================================================
 # SERVER CONFIGURATION

@@ -86,8 +86,9 @@ const ALLOWED_MANAGEMENT_PATHS = new Set<string>([
   "oauth-excluded-models",
   "oauth-model-alias",
 
-  // Plugins (read-only list)
+  // Plugins (list, store; per-plugin routes in the patterns below)
   "plugins",
+  "plugin-store",
 
   // Vertex
   "vertex/import",
@@ -104,6 +105,8 @@ const ALLOWED_MANAGEMENT_PATH_PATTERNS = [
   /^request-error-logs\/[a-z0-9._-]+$/i,
   /^request-log-by-id\/[a-z0-9-]+$/i,
   /^model-definitions\/[a-z0-9-]+$/i,
+  /^plugin-store\/[a-z0-9._-]+\/install$/i,
+  /^plugins\/[a-z0-9._-]+(\/enabled)?$/i,
 ];
 
 function isAllowedManagementPath(path: string): boolean {

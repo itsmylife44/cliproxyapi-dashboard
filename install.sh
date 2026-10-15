@@ -924,6 +924,13 @@ if [ $DASHBOARD_ONLY -eq 0 ]; then
     fi
 fi
 
+# CLIProxyAPI config: generated once from the tracked template, then owned by the proxy.
+CLIPROXY_CONFIG="$INSTALL_DIR/infrastructure/config/config.yaml"
+if [ $DASHBOARD_ONLY -eq 0 ] && [ ! -f "$CLIPROXY_CONFIG" ]; then
+    cp "$INSTALL_DIR/infrastructure/config/config.example.yaml" "$CLIPROXY_CONFIG"
+    log_success "CLIProxyAPI config.yaml created from config.example.yaml"
+fi
+
 echo ""
 
 # ============================================================================
@@ -1313,7 +1320,7 @@ echo ""
 log_info "=== Dashboard Deploy Webhook (Optional) ==="
 echo ""
 log_info "The webhook service enables one-click dashboard updates from the admin panel."
-log_info "It runs a lightweight HTTP server that triggers git pull + image pull + restart."
+log_info "It runs a lightweight HTTP server that pulls the latest dashboard image and restarts the dashboard (repo files: ./rebuild.sh)."
 echo ""
 
 read -p "Install webhook deploy service? [y/N]: " INSTALL_WEBHOOK

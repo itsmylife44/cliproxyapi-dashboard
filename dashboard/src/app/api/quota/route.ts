@@ -71,6 +71,8 @@ function inferProviderFromAuthFile(account: AuthFile): string | null {
     if (candidate.includes("codex-")) return "codex";
     if (candidate.includes("gemini-cli") || candidate.includes("gemini-")) return "gemini-cli";
     if (candidate.includes("antigravity-")) return "antigravity";
+    // kimi.ai first: "kimi-" also matches "kimi-ai-" (upstream kimi.go resolves the same way)
+    if (candidate.includes("kimi-ai") || candidate.includes("kimi.ai")) return "kimi-ai";
     if (candidate.includes("kimi-")) return "kimi";
     if (candidate.includes("github-copilot") || candidate.includes("copilot-")) return "copilot";
     if (candidate.includes("github-")) return "github";

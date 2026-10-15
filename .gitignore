@@ -38,6 +38,8 @@ lerna-debug.log*
 .env.production
 # .env.development is committed (contains safe dev defaults only)
 config.local.yaml
+# Runtime CLIProxyAPI config (rewritten by the proxy); template is config.example.yaml
+infrastructure/config/config.yaml
 secrets/
 *.key
 *.crt

@@ -118,6 +118,12 @@ describe("mergeConfigYaml", () => {
     ).toThrow(/root value is not a YAML mapping/);
   });
 
+  it("flips plugins.enabled without dropping installed plugin configs", () => {
+    const yaml = "plugins:\n  enabled: false\n  dir: plugins\n  configs:\n    gemini-cli:\n      enabled: true\n";
+    const merged = parseConfigYaml(mergeConfigYaml(yaml, { plugins: { enabled: true } }));
+    expect(merged.plugins).toEqual({ enabled: true, dir: "plugins", configs: { "gemini-cli": { enabled: true } } });
+  });
+
   it("adds new keys that did not exist in the original YAML", () => {
     const rawYaml = "debug: false\n";
     const merged = mergeConfigYaml(rawYaml, {
@@ -188,6 +194,12 @@ describe("mergeConfigYaml on a v8-layout config.yaml", () => {
     expect(merged).not.toHaveProperty("streaming");
     expect(merged).not.toHaveProperty("claude-header-defaults");
     expect(merged).not.toHaveProperty("auth-dir");
+  });
+
+  it("writes nonstream-keepalive-interval to requests on a v8 file", () => {
+    const merged = parseConfigYaml(mergeConfigYaml(v8Yaml, { "nonstream-keepalive-interval": 30 }));
+    expect(merged.requests).toEqual({ "passthrough-headers": false, "nonstream-keepalive-interval": 30 });
+    expect(merged).not.toHaveProperty("nonstream-keepalive-interval");
   });
 
   it("shallow-merges objects at the v8 path", () => {

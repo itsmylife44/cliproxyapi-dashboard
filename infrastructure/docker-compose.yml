@@ -66,6 +66,8 @@ services:
       - ./config/config.yaml:/CLIProxyAPI/config.yaml
       - cliproxyapi_auths:/root/.cli-proxy-api
       - cliproxyapi_logs:/CLIProxyAPI/logs
+      # Plugin libraries installed from the dashboard (plugins.dir defaults to /CLIProxyAPI/plugins)
+      - cliproxyapi_plugins:/CLIProxyAPI/plugins
     depends_on:
       postgres:
         condition: service_healthy
@@ -303,6 +305,8 @@ volumes:
   cliproxyapi_auths:
     driver: local
   cliproxyapi_logs:
+    driver: local
+  cliproxyapi_plugins:
     driver: local
   
   # Caddy TLS certificate persistence

@@ -231,7 +231,7 @@ export interface SlimWebsearchConfig {
 
 /**
  * Full oh-my-opencode-slim configuration.
- * Matches the schema at https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json
+ * Targets the pinned upstream schema (see ./upstream/plugins.ts).
  */
 export interface OhMyOpenCodeSlimFullConfig {
   /** Active preset name */

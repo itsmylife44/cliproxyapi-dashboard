@@ -2,6 +2,7 @@ import type {
   OhMyOpenCodeFullConfig,
   OhMyOpenCodePreset,
 } from "./oh-my-opencode-types";
+import { OMO_SCHEMA_URL } from "./upstream/plugins";
 
 export type { OAuthAccount, ConfigData } from "./shared";
 export { type OhMyOpenCodePreset } from "./oh-my-opencode-types";
@@ -345,8 +346,7 @@ export function buildOhMyOpenCodeConfig(
   }
 
   const config: Record<string, unknown> = {
-    $schema:
-      "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/main/assets/oh-my-opencode.schema.json",
+    $schema: OMO_SCHEMA_URL,
   };
 
   if (Object.keys(agents).length > 0) {

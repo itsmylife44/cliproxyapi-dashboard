@@ -78,6 +78,23 @@ describe("generateConfigJson", () => {
 
     expect(parsed.permission).toBeUndefined();
   });
+
+  it("pins OMO by default and keeps the sync plugin on @latest", () => {
+    const parsed = JSON.parse(generateConfigJson("sk-test", models, "https://proxy.example"));
+
+    expect(parsed.plugin).toEqual(["opencode-cliproxyapi-sync@latest", "oh-my-openagent@5.1.33"]);
+  });
+
+  it("pins stored @latest OMO/slim plugin entries", () => {
+    const configJson = generateConfigJson("sk-test", models, "https://proxy.example", {
+      plugins: ["opencode-cliproxyapi-sync@latest", "oh-my-opencode-slim@latest"],
+    });
+
+    expect(JSON.parse(configJson).plugin).toEqual([
+      "opencode-cliproxyapi-sync@latest",
+      "oh-my-opencode-slim@3.0.4",
+    ]);
+  });
 });
 
 describe("getProxyUrl", () => {

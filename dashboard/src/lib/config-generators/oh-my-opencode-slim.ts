@@ -13,6 +13,7 @@ import {
   pickBestModel,
   type TierLevel,
 } from "./oh-my-opencode";
+import { SLIM_SCHEMA_URL } from "./upstream/plugins";
 import {
   SLIM_AGENTS,
   SLIM_DEFAULT_MCPS,
@@ -197,7 +198,7 @@ export function buildSlimConfig(
 
   // Build the config object
   const config: Record<string, unknown> = {
-    $schema: "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
+    $schema: SLIM_SCHEMA_URL,
   };
 
   if (usePresets) {

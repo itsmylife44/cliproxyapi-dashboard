@@ -1,0 +1,1816 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "preset": {
+      "type": "string"
+    },
+    "setDefaultAgent": {
+      "type": "boolean"
+    },
+    "compactSidebar": {
+      "description": "Use the compact TUI sidebar layout. Defaults to true; set false to use the expanded layout.",
+      "type": "boolean"
+    },
+    "stripOrchestratorModel": {
+      "description": "When true, omit orchestrator.model and orchestrator.variant from the SDK config so OpenCode uses the session model selected with /model after subagent dispatch. An explicitly selected preset that sets orchestrator.model is preserved. Defaults to false.",
+      "type": "boolean"
+    },
+    "routingBlock": {
+      "description": "When false, removes the <Agents> routing block from the v2 orchestrator prompt. The host's native subagent roster (appended to the subagent tool description) still lists every enabled agent, but it carries no Delegate/Don't routing criteria — set false only to drop stock routing claims that drift against custom agent prompts, or to trim tokens. Ignored with a warning on v1 hosts, where the orchestrator prompt is a frozen template; use an orchestrator.md override there. No effect when an orchestrator.md override already replaces the whole prompt. Defaults to true.",
+      "type": "boolean"
+    },
+    "autoUpdate": {
+      "description": "Disable automatic installation of plugin updates when false. Defaults to true.",
+      "type": "boolean"
+    },
+    "presets": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "extends": {
+                "type": "string",
+                "minLength": 1
+              },
+              "agents": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "model": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "minItems": 1,
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "variant": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "inheritModelFrom": {
+                      "type": "string",
+                      "enum": [
+                        "session",
+                        "orchestrator"
+                      ]
+                    },
+                    "temperature": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 2
+                    },
+                    "variant": {
+                      "type": "string"
+                    },
+                    "skills": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "skills_add": {
+                      "description": "Skill names to add to this agent's effective skills list. Applied after the resolved `skills` list during config resolution; removal via `skills_remove` wins. Folded into `skills` at resolution time.",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "skills_remove": {
+                      "description": "Skill names to remove from this agent's effective skills list. Applied after `skills_add` during config resolution, so removal wins over addition. Folded into `skills` at resolution time.",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "skills_include_local": {
+                      "description": "When true, adds valid skills from the current/ancestor project `.opencode/skills/**/SKILL.md` and `.agents/skills/**/SKILL.md` trees to this agent's effective skills before `skills_remove`. Global and external skill sources are excluded.",
+                      "type": "boolean"
+                    },
+                    "mcps": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "prompt": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "orchestratorPrompt": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "options": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "color": {
+                      "description": "Agent display color as #RRGGBB or an OpenCode theme color",
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$"
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "primary",
+                            "secondary",
+                            "accent",
+                            "success",
+                            "warning",
+                            "error",
+                            "info"
+                          ]
+                        }
+                      ]
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "permission": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "ask",
+                            "allow",
+                            "deny"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "ask",
+                                  "allow",
+                                  "deny"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {
+                                  "type": "string",
+                                  "enum": [
+                                    "ask",
+                                    "allow",
+                                    "deny"
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "marketplace": {
+                "type": "object",
+                "properties": {
+                  "agents": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}\\/[a-z0-9][a-z0-9._-]{0,63}$"
+                    }
+                  },
+                  "agents_add": {
+                    "description": "Package IDs to add to the inherited marketplace agents list after optional agents replacement.",
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}\\/[a-z0-9][a-z0-9._-]{0,63}$"
+                    }
+                  },
+                  "agents_remove": {
+                    "description": "Package IDs to remove after additions; removal wins over addition.",
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}\\/[a-z0-9][a-z0-9._-]{0,63}$"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "agents"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "extends": {
+                "type": "string",
+                "minLength": 1
+              },
+              "marketplace": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "agents": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}\\/[a-z0-9][a-z0-9._-]{0,63}$"
+                        }
+                      },
+                      "agents_add": {
+                        "description": "Package IDs to add to the inherited marketplace agents list after optional agents replacement.",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}\\/[a-z0-9][a-z0-9._-]{0,63}$"
+                        }
+                      },
+                      "agents_remove": {
+                        "description": "Package IDs to remove after additions; removal wins over addition.",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}\\/[a-z0-9][a-z0-9._-]{0,63}$"
+                        }
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "model": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "variant": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "inheritModelFrom": {
+                        "type": "string",
+                        "enum": [
+                          "session",
+                          "orchestrator"
+                        ]
+                      },
+                      "temperature": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 2
+                      },
+                      "variant": {
+                        "type": "string"
+                      },
+                      "skills": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "skills_add": {
+                        "description": "Skill names to add to this agent's effective skills list. Applied after the resolved `skills` list during config resolution; removal via `skills_remove` wins. Folded into `skills` at resolution time.",
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "skills_remove": {
+                        "description": "Skill names to remove from this agent's effective skills list. Applied after `skills_add` during config resolution, so removal wins over addition. Folded into `skills` at resolution time.",
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "skills_include_local": {
+                        "description": "When true, adds valid skills from the current/ancestor project `.opencode/skills/**/SKILL.md` and `.agents/skills/**/SKILL.md` trees to this agent's effective skills before `skills_remove`. Global and external skill sources are excluded.",
+                        "type": "boolean"
+                      },
+                      "mcps": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "orchestratorPrompt": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "options": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      },
+                      "displayName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "color": {
+                        "description": "Agent display color as #RRGGBB or an OpenCode theme color",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^#[0-9a-fA-F]{6}$"
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "primary",
+                              "secondary",
+                              "accent",
+                              "success",
+                              "warning",
+                              "error",
+                              "info"
+                            ]
+                          }
+                        ]
+                      },
+                      "description": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "permission": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "ask",
+                              "allow",
+                              "deny"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "ask",
+                                    "allow",
+                                    "deny"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ask",
+                                      "allow",
+                                      "deny"
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": [
+              "extends"
+            ],
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "model": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "variant": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "inheritModelFrom": {
+                  "type": "string",
+                  "enum": [
+                    "session",
+                    "orchestrator"
+                  ]
+                },
+                "temperature": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 2
+                },
+                "variant": {
+                  "type": "string"
+                },
+                "skills": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "skills_add": {
+                  "description": "Skill names to add to this agent's effective skills list. Applied after the resolved `skills` list during config resolution; removal via `skills_remove` wins. Folded into `skills` at resolution time.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "skills_remove": {
+                  "description": "Skill names to remove from this agent's effective skills list. Applied after `skills_add` during config resolution, so removal wins over addition. Folded into `skills` at resolution time.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "skills_include_local": {
+                  "description": "When true, adds valid skills from the current/ancestor project `.opencode/skills/**/SKILL.md` and `.agents/skills/**/SKILL.md` trees to this agent's effective skills before `skills_remove`. Global and external skill sources are excluded.",
+                  "type": "boolean"
+                },
+                "mcps": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "prompt": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "orchestratorPrompt": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "options": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                },
+                "displayName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "color": {
+                  "description": "Agent display color as #RRGGBB or an OpenCode theme color",
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "primary",
+                        "secondary",
+                        "accent",
+                        "success",
+                        "warning",
+                        "error",
+                        "info"
+                      ]
+                    }
+                  ]
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "permission": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "ask",
+                        "allow",
+                        "deny"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "ask",
+                              "allow",
+                              "deny"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string",
+                              "enum": [
+                                "ask",
+                                "allow",
+                                "deny"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "marketplace": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "agents": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}\\/[a-z0-9][a-z0-9._-]{0,63}$"
+                        }
+                      },
+                      "agents_add": {
+                        "description": "Package IDs to add to the inherited marketplace agents list after optional agents replacement.",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}\\/[a-z0-9][a-z0-9._-]{0,63}$"
+                        }
+                      },
+                      "agents_remove": {
+                        "description": "Package IDs to remove after additions; removal wins over addition.",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}\\/[a-z0-9][a-z0-9._-]{0,63}$"
+                        }
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "model": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "variant": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "inheritModelFrom": {
+                        "type": "string",
+                        "enum": [
+                          "session",
+                          "orchestrator"
+                        ]
+                      },
+                      "temperature": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 2
+                      },
+                      "variant": {
+                        "type": "string"
+                      },
+                      "skills": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "skills_add": {
+                        "description": "Skill names to add to this agent's effective skills list. Applied after the resolved `skills` list during config resolution; removal via `skills_remove` wins. Folded into `skills` at resolution time.",
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "skills_remove": {
+                        "description": "Skill names to remove from this agent's effective skills list. Applied after `skills_add` during config resolution, so removal wins over addition. Folded into `skills` at resolution time.",
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "skills_include_local": {
+                        "description": "When true, adds valid skills from the current/ancestor project `.opencode/skills/**/SKILL.md` and `.agents/skills/**/SKILL.md` trees to this agent's effective skills before `skills_remove`. Global and external skill sources are excluded.",
+                        "type": "boolean"
+                      },
+                      "mcps": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "orchestratorPrompt": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "options": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      },
+                      "displayName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "color": {
+                        "description": "Agent display color as #RRGGBB or an OpenCode theme color",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^#[0-9a-fA-F]{6}$"
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "primary",
+                              "secondary",
+                              "accent",
+                              "success",
+                              "warning",
+                              "error",
+                              "info"
+                            ]
+                          }
+                        ]
+                      },
+                      "description": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "permission": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "ask",
+                              "allow",
+                              "deny"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "ask",
+                                    "allow",
+                                    "deny"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ask",
+                                      "allow",
+                                      "deny"
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "model": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "variant": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "inheritModelFrom": {
+                  "type": "string",
+                  "enum": [
+                    "session",
+                    "orchestrator"
+                  ]
+                },
+                "temperature": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 2
+                },
+                "variant": {
+                  "type": "string"
+                },
+                "skills": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "skills_add": {
+                  "description": "Skill names to add to this agent's effective skills list. Applied after the resolved `skills` list during config resolution; removal via `skills_remove` wins. Folded into `skills` at resolution time.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "skills_remove": {
+                  "description": "Skill names to remove from this agent's effective skills list. Applied after `skills_add` during config resolution, so removal wins over addition. Folded into `skills` at resolution time.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "skills_include_local": {
+                  "description": "When true, adds valid skills from the current/ancestor project `.opencode/skills/**/SKILL.md` and `.agents/skills/**/SKILL.md` trees to this agent's effective skills before `skills_remove`. Global and external skill sources are excluded.",
+                  "type": "boolean"
+                },
+                "mcps": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "prompt": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "orchestratorPrompt": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "options": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                },
+                "displayName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "color": {
+                  "description": "Agent display color as #RRGGBB or an OpenCode theme color",
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "primary",
+                        "secondary",
+                        "accent",
+                        "success",
+                        "warning",
+                        "error",
+                        "info"
+                      ]
+                    }
+                  ]
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "permission": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "ask",
+                        "allow",
+                        "deny"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "ask",
+                              "allow",
+                              "deny"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string",
+                              "enum": [
+                                "ask",
+                                "allow",
+                                "deny"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        ]
+      }
+    },
+    "agents": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "variant": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id"
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "inheritModelFrom": {
+            "type": "string",
+            "enum": [
+              "session",
+              "orchestrator"
+            ]
+          },
+          "temperature": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "variant": {
+            "type": "string"
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skills_add": {
+            "description": "Skill names to add to this agent's effective skills list. Applied after the resolved `skills` list during config resolution; removal via `skills_remove` wins. Folded into `skills` at resolution time.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skills_remove": {
+            "description": "Skill names to remove from this agent's effective skills list. Applied after `skills_add` during config resolution, so removal wins over addition. Folded into `skills` at resolution time.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skills_include_local": {
+            "description": "When true, adds valid skills from the current/ancestor project `.opencode/skills/**/SKILL.md` and `.agents/skills/**/SKILL.md` trees to this agent's effective skills before `skills_remove`. Global and external skill sources are excluded.",
+            "type": "boolean"
+          },
+          "mcps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "orchestratorPrompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "options": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "color": {
+            "description": "Agent display color as #RRGGBB or an OpenCode theme color",
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "primary",
+                  "secondary",
+                  "accent",
+                  "success",
+                  "warning",
+                  "error",
+                  "info"
+                ]
+              }
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "permission": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ask",
+                  "allow",
+                  "deny"
+                ]
+              },
+              {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "ask",
+                        "allow",
+                        "deny"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "string",
+                        "enum": [
+                          "ask",
+                          "allow",
+                          "deny"
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "disabled_agents": {
+      "description": "Agent names to disable completely. Disabled agents are not instantiated and cannot be delegated to. Orchestrator and council internal agents (councillor) cannot be disabled. By default, 'observer' is disabled. Remove it from this list and configure a vision-capable model to enable.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "image_routing": {
+      "description": "How image attachments are handled. When omitted, preserves legacy conditional behavior: intercept attachments only when observer is enabled. \"auto\": requires observer to be enabled and saves attachments to disk before nudging delegation to @observer. \"direct\": always passes attachments to the orchestrator untouched.",
+      "type": "string",
+      "enum": [
+        "auto",
+        "direct"
+      ]
+    },
+    "deepworkGuardMode": {
+      "description": "Deepwork guard mode. \"shadow\" (default) records receipts and claim markers under .slim/deepwork/.runtime/ but never blocks; \"enforce\" additionally blocks completion writes whose tombstone references artifacts with no recorded receipt. The guard itself is disabled by listing \"deepwork-guard\" in disabled_hooks.",
+      "type": "string",
+      "enum": [
+        "shadow",
+        "enforce"
+      ]
+    },
+    "disabled_mcps": {
+      "description": "MCP server names to disable completely. Disabled servers are not started and cannot be used by agents.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "disabled_tools": {
+      "description": "Tool names to disable completely. Disabled tools are not registered with OpenCode and cannot be used by agents.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "disabled_skills": {
+      "description": "Skill names to disable completely. Disabled skills are not granted to agents, even when referenced by presets or agent overrides.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "disabled_hooks": {
+      "description": "Hook names to disable completely. Valid values: phase-reminder, foreground-fallback, deepwork-guard, deepwork-goal, chat-headers, cache-monitor, json-error-recovery, tool-loop-guard, search-path-guard, absolute-path-rescue, apply-patch, council-inject. \"phase-reminder\" is not registered, so orchestrator phase reminders are never injected; \"foreground-fallback\" marks the fallback manager inert: it is still constructed but never triggers automatic intervention, same effect as fallback.enabled = false; \"chat-headers\" is not registered, so the Copilot x-initiator header is never stamped (v1 chat.headers and the v2 model.request bridge); \"cache-monitor\" stops the prompt-cache bust watchdog, so cache warnings are never logged; the on-demand tool guards (\"json-error-recovery\", \"tool-loop-guard\", \"search-path-guard\", \"absolute-path-rescue\", \"apply-patch\") stop intercepting tool calls entirely, so malformed output, repeated identical calls, and invalid or guessed paths surface raw to the model; \"council-inject\" is not registered, so the keyword-triggered Council Mode injection is never appended to orchestrator messages. Unknown values are stripped with a warning when the config loads. A value consisting only of unknown names is treated as unset, so a lower config layer's list still applies.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "phase-reminder",
+          "foreground-fallback",
+          "deepwork-guard",
+          "deepwork-goal",
+          "chat-headers",
+          "cache-monitor",
+          "json-error-recovery",
+          "tool-loop-guard",
+          "search-path-guard",
+          "absolute-path-rescue",
+          "apply-patch",
+          "council-inject"
+        ]
+      }
+    },
+    "disabled_commands": {
+      "description": "Slash-command names to disable completely. Valid values: implement, interview, deepwork, reflect, loop. Disabled commands are neither registered nor intercepted at execution time, so a user-defined command with the same name is left untouched. The /reflect command is also disabled when \"reflect\" is listed in disabled_skills. Unknown values are stripped with a warning when the config loads. A value consisting only of unknown names is treated as unset, so a lower config layer's list still applies.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "implement",
+          "interview",
+          "deepwork",
+          "reflect",
+          "loop"
+        ]
+      }
+    },
+    "multiplexer": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "default": "none",
+          "type": "string",
+          "enum": [
+            "auto",
+            "tmux",
+            "zellij",
+            "herdr",
+            "kitty",
+            "cmux-tui",
+            "none"
+          ]
+        },
+        "layout": {
+          "default": "main-vertical",
+          "type": "string",
+          "enum": [
+            "main-horizontal",
+            "main-vertical",
+            "tiled",
+            "even-horizontal",
+            "even-vertical"
+          ]
+        },
+        "main_pane_size": {
+          "default": 60,
+          "type": "number",
+          "minimum": 20,
+          "maximum": 80
+        },
+        "cmux_tui_binary": {
+          "description": "Explicit path to the cmux-tui binary. When unset, the adapter probes PATH for `cmux-tui` first and falls back to `cmux`.",
+          "type": "string",
+          "minLength": 1
+        },
+        "viewer": {
+          "description": "Which opencode TUI surface subagent panes open. Defaults to \"tui\" on OpenCode v1 and \"mini\" on v2. \"mini\" uses `attach ... --mini` on v1 (requires OpenCode >= 1.17.10) and `opencode mini` on v2; \"tui\" runs the full interface.",
+          "type": "string",
+          "enum": [
+            "tui",
+            "mini"
+          ]
+        }
+      }
+    },
+    "interview": {
+      "type": "object",
+      "properties": {
+        "maxQuestions": {
+          "default": 2,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "outputFolder": {
+          "default": "interview",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?![\\\\/])(?![A-Za-z]:[\\\\/])(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$)).+$"
+        },
+        "autoOpenBrowser": {
+          "default": true,
+          "description": "Automatically open the interview UI in your default browser during interactive runs. Disabled automatically in tests and CI.",
+          "type": "boolean"
+        },
+        "port": {
+          "default": 0,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "dashboard": {
+          "default": false,
+          "type": "boolean"
+        },
+        "printState": {
+          "default": false,
+          "description": "When true, the interview model prints the full <interview_state> block in the TUI instead of submitting state through the interview_submit_state tool.",
+          "type": "boolean"
+        }
+      }
+    },
+    "backgroundJobs": {
+      "type": "object",
+      "properties": {
+        "strategy": {
+          "default": "latest",
+          "description": "Board injection strategy. \"latest\" retains and replays one frozen board part per eligible turn without a cap; unchanged boards use a short marker for up to nine turns, then a full board. \"checkpoint-compatible\" appends only changed snapshots with a bounded cache epoch.",
+          "type": "string",
+          "enum": [
+            "latest",
+            "checkpoint-compatible"
+          ]
+        },
+        "maxSessionsPerAgent": {
+          "default": 2,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "maxContextLines": {
+          "default": 50000,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 500000
+        },
+        "readContextMinLines": {
+          "default": 10,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "readContextMaxFiles": {
+          "default": 8,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "maxRetainedSnapshots": {
+          "default": 20,
+          "description": "Maximum board snapshots retained per checkpoint cache epoch (1–100). Exceeding the limit starts a new epoch with the current snapshot and intentionally creates one cache miss.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "orchestratorWake": {
+          "default": {
+            "enabled": true,
+            "intervalMs": 300000,
+            "mode": "auto",
+            "periodicWakeEnabled": true,
+            "wakeOnTerminalPublication": true,
+            "publicationWakeMinIntervalMs": 30000
+          },
+          "description": "Periodic orchestrator wake scheduler for idle sessions. v1: requires host session APIs (session.get, todo, children, status, promptAsync) and wakes while incomplete todos remain. v2: runs in children-driven degraded mode (requires session.list + promptAsync) and wakes while un-finished child sessions remain. Default enabled at a 5-minute interval.",
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": true,
+              "description": "When true, idle orchestrator sessions with incomplete todos may receive periodic internal wake prompts. Default enabled.",
+              "type": "boolean"
+            },
+            "intervalMs": {
+              "default": 300000,
+              "description": "Continuous parent-idle interval between orchestrator wake evaluations (60,000–2,147,483,647ms). Default 300,000 (5 minutes). 0 is invalid.",
+              "type": "integer",
+              "minimum": 60000,
+              "maximum": 2147483647
+            },
+            "mode": {
+              "default": "auto",
+              "description": "Wake-condition source. \"auto\" uses todo-gating on v1 hosts and children-driven degraded mode on v2 hosts (no todo surface there); \"todo\" or \"children\" pin one mode, degrading to children when the host lacks the todo API. Default \"auto\".",
+              "type": "string",
+              "enum": [
+                "auto",
+                "todo",
+                "children"
+              ]
+            },
+            "periodicWakeEnabled": {
+              "default": true,
+              "description": "When false, the periodic idle evaluation never runs; only event-driven wakes (stopped-job recovery, terminal-publication rev>1, child-input) still deliver. Failed event wakes keep their timer-based retry path. Default enabled; v2 hosts derive a disabled default when the key is not explicitly configured.",
+              "type": "boolean"
+            },
+            "wakeOnTerminalPublication": {
+              "default": true,
+              "description": "When true, a terminal completed/error publication wakes an idle parent orchestrator immediately (bounded by publicationWakeMinIntervalMs) instead of waiting for the next periodic evaluation. Busy parents are skipped: the native steer already delivered the completion. Default enabled.",
+              "type": "boolean"
+            },
+            "publicationWakeMinIntervalMs": {
+              "default": 30000,
+              "description": "Per-parent minimum spacing between terminal-publication wakes (1,000–2,147,483,647ms; 0 is invalid at the config layer). Default 30,000 (30 seconds). A burst of publications collapses into one wake.",
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 2147483647
+            }
+          }
+        },
+        "wallClockTimeoutMs": {
+          "default": 0,
+          "description": "Explicit opt-in wall-clock deadline for native task(..., background: true) child sessions. 0 disables supervision; finite values are 60,000–2,147,483,647ms.",
+          "anyOf": [
+            {
+              "type": "number",
+              "const": 0
+            },
+            {
+              "type": "integer",
+              "minimum": 60000,
+              "maximum": 2147483647
+            }
+          ]
+        },
+        "abortGraceMs": {
+          "default": 10000,
+          "description": "Grace period after a wall-clock deadline while OpenCode confirms the child terminal state (1,000–60,000ms).",
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 60000
+        },
+        "stopConfirmationMs": {
+          "default": 5000,
+          "description": "Terminal-gate grace period the background-job terminal gate waits for stop confirmation evidence before publishing a stopped job (1,000–60,000ms). Default 5,000 (5 seconds).",
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 60000
+        },
+        "concurrency": {
+          "default": {
+            "defaultConcurrency": 0,
+            "providerConcurrency": {},
+            "modelConcurrency": {}
+          },
+          "type": "object",
+          "properties": {
+            "defaultConcurrency": {
+              "default": 0,
+              "description": "Maximum concurrently running native background tasks. 0 disables the default cap.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "providerConcurrency": {
+              "default": {},
+              "description": "Per-provider concurrency caps keyed by provider ID. The most specific configured cap wins: model > provider > default. 0 means unlimited for that provider.",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "minLength": 1
+              },
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000
+              }
+            },
+            "modelConcurrency": {
+              "default": {},
+              "description": "Per-model concurrency caps keyed by provider/model ID. The most specific configured cap wins: model > provider > default. 0 means unlimited for that model.",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "minLength": 1
+              },
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "sameProviderPolicy": {
+          "default": {},
+          "description": "Opt-in per-provider policy for native background tasks: when the parent session and the child agent both resolve to a provider listed here with value \"foreground\", the background request is converted to foreground execution (existing foreground path, no concurrency admission). Unlisted or unknown providers keep background behavior. Default {} (no conversion).",
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1
+          },
+          "additionalProperties": {
+            "type": "string",
+            "const": "foreground"
+          }
+        },
+        "waitForUserGuard": {
+          "default": true,
+          "description": "When true, intercept wait_for_user calls made while background tasks are still running and the orchestrator wake scheduler is enabled, returning guidance to end the turn instead of blocking on manual input. Default enabled.",
+          "type": "boolean"
+        },
+        "boardInjection": {
+          "default": true,
+          "description": "When false, the Background Job Board reminder is never injected into prompts. Background task tracking, wake, and task_status all keep working; the orchestrator simply no longer passively sees the board. Default enabled; v2 hosts derive a disabled default when the key is not explicitly configured.",
+          "type": "boolean"
+        },
+        "childInputWake": {
+          "default": true,
+          "description": "When true, a background child that asks a question or permission request wakes its parent with the ask content. Permissions can be answered with task_reply when the host exposes permission.reply; OpenCode v2 form questions are observable but not answerable through the pinned plugin context. Default enabled.",
+          "type": "boolean"
+        },
+        "pruneEvictedSessions": {
+          "default": false,
+          "description": "When true, removes the host child session when a retention trim evicts its terminal or retained-stopped record, only for background children this plugin launched itself (never foreground, unattributed placeholder, adopted, or restored sessions) and only after a host read confirms the session still belongs to the record parent. Never fires for parent deletion or explicit drops. v1 hosts only for now (v2 has no live session-status map, so every prune is skipped). Default disabled.",
+          "type": "boolean"
+        }
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "type": "boolean"
+        },
+        "maxRetries": {
+          "default": 3,
+          "description": "Number of current-model retries allowed before Slim switches to the next fallback model (or aborts when no chain is configured). The budget is shared across the whole fallback chain and is not reset by a model switch; it resets only on a successful assistant response, session deletion, or a new user turn. 0 switches immediately.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "initialRetryDelayMs": {
+          "default": 0,
+          "description": "Delay in milliseconds before triggering the first fallback on a failover-worthy error. Gives intercepting plugins time to recover the current model before the fallback chain advances. 0 disables.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "retryDelayMs": {
+          "default": 500,
+          "description": "Delay in milliseconds between consecutive fallback attempts after the initial trigger. 0 disables.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "continuationPolicy": {
+          "default": "retry-primary",
+          "description": "Model policy for unpinned OpenCode v1 internal continuations (for example, background completion and lifecycle wakes) after a confirmed fallback. \"retry-primary\" lets the host try the configured primary again; \"stick-to-fallback\" keeps the confirmed fallback until a new external user turn.",
+          "type": "string",
+          "enum": [
+            "retry-primary",
+            "stick-to-fallback"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "council": {
+      "type": "object",
+      "properties": {
+        "presets": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          }
+        },
+        "default_preset": {
+          "default": "default",
+          "type": "string"
+        }
+      },
+      "required": [
+        "presets"
+      ],
+      "additionalProperties": {}
+    },
+    "companion": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "binaryPath": {
+          "description": "Path to a custom companion binary to launch.",
+          "type": "string",
+          "minLength": 1
+        },
+        "position": {
+          "type": "string",
+          "enum": [
+            "bottom-right",
+            "bottom-left",
+            "top-right",
+            "top-left"
+          ]
+        },
+        "size": {
+          "type": "string",
+          "enum": [
+            "small",
+            "medium",
+            "large"
+          ]
+        },
+        "gifPack": {
+          "description": "Bundled companion animation pack to use.",
+          "type": "string",
+          "enum": [
+            "default"
+          ]
+        },
+        "loopStyle": {
+          "description": "Companion animation playback style: classic loops or smooth ping-pong playback.",
+          "type": "string",
+          "enum": [
+            "classic",
+            "smooth"
+          ]
+        },
+        "speed": {
+          "description": "Companion animation playback speed multiplier. Defaults to 1.",
+          "type": "number",
+          "minimum": 0.25,
+          "maximum": 4
+        },
+        "debug": {
+          "description": "Enable verbose native companion debug logs.",
+          "type": "boolean"
+        }
+      }
+    },
+    "webfetch": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "When false, skip registering this enhanced webfetch so OpenCode uses its built-in version.",
+          "type": "boolean"
+        },
+        "model": {
+          "description": "Dedicated model(s) for smartfetch secondary-model summarization. Same shape as agent model config (string, array of strings/objects with id+variant). Takes priority over small_model, agents.explorer.model, and agents.librarian.model.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "variant": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "acpAgents": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "minLength": 1
+          },
+          "args": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "env": {
+            "default": {},
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "cwd": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "orchestratorPrompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "wrapperModel": {
+            "type": "string",
+            "pattern": "^[^/\\s]+\\/.+$"
+          },
+          "timeoutMs": {
+            "default": 0,
+            "description": "Timeout for a single ACP run in milliseconds. Set to 0 to disable the timeout.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "permissionMode": {
+            "default": "ask",
+            "type": "string",
+            "enum": [
+              "ask",
+              "allow",
+              "reject"
+            ]
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "title": "oh-my-opencode-slim",
+  "description": "Configuration schema for oh-my-opencode-slim plugin for OpenCode"
+}

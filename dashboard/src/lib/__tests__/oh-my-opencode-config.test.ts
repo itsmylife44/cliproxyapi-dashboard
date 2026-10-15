@@ -305,13 +305,13 @@ describe("oh-my-opencode config", () => {
     expect(result.background_task?.providerConcurrency?.openai).toBe(2);
   });
 
-  it("uses schema URL from main branch", () => {
+  it("uses the schema URL of the pinned upstream tag", () => {
     const config = buildOhMyOpenCodeConfig(["claude-opus-4.6"]);
 
     expect(config).not.toBeNull();
-    const typedConfig = config as Record<string, unknown>;
-    expect(typedConfig.$schema).toEqual(expect.stringContaining("/main/"));
-    expect(typedConfig.$schema).not.toEqual(expect.stringContaining("/dev/"));
+    expect(config?.$schema).toBe(
+      "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/v5.1.33/assets/oh-my-opencode.schema.json",
+    );
   });
 
   describe("agent/category skipping when models unavailable", () => {

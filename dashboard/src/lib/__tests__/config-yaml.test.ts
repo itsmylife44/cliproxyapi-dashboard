@@ -190,6 +190,12 @@ describe("mergeConfigYaml on a v8-layout config.yaml", () => {
     expect(merged).not.toHaveProperty("auth-dir");
   });
 
+  it("writes nonstream-keepalive-interval to requests on a v8 file", () => {
+    const merged = parseConfigYaml(mergeConfigYaml(v8Yaml, { "nonstream-keepalive-interval": 30 }));
+    expect(merged.requests).toEqual({ "passthrough-headers": false, "nonstream-keepalive-interval": 30 });
+    expect(merged).not.toHaveProperty("nonstream-keepalive-interval");
+  });
+
   it("shallow-merges objects at the v8 path", () => {
     const merged = parseConfigYaml(mergeConfigYaml(v8Yaml, { pprof: { enable: true } }));
     expect(merged.observability).toEqual({ pprof: { enable: true, addr: "127.0.0.1:8316" } });

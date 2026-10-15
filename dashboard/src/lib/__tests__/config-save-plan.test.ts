@@ -43,6 +43,12 @@ describe("planConfigSave", () => {
     ]);
   });
 
+  it("writes nonstream-keepalive-interval as a root key, not inside streaming", () => {
+    expect(planConfigSave(original, { ...original, "nonstream-keepalive-interval": 30 })).toEqual([
+      { kind: "yaml", changes: { "nonstream-keepalive-interval": 30 } },
+    ]);
+  });
+
   it("folds two endpoint fields into one config.yaml write instead of back-to-back PUTs", () => {
     expect(planConfigSave(original, { ...original, debug: true, "request-retry": 5 })).toEqual([
       { kind: "yaml", changes: { debug: true, "request-retry": 5 } },

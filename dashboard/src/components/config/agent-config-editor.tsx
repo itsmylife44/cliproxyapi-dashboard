@@ -94,7 +94,7 @@ export default function AgentConfigEditor({
             <Input type="number" name="bootstrap-retries" value={String(config.streaming["bootstrap-retries"])} onChange={(value) => updateStreamingConfig("bootstrap-retries", Number(value))} className="font-mono" />
           </ConfigField>
           <ConfigField label={t("fieldNonstreamKeepaliveLabel")} description={t("fieldNonstreamKeepaliveDesc")}>
-            <Input type="number" name="nonstream-keepalive-interval" value={String(config.streaming["nonstream-keepalive-interval"] ?? 0)} onChange={(value) => updateStreamingConfig("nonstream-keepalive-interval", Number(value))} className="font-mono" />
+            <Input type="number" name="nonstream-keepalive-interval" value={String(config["nonstream-keepalive-interval"] ?? 0)} onChange={(value) => updateConfig("nonstream-keepalive-interval", Number(value))} className="font-mono" />
           </ConfigField>
         </div>
       </section>

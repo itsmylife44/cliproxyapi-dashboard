@@ -14,7 +14,6 @@ import { useTranslations } from 'next-intl';
 export interface StreamingConfig {
   "keepalive-seconds": number;
   "bootstrap-retries": number;
-  "nonstream-keepalive-interval": number;
 }
 
 export interface QuotaExceededConfig {
@@ -65,6 +64,7 @@ export interface Config {
   "auth-dir": string;
   "force-model-prefix": boolean;
   streaming: StreamingConfig;
+  "nonstream-keepalive-interval"?: number;
   debug: boolean;
   "commercial-mode": boolean;
   "logging-to-file": boolean;

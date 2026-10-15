@@ -31,7 +31,7 @@ vi.mock("@/lib/db", () => ({
 import { parseBackupData, generateRestorePreview } from "../export-import";
 import type { BackupData } from "../types";
 import { BACKUP_VERSION } from "../types";
-import { buildSlimConfig } from "@/lib/config-generators/oh-my-opencode-slim";
+import { buildSlimConfig } from "@/lib/__tests__/helpers/slim-schema-guard";
 import { validateSlimConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { LEGACY_SLIM_OVERRIDES } from "@/lib/__tests__/helpers/legacy-slim-overrides";
 import { upstreamSchemaErrors } from "@/lib/__tests__/helpers/upstream-schema";

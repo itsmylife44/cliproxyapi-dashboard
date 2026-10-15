@@ -8,6 +8,8 @@
  * @see https://github.com/alvinunreal/oh-my-opencode-slim
  */
 
+import { isRecord } from "@/lib/utils";
+
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -40,6 +42,46 @@ export const SLIM_TMUX_LAYOUTS = [
   "even-horizontal",
   "even-vertical",
 ] as const;
+
+/** Hooks `disabled_hooks` accepts; slim strips unknown names with a warning, the schema rejects them. */
+export const SLIM_HOOKS = [
+  "phase-reminder",
+  "foreground-fallback",
+  "deepwork-guard",
+  "deepwork-goal",
+  "chat-headers",
+  "cache-monitor",
+  "json-error-recovery",
+  "tool-loop-guard",
+  "search-path-guard",
+  "absolute-path-rescue",
+  "apply-patch",
+  "council-inject",
+] as const;
+
+/** Commands `disabled_commands` accepts. */
+export const SLIM_COMMANDS = ["implement", "interview", "deepwork", "reflect", "loop"] as const;
+
+/** Skills bundled with slim; `disabled_skills` also takes any other skill name. */
+export const SLIM_BUNDLED_SKILLS = [
+  "simplify",
+  "codemap",
+  "clonedeps",
+  "deepwork",
+  "verification-planning",
+  "reflect",
+  "oh-my-opencode-slim",
+  "worktrees",
+] as const;
+
+const SLIM_PERMISSION_VALUES = ["ask", "allow", "deny"] as const;
+const SLIM_INHERIT_MODEL_FROM = ["session", "orchestrator"] as const;
+const SLIM_IMAGE_ROUTING = ["auto", "direct"] as const;
+const SLIM_DEEPWORK_GUARD_MODES = ["shadow", "enforce"] as const;
+
+/** Upstream default for `fallback.maxRetries` */
+export const SLIM_DEFAULT_MAX_RETRIES = 3;
+const SLIM_AGENT_COLORS = ["primary", "secondary", "accent", "success", "warning", "error", "info"] as const;
 
 // Upstream renamed skill `cartography` → `codemap` (1.0.0) and MCP `grep_app` → `gh_grep` (2.0.0).
 const RENAMED_SKILLS_AND_MCPS = new Map([["cartography", "codemap"], ["grep_app", "gh_grep"]]);
@@ -84,14 +126,32 @@ export interface SlimAgentConfig {
   mcps?: string[];
   /** Provider-specific options (e.g., OpenAI textVerbosity, Anthropic thinking budget) */
   options?: Record<string, unknown>;
+  inheritModelFrom?: (typeof SLIM_INHERIT_MODEL_FROM)[number];
+  skills_add?: string[];
+  skills_remove?: string[];
+  skills_include_local?: boolean;
+  prompt?: string;
+  orchestratorPrompt?: string;
+  displayName?: string;
+  color?: string;
+  description?: string;
+  permission?: SlimPermission;
 }
+
+type SlimPermissionValue = (typeof SLIM_PERMISSION_VALUES)[number];
+export type SlimPermission =
+  | SlimPermissionValue
+  | Record<string, SlimPermissionValue | Record<string, SlimPermissionValue>>;
 
 /**
  * A named preset containing agent configurations.
  * Presets allow switching between different model/config combinations.
  * Can contain standard agents plus any explicitly configured advanced agents.
+ * Stored flat: upstream's `{ extends, agents: {...} }` wrapper form is unwrapped on read.
  */
 export interface SlimPreset {
+  /** Name of the preset this one inherits from */
+  extends?: string;
   orchestrator?: SlimAgentConfig;
   oracle?: SlimAgentConfig;
   designer?: SlimAgentConfig;
@@ -103,12 +163,14 @@ export interface SlimPreset {
   observer?: SlimAgentConfig;
   councillor?: SlimAgentConfig;
   // Allow any other advanced agent keys
-  [key: string]: SlimAgentConfig | undefined;
+  [key: string]: SlimAgentConfig | string | undefined;
 }
 
 export interface SlimFallbackConfig {
   enabled?: boolean;
   retryDelayMs?: number;
+  /** Retries on the current model before switching to the next one in its `model` array */
+  maxRetries?: number;
   /** Removed upstream (2.0.2); folded into each agent's `model` array by the generator */
   chains?: Record<string, string[]>;
 }
@@ -173,7 +235,42 @@ export interface OhMyOpenCodeSlimFullConfig {
   
   /** Interview feature for browser-based Q&A */
   interview?: SlimInterviewConfig;
+
+  compactSidebar?: boolean;
+  stripOrchestratorModel?: boolean;
+  routingBlock?: boolean;
+  autoUpdate?: boolean;
+  image_routing?: (typeof SLIM_IMAGE_ROUTING)[number];
+  deepworkGuardMode?: (typeof SLIM_DEEPWORK_GUARD_MODES)[number];
+  disabled_tools?: string[];
+  disabled_skills?: string[];
+  disabled_hooks?: string[];
+  disabled_commands?: string[];
+  // ponytail: kept as opaque objects (size-bounded, not validated field by field); add typed
+  // validators when the dashboard grows UI for them.
+  backgroundJobs?: Record<string, unknown>;
+  companion?: Record<string, unknown>;
+  webfetch?: Record<string, unknown>;
+  acpAgents?: Record<string, unknown>;
 }
+
+/** Top-level keys the generator copies to the output unchanged. */
+export const SLIM_PASSTHROUGH_KEYS = [
+  "compactSidebar",
+  "stripOrchestratorModel",
+  "routingBlock",
+  "autoUpdate",
+  "image_routing",
+  "deepworkGuardMode",
+  "disabled_tools",
+  "disabled_skills",
+  "disabled_hooks",
+  "disabled_commands",
+  "backgroundJobs",
+  "companion",
+  "webfetch",
+  "acpAgents",
+] as const satisfies readonly (keyof OhMyOpenCodeSlimFullConfig)[];
 
 // ============================================================================
 // VALIDATION HELPERS
@@ -234,13 +331,62 @@ function validateAgentConfig(entryObj: Record<string, unknown>): SlimAgentConfig
     entry.mcps = mcps; // Preserve even if empty
   }
   // Provider-specific options — pass through as-is (bounded depth check)
-  if (entryObj.options && typeof entryObj.options === "object" && !Array.isArray(entryObj.options)) {
-    const optStr = JSON.stringify(entryObj.options);
-    if (optStr.length <= 8192) {
-      entry.options = entryObj.options as Record<string, unknown>;
+  const options = boundedObject(entryObj.options);
+  if (options) entry.options = options;
+
+  const inheritModelFrom = oneOf(entryObj.inheritModelFrom, SLIM_INHERIT_MODEL_FROM);
+  if (inheritModelFrom) entry.inheritModelFrom = inheritModelFrom;
+  for (const key of ["skills_add", "skills_remove"] as const) {
+    const list = boundedStrings(entryObj[key]);
+    if (list?.length) entry[key] = list;
+  }
+  if (typeof entryObj.skills_include_local === "boolean") entry.skills_include_local = entryObj.skills_include_local;
+  for (const [key, max] of [["prompt", 16384], ["orchestratorPrompt", 16384], ["displayName", 256], ["description", 1024]] as const) {
+    const text = entryObj[key];
+    if (typeof text === "string" && text.length >= 1 && text.length <= max) entry[key] = text;
+  }
+  const color = entryObj.color;
+  if (typeof color === "string" && (/^#[0-9a-fA-F]{6}$/.test(color) || oneOf(color, SLIM_AGENT_COLORS))) {
+    entry.color = color;
+  }
+  const permission = validatePermission(entryObj.permission);
+  if (permission) entry.permission = permission;
+  return entry;
+}
+
+function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | undefined {
+  return (allowed as readonly unknown[]).includes(value) ? (value as T) : undefined;
+}
+
+function boundedStrings(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.slice(0, 50).filter((v): v is string => typeof v === "string" && v.length <= 256);
+}
+
+function boundedObject(value: unknown): Record<string, unknown> | undefined {
+  return isRecord(value) && JSON.stringify(value).length <= 8192 ? value : undefined;
+}
+
+function validatePermission(value: unknown): SlimPermission | undefined {
+  const asValue = (v: unknown) => oneOf(v, SLIM_PERMISSION_VALUES);
+  if (!isRecord(value)) return asValue(value);
+
+  const result: Exclude<SlimPermission, string> = {};
+  for (const [tool, rule] of Object.entries(value).slice(0, 50)) {
+    if (tool.length > 256) continue;
+    const ruleValue = asValue(rule);
+    if (ruleValue) {
+      result[tool] = ruleValue;
+    } else if (isRecord(rule)) {
+      const patterns: Record<string, SlimPermissionValue> = {};
+      for (const [pattern, patternRule] of Object.entries(rule).slice(0, 100)) {
+        const patternValue = asValue(patternRule);
+        if (pattern.length <= 256 && patternValue) patterns[pattern] = patternValue;
+      }
+      if (Object.keys(patterns).length > 0) result[tool] = patterns;
     }
   }
-  return entry;
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 // ============================================================================
@@ -266,11 +412,16 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     const validatedPresets: Record<string, SlimPreset> = {};
     for (const [presetName, presetVal] of Object.entries(presetsObj)) {
       if (typeof presetName !== "string" || presetName.length > 128) continue;
-      if (typeof presetVal !== "object" || presetVal === null || Array.isArray(presetVal)) continue;
-      const pObj = presetVal as Record<string, unknown>;
+      if (!isRecord(presetVal)) continue;
       const preset: SlimPreset = {};
-      for (const [agentName, agentVal] of Object.entries(pObj)) {
-        if (typeof agentName !== "string" || agentName.length > 128) continue;
+      if (typeof presetVal.extends === "string" && presetVal.extends.length >= 1 && presetVal.extends.length <= 128) {
+        preset.extends = presetVal.extends;
+      }
+      // Upstream's `{ extends, agents: {...} }` form: the wrapper holds the agents.
+      const agentsObj = isRecord(presetVal.agents) ? presetVal.agents : presetVal;
+      for (const [agentName, agentVal] of Object.entries(agentsObj)) {
+        // `marketplace` (agent packages) is not supported by the dashboard and is not an agent.
+        if (agentName.length > 128 || agentName === "extends" || agentName === "marketplace") continue;
         if (typeof agentVal !== "object" || agentVal === null || Array.isArray(agentVal)) continue;
         preset[agentName] = validateAgentConfig(agentVal as Record<string, unknown>);
       }
@@ -338,6 +489,7 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     const fb: SlimFallbackConfig = {};
     if (typeof fbObj.enabled === "boolean") fb.enabled = fbObj.enabled;
     if (typeof fbObj.retryDelayMs === "number" && fbObj.retryDelayMs >= 0 && fbObj.retryDelayMs <= 10000) fb.retryDelayMs = fbObj.retryDelayMs;
+    if (Number.isSafeInteger(fbObj.maxRetries) && (fbObj.maxRetries as number) >= 0) fb.maxRetries = fbObj.maxRetries as number;
     if (fbObj.chains && typeof fbObj.chains === "object" && !Array.isArray(fbObj.chains)) {
       const chainsObj = fbObj.chains as Record<string, unknown>;
       const validatedChains: Record<string, string[]> = {};
@@ -413,6 +565,29 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
       interview.dashboard = intObj.dashboard;
     }
     if (Object.keys(interview).length > 0) result.interview = interview;
+  }
+
+  for (const key of ["compactSidebar", "stripOrchestratorModel", "routingBlock", "autoUpdate"] as const) {
+    if (typeof obj[key] === "boolean") result[key] = obj[key];
+  }
+  const imageRouting = oneOf(obj.image_routing, SLIM_IMAGE_ROUTING);
+  if (imageRouting) result.image_routing = imageRouting;
+  const deepworkGuardMode = oneOf(obj.deepworkGuardMode, SLIM_DEEPWORK_GUARD_MODES);
+  if (deepworkGuardMode) result.deepworkGuardMode = deepworkGuardMode;
+
+  const lists = {
+    disabled_tools: boundedStrings(obj.disabled_tools),
+    disabled_skills: boundedStrings(obj.disabled_skills),
+    disabled_hooks: boundedStrings(obj.disabled_hooks)?.filter((hook) => oneOf(hook, SLIM_HOOKS)),
+    disabled_commands: boundedStrings(obj.disabled_commands)?.filter((command) => oneOf(command, SLIM_COMMANDS)),
+  };
+  for (const [key, list] of Object.entries(lists) as [keyof typeof lists, string[] | undefined][]) {
+    if (list?.length) result[key] = list;
+  }
+
+  for (const key of ["backgroundJobs", "companion", "webfetch", "acpAgents"] as const) {
+    const value = boundedObject(obj[key]);
+    if (value) result[key] = value;
   }
 
   return result;

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.88](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.87...dashboard-v0.1.88) (2026-10-15)
+
+
+### Bug Fixes
+
+* **docker:** raise next build heap to 1536 MB ([#277](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/277)) ([3ea17e0](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/3ea17e0b1710ba28439b781fea7f0a4cfecdef4a))
+
 ## [0.1.87](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.86...dashboard-v0.1.87) (2026-10-15)
 
 

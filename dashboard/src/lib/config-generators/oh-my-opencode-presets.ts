@@ -5,10 +5,10 @@ import { isRecord } from "@/lib/utils";
 
 import {
   type AgentConfigEntry,
-  type AgentPermissionConfig,
   type AgentThinkingConfig,
   type OhMyOpenCodeFullConfig,
   type OhMyOpenCodePreset,
+  readPermissionConfig,
   validateFullConfig,
 } from "./oh-my-opencode-types";
 
@@ -50,36 +50,6 @@ function pruneEmptyEntries(config: OhMyOpenCodeFullConfig): OhMyOpenCodeFullConf
     ...(agents && Object.keys(agents).length > 0 ? { agents } : { agents: undefined }),
     ...(categories && Object.keys(categories).length > 0 ? { categories } : { categories: undefined }),
   };
-}
-
-function readPermissionConfig(value: unknown): AgentPermissionConfig | undefined {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-
-  const permission: AgentPermissionConfig = {};
-  const edit = value.edit;
-  if (edit === "allow" || edit === "deny" || edit === "prompt") {
-    permission.edit = edit;
-  }
-
-  const bash = value.bash;
-  if (bash === "allow" || bash === "deny" || bash === "prompt") {
-    permission.bash = bash;
-  } else if (isRecord(bash)) {
-    const bashPermission: NonNullable<Exclude<AgentPermissionConfig["bash"], string>> = {};
-    if (bash.git === "allow" || bash.git === "deny" || bash.git === "prompt") {
-      bashPermission.git = bash.git;
-    }
-    if (bash.test === "allow" || bash.test === "deny" || bash.test === "prompt") {
-      bashPermission.test = bash.test;
-    }
-    if (Object.keys(bashPermission).length > 0) {
-      permission.bash = bashPermission;
-    }
-  }
-
-  return Object.keys(permission).length > 0 ? permission : undefined;
 }
 
 function readThinkingConfig(value: unknown): AgentThinkingConfig | undefined {

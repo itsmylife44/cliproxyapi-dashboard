@@ -32,6 +32,9 @@ export const ContainerActionSchema = z.object({
 // AGENT CONFIG
 // ============================================================================
 
+// Legacy "prompt" is still accepted and stored as "ask" by validateFullConfig.
+const PermissionValueSchema = z.enum(["ask", "allow", "deny", "prompt"]);
+
 const AgentConfigEntrySchema = z.object({
   model: z.string().optional(),
   variant: z.string().optional(),
@@ -39,12 +42,12 @@ const AgentConfigEntrySchema = z.object({
   prompt_append: z.string().optional(),
   fallback_models: z.array(z.string()).optional(),
   permission: z.object({
-    edit: z.enum(["allow", "deny", "prompt"]).optional(),
+    edit: PermissionValueSchema.optional(),
     bash: z.union([
-      z.enum(["allow", "deny", "prompt"]),
+      PermissionValueSchema,
       z.object({
-        git: z.enum(["allow", "deny", "prompt"]).optional(),
-        test: z.enum(["allow", "deny", "prompt"]).optional(),
+        git: PermissionValueSchema.optional(),
+        test: PermissionValueSchema.optional(),
       }),
     ]).optional(),
   }).optional(),
@@ -103,11 +106,6 @@ const ExperimentalConfigSchema = z.object({
   task_system: z.boolean().optional(),
 });
 
-const LspEntrySchema = z.object({
-  command: z.array(z.string()).min(1),
-  extensions: z.array(z.string()).optional(),
-});
-
 const LocalMcpEntrySchema = z.object({
   name: z.string().min(1),
   type: z.literal("local"),
@@ -139,7 +137,6 @@ export const AgentConfigOverridesSchema = z.object({
   browser_automation_engine: BrowserAutomationConfigSchema.optional(),
   sisyphus_agent: SisyphusAgentConfigSchema.optional(),
   git_master: GitMasterConfigSchema.optional(),
-  lsp: z.record(z.string(), LspEntrySchema).optional(),
   mcpServers: z.array(McpEntrySchema).optional(),
   customPlugins: z.array(z.string()).optional(),
   configSchemaVersion: z.number().positive().optional(),

@@ -7,6 +7,7 @@ import {
   UPSTREAM_CATEGORY_CHAINS,
 } from "../config-generators/oh-my-opencode";
 import { getBundledOhMyOpenCodePresets } from "../config-generators/oh-my-opencode-presets";
+import { validateFullConfig } from "../config-generators/oh-my-opencode-types";
 import { buildSlimConfig } from "../config-generators/oh-my-opencode-slim";
 import { upstreamSchemaErrors } from "./helpers/upstream-schema";
 
@@ -44,6 +45,21 @@ describe("upstream schema guard: OMO", () => {
       expect(Object.keys(categories).filter((c) => !(c in UPSTREAM_CATEGORY_CHAINS))).toEqual([]);
     },
   );
+
+  it("a legacy stored config with values removed upstream validates against the vendored schema", () => {
+    const stored = {
+      agents: { sisyphus: { permission: { edit: "prompt", bash: { git: "prompt", test: "allow" } } } },
+      disabled_commands: ["init-deep", "start-work"],
+      disabled_skills: ["agent-browser", "frontend-ui-ux"],
+      disabled_hooks: ["context-window-monitor", "ralph-loop"],
+      browser_automation_engine: { provider: "agent-browser" },
+      lsp: { typescript: { command: ["typescript-language-server", "--stdio"] } },
+    };
+
+    const config = buildOhMyOpenCodeConfig(ALL_CHAIN_MODELS, validateFullConfig(stored));
+
+    expect(upstreamSchemaErrors("omo", config)).toEqual([]);
+  });
 });
 
 describe("upstream schema guard: slim", () => {

@@ -1,4 +1,3 @@
-export { LspServersSection } from "./lsp-servers-section";
 export { ToggleListSection } from "./toggle-list-section";
 export { HooksSection } from "./hooks-section";
 export { TmuxSection } from "./tmux-section";

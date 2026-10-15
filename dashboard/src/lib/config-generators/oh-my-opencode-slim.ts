@@ -167,6 +167,30 @@ function normalizeExplicitAgentConfig(
   return Object.keys(entry).length > 0 ? entry : null;
 }
 
+/**
+ * Slim 2.0.2 removed `fallback.chains`; an agent's array `model` is now its fallback chain.
+ * Folds each stored chain into the matching agent's model as `[primary, ...chain]`, deduped by id.
+ * Agents without an emitted model are skipped (there is no primary to put first).
+ */
+function foldFallbackChains(
+  agents: Record<string, SlimAgentConfig>,
+  chains: Record<string, string[]>,
+  availableModels: string[],
+): void {
+  for (const [agent, chain] of Object.entries(chains)) {
+    const entry = agents[agent];
+    if (entry?.model === undefined) continue;
+    const seen = new Set<string>();
+    const primary = typeof entry.model === "string" ? [entry.model] : entry.model;
+    entry.model = [...primary, ...chain.map((m) => prefixModel(m, availableModels))].filter((item) => {
+      const id = typeof item === "string" ? item : item.id;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main config builder
 // ---------------------------------------------------------------------------
@@ -195,6 +219,8 @@ export function buildSlimConfig(
 
   // Active preset selection: overrides.preset first, then options.presetName, then "cliproxyapi"
   const activePresetName = overrides?.preset ?? optionsPresetName;
+  // A model array is always a live chain upstream, so a disabled fallback must not fold its chains in.
+  const chains = overrides?.fallback?.enabled === false ? {} : overrides?.fallback?.chains ?? {};
 
   // Build the config object
   const config: Record<string, unknown> = {
@@ -237,6 +263,7 @@ export function buildSlimConfig(
         }
       }
 
+      foldFallbackChains(presetOut, chains, availableModels);
       presets[presetName] = presetOut;
     }
 
@@ -253,6 +280,7 @@ export function buildSlimConfig(
         }
       }
       if (Object.keys(rootAgents).length > 0) {
+        foldFallbackChains(rootAgents, chains, availableModels);
         config.agents = rootAgents;
       }
     }
@@ -276,6 +304,7 @@ export function buildSlimConfig(
       }
     }
 
+    foldFallbackChains(generatedAgents, chains, availableModels);
     config.agents = generatedAgents;
     if (overrides?.preset) config.preset = overrides.preset;
   }
@@ -332,32 +361,11 @@ export function buildSlimConfig(
     config.background = { maxConcurrentStarts: 10, ...overrides.background };
   }
 
-  // Fallback — build chains from available models if not explicitly set
+  // Fallback — `chains` are folded into agent models above. Slim's `fallback` is strict, so only
+  // emit keys it still accepts (timeoutMs / retry_on_empty were removed upstream).
   if (overrides?.fallback) {
-    const { chains: rawChains, ...fallbackRest } = overrides.fallback;
-    const fallback: Record<string, unknown> = {
-      enabled: true,
-      timeoutMs: 15000,
-      retryDelayMs: 500,
-      retry_on_empty: true,
-      ...fallbackRest,
-    };
-
-    // Prefix chain models with cliproxyapi/ if available, passthrough external models
-    if (rawChains) {
-      const prefixedChains: Record<string, string[]> = {};
-      for (const [agent, chain] of Object.entries(rawChains)) {
-        const prefixed = chain.map((m) => prefixModel(m, availableModels));
-        if (prefixed.length > 0) {
-          prefixedChains[agent] = prefixed;
-        }
-      }
-      if (Object.keys(prefixedChains).length > 0) {
-        fallback.chains = prefixedChains;
-      }
-    }
-
-    config.fallback = fallback;
+    const { enabled = true, retryDelayMs = 500 } = overrides.fallback;
+    config.fallback = { enabled, retryDelayMs };
   }
 
   // Council — prefix model IDs, validate availability

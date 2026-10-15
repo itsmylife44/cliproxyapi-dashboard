@@ -7,33 +7,33 @@ function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfig>): OhMy
   return config as OhMyOpenCodeSlimFullConfig;
 }
 
-describe("buildSlimConfig fallback chains - external model passthrough", () => {
+describe("buildSlimConfig fallback chains - folded into each agent's model array", () => {
   const available = ["claude-sonnet-4", "gemini-2.5-pro"];
 
   it("passes through external models (not in available) without prefix", () => {
     const overrides: OhMyOpenCodeSlimFullConfig = {
+      presets: { cliproxyapi: { orchestrator: { model: "claude-sonnet-4" } } },
       fallback: {
         enabled: true,
-        timeoutMs: 10000,
         chains: {
           orchestrator: ["model-gone-a", "model-gone-b"],
         },
       },
     };
 
-    const config = buildSlimConfig(available, overrides);
-    expect(config).not.toBeNull();
+    const generated = expectGeneratedConfig(buildSlimConfig(available, overrides));
 
-    const fallback = config!.fallback as Record<string, unknown>;
-    expect(fallback).toBeDefined();
-
-    // External models should be passed through as-is (no cliproxyapi/ prefix)
-    const chains = fallback.chains as Record<string, string[]>;
-    expect(chains.orchestrator).toEqual(["model-gone-a", "model-gone-b"]);
+    expect(generated.fallback).not.toHaveProperty("chains");
+    expect(generated.presets?.cliproxyapi?.orchestrator?.model).toEqual([
+      "cliproxyapi/claude-sonnet-4",
+      "model-gone-a",
+      "model-gone-b",
+    ]);
   });
 
   it("mixed available/external chains — available get prefixed, external pass through", () => {
     const overrides: OhMyOpenCodeSlimFullConfig = {
+      presets: { cliproxyapi: { orchestrator: { model: "claude-sonnet-4" }, fixer: { model: "gemini-2.5-pro" } } },
       fallback: {
         enabled: true,
         chains: {
@@ -43,38 +43,67 @@ describe("buildSlimConfig fallback chains - external model passthrough", () => {
       },
     };
 
-    const config = buildSlimConfig(available, overrides);
-    expect(config).not.toBeNull();
+    const generated = expectGeneratedConfig(buildSlimConfig(available, overrides));
 
-    const fallback = config!.fallback as Record<string, unknown>;
-    const chains = fallback.chains as Record<string, string[]>;
-
-    // fixer: available model prefixed, external model passed through
-    expect(chains.fixer).toEqual(["cliproxyapi/claude-sonnet-4", "model-gone"]);
-
-    // orchestrator: external model passed through
-    expect(chains.orchestrator).toEqual(["model-gone"]);
+    expect(generated.presets?.cliproxyapi?.fixer?.model).toEqual([
+      "cliproxyapi/gemini-2.5-pro",
+      "cliproxyapi/claude-sonnet-4",
+      "model-gone",
+    ]);
+    expect(generated.presets?.cliproxyapi?.orchestrator?.model).toEqual([
+      "cliproxyapi/claude-sonnet-4",
+      "model-gone",
+    ]);
   });
 
-  it("keeps prefixed chains when all models are available", () => {
+  it("dedupes chain models already in the agent's model list, keeping order", () => {
     const overrides: OhMyOpenCodeSlimFullConfig = {
+      presets: {
+        cliproxyapi: {
+          orchestrator: { model: ["claude-sonnet-4", { id: "gemini-2.5-pro", variant: "high" }] },
+        },
+      },
       fallback: {
         enabled: true,
         chains: {
-          orchestrator: ["claude-sonnet-4", "gemini-2.5-pro"],
+          orchestrator: ["gemini-2.5-pro", "model-x", "claude-sonnet-4", "model-x"],
         },
       },
     };
 
-    const config = buildSlimConfig(available, overrides);
-    expect(config).not.toBeNull();
+    const generated = expectGeneratedConfig(buildSlimConfig(available, overrides));
 
-    const fallback = config!.fallback as Record<string, unknown>;
-    const chains = fallback.chains as Record<string, string[]>;
-    expect(chains.orchestrator).toEqual([
+    expect(generated.presets?.cliproxyapi?.orchestrator?.model).toEqual([
       "cliproxyapi/claude-sonnet-4",
-      "cliproxyapi/gemini-2.5-pro",
+      { id: "cliproxyapi/gemini-2.5-pro", variant: "high" },
+      "model-x",
     ]);
+  });
+
+  it("does not fold chains when fallback is disabled", () => {
+    const overrides: OhMyOpenCodeSlimFullConfig = {
+      presets: { cliproxyapi: { orchestrator: { model: "claude-sonnet-4" } } },
+      fallback: { enabled: false, chains: { orchestrator: ["gemini-2.5-pro"] } },
+    };
+
+    const generated = expectGeneratedConfig(buildSlimConfig(available, overrides));
+
+    expect(generated.presets?.cliproxyapi?.orchestrator?.model).toBe("cliproxyapi/claude-sonnet-4");
+    expect(generated.fallback).toEqual({ enabled: false, retryDelayMs: 500 });
+  });
+
+  it("folds chains into root agent overrides that set a model, and into legacy agents output", () => {
+    const overrides: OhMyOpenCodeSlimFullConfig = {
+      agents: { oracle: { model: "gemini-2.5-pro" } },
+      fallback: { chains: { oracle: ["claude-sonnet-4"] } },
+    };
+
+    const presetConfig = expectGeneratedConfig(buildSlimConfig(available, overrides));
+    expect(presetConfig.agents?.oracle?.model).toEqual(["cliproxyapi/gemini-2.5-pro", "cliproxyapi/claude-sonnet-4"]);
+
+    const legacyConfig = expectGeneratedConfig(buildSlimConfig(available, overrides, { usePresets: false }));
+    expect(legacyConfig.agents?.oracle?.model).toEqual(["cliproxyapi/gemini-2.5-pro", "cliproxyapi/claude-sonnet-4"]);
+    expect(legacyConfig.fallback).not.toHaveProperty("chains");
   });
 });
 
@@ -98,20 +127,19 @@ describe("buildSlimConfig - advanced field preservation", () => {
     expect(generated.interview?.autoOpenBrowser).toBe(false);
   });
 
-  it("should handle retry_on_empty in fallback config", () => {
+  it("drops stored retry_on_empty / timeoutMs, which slim's strict fallback block rejects", () => {
     const overrides: OhMyOpenCodeSlimFullConfig = {
       fallback: {
         enabled: true,
         retry_on_empty: true,
         timeoutMs: 5000,
+        retryDelayMs: 250,
       },
     };
 
     const config = buildSlimConfig(available, overrides);
     const generated = expectGeneratedConfig(config);
-    expect(generated.fallback?.retry_on_empty).toBe(true);
-    expect(generated.fallback?.enabled).toBe(true);
-    expect(generated.fallback?.timeoutMs).toBe(5000);
+    expect(generated.fallback).toEqual({ enabled: true, retryDelayMs: 250 });
   });
 
   it("should fail fast when no models available and no overrides", () => {

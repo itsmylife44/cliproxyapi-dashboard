@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "@/lib/env";
+import { isRecord } from "@/lib/utils";
 
 /**
  * SINGLE-INSTANCE CONSTRAINT WARNING
@@ -131,10 +132,6 @@ export interface ToggleOAuthResult {
   ok: boolean;
   disabled?: boolean;
   error?: string;
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function isApiKeyArray(value: unknown): value is Array<{ "api-key": string }> {

@@ -1,5 +1,5 @@
+import { isRecord } from "@/lib/utils";
 import {
-  isRecord,
   type ProxyModel,
 } from "./shared";
 import { modelsDevCache, CACHE_TTL, CACHE_KEYS } from "@/lib/cache";

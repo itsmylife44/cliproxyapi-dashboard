@@ -23,6 +23,7 @@ import {
   SLIM_WEBSEARCH_PROVIDERS,
 } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { HelpTooltip } from "@/components/ui/tooltip";
+import { isRecord } from "@/lib/utils";
 
 function Section({
   label,
@@ -71,10 +72,6 @@ function Section({
 
 function formatJson(value: unknown): string {
   return JSON.stringify(value ?? {}, null, 2);
-}
-
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function JsonApplyEditor({
@@ -398,7 +395,7 @@ export function SlimToggleSections({
               onApply={(parsed) => {
                 onFallbackChange({
                   ...fallback,
-                  chains: isObjectRecord(parsed) && Object.keys(parsed).length > 0
+                  chains: isRecord(parsed) && Object.keys(parsed).length > 0
                     ? parsed as Record<string, string[]>
                     : undefined,
                 });
@@ -565,7 +562,7 @@ export function SlimToggleSections({
               applyLabel={t("applyJsonButton")}
               onApply={(parsed) => onCouncilChange({
                 ...council,
-                presets: isObjectRecord(parsed) && Object.keys(parsed).length > 0
+                presets: isRecord(parsed) && Object.keys(parsed).length > 0
                   ? parsed as SlimCouncilConfig["presets"]
                   : undefined,
               })}
@@ -775,7 +772,7 @@ export function SlimToggleSections({
           placeholder={t("manualPlanPlaceholder")}
           invalidLabel={t("jsonInvalidLabel")}
           applyLabel={t("applyJsonButton")}
-          onApply={(parsed) => onManualPlanChange(isObjectRecord(parsed) && Object.keys(parsed).length > 0 ? parsed as Record<string, SlimManualPlanEntry> : undefined)}
+          onApply={(parsed) => onManualPlanChange(isRecord(parsed) && Object.keys(parsed).length > 0 ? parsed as Record<string, SlimManualPlanEntry> : undefined)}
         />
       </Section>
 

@@ -1,10 +1,8 @@
 import yaml from "js-yaml";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { isRecord } from "@/lib/utils";
 
 type ConfigYamlObject = Record<string, unknown>;
-
-function isPlainObject(value: unknown): value is ConfigYamlObject {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 export function parseConfigYaml(rawYaml: string): ConfigYamlObject {
   if (!rawYaml.trim()) {
@@ -19,7 +17,7 @@ export function parseConfigYaml(rawYaml: string): ConfigYamlObject {
     throw new Error(`Invalid current config.yaml: ${message}`);
   }
 
-  if (!isPlainObject(parsed)) {
+  if (!isRecord(parsed)) {
     throw new Error(
       "Invalid current config.yaml: root value is not a YAML mapping"
     );
@@ -31,7 +29,7 @@ export function parseConfigYaml(rawYaml: string): ConfigYamlObject {
 /** auth-dir as stored in config.yaml (GET /config never returns it). The v8 path wins, like upstream. */
 export function readAuthDir(rawYaml: string): string {
   const parsed = parseConfigYaml(rawYaml);
-  const oauth = isPlainObject(parsed.oauth) ? parsed.oauth : {};
+  const oauth = isRecord(parsed.oauth) ? parsed.oauth : {};
   const value = oauth["auth-dir"] ?? parsed["auth-dir"];
   return typeof value === "string" ? value : "";
 }
@@ -76,9 +74,9 @@ function setPath(target: ConfigYamlObject, path: string[], value: unknown, repla
   const [head, ...rest] = path as [string, ...string[]];
   const current = target[head];
   if (rest.length > 0) {
-    return { ...target, [head]: setPath(isPlainObject(current) ? current : {}, rest, value, replace) };
+    return { ...target, [head]: setPath(isRecord(current) ? current : {}, rest, value, replace) };
   }
-  const merge = !replace && isPlainObject(value) && isPlainObject(current);
+  const merge = !replace && isRecord(value) && isRecord(current);
   return { ...target, [head]: merge ? { ...current, ...value } : value };
 }
 
@@ -97,4 +95,21 @@ export function mergeConfigYaml(rawYaml: string, changes: ConfigYamlObject): str
   }
 
   return yaml.dump(mergedConfig, { lineWidth: -1, noRefs: true });
+}
+
+/**
+ * The one read-merge-write of config.yaml: GET the raw file, merge `changes`, PUT it back.
+ * `step` says which request `res` came from, so callers can tell a failed read from a failed write.
+ */
+export async function writeConfigYamlChanges(
+  changes: ConfigYamlObject
+): Promise<{ step: "read" | "write"; res: Response }> {
+  const raw = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML);
+  if (!raw.ok) return { step: "read", res: raw };
+  const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
+    method: "PUT",
+    headers: { "Content-Type": "text/yaml" },
+    body: mergeConfigYaml(await raw.text(), changes),
+  });
+  return { step: "write", res };
 }

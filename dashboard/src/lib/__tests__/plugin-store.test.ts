@@ -144,4 +144,35 @@ describe("waitForPluginState", () => {
     await waitForPluginState(polls(snapshot(true, true)), { ids: ["gemini-cli"] }, { intervalMs: 1000, sleep });
     expect(sleep).toHaveBeenCalledWith(1000);
   });
+
+  it("stays locked for the settle window even when the state is reached at once", async () => {
+    // A second write during upstream's async reload can roll back the first (CLIProxyAPI#6631).
+    const fetchView = vi.fn(polls(snapshot(true, true)));
+    const result = await waitForPluginState(fetchView, { ids: ["gemini-cli"] }, { intervalMs: 500, sleep: noSleep });
+
+    expect(result.pending).toEqual([]);
+    // 2 s settle window at 500 ms per poll
+    expect(fetchView).toHaveBeenCalledTimes(4);
+  });
+
+  it("waits for an update until the installed version is the target version", async () => {
+    const at = (installed_version: string) =>
+      parsePluginStore({ plugins_enabled: true, plugins: [{ ...entry, installed_version }] });
+    const fetchView = vi.fn(polls(at("1.0.4"), at("1.0.4"), at("1.0.4"), at("1.0.5")));
+    const result = await waitForPluginState(fetchView, { ids: ["gemini-cli"], installedVersion: "1.0.5" }, { sleep: noSleep });
+
+    expect(result.pending).toEqual([]);
+    expect(fetchView).toHaveBeenCalledTimes(4);
+  });
+
+  it("reports an update that never reaches the target version", async () => {
+    const fetchView = polls(snapshot(true, true));
+    const result = await waitForPluginState(
+      fetchView,
+      { ids: ["gemini-cli"], installedVersion: "1.0.5" },
+      { intervalMs: 1000, timeoutMs: 3000, sleep: noSleep }
+    );
+
+    expect(result.pending).toEqual(["gemini-cli"]);
+  });
 });

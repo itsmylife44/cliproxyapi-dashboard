@@ -60,6 +60,34 @@ describe("parsePluginConfigFields", () => {
     });
   });
 
+  it("decodes escaped names, enum values and defaults so the plugin gets the raw values back", () => {
+    // GET /plugins html-escapes name, enum_values and default strings; PATCH stores the body as sent
+    // and the plugin compares against its own unescaped enum values.
+    const fields = parsePluginConfigFields({
+      plugins: [
+        {
+          id: "router",
+          registered: true,
+          config_fields: [
+            { name: "r&amp;d_mode", type: "enum", enum_values: ["&lt;auto&gt;", "fill-first"], default: "&lt;auto&gt;" },
+            { name: "headers", type: "object", default: { "x-q": "a&amp;b" } },
+          ],
+        },
+      ],
+    });
+
+    expect(fields.router).toEqual([
+      { name: "r&d_mode", type: "enum", default: "<auto>", enumValues: ["<auto>", "fill-first"], description: "" },
+      { name: "headers", type: "object", default: { "x-q": "a&b" }, enumValues: [], description: "" },
+    ]);
+    const routerFields = fields.router ?? [];
+    const draft = { ...toPluginConfigDraft(routerFields, {}), "r&d_mode": "fill-first" };
+    expect(diffPluginConfig(routerFields, {}, draft)).toEqual({ patch: { "r&d_mode": "fill-first" }, errors: {} });
+    expect(diffPluginConfig(routerFields, { "r&d_mode": "fill-first" }, { ...draft, "r&d_mode": "<auto>" }).patch).toEqual({
+      "r&d_mode": "<auto>",
+    });
+  });
+
   it("ignores plugins that are not loaded, malformed fields and unknown field types", () => {
     const fields = parsePluginConfigFields({
       plugins: [
@@ -137,6 +165,26 @@ describe("plugin settings draft and diff", () => {
       headers: "notObject",
     });
     expect(diffPluginConfig(FIELDS, CONFIG, { ...draft, models: '{"a": 1}' }).errors.models).toBe("notArray");
+  });
+
+  it.each(["0x10", "1e3", "0b11", "0o7", "Infinity", "1_000", "1 2", "12abc", "--1", "."])(
+    "rejects the non-decimal number %j",
+    (raw) => {
+      const draft = { ...toPluginConfigDraft(FIELDS, CONFIG), ratio: raw, retries: raw };
+      expect(diffPluginConfig(FIELDS, CONFIG, draft).errors).toEqual({ ratio: "invalidNumber", retries: "invalidNumber" });
+    }
+  );
+
+  it("accepts plain decimals, signed and with surrounding spaces", () => {
+    const draft = { ...toPluginConfigDraft(FIELDS, CONFIG), ratio: " -0.25 ", retries: "+7" };
+    expect(diffPluginConfig(FIELDS, CONFIG, draft)).toEqual({ patch: { ratio: -0.25, retries: 7 }, errors: {} });
+    expect(diffPluginConfig(FIELDS, CONFIG, { ...draft, ratio: ".75" }).patch.ratio).toBe(0.75);
+  });
+
+  it("treats a whitespace-only number as empty, never as 0", () => {
+    const draft = { ...toPluginConfigDraft(FIELDS, CONFIG), ratio: " \t ", retries: "\n" };
+    // ratio was stored: clear it; retries was not: nothing to send.
+    expect(diffPluginConfig(FIELDS, CONFIG, draft)).toEqual({ patch: { ratio: null }, errors: {} });
   });
 
   it("deletes a stored key when its field is emptied, so the plugin default applies again", () => {

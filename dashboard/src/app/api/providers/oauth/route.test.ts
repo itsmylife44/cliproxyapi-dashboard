@@ -57,7 +57,9 @@ describe("/api/providers/oauth response body", () => {
     const res = await GET();
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({
+    // Exact body: the UI reads these keys loosely, so any drift must fail here.
+    expect(await res.json()).toEqual({
+      success: true,
       accounts: [account],
       pluginOAuthProviders: ["kiro"],
     });
@@ -74,6 +76,6 @@ describe("/api/providers/oauth response body", () => {
     );
 
     expect(res.status).toBe(201);
-    expect(await res.json()).toMatchObject({ id: "acc-2" });
+    expect(await res.json()).toEqual({ success: true, id: "acc-2" });
   });
 });

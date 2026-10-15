@@ -1,5 +1,4 @@
-import { isRecord } from "@/lib/utils";
-import { extractApiError } from "@/lib/utils";
+import { decodeHtmlEntities, extractApiError, isRecord } from "@/lib/utils";
 
 /** One plugin from CLIProxyAPI's GET /plugin-store, with display strings decoded. */
 export interface PluginRow {
@@ -27,13 +26,6 @@ export interface PluginStoreView {
   sourceErrors: string[];
 }
 
-const ENTITIES: Record<string, string> = { "&lt;": "<", "&gt;": ">", "&#39;": "'", "&#34;": '"', "&amp;": "&" };
-
-/** Reverses Go's html.EscapeString, which upstream applies to every store display string. */
-export function decode(value: unknown): string {
-  return typeof value === "string" ? value.replace(/&(lt|gt|#39|#34|amp);/g, (m) => ENTITIES[m] ?? m) : "";
-}
-
 export function parsePluginStore(data: unknown): PluginStoreView {
   if (!isRecord(data)) return { pluginsEnabled: false, rows: [], sourceErrors: [] };
   const entries = Array.isArray(data.plugins) ? data.plugins : [];
@@ -44,13 +36,13 @@ export function parsePluginStore(data: unknown): PluginStoreView {
       isRecord(p) && typeof p.id === "string" && p.id
         ? [{
             id: p.id,
-            sourceId: decode(p.source_id),
-            name: decode(p.name) || p.id,
-            description: decode(p.description),
-            author: decode(p.author),
-            version: decode(p.version),
-            installedVersion: decode(p.installed_version),
-            tags: Array.isArray(p.tags) ? p.tags.map(decode).filter(Boolean) : [],
+            sourceId: decodeHtmlEntities(p.source_id),
+            name: decodeHtmlEntities(p.name) || p.id,
+            description: decodeHtmlEntities(p.description),
+            author: decodeHtmlEntities(p.author),
+            version: decodeHtmlEntities(p.version),
+            installedVersion: decodeHtmlEntities(p.installed_version),
+            tags: Array.isArray(p.tags) ? p.tags.map(decodeHtmlEntities).filter(Boolean) : [],
             installed: p.installed === true,
             enabled: p.enabled === true,
             active: p.effective_enabled === true && p.registered === true,
@@ -60,37 +52,50 @@ export function parsePluginStore(data: unknown): PluginStoreView {
         : []
     ),
     sourceErrors: errors.flatMap((e) =>
-      isRecord(e) ? [`${decode(e.source_name) || decode(e.source_id)}: ${decode(e.message)}`] : []
+      isRecord(e) ? [`${decodeHtmlEntities(e.source_name) || decodeHtmlEntities(e.source_id)}: ${decodeHtmlEntities(e.message)}`] : []
     ),
   };
 }
 
 /** Upstream plugin errors are `{error: code, message}`; the message is the useful part. */
 export function pluginErrorMessage(data: unknown, fallback: string): string {
-  return isRecord(data) && typeof data.message === "string" && data.message ? decode(data.message) : extractApiError(data, fallback);
+  return isRecord(data) && typeof data.message === "string" && data.message ? decodeHtmlEntities(data.message) : extractApiError(data, fallback);
 }
 
 /** Plugins an action should leave settled, and the global switch state it should leave behind. */
 export interface PluginTarget {
   ids: string[];
   pluginsEnabled?: boolean;
+  /** An update is done only once the store reports this installed version. */
+  installedVersion?: string;
 }
 
-/** Ids from the target whose load state does not yet match their switches. */
+/** Ids from the target whose load state (or installed version) does not yet match. */
 function unsettled(view: PluginStoreView, target: PluginTarget): string[] {
   if (target.pluginsEnabled !== undefined && view.pluginsEnabled !== target.pluginsEnabled) return target.ids;
   return target.ids.filter((id) => {
     const row = view.rows.find((r) => r.id === id);
-    return row !== undefined && row.loaded !== (view.pluginsEnabled && row.installed && row.enabled);
+    if (row === undefined) return false;
+    if (target.installedVersion !== undefined && row.installedVersion !== target.installedVersion) return true;
+    return row.loaded !== (view.pluginsEnabled && row.installed && row.enabled);
   });
 }
+
+/**
+ * Least time actions stay locked after any plugin config write. A write that lands while
+ * upstream still reloads the previous one can roll it back (router-for-me/CLIProxyAPI#6631):
+ * the reload re-reads config.yaml after a 150 ms file-watch debounce and a 1 s server-update
+ * debounce. Writes 1.5 s apart survived in the issue's repro; 2 s adds margin over that.
+ */
+export const PLUGIN_SETTLE_MIN_MS = 2000;
 
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
  * Upstream answers plugin writes before its async hot reload loads or unloads the library,
- * so poll the store until every target plugin is loaded exactly when its switches say so.
- * `pending` lists the ids still unsettled when `timeoutMs` ran out (empty on success).
+ * so poll the store until every target plugin is loaded exactly when its switches say so,
+ * and for at least PLUGIN_SETTLE_MIN_MS. `pending` lists the ids still unsettled when
+ * `timeoutMs` ran out (empty on success).
  */
 export async function waitForPluginState(
   fetchView: () => Promise<PluginStoreView | null>,
@@ -99,11 +104,11 @@ export async function waitForPluginState(
 ): Promise<{ view: PluginStoreView | null; pending: string[] }> {
   let view: PluginStoreView | null = null;
   let pending = target.ids;
-  for (let waited = 0; waited < timeoutMs; waited += intervalMs) {
+  for (let waited = intervalMs; waited <= timeoutMs; waited += intervalMs) {
     await sleep(intervalMs);
     view = (await fetchView()) ?? view;
     pending = view ? unsettled(view, target) : target.ids;
-    if (pending.length === 0) break;
+    if (pending.length === 0 && waited >= PLUGIN_SETTLE_MIN_MS) break;
   }
   return { view, pending };
 }

@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Toggle } from "@/components/config/config-fields";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
-import { writeConfigYamlChanges } from "@/lib/config-yaml";
+import { writeConfigYamlChanges } from "@/lib/config-yaml-write";
 import { isRecord } from "@/lib/utils";
 import { parsePluginConfigFields, type PluginConfigField } from "@/lib/plugin-config";
 import { PluginConfigForm } from "@/components/settings/plugin-config-form";
@@ -24,7 +24,8 @@ import {
 
 // Upstream applies config writes with an async hot reload and can roll back a write
 // that lands during the previous reload (router-for-me/CLIProxyAPI#6631), and plugins
-// load in that reload. Actions stay locked until the affected plugins settle.
+// load in that reload. After every write, actions stay locked until the affected plugins
+// settle and for at least PLUGIN_SETTLE_MIN_MS (see waitForPluginState).
 
 async function readJson(res: Response): Promise<unknown> {
   return res.json().catch(() => null);
@@ -157,7 +158,8 @@ export function PluginSettings() {
           { method: "POST" }
         ),
       t("toastInstalled", { name: row.name }),
-      { ids: [row.id] }
+      // An update is done once the new version is the installed one, not just loaded.
+      { ids: [row.id], installedVersion: row.installed ? row.version : undefined }
     );
 
   const setEnabled = (row: PluginRow, enabled: boolean) =>

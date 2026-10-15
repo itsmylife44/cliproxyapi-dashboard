@@ -7,6 +7,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { fetchWithRetry } from "@/lib/fetch-utils";
 import { getManagementUrl } from "@/lib/management-url";
+import { ERROR_CODE, apiError } from "@/lib/errors";
 
 const BACKEND_API_URL = getManagementUrl();
 const MANAGEMENT_API_KEY = env.MANAGEMENT_API_KEY;
@@ -101,18 +102,20 @@ const ALLOWED_MANAGEMENT_PATHS = new Set<string>([
   ...NON_ADMIN_OAUTH_PATHS,
 ]);
 
+const PLUGIN_ID = "[a-z0-9._-]+";
+
 const ALLOWED_MANAGEMENT_PATH_PATTERNS = [
   /^[a-z0-9-]+-api-key$/,
   /^request-error-logs\/[a-z0-9._-]+$/i,
   /^request-log-by-id\/[a-z0-9-]+$/i,
   /^model-definitions\/[a-z0-9-]+$/i,
-  /^plugin-store\/[a-z0-9._-]+\/install$/i,
-  /^plugins\/[a-z0-9._-]+(\/enabled|\/config)?$/i,
+  new RegExp(`^plugin-store/${PLUGIN_ID}/install$`, "i"),
+  new RegExp(`^plugins/${PLUGIN_ID}(/enabled|/config)?$`, "i"),
 ];
 
 // Upstream PUT replaces the whole plugins.configs.<id> entry: it disables the plugin
 // and drops its store record. Plugin settings are saved with PATCH only.
-const PUT_FORBIDDEN_PATH = /^plugins\/[a-z0-9._-]+\/config$/i;
+const PUT_FORBIDDEN_PATH = new RegExp(`^plugins/${PLUGIN_ID}/config$`, "i");
 
 function isAllowedManagementPath(path: string): boolean {
   return (
@@ -220,7 +223,7 @@ async function proxyRequest(
   }
 
   if (method === "PUT" && PUT_FORBIDDEN_PATH.test(normalizedPath)) {
-    return NextResponse.json({ error: "Use PATCH to change plugin settings" }, { status: 405 });
+    return apiError(ERROR_CODE.VALIDATION_ERROR, "Use PATCH to change plugin settings", 405);
   }
 
   if (!user.isAdmin && !isNonAdminAllowedManagementRequest(method, normalizedPath)) {

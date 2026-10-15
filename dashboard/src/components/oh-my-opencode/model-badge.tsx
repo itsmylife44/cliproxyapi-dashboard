@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import type { AgentUltraworkConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { groupModelsByProvider } from "@/lib/providers/model-grouping";
 
 export function downloadFile(content: string, filename: string) {
@@ -17,14 +18,10 @@ export function downloadFile(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export interface AgentUltraworkConfig {
-  model?: string;
-  variant?: string;
-  temperature?: number;
-}
-
 export interface ExtraFieldConfig {
-  variant?: string;
+  reasoning?: string;
+  /** Field the reasoning input edits: OMO 5.x `reasoning`, slim `variant`. */
+  reasoningKey: "reasoning" | "variant";
   temperature?: number;
   thirdField?: string;
   thirdFieldKey: string;
@@ -82,13 +79,11 @@ export function ModelBadge({
 
   const hasUltraworkValues = Boolean(
     extraFields?.ultrawork &&
-      (extraFields.ultrawork.model ||
-        extraFields.ultrawork.variant ||
-        extraFields.ultrawork.temperature !== undefined)
+      (extraFields.ultrawork.model || extraFields.ultrawork.reasoning)
   );
   const hasExtraValues =
     extraFields &&
-    (extraFields.variant ||
+    (extraFields.reasoning ||
       extraFields.temperature !== undefined ||
       extraFields.thirdField ||
       (extraFields.fallback_models && extraFields.fallback_models.length > 0) ||
@@ -185,9 +180,12 @@ export function ModelBadge({
           <div className="flex items-center gap-1.5">
             <input
               type="text"
-              placeholder="variant"
-              value={extraFields?.variant ?? ""}
-              onChange={(e) => onFieldChange("variant", e.target.value || undefined)}
+              placeholder={extraFields?.reasoningKey ?? ""}
+              value={extraFields?.reasoning ?? ""}
+              onChange={(e) => {
+                const key = extraFields?.reasoningKey;
+                if (key) onFieldChange(key, e.target.value || undefined);
+              }}
               className="w-16 px-1.5 py-0.5 text-[10px] bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded text-[var(--text-secondary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-black/15"
             />
             <input
@@ -288,32 +286,16 @@ export function ModelBadge({
                 </select>
                 <input
                   type="text"
-                  placeholder="variant"
-                  value={extraFields.ultrawork?.variant ?? ""}
+                  placeholder="reasoning"
+                  value={extraFields.ultrawork?.reasoning ?? ""}
                   onChange={(e) => {
                     const value = e.target.value || undefined;
                     onFieldChange("ultrawork", {
                       ...extraFields?.ultrawork,
-                      variant: value,
+                      reasoning: value,
                     });
                   }}
               className="w-16 px-1.5 py-0.5 text-[10px] bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded text-[var(--text-secondary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/15"
-                />
-                <input
-                  type="number"
-                  placeholder="temp"
-                  step={0.1}
-                  min={0}
-                  max={2}
-                  value={extraFields.ultrawork?.temperature ?? ""}
-                  onChange={(e) => {
-                    const value = e.target.value ? Number(e.target.value) : undefined;
-                    onFieldChange("ultrawork", {
-                      ...extraFields?.ultrawork,
-                      temperature: value,
-                    });
-                  }}
-                  className="w-14 px-1.5 py-0.5 text-[10px] bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded text-[var(--text-secondary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/15"
                 />
               </div>
             </div>

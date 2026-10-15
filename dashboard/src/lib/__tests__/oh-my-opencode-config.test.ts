@@ -3,13 +3,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { applyPreset, buildOhMyOpenCodeConfig, getMissingPresetModels } from "../config-generators/oh-my-opencode";
 import type { OhMyOpenCodePreset } from "../config-generators/oh-my-opencode-types";
 import { validateFullConfig } from "../config-generators/oh-my-opencode-types";
+import { AgentConfigOverridesSchema } from "../validation/schemas";
+import { deprecatedOmoKeys } from "./helpers/upstream-schema";
+
+vi.mock("server-only", () => ({}));
 
 describe("oh-my-opencode config", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("preserves ultrawork overrides when validating saved config", () => {
+  it("reads a stored ultrawork variant as reasoning and drops its temperature", () => {
     const validated = validateFullConfig({
       agents: {
         sisyphus: {
@@ -25,12 +29,11 @@ describe("oh-my-opencode config", () => {
 
     expect(validated.agents?.sisyphus?.ultrawork).toEqual({
       model: "claude-opus-4.6",
-      variant: "max",
-      temperature: 0.7,
+      reasoning: "max",
     });
   });
 
-  it("preserves permission and thinking overrides when validating saved config", () => {
+  it("preserves permission overrides and moves stored thinking under providerOptions", () => {
     const validated = validateFullConfig({
       agents: {
         hephaestus: {
@@ -48,9 +51,8 @@ describe("oh-my-opencode config", () => {
       edit: "allow",
       bash: { git: "allow", test: "allow" },
     });
-    expect(validated.agents?.oracle?.thinking).toEqual({
-      type: "enabled",
-      budgetTokens: 120000,
+    expect(validated.agents?.oracle?.providerOptions).toEqual({
+      thinking: { type: "enabled", budgetTokens: 120000 },
     });
   });
 
@@ -100,7 +102,7 @@ describe("oh-my-opencode config", () => {
           model: "k2p5",
           ultrawork: {
             model: "claude-opus-4.6",
-            variant: "max",
+            reasoning: "max",
           },
         },
       },
@@ -113,13 +115,13 @@ describe("oh-my-opencode config", () => {
 
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
-    const agents = typedConfig.agents as Record<string, { ultrawork?: { model?: string; variant?: string } }>;
+    const agents = typedConfig.agents as Record<string, { ultrawork?: { model?: string; reasoning?: string } }>;
     const sisyphus = agents.sisyphus;
 
     expect(sisyphus).toBeDefined();
     expect(sisyphus!.ultrawork).toEqual({
       model: "cliproxyapi/claude-opus-4.6",
-      variant: "max",
+      reasoning: "max",
     });
     expect(typedConfig.hashline_edit).toBe(true);
     expect(typedConfig.experimental).toEqual({
@@ -132,37 +134,34 @@ describe("oh-my-opencode config", () => {
     const config = buildOhMyOpenCodeConfig(["claude-haiku-5-5", "deepseek-flash", "minimax-m2.7", "claude-opus-4-6"]);
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
-    const agents = typedConfig.agents as Record<string, { model: string; fallback_models?: string[] }>;
-    const categories = typedConfig.categories as Record<string, { model: string; fallback_models?: string[] }>;
+    const agents = typedConfig.agents as Record<string, unknown>;
+    const categories = typedConfig.categories as Record<string, unknown>;
 
     // explore/librarian: kimi-for-coding-highspeed → gpt-6-luna-fast → claude-haiku-5-5 → deepseek-flash → qwen3.7-plus → minimax-m2.7
     for (const agent of ["explore", "librarian"]) {
       expect(agents[agent]).toEqual({
-        model: "cliproxyapi/claude-haiku-5-5",
-        fallback_models: ["cliproxyapi/deepseek-flash", "cliproxyapi/minimax-m2.7"],
+        models: ["cliproxyapi/claude-haiku-5-5", "cliproxyapi/deepseek-flash", "cliproxyapi/minimax-m2.7"],
       });
     }
 
     // quick: gpt-6-luna-fast → claude-haiku-5-5 → deepseek-flash → qwen3.6-flash → minimax-m3 → minimax-m2.7 → …
     expect(categories.quick).toEqual({
-      model: "cliproxyapi/claude-haiku-5-5",
-      fallback_models: ["cliproxyapi/deepseek-flash", "cliproxyapi/minimax-m2.7"],
+      models: ["cliproxyapi/claude-haiku-5-5", "cliproxyapi/deepseek-flash", "cliproxyapi/minimax-m2.7"],
     });
 
     // writing is Claude-only: claude-opus-5-5 → claude-opus-4-6
     expect(categories.writing).toEqual({ model: "cliproxyapi/claude-opus-4-6" });
   });
 
-  it("auto-generates fallback_models from chain when no override", () => {
+  it("auto-generates the models chain when no override", () => {
     const config = buildOhMyOpenCodeConfig(["kimi-k3", "gpt-5.6-sol", "glm-5.2", "claude-opus-4.6"]);
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
-    const agents = typedConfig.agents as Record<string, { model: string; fallback_models?: string[] }>;
+    const agents = typedConfig.agents as Record<string, unknown>;
 
     // sisyphus: claude-opus-5-5 → kimi-k3 → gpt-5.6-sol → glm-5.2 → big-pickle
     expect(agents.sisyphus).toEqual({
-      model: "cliproxyapi/kimi-k3",
-      fallback_models: ["cliproxyapi/gpt-5.6-sol", "cliproxyapi/glm-5.2"],
+      models: ["cliproxyapi/kimi-k3", "cliproxyapi/gpt-5.6-sol", "cliproxyapi/glm-5.2"],
     });
   });
 
@@ -172,8 +171,7 @@ describe("oh-my-opencode config", () => {
 
     // deep-low: gpt-6.1-sol → gpt-6.1-sol-fast → gpt-5.6-sol → gpt-5.6-sol-fast
     expect(categories["deep-low"]).toEqual({
-      model: "cliproxyapi/gpt-6.1-sol-fast",
-      fallback_models: ["cliproxyapi/gpt-5.6-sol"],
+      models: ["cliproxyapi/gpt-6.1-sol-fast", "cliproxyapi/gpt-5.6-sol"],
     });
     // deep-high: gpt-6-astra
     expect(categories["deep-high"]).toEqual({ model: "cliproxyapi/gpt-6-astra" });
@@ -257,12 +255,11 @@ describe("oh-my-opencode config", () => {
 
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
-    const agents = typedConfig.agents as Record<string, { model: string; fallback_models?: string[] }>;
-    const sisyphus = agents.sisyphus;
+    const agents = typedConfig.agents as Record<string, unknown>;
 
-    expect(sisyphus).toBeDefined();
-    expect(sisyphus!.model).toBe("cliproxyapi/kimi-k3");
-    expect(sisyphus!.fallback_models).toEqual(["cliproxyapi/gpt-5.6-sol", "cliproxyapi/glm-5.2"]);
+    expect(agents.sisyphus).toEqual({
+      models: ["cliproxyapi/kimi-k3", "cliproxyapi/gpt-5.6-sol", "cliproxyapi/glm-5.2"],
+    });
   });
 
   it("computes category override fallback from override position", () => {
@@ -272,12 +269,11 @@ describe("oh-my-opencode config", () => {
 
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
-    const categories = typedConfig.categories as Record<string, { model: string; fallback_models?: string[] }>;
-    const visualEngineering = categories["visual-engineering"];
+    const categories = typedConfig.categories as Record<string, unknown>;
 
-    expect(visualEngineering).toBeDefined();
-    expect(visualEngineering!.model).toBe("cliproxyapi/claude-opus-5-5");
-    expect(visualEngineering!.fallback_models).toEqual(["cliproxyapi/kimi-k3"]);
+    expect(categories["visual-engineering"]).toEqual({
+      models: ["cliproxyapi/claude-opus-5-5", "cliproxyapi/kimi-k3"],
+    });
   });
 
   it("uses no fallbacks when override model is not in chain", () => {
@@ -287,12 +283,9 @@ describe("oh-my-opencode config", () => {
 
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
-    const agents = typedConfig.agents as Record<string, { model: string; fallback_models?: string[] }>;
-    const sisyphus = agents.sisyphus;
+    const agents = typedConfig.agents as Record<string, unknown>;
 
-    expect(sisyphus).toBeDefined();
-    expect(sisyphus!.model).toBe("cliproxyapi/big-pickle");
-    expect(sisyphus!.fallback_models).toBeUndefined();
+    expect(agents.sisyphus).toEqual({ model: "cliproxyapi/big-pickle" });
   });
 
   it("drops ultrawork.model when ultrawork model is not available", () => {
@@ -300,21 +293,21 @@ describe("oh-my-opencode config", () => {
       agents: {
         sisyphus: {
           model: "claude-opus-4.6",
-          ultrawork: { model: "gpt-5.4", variant: "max" },
+          ultrawork: { model: "gpt-5.4", reasoning: "max" },
         },
       },
     });
 
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
-    const agents = typedConfig.agents as Record<string, { ultrawork?: { model?: string; variant?: string } }>;
+    const agents = typedConfig.agents as Record<string, { ultrawork?: { model?: string; reasoning?: string } }>;
     const sisyphus = agents.sisyphus;
     const ultrawork = sisyphus?.ultrawork;
 
     expect(sisyphus).toBeDefined();
     expect(ultrawork).toBeDefined();
     expect(ultrawork!.model).toBeUndefined();
-    expect(ultrawork!.variant).toBe("max");
+    expect(ultrawork!.reasoning).toBe("max");
   });
 
   it("prefixes ultrawork.model when ultrawork model is available", () => {
@@ -322,21 +315,127 @@ describe("oh-my-opencode config", () => {
       agents: {
         sisyphus: {
           model: "claude-opus-4.6",
-          ultrawork: { model: "gpt-5.4", variant: "max" },
+          ultrawork: { model: "gpt-5.4", reasoning: "max" },
         },
       },
     });
 
     expect(config).not.toBeNull();
     const typedConfig = config as Record<string, unknown>;
-    const agents = typedConfig.agents as Record<string, { ultrawork?: { model?: string; variant?: string } }>;
+    const agents = typedConfig.agents as Record<string, { ultrawork?: { model?: string; reasoning?: string } }>;
     const sisyphus = agents.sisyphus;
     const ultrawork = sisyphus?.ultrawork;
 
     expect(sisyphus).toBeDefined();
     expect(ultrawork).toBeDefined();
     expect(ultrawork!.model).toBe("cliproxyapi/gpt-5.4");
-    expect(ultrawork!.variant).toBe("max");
+    expect(ultrawork!.reasoning).toBe("max");
+  });
+
+  describe("deprecated fields translated to reasoning/models/providerOptions", () => {
+    const AVAILABLE = ["kimi-k3", "gpt-5.6-sol", "glm-5.2", "claude-opus-5-5", "gpt-6-astra"];
+
+    it("reads a stored variant as reasoning, with an explicit reasoning winning", () => {
+      const validated = validateFullConfig({
+        agents: { sisyphus: { variant: "max" }, oracle: { variant: "max", reasoning: "low" } },
+        categories: { quick: { variant: "high" } },
+      });
+
+      expect(validated.agents?.sisyphus).toEqual({ reasoning: "max" });
+      expect(validated.agents?.oracle).toEqual({ reasoning: "low" });
+      expect(validated.categories?.quick).toEqual({ reasoning: "high" });
+    });
+
+    it("keeps reasoning and providerOptions through the save schema", () => {
+      const saved = {
+        agents: {
+          oracle: { reasoning: "high", providerOptions: { thinking: { type: "enabled" } }, ultrawork: { reasoning: "max" } },
+        },
+        categories: { quick: { reasoning: "low" } },
+      };
+
+      expect(validateFullConfig(AgentConfigOverridesSchema.parse(saved))).toEqual(saved);
+    });
+
+    it("reads a disabled stored thinking as reasoning off", () => {
+      const validated = validateFullConfig({ agents: { oracle: { thinking: { type: "disabled" } } } });
+
+      expect(validated.agents?.oracle).toEqual({ reasoning: "off" });
+    });
+
+    it("puts reasoning and temperature on the primary rung of the models chain", () => {
+      const config = buildOhMyOpenCodeConfig(AVAILABLE, validateFullConfig({
+        agents: { sisyphus: { model: "kimi-k3", variant: "max", temperature: 0.7 } },
+      }));
+      const agents = (config as Record<string, unknown>).agents as Record<string, unknown>;
+
+      expect(agents.sisyphus).toEqual({
+        models: [
+          { model: "cliproxyapi/kimi-k3", reasoning: "max", temperature: 0.7 },
+          "cliproxyapi/gpt-5.6-sol",
+          "cliproxyapi/glm-5.2",
+        ],
+      });
+    });
+
+    it("emits reasoning next to model when there are no fallbacks", () => {
+      const config = buildOhMyOpenCodeConfig(["big-pickle"], validateFullConfig({
+        agents: { sisyphus: { model: "big-pickle", variant: "high" } },
+      }));
+      const agents = (config as Record<string, unknown>).agents as Record<string, unknown>;
+
+      expect(agents.sisyphus).toEqual({ model: "cliproxyapi/big-pickle", reasoning: "high" });
+    });
+
+    it("turns stored fallback_models into the tail of the models chain", () => {
+      const config = buildOhMyOpenCodeConfig(AVAILABLE, validateFullConfig({
+        agents: { oracle: { model: "claude-opus-5-5", fallback_models: ["glm-5.2", "not-served"] } },
+      }));
+      const agents = (config as Record<string, unknown>).agents as Record<string, unknown>;
+
+      expect(agents.oracle).toEqual({ models: ["cliproxyapi/claude-opus-5-5", "cliproxyapi/glm-5.2"] });
+    });
+
+    it("emits a stored enabled thinking as providerOptions.thinking", () => {
+      const config = buildOhMyOpenCodeConfig(["big-pickle"], validateFullConfig({
+        agents: { oracle: { model: "big-pickle", thinking: { type: "enabled", budgetTokens: 32000 } } },
+      }));
+      const agents = (config as Record<string, unknown>).agents as Record<string, unknown>;
+
+      expect(agents.oracle).toEqual({
+        model: "cliproxyapi/big-pickle",
+        providerOptions: { thinking: { type: "enabled", budgetTokens: 32000 } },
+      });
+    });
+
+    it("keeps a category temperature on the entry and its reasoning on the primary rung", () => {
+      const config = buildOhMyOpenCodeConfig(AVAILABLE, validateFullConfig({
+        categories: { "visual-engineering": { model: "claude-opus-5-5", variant: "high", temperature: 0.4 } },
+      }));
+      const categories = (config as Record<string, unknown>).categories as Record<string, unknown>;
+
+      expect(categories["visual-engineering"]).toEqual({
+        models: [{ model: "cliproxyapi/claude-opus-5-5", reasoning: "high" }, "cliproxyapi/kimi-k3"],
+        temperature: 0.4,
+      });
+    });
+
+    it("never emits variant, fallback_models or thinking", () => {
+      const config = buildOhMyOpenCodeConfig(AVAILABLE, validateFullConfig({
+        agents: {
+          sisyphus: {
+            model: "kimi-k3",
+            variant: "max",
+            fallback_models: ["glm-5.2"],
+            thinking: { type: "enabled", budgetTokens: 1000 },
+            ultrawork: { model: "gpt-6-astra", variant: "xhigh", temperature: 0.2 },
+          },
+        },
+        categories: { quick: { model: "glm-5.2", variant: "low", fallback_models: ["kimi-k3"] } },
+      }));
+
+      expect(deprecatedOmoKeys(config)).toEqual([]);
+    });
   });
 
   it("applyPreset does not create empty concurrency objects", () => {

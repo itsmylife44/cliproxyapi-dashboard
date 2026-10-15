@@ -35,8 +35,10 @@ export const ContainerActionSchema = z.object({
 // Legacy "prompt" is still accepted and stored as "ask" by validateFullConfig.
 const PermissionValueSchema = z.enum(["ask", "allow", "deny", "prompt"]);
 
+// Legacy `variant`/`thinking` are still accepted; validateFullConfig translates them to `reasoning`/`providerOptions`.
 const AgentConfigEntrySchema = z.object({
   model: z.string().optional(),
+  reasoning: z.string().optional(),
   variant: z.string().optional(),
   temperature: z.number().min(0).max(2).optional(),
   prompt_append: z.string().optional(),
@@ -51,19 +53,21 @@ const AgentConfigEntrySchema = z.object({
       }),
     ]).optional(),
   }).optional(),
+  providerOptions: z.record(z.string(), z.unknown()).optional(),
   thinking: z.object({
     type: z.enum(["enabled", "disabled"]),
     budgetTokens: z.number().min(0).optional(),
   }).optional(),
   ultrawork: z.object({
     model: z.string().optional(),
+    reasoning: z.string().optional(),
     variant: z.string().optional(),
-    temperature: z.number().min(0).max(2).optional(),
   }).optional(),
 });
 
 const CategoryConfigEntrySchema = z.object({
   model: z.string().optional(),
+  reasoning: z.string().optional(),
   variant: z.string().optional(),
   temperature: z.number().min(0).max(2).optional(),
   description: z.string().optional(),

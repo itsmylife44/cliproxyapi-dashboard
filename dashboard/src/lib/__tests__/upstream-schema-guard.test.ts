@@ -9,7 +9,7 @@ import {
 import { getBundledOhMyOpenCodePresets } from "../config-generators/oh-my-opencode-presets";
 import { validateFullConfig } from "../config-generators/oh-my-opencode-types";
 import { buildSlimConfig } from "./helpers/slim-schema-guard";
-import { upstreamSchemaErrors } from "./helpers/upstream-schema";
+import { deprecatedOmoKeys, upstreamSchemaErrors } from "./helpers/upstream-schema";
 
 const ALL_CHAIN_MODELS = [
   ...new Set([...Object.values(UPSTREAM_AGENT_CHAINS), ...Object.values(UPSTREAM_CATEGORY_CHAINS)].flat()),
@@ -60,6 +60,37 @@ describe("upstream schema guard: OMO", () => {
 
     expect(upstreamSchemaErrors("omo", config)).toEqual([]);
   });
+
+  it("a legacy stored config with deprecated model fields validates and emits none of them", () => {
+    const stored = {
+      agents: {
+        sisyphus: {
+          model: "kimi-k3",
+          variant: "max",
+          temperature: 0.7,
+          fallback_models: ["glm-5.2"],
+          thinking: { type: "enabled", budgetTokens: 32000 },
+          ultrawork: { model: "claude-opus-5-5", variant: "max", temperature: 0.5 },
+        },
+        oracle: { thinking: { type: "disabled" } },
+      },
+      categories: { deep: { model: "gpt-5.6-sol", variant: "high", temperature: 0.3, fallback_models: ["kimi-k3"] } },
+    };
+
+    const config = buildOhMyOpenCodeConfig(ALL_CHAIN_MODELS, validateFullConfig(stored));
+
+    expect(upstreamSchemaErrors("omo", config)).toEqual([]);
+    expect(deprecatedOmoKeys(config)).toEqual([]);
+  });
+
+  it.each(BUILT_IN_PRESETS.map((preset) => [preset.name, preset] as const))(
+    "built-in preset %s emits no deprecated model fields",
+    (_name, preset) => {
+      const config = buildOhMyOpenCodeConfig(ALL_CHAIN_MODELS, applyPreset(preset));
+
+      expect(deprecatedOmoKeys(config)).toEqual([]);
+    },
+  );
 });
 
 describe("upstream schema guard: slim", () => {

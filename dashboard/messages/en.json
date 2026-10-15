@@ -1722,7 +1722,7 @@
     "councilMasterTimeoutLabel": "Master timeout (ms)",
     "councilCouncillorsTimeoutLabel": "Councillors timeout (ms)",
     "councilRetriesLabel": "Retries",
-    "configureTooltip": "Configure variant, temperature, and more",
+    "configureTooltip": "Configure model settings",
     "categoryRoles": {
       "visual-engineering": "UI work",
       "ultrabrain": "Hard logic",

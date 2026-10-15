@@ -93,7 +93,8 @@ export function TierAssignments({
                         modelSourceMap={modelSourceMap}
                         onSelect={(value) => onAgentModelChange(name, value)}
                         extraFields={{
-                          variant: config.variant,
+                          reasoning: config.reasoning,
+                          reasoningKey: "reasoning",
                           temperature: config.temperature,
                           thirdField: config.prompt_append,
                           thirdFieldKey: "prompt_append",
@@ -164,7 +165,8 @@ export function TierAssignments({
                         modelSourceMap={modelSourceMap}
                         onSelect={(value) => onCategoryModelChange(name, value)}
                         extraFields={{
-                          variant: config.variant,
+                          reasoning: config.reasoning,
+                          reasoningKey: "reasoning",
                           temperature: config.temperature,
                           thirdField: config.description,
                           thirdFieldKey: "description",

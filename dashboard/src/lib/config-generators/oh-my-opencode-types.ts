@@ -51,31 +51,29 @@ export interface AgentPermissionConfig {
   bash?: { git?: PermissionValue; test?: PermissionValue } | PermissionValue;
 }
 
-export interface AgentThinkingConfig {
-  type: "enabled" | "disabled";
-  budgetTokens?: number;
-}
-
 export interface AgentUltraworkConfig {
   model?: string;
-  variant?: string;
-  temperature?: number;
+  reasoning?: string;
 }
 
+/**
+ * Stored overrides. `fallback_models` is the stored fallback list only; the generator emits it as the
+ * tail of upstream's `models` chain. Legacy `variant`/`thinking` are translated by `validateFullConfig`.
+ */
 export interface AgentConfigEntry {
   model?: string;
-  variant?: string;
+  reasoning?: string;
   temperature?: number;
   prompt_append?: string;
   fallback_models?: string[];
   permission?: AgentPermissionConfig;
-  thinking?: AgentThinkingConfig;
+  providerOptions?: Record<string, unknown>;
   ultrawork?: AgentUltraworkConfig;
 }
 
 export interface CategoryConfigEntry {
   model?: string;
-  variant?: string;
+  reasoning?: string;
   temperature?: number;
   description?: string;
   fallback_models?: string[];
@@ -244,7 +242,7 @@ function readPermissionValue(value: unknown): PermissionValue | undefined {
 }
 
 /** Reads a stored agent permission block, dropping invalid values. */
-export function readPermissionConfig(value: unknown): AgentPermissionConfig | undefined {
+function readPermissionConfig(value: unknown): AgentPermissionConfig | undefined {
   if (!isRecord(value)) {
     return undefined;
   }
@@ -276,6 +274,25 @@ export function readPermissionConfig(value: unknown): AgentPermissionConfig | un
   return Object.keys(permission).length > 0 ? permission : undefined;
 }
 
+/** Canonical `reasoning`, else the deprecated `variant`, else `off` for a disabled legacy `thinking` (as upstream migrates). */
+function readReasoning(entry: Record<string, unknown>): string | undefined {
+  if (typeof entry.reasoning === "string") return entry.reasoning;
+  if (typeof entry.variant === "string") return entry.variant;
+  return isRecord(entry.thinking) && entry.thinking.type === "disabled" ? "off" : undefined;
+}
+
+/** `providerOptions`, with an enabled legacy `thinking` block moved under it (upstream's replacement). */
+function readProviderOptions(entry: Record<string, unknown>): Record<string, unknown> | undefined {
+  const options: Record<string, unknown> = isRecord(entry.providerOptions) ? { ...entry.providerOptions } : {};
+  const thinking = entry.thinking;
+  if (isRecord(thinking) && thinking.type === "enabled" && options.thinking === undefined) {
+    options.thinking = typeof thinking.budgetTokens === "number" && thinking.budgetTokens >= 0
+      ? { type: "enabled", budgetTokens: thinking.budgetTokens }
+      : { type: "enabled" };
+  }
+  return Object.keys(options).length > 0 ? options : undefined;
+}
+
 // ============================================================================
 // VALIDATION FUNCTION
 // ============================================================================
@@ -300,7 +317,8 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
         const entryObj = value as Record<string, unknown>;
         const entry: AgentConfigEntry = {};
         if (typeof entryObj.model === "string") entry.model = entryObj.model;
-        if (typeof entryObj.variant === "string") entry.variant = entryObj.variant;
+        const reasoning = readReasoning(entryObj);
+        if (reasoning) entry.reasoning = reasoning;
         if (typeof entryObj.temperature === "number" && entryObj.temperature >= 0 && entryObj.temperature <= 2) {
           entry.temperature = entryObj.temperature;
         }
@@ -311,28 +329,14 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
         }
         const permission = readPermissionConfig(entryObj.permission);
         if (permission) entry.permission = permission;
-        if (entryObj.thinking && typeof entryObj.thinking === "object" && !Array.isArray(entryObj.thinking)) {
-          const thinkingObj = entryObj.thinking as Record<string, unknown>;
-          if (thinkingObj.type === "enabled" || thinkingObj.type === "disabled") {
-            const thinking: AgentThinkingConfig = { type: thinkingObj.type };
-            if (typeof thinkingObj.budgetTokens === "number" && thinkingObj.budgetTokens >= 0) {
-              thinking.budgetTokens = thinkingObj.budgetTokens;
-            }
-            entry.thinking = thinking;
-          }
-        }
-        if (entryObj.ultrawork && typeof entryObj.ultrawork === "object" && !Array.isArray(entryObj.ultrawork)) {
-          const ultraworkObj = entryObj.ultrawork as Record<string, unknown>;
+        const providerOptions = readProviderOptions(entryObj);
+        if (providerOptions) entry.providerOptions = providerOptions;
+        // ultrawork.temperature is not in the OMO 5.x schema, so a stored one is dropped.
+        if (isRecord(entryObj.ultrawork)) {
           const ultrawork: AgentUltraworkConfig = {};
-          if (typeof ultraworkObj.model === "string") ultrawork.model = ultraworkObj.model;
-          if (typeof ultraworkObj.variant === "string") ultrawork.variant = ultraworkObj.variant;
-          if (
-            typeof ultraworkObj.temperature === "number" &&
-            ultraworkObj.temperature >= 0 &&
-            ultraworkObj.temperature <= 2
-          ) {
-            ultrawork.temperature = ultraworkObj.temperature;
-          }
+          if (typeof entryObj.ultrawork.model === "string") ultrawork.model = entryObj.ultrawork.model;
+          const ultraworkReasoning = readReasoning(entryObj.ultrawork);
+          if (ultraworkReasoning) ultrawork.reasoning = ultraworkReasoning;
           if (Object.keys(ultrawork).length > 0) entry.ultrawork = ultrawork;
         }
         validatedAgents[key] = entry;
@@ -366,7 +370,8 @@ export function validateFullConfig(raw: unknown): OhMyOpenCodeFullConfig {
         const entryObj = value as Record<string, unknown>;
         const entry: CategoryConfigEntry = {};
         if (typeof entryObj.model === "string") entry.model = entryObj.model;
-        if (typeof entryObj.variant === "string") entry.variant = entryObj.variant;
+        const reasoning = readReasoning(entryObj);
+        if (reasoning) entry.reasoning = reasoning;
         if (typeof entryObj.temperature === "number" && entryObj.temperature >= 0 && entryObj.temperature <= 2) {
           entry.temperature = entryObj.temperature;
         }

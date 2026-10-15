@@ -219,16 +219,61 @@ export const CATEGORY_ROLES: Record<string, { tier: TierLevel; label: string }> 
   writing: { tier: 3, label: "Documentation" },
 };
 
+type ModelRef = string | { model: string; reasoning?: string; temperature?: number };
+
 interface ModelAssignment {
-  model: string;
-  variant?: string;
+  model?: string;
+  models?: ModelRef[];
+  reasoning?: string;
   temperature?: number;
   prompt_append?: string;
   description?: string;
-  fallback_models?: string[];
   permission?: { edit?: string; bash?: unknown };
-  thinking?: { type: string; budgetTokens?: number };
-  ultrawork?: { model?: string; variant?: string; temperature?: number };
+  providerOptions?: Record<string, unknown>;
+  ultrawork?: { model?: string; reasoning?: string };
+}
+
+const withProvider = (model: string) => `cliproxyapi/${model}`;
+
+/** Primary model and ordered fallbacks (unprefixed) for one chain and its stored override. */
+function resolveAssignment(
+  chain: string[],
+  availableModels: string[],
+  override: { model?: string; fallback_models?: string[] } | undefined,
+): ChainResolution {
+  let resolved: ChainResolution;
+  if (override?.model && availableModels.includes(override.model)) {
+    const overrideIndex = chain.indexOf(override.model);
+    resolved = {
+      model: override.model,
+      fallbackModels: overrideIndex >= 0
+        ? chain.slice(overrideIndex + 1).filter((m) => availableModels.includes(m))
+        : [],
+    };
+  } else {
+    const resolution = resolveChain(chain, availableModels);
+    // No chain model available — still emit the first chain model as the intended model
+    resolved = resolution ?? { model: chain[0]!, fallbackModels: [] };
+  }
+  if (override?.fallback_models?.length) {
+    resolved = { ...resolved, fallbackModels: override.fallback_models.filter((m) => availableModels.includes(m)) };
+  }
+  return resolved;
+}
+
+/**
+ * OMO 5.x model fields: a single `model`, or `models: [primary, ...fallbacks]` (upstream's replacement for
+ * `fallback_models`). With `models`, upstream takes per-model settings from the primary rung and drops the
+ * entry-level ones, so `primarySettings` move onto that rung.
+ */
+function modelFields(
+  { model, fallbackModels }: ChainResolution,
+  primarySettings: { reasoning?: string; temperature?: number },
+): Pick<ModelAssignment, "model" | "models" | "reasoning" | "temperature"> {
+  const settings = Object.fromEntries(Object.entries(primarySettings).filter(([, v]) => v !== undefined));
+  if (fallbackModels.length === 0) return { model: withProvider(model), ...settings };
+  const primary = Object.keys(settings).length > 0 ? { model: withProvider(model), ...settings } : withProvider(model);
+  return { models: [primary, ...fallbackModels.map(withProvider)] };
 }
 
 export function buildOhMyOpenCodeConfig(
@@ -239,53 +284,19 @@ export function buildOhMyOpenCodeConfig(
 
   for (const [agent, chain] of Object.entries(UPSTREAM_AGENT_CHAINS)) {
     const agentOverride = overrides?.agents?.[agent];
-    const overrideModel = agentOverride?.model;
-    let entry: ModelAssignment;
+    const entry: ModelAssignment = modelFields(resolveAssignment(chain, availableModels, agentOverride), {
+      reasoning: agentOverride?.reasoning,
+      temperature: agentOverride?.temperature,
+    });
 
-    if (overrideModel && availableModels.includes(overrideModel)) {
-      const overrideIndex = chain.indexOf(overrideModel);
-      const fallbackModels = overrideIndex >= 0
-        ? chain.slice(overrideIndex + 1).filter((m) => availableModels.includes(m))
-        : [];
-      entry = {
-        model: `cliproxyapi/${overrideModel}`,
-        fallback_models: fallbackModels.length > 0
-          ? fallbackModels.map((m) => `cliproxyapi/${m}`)
-          : undefined,
-      };
-      if (!entry.fallback_models) delete entry.fallback_models;
-    } else {
-      const resolution = resolveChain(chain, availableModels);
-      if (!resolution) {
-        // No chain model available — still include agent with the first chain model as intended model
-        entry = { model: `cliproxyapi/${chain[0]}` };
-      } else {
-        entry = {
-          model: `cliproxyapi/${resolution.model}`,
-          fallback_models: resolution.fallbackModels.length > 0
-            ? resolution.fallbackModels.map((m) => `cliproxyapi/${m}`)
-            : undefined,
-        };
-        if (!entry.fallback_models) delete entry.fallback_models;
-      }
-    }
-
-    if (agentOverride?.variant) entry.variant = agentOverride.variant;
-    if (agentOverride?.temperature !== undefined) entry.temperature = agentOverride.temperature;
     if (agentOverride?.prompt_append) entry.prompt_append = agentOverride.prompt_append;
-    if (agentOverride?.fallback_models?.length) {
-      entry.fallback_models = agentOverride.fallback_models
-        .filter((m) => availableModels.includes(m))
-        .map((m) => `cliproxyapi/${m}`);
-      if (entry.fallback_models.length === 0) delete entry.fallback_models;
-    }
     if (agentOverride?.permission) entry.permission = agentOverride.permission;
-    if (agentOverride?.thinking) entry.thinking = agentOverride.thinking;
+    if (agentOverride?.providerOptions) entry.providerOptions = agentOverride.providerOptions;
     if (agentOverride?.ultrawork) {
       const ultrawork = { ...agentOverride.ultrawork };
       if (ultrawork.model) {
         if (availableModels.includes(ultrawork.model)) {
-          ultrawork.model = `cliproxyapi/${ultrawork.model}`;
+          ultrawork.model = withProvider(ultrawork.model);
         } else {
           delete ultrawork.model;
         }
@@ -300,46 +311,13 @@ export function buildOhMyOpenCodeConfig(
 
   for (const [category, chain] of Object.entries(UPSTREAM_CATEGORY_CHAINS)) {
     const categoryOverride = categoryOverrides?.[category];
-    const overrideModel = categoryOverride?.model;
-    let entry: ModelAssignment;
+    // Upstream applies a category's temperature from the entry, so only reasoning rides on the primary rung.
+    const entry: ModelAssignment = modelFields(resolveAssignment(chain, availableModels, categoryOverride), {
+      reasoning: categoryOverride?.reasoning,
+    });
 
-    if (overrideModel && availableModels.includes(overrideModel)) {
-      const overrideIndex = chain.indexOf(overrideModel);
-      const fallbackModels = overrideIndex >= 0
-        ? chain.slice(overrideIndex + 1).filter((m) => availableModels.includes(m))
-        : [];
-      entry = {
-        model: `cliproxyapi/${overrideModel}`,
-        fallback_models: fallbackModels.length > 0
-          ? fallbackModels.map((m) => `cliproxyapi/${m}`)
-          : undefined,
-      };
-      if (!entry.fallback_models) delete entry.fallback_models;
-    } else {
-      const resolution = resolveChain(chain, availableModels);
-      if (!resolution) {
-        // No chain model available — still include category with the first chain model as intended model
-        entry = { model: `cliproxyapi/${chain[0]}` };
-      } else {
-        entry = {
-          model: `cliproxyapi/${resolution.model}`,
-          fallback_models: resolution.fallbackModels.length > 0
-            ? resolution.fallbackModels.map((m) => `cliproxyapi/${m}`)
-            : undefined,
-        };
-        if (!entry.fallback_models) delete entry.fallback_models;
-      }
-    }
-
-    if (categoryOverride?.variant) entry.variant = categoryOverride.variant;
     if (categoryOverride?.temperature !== undefined) entry.temperature = categoryOverride.temperature;
     if (categoryOverride?.description) entry.description = categoryOverride.description;
-    if (categoryOverride?.fallback_models?.length) {
-      entry.fallback_models = categoryOverride.fallback_models
-        .filter((m) => availableModels.includes(m))
-        .map((m) => `cliproxyapi/${m}`);
-      if (entry.fallback_models.length === 0) delete entry.fallback_models;
-    }
     categories[category] = entry;
   }
 

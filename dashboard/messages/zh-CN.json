@@ -1722,7 +1722,7 @@
     "councilMasterTimeoutLabel": "主持模型超时（毫秒）",
     "councilCouncillorsTimeoutLabel": "议事成员超时（毫秒）",
     "councilRetriesLabel": "重试次数",
-    "configureTooltip": "配置变体、温度等参数",
+    "configureTooltip": "配置模型参数",
     "categoryRoles": {
       "visual-engineering": "UI 工作",
       "ultrabrain": "复杂逻辑",

@@ -16,7 +16,6 @@ import {
   type ListOAuthResult,
   type ImportOAuthResult,
   type ToggleOAuthResult,
-  type OAuthAccountQuotaGroupState,
   type OAuthAccountWithOwnership,
 } from "./management-api";
 
@@ -296,48 +295,6 @@ export async function listOAuthWithOwnership(
       unavailable?: boolean;
     }>;
 
-    const quotaGroupsByAuthId = new Map<string, OAuthAccountQuotaGroupState[]>();
-    try {
-      const quotaGroupsEndpoint = `${MANAGEMENT_BASE_URL}/auth-files/quota-groups`;
-      const quotaGroupsRes = await fetchWithTimeout(quotaGroupsEndpoint, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-      });
-      if (quotaGroupsRes.ok) {
-        const quotaGroupsData = await quotaGroupsRes.json();
-        if (isRecord(quotaGroupsData) && Array.isArray(quotaGroupsData.items)) {
-          for (const raw of quotaGroupsData.items) {
-            if (!isRecord(raw) || typeof raw.auth_id !== "string" || typeof raw.group_id !== "string") {
-              continue;
-            }
-            const authId = raw.auth_id;
-            const items = quotaGroupsByAuthId.get(authId) ?? [];
-            items.push({
-              authId,
-              groupId: String(raw.group_id),
-              label: typeof raw.label === "string" ? raw.label : String(raw.group_id),
-              effectiveStatus: typeof raw.effective_status === "string" ? raw.effective_status : "available",
-              manualSuspended: raw.manual_suspended === true,
-              manualReason: typeof raw.manual_reason === "string" ? raw.manual_reason : null,
-              autoSuspendedUntil:
-                typeof raw.auto_suspended_until === "string" ? raw.auto_suspended_until : null,
-              autoReason: typeof raw.auto_reason === "string" ? raw.auto_reason : null,
-              sourceModel: typeof raw.source_model === "string" ? raw.source_model : null,
-              sourceProvider: typeof raw.source_provider === "string" ? raw.source_provider : null,
-              resetTimeSource: typeof raw.reset_time_source === "string" ? raw.reset_time_source : null,
-              updatedAt: typeof raw.updated_at === "string" ? raw.updated_at : null,
-              updatedBy: typeof raw.updated_by === "string" ? raw.updated_by : null,
-            });
-            quotaGroupsByAuthId.set(authId, items);
-          }
-        }
-      } else {
-        await quotaGroupsRes.body?.cancel();
-      }
-    } catch (error) {
-      logger.warn({ err: error }, "listOAuthWithOwnership: failed to fetch quota groups");
-    }
-
     // Build ownership lookup rows using canonical provider identifiers. Every
     // write path (claim route, cascade, migration) canonicalizes before insert,
     // so an auth file whose raw provider does not canonicalize cannot have an
@@ -382,7 +339,6 @@ export async function listOAuthWithOwnership(
          status: file.status || "active",
          statusMessage: file.status_message || null,
          unavailable: file.unavailable ?? false,
-         quotaGroups: canSeeDetails ? quotaGroupsByAuthId.get(file.id) ?? [] : [],
        };
      });
 
@@ -392,84 +348,6 @@ export async function listOAuthWithOwnership(
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Unknown error during OAuth listing",
-    };
-  }
-}
-
-export async function setOAuthQuotaGroupManualByAuthId(
-  authId: string,
-  groupId: string,
-  manualSuspended: boolean,
-  reason?: string
-): Promise<ToggleOAuthResult> {
-  if (!MANAGEMENT_API_KEY) {
-    return { ok: false, error: "Management API key not configured" };
-  }
-
-  try {
-    const endpoint = `${MANAGEMENT_BASE_URL}/auth-files/quota-groups/manual`;
-    const response = await fetchWithTimeout(endpoint, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        auth_id: authId,
-        group_id: groupId,
-        manual_suspended: manualSuspended,
-        reason: reason ?? "",
-      }),
-    });
-    if (!response.ok) {
-      await response.body?.cancel();
-      return { ok: false, error: `Failed to update quota group: HTTP ${response.status}` };
-    }
-    invalidateUsageCaches();
-    invalidateProxyModelsCache();
-    return { ok: true };
-  } catch (error) {
-    logger.error({ err: error, authId, groupId, manualSuspended }, "setOAuthQuotaGroupManualByAuthId error");
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Unknown error updating quota group",
-    };
-  }
-}
-
-export async function clearOAuthQuotaGroupCooldownByAuthId(
-  authId: string,
-  groupId: string
-): Promise<ToggleOAuthResult> {
-  if (!MANAGEMENT_API_KEY) {
-    return { ok: false, error: "Management API key not configured" };
-  }
-
-  try {
-    const endpoint = `${MANAGEMENT_BASE_URL}/auth-files/quota-groups/auto/clear`;
-    const response = await fetchWithTimeout(endpoint, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        auth_id: authId,
-        group_id: groupId,
-      }),
-    });
-    if (!response.ok) {
-      await response.body?.cancel();
-      return { ok: false, error: `Failed to clear cooldown: HTTP ${response.status}` };
-    }
-    invalidateUsageCaches();
-    invalidateProxyModelsCache();
-    return { ok: true };
-  } catch (error) {
-    logger.error({ err: error, authId, groupId }, "clearOAuthQuotaGroupCooldownByAuthId error");
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Unknown error clearing quota cooldown",
     };
   }
 }
@@ -690,12 +568,14 @@ export async function toggleOAuthAccountByIdOrName(
       }
     }
 
-    const endpoint = `${MANAGEMENT_BASE_URL}/auth-files?name=${encodeURIComponent(resolved.accountName)}`;
+    // A plain POST /auth-files is an upload and would overwrite the token file
+    // with this body; the status route only flips the disabled flag.
+    const endpoint = `${MANAGEMENT_BASE_URL}/auth-files/status`;
 
     let postRes: Response;
     try {
       postRes = await fetchWithTimeout(endpoint, {
-        method: "POST",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${MANAGEMENT_API_KEY}`,
@@ -712,7 +592,7 @@ export async function toggleOAuthAccountByIdOrName(
           endpoint,
           accountName: resolved.accountName,
           timeoutMs: FETCH_TIMEOUT_MS,
-        }, "Fetch timeout - toggleOAuthAccountByIdOrName POST");
+        }, "Fetch timeout - toggleOAuthAccountByIdOrName PATCH");
         return { ok: false, error: "Request timeout toggling OAuth account" };
       }
       throw fetchError;

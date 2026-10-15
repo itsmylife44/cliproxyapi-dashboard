@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ServiceStatus } from "@/components/monitoring/service-status";
+import type { UsageSummary } from "@/components/monitoring/usage-stats";
 const UsageStats = dynamic(
   () => import("@/components/monitoring/usage-stats").then(mod => ({ default: mod.UsageStats })),
   { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> }
@@ -19,24 +20,6 @@ interface StatusResponse {
   containerName?: string;
   uptime?: number;
   error?: string;
-}
-
-interface UsageResponse {
-  usage: {
-    total_requests: number;
-    success_count: number;
-    failure_count: number;
-    total_tokens: number;
-    requests_by_day?: Record<string, number>;
-    requests_by_hour?: Record<string, number>;
-    apis?: Record<string, {
-      total_requests: number;
-      models?: Record<string, {
-        total_requests: number;
-        total_tokens: number;
-      }>;
-    }>;
-  };
 }
 
 interface LogResponse {
@@ -99,7 +82,7 @@ export default function MonitoringPage() {
   const t = useTranslations("monitoring");
   const { provide: provideProxyStatus, clear: clearProxyStatus } = useProxyStatusProvider();
   const [status, setStatus] = useState<StatusResponse | null>(null);
-  const [usage, setUsage] = useState<UsageResponse | null>(null);
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [restarting, setRestarting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -145,16 +128,18 @@ export default function MonitoringPage() {
     const fetchUsage = async () => {
       if (!shouldPollDashboard()) return;
       try {
-        const res = await fetch(API_ENDPOINTS.MANAGEMENT.USAGE);
+        // Today's usage from our DB; it changes when the collector runs.
+        const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD, local time
+        const res = await fetch(`${API_ENDPOINTS.USAGE.HISTORY}?from=${today}&to=${today}`);
         if (res.ok) {
-          const data = await res.json();
-          setUsage(data);
+          const json: { data: UsageSummary } = await res.json();
+          setUsage(json.data);
         }
       } catch {}
     };
 
     fetchUsage();
-    const usageInterval = setInterval(fetchUsage, 5000);
+    const usageInterval = setInterval(fetchUsage, 60_000);
 
     return () => clearInterval(usageInterval);
   }, []);

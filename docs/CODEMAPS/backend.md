@@ -58,7 +58,6 @@ GET|POST|PATCH|DELETE /api/config-sharing/subscribe → Prisma ConfigSubscriptio
 ## Quota & Usage
 GET            /api/quota                → management proxy + aggregation (1156 lines)
 POST           /api/quota/check-alerts   → lib/quota-alerts → lib/telegram
-GET            /api/usage                → Prisma UsageRecord aggregate
 POST           /api/usage/collect        → fetch from proxy → Prisma UsageRecord
 GET            /api/usage/history        → Prisma UsageRecord time series
 

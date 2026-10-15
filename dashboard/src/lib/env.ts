@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEFAULT_MANAGEMENT_URL } from "./management-url";
 
 const BUILD_TIME_DATABASE_URL = "postgresql://build:build@localhost:5432/build";
 const BUILD_TIME_JWT_SECRET = "build-time-placeholder-at-least-32-chars";
@@ -36,7 +37,7 @@ const envSchema = z.object({
   CLIPROXYAPI_MANAGEMENT_URL: z
     .string()
     .url("CLIPROXYAPI_MANAGEMENT_URL must be a valid URL")
-    .default("http://cliproxyapi:8317/v0/management"),
+    .default(DEFAULT_MANAGEMENT_URL),
   
   NODE_ENV: z
     .enum(["development", "production", "test"])

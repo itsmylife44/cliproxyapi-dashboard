@@ -22,7 +22,8 @@ commercial-mode: false
 logging-to-file: false
 logs-max-total-size-mb: 0
 error-logs-max-files: 10
-usage-statistics-enabled: false
+usage-statistics-enabled: true
+redis-usage-queue-retention-seconds: 3600
 disable-cooling: false
 request-retry: 3
 max-retry-credentials: 0

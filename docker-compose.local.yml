@@ -26,7 +26,7 @@ services:
 
   # Requires ./config.local.yaml mounted below with `port: 8317` for management/OAuth
   cliproxyapi:
-    image: eceasy/cli-proxy-api:latest
+    image: eceasy/cli-proxy-api:${CLIPROXYAPI_IMAGE_TAG:-v8.0.29}
     container_name: cliproxyapi
     restart: unless-stopped
     networks:
@@ -48,6 +48,7 @@ services:
       - ./config.local.yaml:/CLIProxyAPI/config.yaml
       - cliproxyapi_auths:/root/.cli-proxy-api
       - cliproxyapi_logs:/CLIProxyAPI/logs
+      - cliproxyapi_plugins:/CLIProxyAPI/plugins
     depends_on:
       postgres:
         condition: service_healthy
@@ -135,6 +136,8 @@ services:
       API_URL: http://localhost:8317
       ALLOW_LOCAL_PROVIDER_URLS: ${ALLOW_LOCAL_PROVIDER_URLS:-false}
     volumes:
+      # Writable so the in-app updater can pin CLIPROXYAPI_IMAGE_TAG
+      - ./.env:/opt/cliproxyapi/host.env
       - dashboard_backups:/app/backups
     depends_on:
       postgres:
@@ -154,6 +157,7 @@ volumes:
   postgres_data:
   cliproxyapi_auths:
   cliproxyapi_logs:
+  cliproxyapi_plugins:
   dashboard_backups:
 
 networks:

@@ -35,6 +35,7 @@ export const API_ENDPOINTS = {
   USAGE: {
     COLLECT: "/api/usage/collect",
     COLLECTION_STATUS: "/api/usage/collection-status",
+    HISTORY: "/api/usage/history",
   },
   USER: {
     API_KEYS: "/api/user/api-keys",
@@ -60,10 +61,11 @@ export const API_ENDPOINTS = {
   MANAGEMENT: {
     CONFIG: "/api/management/config",
     CONFIG_YAML: "/api/management/config.yaml",
-    USAGE: "/api/management/usage",
     LOGS: "/api/management/logs",
     LATEST_VERSION: "/api/management/latest-version",
     OAUTH_CALLBACK: "/api/management/oauth-callback",
+    PLUGINS: "/api/management/plugins",
+    PLUGIN_STORE: "/api/management/plugin-store",
 
     // Config field dedicated endpoints
     PROXY_URL: "/api/management/proxy-url",
@@ -74,6 +76,7 @@ export const API_ENDPOINTS = {
     USAGE_STATISTICS_ENABLED: "/api/management/usage-statistics-enabled",
     REQUEST_RETRY: "/api/management/request-retry",
     MAX_RETRY_INTERVAL: "/api/management/max-retry-interval",
+    MAX_RETRY_CREDENTIALS: "/api/management/max-retry-credentials",
     REQUEST_LOG: "/api/management/request-log",
     WS_AUTH: "/api/management/ws-auth",
     FORCE_MODEL_PREFIX: "/api/management/force-model-prefix",
@@ -88,30 +91,30 @@ export const API_ENDPOINTS = {
     // OAuth
     OAUTH_EXCLUDED_MODELS: "/api/management/oauth-excluded-models",
     OAUTH_MODEL_ALIAS: "/api/management/oauth-model-alias",
-    OAUTH_QUOTA_GROUPS: "/api/management/oauth-quota-groups",
+    OAUTH_AUTH_URL: {
+      CLAUDE: "/api/management/anthropic-auth-url?is_webui=true",
+      GEMINI_CLI: "/api/management/gemini-cli-auth-url?project_id=ALL&is_webui=true",
+      CODEX: "/api/management/codex-auth-url?is_webui=true",
+      XAI: "/api/management/xai-auth-url?is_webui=true",
+      ANTIGRAVITY: "/api/management/antigravity-auth-url?is_webui=true",
+      KIMI: "/api/management/kimi-auth-url?is_webui=true",
+      KIMI_AI: "/api/management/kimi-ai-auth-url?is_webui=true",
+      DEVIN: "/api/management/devin-auth-url?is_webui=true",
+      META: "/api/management/meta-auth-url?is_webui=true",
+      COPILOT: "/api/management/copilot-auth-url?is_webui=true",
+      KIRO: "/api/management/kiro-auth-url?is_webui=true",
+      CURSOR: "/api/management/cursor-auth-url?is_webui=true",
+    },
 
     // Auth files
     AUTH_FILES: "/api/management/auth-files",
-    AUTH_FILE_QUOTA_GROUPS: "/api/management/auth-files/quota-groups",
-    AUTH_FILE_QUOTA_GROUPS_MANUAL: "/api/management/auth-files/quota-groups/manual",
-    AUTH_FILE_QUOTA_GROUPS_AUTO_CLEAR: "/api/management/auth-files/quota-groups/auto/clear",
 
     // Providers
     OPENAI_COMPATIBILITY: "/api/management/openai-compatibility",
     API_KEYS: "/api/management/api-keys",
-
-    // Ampcode
-    AMPCODE: "/api/management/ampcode",
-    AMPCODE_UPSTREAM_URL: "/api/management/ampcode/upstream-url",
-    AMPCODE_UPSTREAM_API_KEY: "/api/management/ampcode/upstream-api-key",
-    AMPCODE_RESTRICT_MANAGEMENT: "/api/management/ampcode/restrict-management-to-localhost",
-    AMPCODE_MODEL_MAPPINGS: "/api/management/ampcode/model-mappings",
-    AMPCODE_FORCE_MODEL_MAPPINGS: "/api/management/ampcode/force-model-mappings",
-    AMPCODE_UPSTREAM_API_KEYS: "/api/management/ampcode/upstream-api-keys",
   },
   PROXY: {
     STATUS: "/api/proxy/status",
-    OAUTH_SETTINGS: "/api/proxy/oauth-settings",
   },
   CONFIG_SYNC: {
     TOKENS: "/api/config-sync/tokens",

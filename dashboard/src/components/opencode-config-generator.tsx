@@ -16,6 +16,7 @@ import {
   type ModelDefinition,
   generateConfigJson,
 } from "@/lib/config-generators/opencode";
+import { PROVIDER_CONFIG_KEYS } from "@/lib/providers/constants";
 
 interface ApiKeyEntry {
   key: string;
@@ -172,14 +173,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   const hasModels = Object.keys(availableModels).length > 0;
   const hasKeys = apiKeys.length > 0;
   const hasActiveOAuth = oauthAccounts.some((a) => !a.disabled);
-  const providerKeys = [
-    "gemini-api-key",
-    "claude-api-key",
-    "codex-api-key",
-    "vertex-api-key",
-    "openai-compatibility",
-  ] as const;
-  const hasConfiguredProviderKey = providerKeys.some((key) => {
+  const hasConfiguredProviderKey = PROVIDER_CONFIG_KEYS.some((key) => {
     const value = (config as Record<string, unknown> | null)?.[key];
     return Array.isArray(value) ? value.length > 0 : Boolean(value);
   });

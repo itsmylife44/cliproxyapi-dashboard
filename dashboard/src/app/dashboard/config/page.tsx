@@ -5,16 +5,15 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
-import { mergeConfigYaml } from "@/lib/config-yaml";
+import { mergeConfigYaml, readAuthDir } from "@/lib/config-yaml";
+import { planConfigSave } from "@/lib/config-save-plan";
 import AgentConfigEditor from "@/components/config/agent-config-editor";
 import ConfigPreview from "@/components/config/config-preview";
-import yaml from "js-yaml";
 import { useTranslations } from 'next-intl';
 
 export interface StreamingConfig {
   "keepalive-seconds": number;
   "bootstrap-retries": number;
-  "nonstream-keepalive-interval": number;
 }
 
 export interface QuotaExceededConfig {
@@ -44,14 +43,6 @@ export interface ClaudeHeaderDefaults {
   timeout: string;
 }
 
-export interface AmpcodeConfig {
-  "upstream-url": string;
-  "upstream-api-key": string;
-  "restrict-management-to-localhost": boolean;
-  "model-mappings": unknown;
-  "force-model-mappings": boolean;
-}
-
 export interface PayloadConfig {
   default: unknown;
   "default-raw": unknown;
@@ -73,6 +64,7 @@ export interface Config {
   "auth-dir": string;
   "force-model-prefix": boolean;
   streaming: StreamingConfig;
+  "nonstream-keepalive-interval"?: number;
   debug: boolean;
   "commercial-mode": boolean;
   "logging-to-file": boolean;
@@ -88,13 +80,9 @@ export interface Config {
   "request-log": boolean;
   "max-retry-credentials": number;
   "passthrough-headers": boolean;
-  "incognito-browser": boolean;
-  "kiro-preferred-endpoint": string;
-  kiro: unknown;
   tls: TlsConfig;
   pprof: PprofConfig;
   "claude-header-defaults": ClaudeHeaderDefaults;
-  ampcode: AmpcodeConfig;
   payload: PayloadConfig;
   "oauth-model-alias": Record<string, OAuthModelAliasEntry[]>;
 }
@@ -174,8 +162,13 @@ export default function ConfigPage() {
         }
 
         const data = await res.json();
-        if (!data["auth-dir"]) {
-          data["auth-dir"] = "~/.cli-proxy-api";
+        // GET /config never returns auth-dir; read the real value from the raw YAML.
+        data["auth-dir"] = "";
+        try {
+          const yamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML);
+          if (yamlRes.ok) data["auth-dir"] = readAuthDir(await yamlRes.text());
+        } catch {
+          // leave empty: unchanged auth-dir is never written back
         }
         const stamped = stampOAuthIds(data as Config);
         setConfig(stamped);
@@ -240,34 +233,6 @@ export default function ConfigPage() {
     await executeSave();
   };
 
-  // Map of config fields to their dedicated Management API endpoints.
-  // Fields with dedicated endpoints are updated individually (safer, no full config overwrite).
-  // Fields without endpoints fall back to config.yaml update (only for those specific fields).
-  const FIELD_ENDPOINTS: Record<string, string> = {
-    "proxy-url": API_ENDPOINTS.MANAGEMENT.PROXY_URL,
-    "debug": API_ENDPOINTS.MANAGEMENT.DEBUG,
-    "logging-to-file": API_ENDPOINTS.MANAGEMENT.LOGGING_TO_FILE,
-    "logs-max-total-size-mb": API_ENDPOINTS.MANAGEMENT.LOGS_MAX_TOTAL_SIZE_MB,
-    "error-logs-max-files": API_ENDPOINTS.MANAGEMENT.ERROR_LOGS_MAX_FILES,
-    "usage-statistics-enabled": API_ENDPOINTS.MANAGEMENT.USAGE_STATISTICS_ENABLED,
-    "request-retry": API_ENDPOINTS.MANAGEMENT.REQUEST_RETRY,
-    "max-retry-interval": API_ENDPOINTS.MANAGEMENT.MAX_RETRY_INTERVAL,
-    "request-log": API_ENDPOINTS.MANAGEMENT.REQUEST_LOG,
-    "ws-auth": API_ENDPOINTS.MANAGEMENT.WS_AUTH,
-    "force-model-prefix": API_ENDPOINTS.MANAGEMENT.FORCE_MODEL_PREFIX,
-  };
-
-  // Nested field endpoints (e.g., quota-exceeded.switch-project)
-  const NESTED_FIELD_ENDPOINTS: Record<string, Record<string, string>> = {
-    "quota-exceeded": {
-      "switch-project": API_ENDPOINTS.MANAGEMENT.QUOTA_EXCEEDED_SWITCH_PROJECT,
-      "switch-preview-model": API_ENDPOINTS.MANAGEMENT.QUOTA_EXCEEDED_SWITCH_PREVIEW_MODEL,
-    },
-    "routing": {
-      "strategy": API_ENDPOINTS.MANAGEMENT.ROUTING_STRATEGY,
-    },
-  };
-
   const executeSave = async () => {
     if (!config || !originalConfig) return;
 
@@ -277,121 +242,42 @@ export default function ConfigPage() {
       const errors: string[] = [];
       let successCount = 0;
 
-      // Helper to update a single field via its dedicated endpoint
-      const updateField = async (endpoint: string, value: unknown): Promise<boolean> => {
+      // At most one management write per save (see planConfigSave).
+      for (const write of planConfigSave(stripOAuthIds(originalConfig), stripOAuthIds(config))) {
         try {
-          const res = await fetch(endpoint, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ value }),
-          });
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            errors.push(`${endpoint}: ${errData.error || res.statusText}`);
-            return false;
-          }
-          return true;
-        } catch (error) {
-          errors.push(`${endpoint}: ${getErrorMessage(error)}`);
-          return false;
-        }
-      };
-
-      // Check each top-level field for changes
-      for (const key of Object.keys(FIELD_ENDPOINTS) as (keyof Config)[]) {
-        const oldVal = originalConfig[key];
-        const newVal = config[key];
-        const endpoint = FIELD_ENDPOINTS[key];
-        if (!endpoint || JSON.stringify(oldVal) === JSON.stringify(newVal)) {
-          continue;
-        }
-        const success = await updateField(endpoint, newVal);
-        if (success) successCount++;
-      }
-
-      // Check nested fields (quota-exceeded)
-      for (const [parentKey, subFields] of Object.entries(NESTED_FIELD_ENDPOINTS)) {
-        const oldParent = originalConfig[parentKey as keyof Config] as Record<string, unknown> | undefined;
-        const newParent = config[parentKey as keyof Config] as Record<string, unknown> | undefined;
-        if (oldParent && newParent) {
-          for (const [subKey, endpoint] of Object.entries(subFields)) {
-            if (JSON.stringify(oldParent[subKey]) !== JSON.stringify(newParent[subKey])) {
-              const success = await updateField(endpoint, newParent[subKey]);
-              if (success) successCount++;
+          if (write.kind === "endpoint") {
+            const res = await fetch(write.endpoint, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(write.body),
+            });
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              errors.push(`${write.endpoint}: ${errData.error || res.statusText}`);
+            } else {
+              successCount++;
             }
+            continue;
           }
-        }
-      }
 
-      // For fields without dedicated endpoints, we need to use config.yaml
-      // But ONLY send those specific fields that changed and don't have endpoints
-      const fieldsWithoutEndpoints = [
-        "auth-dir", "streaming", "commercial-mode",
-        "disable-cooling", "max-retry-credentials", "passthrough-headers",
-        "incognito-browser", "kiro-preferred-endpoint", "kiro", "tls", "pprof",
-        "claude-header-defaults", "ampcode", "payload", "oauth-model-alias",
-      ] as const;
-
-      const yamlChanges: Record<string, unknown> = {};
-      for (const key of fieldsWithoutEndpoints) {
-        const oldVal = originalConfig[key];
-        const newVal = config[key];
-        if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
-          // For oauth-model-alias, strip the _id fields
-          if (key === "oauth-model-alias") {
-            yamlChanges[key] = stripOAuthIds(config)["oauth-model-alias"];
-          } else {
-            yamlChanges[key] = newVal;
-          }
-        }
-      }
-
-      // Fetch the current live config once — used for the auth-dir guard.
-      let liveConfig: Record<string, unknown> | null = null;
-      try {
-        const currentRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG);
-        if (currentRes.ok) {
-          liveConfig = await currentRes.json();
-        } else {
-          await currentRes.body?.cancel();
-        }
-      } catch {
-        // handled below
-      }
-
-      // Ensure auth-dir is always persisted in config.yaml.  Without it,
-      // CLIProxyAPI may write OAuth credential files into its CWD instead
-      // of the auth directory, making them invisible to the management API.
-      // This runs *before* the yamlChanges gate so endpoint-only saves
-      // (e.g. debug, proxy-url) still trigger the yaml write when needed.
-      if (liveConfig && !("auth-dir" in liveConfig) && !("auth-dir" in yamlChanges)) {
-        yamlChanges["auth-dir"] = config["auth-dir"] || "~/.cli-proxy-api";
-      }
-
-      // If there are fields that need config.yaml update, merge and write
-      if (Object.keys(yamlChanges).length > 0) {
-        try {
           const rawYamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML);
           if (!rawYamlRes.ok) {
             errors.push(t('failedToFetchYaml'));
+            continue;
+          }
+          const mergedYaml = mergeConfigYaml(await rawYamlRes.text(), write.changes);
+          const yamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
+            method: "PUT",
+            headers: { "Content-Type": "text/yaml" },
+            body: mergedYaml,
+          });
+          if (!yamlRes.ok) {
+            errors.push(t('failedToSaveYaml'));
           } else {
-            const rawYaml = await rawYamlRes.text();
-            const mergedYaml = mergeConfigYaml(rawYaml, yamlChanges);
-
-            const yamlRes = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
-              method: "PUT",
-              headers: { "Content-Type": "text/yaml" },
-              body: mergedYaml,
-            });
-
-            if (!yamlRes.ok) {
-              errors.push(t('failedToSaveYaml'));
-            } else {
-              successCount += Object.keys(yamlChanges).length;
-            }
+            successCount += Object.keys(write.changes).length;
           }
         } catch (error) {
-          errors.push(`Failed to update config.yaml: ${getErrorMessage(error)}`);
+          errors.push(getErrorMessage(error));
         }
       }
 
@@ -478,11 +364,6 @@ export default function ConfigPage() {
   const updateClaudeHeaderDefaults = (key: keyof ClaudeHeaderDefaults, value: string) => {
     if (!config) return;
     setConfig({ ...config, "claude-header-defaults": { ...config["claude-header-defaults"], [key]: value } });
-  };
-
-  const updateAmpcodeConfig = (key: keyof AmpcodeConfig, value: string | boolean | unknown) => {
-    if (!config) return;
-    setConfig({ ...config, ampcode: { ...config.ampcode, [key]: value } });
   };
 
   const updatePayloadConfig = (key: keyof PayloadConfig, value: unknown) => {
@@ -581,11 +462,7 @@ export default function ConfigPage() {
     const handleEmergencyProxyReset = async () => {
       setResettingProxy(true);
       try {
-        const res = await fetch(API_ENDPOINTS.MANAGEMENT.CONFIG_YAML, {
-          method: "PUT",
-          headers: { "Content-Type": "text/yaml" },
-          body: yaml.dump({ "proxy-url": "" }, { lineWidth: -1, noRefs: true, quotingType: '"', forceQuotes: true }),
-        });
+        const res = await fetch(API_ENDPOINTS.MANAGEMENT.PROXY_URL, { method: "DELETE" });
 
         if (res.ok) {
           showToast(t('toastProxyCleared'), "success");
@@ -676,7 +553,6 @@ export default function ConfigPage() {
         updateTlsConfig={updateTlsConfig}
         updatePprofConfig={updatePprofConfig}
         updateClaudeHeaderDefaults={updateClaudeHeaderDefaults}
-        updateAmpcodeConfig={updateAmpcodeConfig}
         updatePayloadConfig={updatePayloadConfig}
         toggleProviderExpanded={toggleProviderExpanded}
         updateOAuthAliasEntry={updateOAuthAliasEntry}

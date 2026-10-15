@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { verifySession } from "@/lib/auth/session";
+import { getManagementUrl } from "@/lib/management-url";
 import { logger } from "@/lib/logger";
 import { quotaCache, CACHE_TTL } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
@@ -15,9 +16,7 @@ import {
   type QuotaResponse,
 } from "@/lib/model-first-monitoring";
 
-const CLIPROXYAPI_MANAGEMENT_URL =
-  process.env.CLIPROXYAPI_MANAGEMENT_URL ||
-  "http://cliproxyapi:8317/v0/management";
+const CLIPROXYAPI_MANAGEMENT_URL = getManagementUrl();
 const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
 
 interface AuthFile {
@@ -72,6 +71,8 @@ function inferProviderFromAuthFile(account: AuthFile): string | null {
     if (candidate.includes("codex-")) return "codex";
     if (candidate.includes("gemini-cli") || candidate.includes("gemini-")) return "gemini-cli";
     if (candidate.includes("antigravity-")) return "antigravity";
+    // kimi.ai first: "kimi-" also matches "kimi-ai-" (upstream kimi.go resolves the same way)
+    if (candidate.includes("kimi-ai") || candidate.includes("kimi.ai")) return "kimi-ai";
     if (candidate.includes("kimi-")) return "kimi";
     if (candidate.includes("github-copilot") || candidate.includes("copilot-")) return "copilot";
     if (candidate.includes("github-")) return "github";

@@ -4,14 +4,15 @@ import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { Errors, apiSuccess } from "@/lib/errors";
+import { readFile } from "fs/promises";
+import { Errors, apiError, apiSuccess, ERROR_CODE } from "@/lib/errors";
 import { UpdateProxySchema } from "@/lib/validation/schemas";
 import { logger } from "@/lib/logger";
+import { hostEnvFilePath, isWritableFile, withImageTag, writeInPlace } from "@/lib/proxy-image-pin";
 
 const execFileAsync = promisify(execFile);
 
 const CONTAINER_NAME = "cliproxyapi";
-const COMPOSE_FILE = "/opt/cliproxyapi/infrastructure/docker-compose.yml";
 const IMAGE_NAME = "eceasy/cli-proxy-api";
 
 interface PortBinding {
@@ -20,11 +21,14 @@ interface PortBinding {
 }
 
 interface ContainerConfig {
+  image: string;
   env: string[];
   volumes: string[];
   networks: string[];
   ports: string[];
   restartPolicy: string;
+  /** compose's own labels, so `docker compose` keeps treating the container as its service */
+  composeLabels: string[];
 }
 
 function getCommandErrorText(error: unknown): string {
@@ -54,11 +58,15 @@ async function getContainerConfig(): Promise<ContainerConfig> {
   }
 
   return {
+    image: config.Image,
     env: config.Env || [],
     volumes: hostConfig.Binds || [],
     networks: Object.keys(inspect.NetworkSettings?.Networks || {}),
     ports,
     restartPolicy: hostConfig.RestartPolicy?.Name || "unless-stopped",
+    composeLabels: Object.entries((config.Labels || {}) as Record<string, string>)
+      .filter(([key]) => key.startsWith("com.docker.compose."))
+      .map(([key, value]) => `${key}=${value}`),
   };
 }
 
@@ -72,6 +80,7 @@ function buildRunArgs(cfg: ContainerConfig, imageTag: string): string[] {
   for (const vol of cfg.volumes) { args.push("-v", vol); }
   for (const port of cfg.ports) { args.push("-p", port); }
   for (const net of cfg.networks) { args.push("--network", net); }
+  for (const label of cfg.composeLabels) { args.push("--label", label); }
 
   args.push(
     "--health-cmd", "wget --no-verbose --tries=1 -O /dev/null http://localhost:8317/",
@@ -101,27 +110,42 @@ async function recreateWithDockerRun(config: ContainerConfig, imageTag: string) 
   await execFileAsync("docker", buildRunArgs(config, imageTag));
 }
 
-async function runCompose(args: string[]) {
-  return execFileAsync("docker", ["compose", "-f", COMPOSE_FILE, ...args]);
+async function attemptRestore(what: string, restore: () => Promise<void>) {
+  try {
+    await restore();
+    logger.info({ what }, "Recovery: restored after failed proxy update");
+  } catch (error) {
+    logger.error({ err: error, what }, "Recovery failed");
+  }
 }
 
-async function isComposeAvailable() {
+/**
+ * Switches CLIProxyAPI to `version`: pull, pin the tag in the host .env so
+ * compose keeps it on the next `up`, then recreate the container (docker run,
+ * as the dashboard image has no compose plugin). On failure the previous image
+ * and env file come back.
+ */
+async function switchProxyVersion(version: string): Promise<void> {
+  const envFile = hostEnvFilePath();
+  const imageTag = `${IMAGE_NAME}:${version}`;
+  const previous = await getContainerConfig();
+  const envBefore = await readFile(envFile, "utf8");
+  const envAfter = withImageTag(envBefore, version);
+
+  const pullResult = await execFileAsync("docker", ["pull", imageTag]);
+  logger.info({ stdout: pullResult.stdout }, "Pull result");
+
+  let containerReplaced = false;
   try {
-    await execFileAsync("docker", ["compose", "version"]);
-    return true;
+    await writeInPlace(envFile, envAfter);
+    containerReplaced = true;
+    await recreateWithDockerRun(previous, imageTag);
   } catch (error) {
-    const errorText = getCommandErrorText(error);
-    const composeMissing =
-      errorText.includes("unknown command: docker compose") ||
-      errorText.includes("unknown shorthand flag: 'f' in -f");
-
-    if (composeMissing) {
-      logger.info("Docker compose not available in runtime, using docker run fallback");
-    } else {
-      logger.warn({ err: error }, "Compose availability check failed, using fallback");
+    await attemptRestore("env file", () => writeInPlace(envFile, envBefore));
+    if (containerReplaced) {
+      await attemptRestore("proxy container", () => recreateWithDockerRun(previous, previous.image));
     }
-
-    return false;
+    throw error;
   }
 }
 
@@ -144,9 +168,6 @@ export async function POST(request: NextRequest) {
   const originError = validateOrigin(request);
   if (originError) return originError;
 
-  let configSnapshot: ContainerConfig | null = null;
-  let composeAvailable = false;
-
   try {
     const body = await request.json();
     const result = UpdateProxySchema.safeParse(body);
@@ -157,38 +178,19 @@ export async function POST(request: NextRequest) {
 
     const { version } = result.data;
 
-    const imageTag = `${IMAGE_NAME}:${version}`;
-    configSnapshot = await getContainerConfig();
-    composeAvailable = await isComposeAvailable();
-
-    const pullResult = await execFileAsync("docker", ["pull", imageTag]);
-    logger.info({ stdout: pullResult.stdout }, "Pull result");
-
-    if (composeAvailable && version !== "latest") {
-      await execFileAsync("docker", ["tag", imageTag, `${IMAGE_NAME}:latest`]);
-      logger.info({ version }, "Tagged selected version as latest for compose rollout");
+    // Without the pin, the next `docker compose up` would silently undo the switch.
+    if (!(await isWritableFile(hostEnvFilePath()))) {
+      return apiError(
+        ERROR_CODE.PROXY_VERSION_PIN_UNAVAILABLE,
+        `Cannot pin the CLIProxyAPI version: ${hostEnvFilePath()} is not mounted or not writable. See docs/ENV.md (CLIPROXYAPI_IMAGE_TAG).`,
+        409
+      );
     }
 
-    if (composeAvailable) {
-      await runCompose(["up", "-d", "--no-deps", "--force-recreate", CONTAINER_NAME]);
-    } else {
-      await recreateWithDockerRun(configSnapshot, imageTag);
-    }
+    await switchProxyVersion(version);
 
     return apiSuccess({ message: `Updated to ${version}`, version });
   } catch (error) {
-    try {
-      if (composeAvailable) {
-        await runCompose(["up", "-d", "--no-deps", CONTAINER_NAME]);
-        logger.info("Recovery: compose ensured proxy service is up");
-      } else if (configSnapshot) {
-        await recreateWithDockerRun(configSnapshot, `${IMAGE_NAME}:latest`);
-        logger.info("Recovery: recreated proxy container with latest image");
-      }
-    } catch (restartError) {
-      logger.error({ err: restartError }, "Recovery failed");
-    }
-
     return Errors.internal("Update failed", error);
   }
 }

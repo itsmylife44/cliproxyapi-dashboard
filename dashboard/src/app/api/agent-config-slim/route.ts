@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
+import { getManagementUrl } from "@/lib/management-url";
 import { validateOrigin } from "@/lib/auth/origin";
 import { prisma } from "@/lib/db";
 import { pickBestModel, SLIM_AGENT_ROLES } from "@/lib/config-generators/oh-my-opencode-slim";
@@ -14,9 +15,7 @@ import { Errors, apiSuccess } from "@/lib/errors";
 
 async function fetchManagementJson(path: string) {
   try {
-    const baseUrl =
-      process.env.CLIPROXYAPI_MANAGEMENT_URL ||
-      "http://cliproxyapi:8317/v0/management";
+    const baseUrl = getManagementUrl();
     const res = await fetch(`${baseUrl}/${path}`, {
       headers: {
         Authorization: `Bearer ${process.env.MANAGEMENT_API_KEY}`,

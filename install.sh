@@ -913,6 +913,24 @@ EOF
     log_success ".env file created"
 fi
 
+# The dashboard container (UID 1001) pins the CLIProxyAPI version in .env when an
+# admin switches versions in the UI. Skipped if UID 1001 is a real host account,
+# which would then own the secrets; version switching stays off until fixed by hand.
+if [ $DASHBOARD_ONLY -eq 0 ]; then
+    if getent passwd 1001 > /dev/null; then
+        log_warning "UID 1001 exists on this host; in-app CLIProxyAPI version switching stays off (see docs/ENV.md, CLIPROXYAPI_IMAGE_TAG)"
+    else
+        chown 1001 "$ENV_FILE"
+    fi
+fi
+
+# CLIProxyAPI config: generated once from the tracked template, then owned by the proxy.
+CLIPROXY_CONFIG="$INSTALL_DIR/infrastructure/config/config.yaml"
+if [ $DASHBOARD_ONLY -eq 0 ] && [ ! -f "$CLIPROXY_CONFIG" ]; then
+    cp "$INSTALL_DIR/infrastructure/config/config.example.yaml" "$CLIPROXY_CONFIG"
+    log_success "CLIProxyAPI config.yaml created from config.example.yaml"
+fi
+
 echo ""
 
 # ============================================================================
@@ -1065,32 +1083,19 @@ if [ "$BACKUP_INTERVAL" != "none" ]; then
 fi
 
 # ============================================================================
-# USAGE COLLECTOR CRON JOB
+# USAGE COLLECTOR
 # ============================================================================
 
-log_info "=== Usage Collector Cron Job ==="
-echo ""
-
-log_info "Setting up usage data collection (every 5 minutes)..."
-log_info "This prevents data loss when the proxy restarts."
-
-if [ $EXTERNAL_PROXY -eq 1 ]; then
-    COLLECTOR_URL="http://127.0.0.1:3000"
-else
-    COLLECTOR_URL="https://${DASHBOARD_SUBDOMAIN}.${DOMAIN}"
-fi
-
-COLLECTOR_CRON_SCHEDULE="*/5 * * * *"
-COLLECTOR_CRON_CMD="curl -sf -X POST ${COLLECTOR_URL}/api/usage/collect -H 'Authorization: Bearer ${COLLECTOR_API_KEY}' -o /dev/null"
-
+# Usage is collected by the compose `usage-collector` service. Earlier installs
+# also added a host crontab entry for the same endpoint; drop it so a re-run
+# leaves exactly one collector.
 if crontab -l 2>/dev/null | grep -q "/api/usage/collect"; then
-    log_warning "Usage collector cron job already exists"
-else
-    (crontab -l 2>/dev/null || true; echo "# CLIProxyAPI usage collector (every 5 minutes)"; echo "$COLLECTOR_CRON_SCHEDULE $COLLECTOR_CRON_CMD") | crontab -
-    log_success "Usage collector cron job installed (every 5 minutes)"
+    crontab -l 2>/dev/null \
+        | { grep -v -e "/api/usage/collect" -e "^# CLIProxyAPI usage collector" || true; } \
+        | crontab -
+    log_success "Removed duplicate host crontab usage collector (the usage-collector container collects usage)"
+    echo ""
 fi
-
-echo ""
 
 # ============================================================================
 # EXTERNAL PROXY MODE SETUP
@@ -1315,7 +1320,7 @@ echo ""
 log_info "=== Dashboard Deploy Webhook (Optional) ==="
 echo ""
 log_info "The webhook service enables one-click dashboard updates from the admin panel."
-log_info "It runs a lightweight HTTP server that triggers git pull + image pull + restart."
+log_info "It runs a lightweight HTTP server that pulls the latest dashboard image and restarts the dashboard (repo files: ./rebuild.sh)."
 echo ""
 
 read -p "Install webhook deploy service? [y/N]: " INSTALL_WEBHOOK

@@ -33,6 +33,9 @@ const loadProvidersData = async (signal?: AbortSignal): Promise<Record<ProviderI
     [PROVIDER_IDS.GEMINI]: { keys: [] },
     [PROVIDER_IDS.CODEX]: { keys: [] },
     [PROVIDER_IDS.XAI]: { keys: [] },
+    [PROVIDER_IDS.VERTEX]: { keys: [] },
+    [PROVIDER_IDS.INTERACTIONS]: { keys: [] },
+    [PROVIDER_IDS.META]: { keys: [] },
     [PROVIDER_IDS.OPENAI]: { keys: [] },
   };
 
@@ -65,13 +68,15 @@ export default function ProvidersPage() {
     [PROVIDER_IDS.GEMINI]: { keys: [] },
     [PROVIDER_IDS.CODEX]: { keys: [] },
     [PROVIDER_IDS.XAI]: { keys: [] },
+    [PROVIDER_IDS.VERTEX]: { keys: [] },
+    [PROVIDER_IDS.INTERACTIONS]: { keys: [] },
+    [PROVIDER_IDS.META]: { keys: [] },
     [PROVIDER_IDS.OPENAI]: { keys: [] },
   }));
   const [loading, setLoading] = useState(true);
   const [maxKeysPerUser, setMaxKeysPerUser] = useState<number>(10);
   const [oauthAccountCount, setOauthAccountCount] = useState(0);
   const [customProviderCount, setCustomProviderCount] = useState(0);
-  const [incognitoBrowserEnabled, setIncognitoBrowserEnabled] = useState(false);
   const { showToast } = useToast();
   const t = useTranslations("providers");
 
@@ -94,25 +99,10 @@ export default function ProvidersPage() {
     }
   }, []);
 
-  const loadIncognitoSetting = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const res = await fetch(API_ENDPOINTS.PROXY.OAUTH_SETTINGS, { signal });
-      if (res.ok) {
-        const data = await res.json();
-        setIncognitoBrowserEnabled(Boolean(data.incognitoBrowser));
-      }
-    } catch {
-      if (!signal?.aborted) {
-        setIncognitoBrowserEnabled(false);
-      }
-    }
-  }, []);
-
   const refreshProviders = async () => {
     setLoading(true);
     const newConfigs = await loadProvidersData();
     setConfigs(newConfigs);
-    await loadIncognitoSetting();
     setLoading(false);
   };
 
@@ -122,8 +112,6 @@ export default function ProvidersPage() {
       const newConfigs = await loadProvidersData(controller.signal);
       if (controller.signal.aborted) return;
       setConfigs(newConfigs);
-
-      await loadIncognitoSetting(controller.signal);
 
       setLoading(false);
 
@@ -138,7 +126,7 @@ export default function ProvidersPage() {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [authUser, loadMaxKeysPerUser, loadIncognitoSetting]);
+  }, [authUser, loadMaxKeysPerUser]);
 
   const providerStats = API_KEY_PROVIDERS.map((provider) => ({
     id: provider.id,
@@ -211,7 +199,6 @@ export default function ProvidersPage() {
                 currentUser={currentUser}
                 refreshProviders={refreshProviders}
                 onAccountCountChange={setOauthAccountCount}
-                incognitoBrowserEnabled={incognitoBrowserEnabled}
               />
             </div>
 

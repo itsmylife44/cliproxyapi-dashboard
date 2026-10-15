@@ -3,6 +3,7 @@ import {
   PASSWORD_MIN_LENGTH,
   PASSWORD_MAX_LENGTH,
 } from "@/lib/auth/validation";
+import { DOCKER_TAG_PATTERN } from "@/lib/proxy-image-pin";
 
 // ============================================================================
 // MODEL PREFERENCES
@@ -356,14 +357,12 @@ export const ConfirmActionSchema = z.object({
   }),
 });
 
-const DOCKER_TAG_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/;
-
 export const UpdateProxySchema = z.object({
+  // A concrete tag: "latest" (or no version) would pin CLIPROXYAPI_IMAGE_TAG=latest and unpin the stack.
   version: z
     .string()
-    .default("latest")
-    .refine((v) => v === "latest" || DOCKER_TAG_PATTERN.test(v), {
-      message: "Invalid version format",
+    .refine((v) => v !== "latest" && DOCKER_TAG_PATTERN.test(v), {
+      message: "Version must be a concrete image tag, not \"latest\"",
     }),
   confirm: z.literal(true, {
     message: "Confirmation required: set confirm to true",

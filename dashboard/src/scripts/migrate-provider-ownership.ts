@@ -15,6 +15,7 @@ import { createHash } from "crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { canonicalizeOAuthProvider } from "@/lib/providers/constants";
+import { getManagementUrl } from "@/lib/management-url";
 
 const PROVIDER = {
   CLAUDE: "claude",
@@ -68,7 +69,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 async function fetchManagementJson(endpoint: string): Promise<unknown> {
   try {
-    const baseUrl = process.env.CLIPROXYAPI_MANAGEMENT_URL || "http://cliproxyapi:8317/v0/management";
+    const baseUrl = getManagementUrl();
     const res = await fetch(`${baseUrl}${endpoint}`, {
       headers: {
         Authorization: `Bearer ${process.env.MANAGEMENT_API_KEY}`,

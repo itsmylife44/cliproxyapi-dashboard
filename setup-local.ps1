@@ -173,6 +173,8 @@ quota-exceeded:
   switch-preview-model: true
 routing:
   strategy: "round-robin"
+usage-statistics-enabled: true
+redis-usage-queue-retention-seconds: 3600
 "@
 
     # Ensure no directory exists before writing file

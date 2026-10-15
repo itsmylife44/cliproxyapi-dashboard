@@ -21,107 +21,99 @@ interface OAuthSectionProps {
   currentUser: CurrentUserLike | null;
   refreshProviders: () => Promise<void>;
   onAccountCountChange: (count: number) => void;
-  incognitoBrowserEnabled?: boolean;
 }
 
+// requiresPlugin: served by a CLIProxyAPI plugin whose oauth_provider equals
+// the id; upstream routes `<id>-auth-url` to it only while it is enabled.
 export const OAUTH_PROVIDERS = [
   {
     id: "claude" as const,
     name: "Claude Code",
-    description: "Anthropic Claude (Pro/Max subscription)",
-    authEndpoint: "/api/management/anthropic-auth-url?is_webui=true",
+    authEndpoint: API_ENDPOINTS.MANAGEMENT.OAUTH_AUTH_URL.CLAUDE,
     requiresCallback: true,
-    preConnect: null,
+    requiresPlugin: false,
   },
   {
     id: "gemini-cli" as const,
     name: "Gemini CLI",
-    description: "Google Gemini (via Google OAuth)",
-    authEndpoint: "/api/management/gemini-cli-auth-url?project_id=ALL&is_webui=true",
+    authEndpoint: API_ENDPOINTS.MANAGEMENT.OAUTH_AUTH_URL.GEMINI_CLI,
     requiresCallback: true,
-    preConnect: null,
+    requiresPlugin: true,
   },
   {
     id: "codex" as const,
     name: "Codex",
-    description: "OpenAI Codex (Plus/Pro subscription)",
-    authEndpoint: "/api/management/codex-auth-url?is_webui=true",
+    authEndpoint: API_ENDPOINTS.MANAGEMENT.OAUTH_AUTH_URL.CODEX,
     requiresCallback: true,
-    preConnect: null,
+    requiresPlugin: false,
   },
   {
     id: "xai" as const,
     name: "xAI (Grok)",
-    description: "xAI Grok (device OAuth)",
-    authEndpoint: "/api/management/xai-auth-url?is_webui=true",
+    authEndpoint: API_ENDPOINTS.MANAGEMENT.OAUTH_AUTH_URL.XAI,
     requiresCallback: false,
-    preConnect: null,
+    requiresPlugin: false,
   },
   {
     id: "antigravity" as const,
     name: "Antigravity",
-    description: "Google Antigravity (via Google OAuth)",
-    authEndpoint: "/api/management/antigravity-auth-url?is_webui=true",
+    authEndpoint: API_ENDPOINTS.MANAGEMENT.OAUTH_AUTH_URL.ANTIGRAVITY,
     requiresCallback: true,
-    preConnect: null,
-  },
-  {
-    id: "iflow" as const,
-    name: "iFlow",
-    description: "iFlytek iFlow (via OAuth)",
-    authEndpoint: "/api/management/iflow-auth-url?is_webui=true",
-    requiresCallback: true,
-    preConnect: null,
+    requiresPlugin: false,
   },
   {
     id: "kimi" as const,
     name: "Kimi",
-    description: "Moonshot AI Kimi (device OAuth)",
-    authEndpoint: "/api/management/kimi-auth-url?is_webui=true",
+    authEndpoint: API_ENDPOINTS.MANAGEMENT.OAUTH_AUTH_URL.KIMI,
     requiresCallback: false,
-    preConnect: null,
+    requiresPlugin: false,
+  },
+  {
+    id: "kimi-ai" as const,
+    name: "Kimi.ai",
+    authEndpoint: API_ENDPOINTS.MANAGEMENT.OAUTH_AUTH_URL.KIMI_AI,
+    requiresCallback: false,
+    requiresPlugin: false,
+  },
+  {
+    id: "devin" as const,
+    name: "Devin",
+    authEndpoint: API_ENDPOINTS.MANAGEMENT.OAUTH_AUTH_URL.DEVIN,
+    requiresCallback: true,
+    requiresPlugin: false,
+  },
+  {
+    id: "meta" as const,
+    name: "Meta AI",
+    authEndpoint: API_ENDPOINTS.MANAGEMENT.OAUTH_AUTH_URL.META,
+    requiresCallback: false,
+    requiresPlugin: false,
   },
   {
     id: "copilot" as const,
     name: "GitHub Copilot",
-    description: "GitHub Copilot (via GitHub device OAuth)",
-    authEndpoint: "/api/management/github-auth-url?is_webui=true",
+    authEndpoint: API_ENDPOINTS.MANAGEMENT.OAUTH_AUTH_URL.COPILOT,
     requiresCallback: false,
-    preConnect: null,
+    requiresPlugin: true,
   },
   {
     id: "kiro" as const,
     name: "Kiro",
-    description: "AWS CodeWhisperer / Kiro (device OAuth)",
-    authEndpoint: "/api/management/kiro-auth-url?is_webui=true",
+    authEndpoint: API_ENDPOINTS.MANAGEMENT.OAUTH_AUTH_URL.KIRO,
     requiresCallback: false,
-    preConnect: null,
+    requiresPlugin: true,
   },
   {
     id: "cursor" as const,
     name: "Cursor",
-    description: "Cursor IDE (via PKCE OAuth)",
-    authEndpoint: "/api/management/cursor-auth-url?is_webui=true",
+    authEndpoint: API_ENDPOINTS.MANAGEMENT.OAUTH_AUTH_URL.CURSOR,
     requiresCallback: false,
-    preConnect: null,
-  },
-  {
-    id: "kilo" as const,
-    name: "Kilo Code",
-    description: "Kilo Code (device OAuth)",
-    authEndpoint: "/api/management/kilo-auth-url?is_webui=true",
-    requiresCallback: false,
-    preConnect: null,
-  },
-  {
-    id: "gitlab" as const,
-    name: "GitLab Duo",
-    description: "GitLab Duo (OAuth app or Personal Access Token)",
-    authEndpoint: "",
-    requiresCallback: true,
-    preConnect: "gitlab" as const,
+    requiresPlugin: true,
   },
 ] as const;
+
+export const visibleOAuthProviders = (enabledPluginProviders: readonly string[]) =>
+  OAUTH_PROVIDERS.filter((p) => !p.requiresPlugin || enabledPluginProviders.includes(p.id));
 
 type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
 export type OAuthProviderId = OAuthProvider["id"];
@@ -206,7 +198,6 @@ export function OAuthSection({
   currentUser,
   refreshProviders,
   onAccountCountChange,
-  incognitoBrowserEnabled = false,
 }: OAuthSectionProps) {
   const t = useTranslations("providers");
   const getCallbackMessage = (result: ReturnType<typeof validateCallbackUrl>): string => {
@@ -233,29 +224,19 @@ export function OAuthSection({
   const selectedOAuthProviderIdRef = useRef<OAuthProviderId | null>(null);
   const [deviceCodeInfo, setDeviceCodeInfo] = useState<{ verificationUrl: string; userCode: string } | null>(null);
   const deviceCodePopupOpenedRef = useRef(false);
-  const incognitoRef = useRef(incognitoBrowserEnabled);
-  incognitoRef.current = incognitoBrowserEnabled;
   const [accounts, setAccounts] = useState<OAuthAccountWithOwnership[]>([]);
   const [oauthAccountsLoading, setOauthAccountsLoading] = useState(true);
   const [showConfirmOAuthDelete, setShowConfirmOAuthDelete] = useState(false);
   const [pendingOAuthDelete, setPendingOAuthDelete] = useState<{ accountId: string; accountName: string } | null>(null);
   const [togglingAccountId, setTogglingAccountId] = useState<string | null>(null);
   const [claimingAccountName, setClaimingAccountName] = useState<string | null>(null);
-  const [quotaActionKey, setQuotaActionKey] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importProviderId, setImportProviderId] = useState<OAuthProviderId | null>(null);
   const [importJsonContent, setImportJsonContent] = useState("");
   const [importFileName, setImportFileName] = useState("");
   const [importStatus, setImportStatus] = useState<"idle" | "validating" | "uploading" | "success" | "error">("idle");
   const [importErrorMessage, setImportErrorMessage] = useState<string | null>(null);
-  const [isGitLabPreConnectOpen, setIsGitLabPreConnectOpen] = useState(false);
-  const [gitLabMode, setGitLabMode] = useState<"oauth" | "pat">("oauth");
-  const [gitLabClientId, setGitLabClientId] = useState("");
-  const [gitLabClientSecret, setGitLabClientSecret] = useState("");
-  const [gitLabBaseUrl, setGitLabBaseUrl] = useState("");
-  const [gitLabPat, setGitLabPat] = useState("");
-  const [gitLabSubmitting, setGitLabSubmitting] = useState(false);
-  const [gitLabError, setGitLabError] = useState<string | null>(null);
+  const [pluginOAuthProviders, setPluginOAuthProviders] = useState<string[]>([]);
 
   const selectedOAuthProvider = getOAuthProviderById(selectedOAuthProviderId);
   const selectedOAuthProviderRequiresCallback = selectedOAuthProvider?.requiresCallback ?? true;
@@ -289,6 +270,7 @@ export function OAuthSection({
       const data = await res.json();
       const nextAccounts = Array.isArray(data.accounts) ? data.accounts : [];
       setAccounts(nextAccounts);
+      setPluginOAuthProviders(Array.isArray(data.pluginOAuthProviders) ? data.pluginOAuthProviders : []);
       onAccountCountChange(nextAccounts.length);
       setOauthAccountsLoading(false);
     } catch {
@@ -343,66 +325,6 @@ export function OAuthSection({
     }
   };
 
-  const updateQuotaGroupManual = async (
-    authId: string,
-    groupId: string,
-    manualSuspended: boolean
-  ) => {
-    const actionKey = `${authId}:${groupId}:${manualSuspended ? "manual-on" : "manual-off"}`;
-    setQuotaActionKey(actionKey);
-    try {
-      const res = await fetch(API_ENDPOINTS.MANAGEMENT.AUTH_FILE_QUOTA_GROUPS_MANUAL, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          auth_id: authId,
-          group_id: groupId,
-          manual_suspended: manualSuspended,
-          reason: manualSuspended ? "dashboard_manual_suspend" : "",
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        showToast(extractApiError(data, "Failed to update quota group"), "error");
-        return;
-      }
-      showToast(manualSuspended ? "Quota group suspended" : "Manual suspension lifted", "success");
-      await loadAccounts();
-      await refreshProviders();
-    } catch {
-      showToast(t("toastNetworkError"), "error");
-    } finally {
-      setQuotaActionKey(null);
-    }
-  };
-
-  const clearQuotaGroupCooldown = async (authId: string, groupId: string) => {
-    const actionKey = `${authId}:${groupId}:auto-clear`;
-    setQuotaActionKey(actionKey);
-    try {
-      const res = await fetch(API_ENDPOINTS.MANAGEMENT.AUTH_FILE_QUOTA_GROUPS_AUTO_CLEAR, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          auth_id: authId,
-          group_id: groupId,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        showToast(extractApiError(data, "Failed to clear quota cooldown"), "error");
-        return;
-      }
-      showToast("Quota cooldown cleared", "success");
-      await loadAccounts();
-      await refreshProviders();
-    } catch {
-      showToast(t("toastNetworkError"), "error");
-    } finally {
-      setQuotaActionKey(null);
-    }
-  };
-
   const openAuthPopup = (url: string) => {
     const popup = window.open(url, "oauth", "width=600,height=800");
     return popup !== null;
@@ -448,7 +370,7 @@ export function OAuthSection({
             userCode: data.user_code,
           });
           setAuthLaunchUrl(data.verification_url);
-          if (!deviceCodePopupOpenedRef.current && !incognitoRef.current) {
+          if (!deviceCodePopupOpenedRef.current) {
             deviceCodePopupOpenedRef.current = true;
             window.open(data.verification_url, "oauth", "width=600,height=800");
           }
@@ -551,22 +473,10 @@ export function OAuthSection({
   }
 
   const handleOAuthConnect = async (
-    providerId: OAuthProviderId,
-    endpointOverride?: string,
-    requestInitOverride?: RequestInit
+    providerId: OAuthProviderId
   ): Promise<{ ok: boolean; errorMessage?: string }> => {
     const provider = getOAuthProviderById(providerId);
     if (!provider) return { ok: false };
-
-    if (provider.preConnect === "gitlab" && !endpointOverride) {
-      openGitLabPreConnect();
-      return { ok: false };
-    }
-
-    const authEndpoint = endpointOverride ?? provider.authEndpoint;
-    if (!authEndpoint) {
-      return { ok: false };
-    }
 
     selectedOAuthProviderIdRef.current = providerId;
     setSelectedOAuthProviderId(providerId);
@@ -585,7 +495,7 @@ export function OAuthSection({
     };
 
     try {
-      const res = await fetch(authEndpoint, requestInitOverride);
+      const res = await fetch(provider.authEndpoint);
       if (!res.ok) {
         const errorData: unknown = await res.json().catch(() => null);
         return fail(
@@ -615,30 +525,27 @@ export function OAuthSection({
       }
       setAuthLaunchUrl(data.url);
 
-      const shouldOpenPopup = !incognitoBrowserEnabled;
-      if (shouldOpenPopup) {
-        const popupOpened = openAuthPopup(data.url);
-        if (!popupOpened) {
-          return fail(t("errorOAuthPopupBlocked"));
-        }
+      const popupOpened = openAuthPopup(data.url);
+      if (!popupOpened) {
+        return fail(t("errorOAuthPopupBlocked"));
       }
       authStateRef.current = data.state;
       if (provider.requiresCallback) {
         setOauthModalStatus(MODAL_STATUS.WAITING);
         setCallbackValidation(CALLBACK_VALIDATION.EMPTY);
         setCallbackMessage(t("callbackMsgEmpty"));
-        showToast(incognitoBrowserEnabled ? t("toastOAuthFollowStepsIncognito") : t("toastOAuthFollowStepsPopup"), "info");
+        showToast(t("toastOAuthFollowStepsPopup"), "info");
       } else {
         setOauthModalStatus(MODAL_STATUS.POLLING);
         setCallbackValidation(CALLBACK_VALIDATION.VALID);
-        setCallbackMessage(incognitoBrowserEnabled ? t("callbackMsgNoCallbackIncognito") : t("callbackMsgNoCallbackPopup"));
-        showToast(incognitoBrowserEnabled ? t("toastOAuthNoCallbackIncognito") : t("toastOAuthNoCallbackPopup"), "info");
+        setCallbackMessage(t("callbackMsgNoCallbackPopup"));
+        showToast(t("toastOAuthNoCallbackPopup"), "info");
         if (data.user_code && data.url) {
           setDeviceCodeInfo({
             verificationUrl: data.url,
             userCode: data.user_code,
           });
-          deviceCodePopupOpenedRef.current = shouldOpenPopup;
+          deviceCodePopupOpenedRef.current = true;
         }
         stopNoCallbackClaimPolling();
         void claimOAuthWithoutCallback(providerId, data.state);
@@ -650,101 +557,6 @@ export function OAuthSection({
       return fail(t("errorOAuthStartNetwork"));
     }
   };
-
-  const openGitLabPreConnect = () => {
-    setIsGitLabPreConnectOpen(true);
-    setGitLabError(null);
-    setGitLabSubmitting(false);
-  };
-
-  const closeGitLabPreConnect = () => {
-    if (gitLabSubmitting) return;
-    setIsGitLabPreConnectOpen(false);
-    setGitLabError(null);
-  };
-
-  const resetGitLabPreConnectFields = () => {
-    setGitLabMode("oauth");
-    setGitLabClientId("");
-    setGitLabClientSecret("");
-    setGitLabBaseUrl("");
-    setGitLabPat("");
-  };
-
-  const submitGitLabPreConnect = async () => {
-    setGitLabError(null);
-    const baseUrl = gitLabBaseUrl.trim();
-
-    if (gitLabMode === "oauth") {
-      const clientId = gitLabClientId.trim();
-      const clientSecret = gitLabClientSecret.trim();
-      if (!clientId) {
-        setGitLabError(t("gitlabClientIdRequired"));
-        return;
-      }
-
-      const requestInit: RequestInit = {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: clientId,
-          ...(clientSecret ? { client_secret: clientSecret } : {}),
-          ...(baseUrl ? { base_url: baseUrl } : {}),
-        }),
-      };
-      const endpoint = "/api/management/gitlab-auth-url";
-
-      setGitLabSubmitting(true);
-      try {
-        const result = await handleOAuthConnect("gitlab", endpoint, requestInit);
-        if (result.ok) {
-          setIsGitLabPreConnectOpen(false);
-          resetGitLabPreConnectFields();
-        } else {
-          // Bootstrap failed — close the secondary OAuth modal and surface the
-          // error inside the GitLab modal so the user can retry with the same inputs.
-          setIsOAuthModalOpen(false);
-          setGitLabError(result.errorMessage ?? t("errorOAuthStartNetwork"));
-        }
-      } finally {
-        setGitLabSubmitting(false);
-      }
-      return;
-    }
-
-    const pat = gitLabPat.trim();
-    if (!pat) {
-      setGitLabError(t("gitlabPatRequired"));
-      return;
-    }
-
-    setGitLabSubmitting(true);
-    try {
-      const res = await fetch("/api/management/gitlab-auth-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          personal_access_token: pat,
-          base_url: baseUrl || undefined,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.status === "error") {
-        setGitLabError(extractApiError(data, t("gitlabPatFailed")));
-        return;
-      }
-      setIsGitLabPreConnectOpen(false);
-      resetGitLabPreConnectFields();
-      showToast(t("toastOAuthConnected"), "success");
-      await refreshProviders();
-      void loadAccounts();
-    } catch {
-      setGitLabError(t("toastNetworkError"));
-    } finally {
-      setGitLabSubmitting(false);
-    }
-  };
-
 
   const handleCallbackChange = (value: string) => {
     setCallbackUrl(value);
@@ -991,24 +803,18 @@ export function OAuthSection({
             currentUser={currentUser}
             togglingAccountId={togglingAccountId}
             claimingAccountName={claimingAccountName}
-            quotaActionKey={quotaActionKey}
             onToggle={toggleOAuthAccount}
             onDelete={confirmDeleteOAuth}
             onClaim={claimOAuthAccount}
-            onForceSuspend={(authId, groupId) => void updateQuotaGroupManual(authId, groupId, true)}
-            onLiftManual={(authId, groupId) => void updateQuotaGroupManual(authId, groupId, false)}
-            onClearCooldown={(authId, groupId) => void clearQuotaGroupCooldown(authId, groupId)}
           />
 
           <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 text-xs text-[var(--text-muted)]">
             <strong className="text-[var(--text-primary)]">{t("noteLabel")}</strong>{" "}
-            {incognitoBrowserEnabled
-              ? t("oauthIncognitoNote")
-              : t("oauthPopupNote")}
+            {t("oauthPopupNote")}
           </div>
 
           <OAuthActions
-            providers={OAUTH_PROVIDERS}
+            providers={visibleOAuthProviders(pluginOAuthProviders)}
             onConnect={handleOAuthConnect}
             onImport={openImportModal}
           />
@@ -1029,18 +835,12 @@ export function OAuthSection({
           )}
 
           {authLaunchUrl && (oauthModalStatus === MODAL_STATUS.WAITING || oauthModalStatus === MODAL_STATUS.POLLING || oauthModalStatus === MODAL_STATUS.ERROR) && (
-            <div className={`rounded-xl border-l-4 p-4 text-sm ${
-              incognitoBrowserEnabled
-                ? "border-amber-300 bg-amber-500/10 text-amber-900"
-                : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
-            }`}>
+            <div className="rounded-xl border-l-4 border-[var(--surface-border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
               <div className="font-medium text-[var(--text-primary)]">
-                {incognitoBrowserEnabled ? "Open This URL In A Private Window" : "Authorization URL"}
+                Authorization URL
               </div>
               <p className="mt-2 text-[var(--text-secondary)]">
-                {incognitoBrowserEnabled
-                  ? t("oauthOpenManuallyIncognito")
-                  : t("oauthOpenManually")}
+                {t("oauthOpenManually")}
               </p>
               <div className="mt-3 rounded-lg bg-[var(--surface-muted)] p-3">
                 <input
@@ -1063,19 +863,17 @@ export function OAuthSection({
                 >
                   {t("oauthCopyUrlButton")}
                 </Button>
-                {!incognitoBrowserEnabled && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      const popupOpened = openAuthPopup(authLaunchUrl);
-                      if (!popupOpened) {
-                        showToast(t("errorOAuthPopupBlocked"), "error");
-                      }
-                    }}
-                  >
-                    {t("oauthOpenAgainButton")}
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    const popupOpened = openAuthPopup(authLaunchUrl);
+                    if (!popupOpened) {
+                      showToast(t("errorOAuthPopupBlocked"), "error");
+                    }
+                  }}
+                >
+                  {t("oauthOpenAgainButton")}
+                </Button>
               </div>
             </div>
           )}
@@ -1091,7 +889,7 @@ export function OAuthSection({
                   Step-by-step
                 </div>
                 <ol className="mt-3 list-decimal space-y-2 pl-4 text-[var(--text-primary)]">
-                  <li>{incognitoBrowserEnabled ? "Open the authorization URL above in a private/incognito window and sign in there." : "Log in and authorize in the popup window."}</li>
+                  <li>Log in and authorize in the popup window.</li>
                   <li>
                     After authorizing, the page will fail to load (this is
                     expected).
@@ -1144,7 +942,7 @@ export function OAuthSection({
                 Device Authorization
               </div>
               <ol className="mt-3 list-decimal space-y-2 pl-4 text-[var(--text-primary)]">
-                <li>{incognitoBrowserEnabled ? "Open the authorization URL above in a private/incognito window." : "A browser window has opened with the authorization page."}</li>
+                <li>A browser window has opened with the authorization page.</li>
                 <li>Log in and approve the access request.</li>
                 <li>{t("oauthDeviceStep3")}</li>
               </ol>
@@ -1209,121 +1007,6 @@ export function OAuthSection({
           )}
         </ModalFooter>
       </Modal>
-
-      <Modal isOpen={isGitLabPreConnectOpen} onClose={closeGitLabPreConnect}>
-        <ModalHeader>
-          <ModalTitle>{t("gitlabConnectTitle")}</ModalTitle>
-        </ModalHeader>
-        <ModalContent>
-          <div className="space-y-4">
-            <div className="rounded-xl border-l-4 border-[var(--surface-border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
-              {t("gitlabIntro")}
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                variant={gitLabMode === "oauth" ? "secondary" : "ghost"}
-                onClick={() => setGitLabMode("oauth")}
-                disabled={gitLabSubmitting}
-              >
-                {t("gitlabModeOAuth")}
-              </Button>
-              <Button
-                variant={gitLabMode === "pat" ? "secondary" : "ghost"}
-                onClick={() => setGitLabMode("pat")}
-                disabled={gitLabSubmitting}
-              >
-                {t("gitlabModePat")}
-              </Button>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-medium text-[var(--text-primary)]">
-                {t("gitlabBaseUrlLabel")}
-              </label>
-              <Input
-                type="text"
-                name="gitlab_base_url"
-                value={gitLabBaseUrl}
-                onChange={setGitLabBaseUrl}
-                placeholder="https://gitlab.com"
-                disabled={gitLabSubmitting}
-              />
-              <p className="mt-1 text-xs text-[var(--text-muted)]">{t("gitlabBaseUrlHint")}</p>
-            </div>
-
-            {gitLabMode === "oauth" ? (
-              <>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-[var(--text-primary)]">
-                    {t("gitlabClientIdLabel")}
-                  </label>
-                  <Input
-                    type="text"
-                    name="gitlab_client_id"
-                    value={gitLabClientId}
-                    onChange={setGitLabClientId}
-                    placeholder="abc123..."
-                    disabled={gitLabSubmitting}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-[var(--text-primary)]">
-                    {t("gitlabClientSecretLabel")}
-                  </label>
-                  <Input
-                    type="password"
-                    name="gitlab_client_secret"
-                    value={gitLabClientSecret}
-                    onChange={setGitLabClientSecret}
-                    placeholder={t("gitlabClientSecretPlaceholder")}
-                    disabled={gitLabSubmitting}
-                  />
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">{t("gitlabClientSecretHint")}</p>
-                </div>
-              </>
-            ) : (
-              <div>
-                <label className="mb-1 block text-xs font-medium text-[var(--text-primary)]">
-                  {t("gitlabPatLabel")}
-                </label>
-                <Input
-                  type="password"
-                  name="gitlab_pat"
-                  value={gitLabPat}
-                  onChange={setGitLabPat}
-                  placeholder="glpat-..."
-                  disabled={gitLabSubmitting}
-                />
-                <p className="mt-1 text-xs text-[var(--text-muted)]">{t("gitlabPatHint")}</p>
-              </div>
-            )}
-
-            {gitLabError && (
-              <div className="rounded-xl border-l-4 border-red-300 bg-red-500/10 p-3 text-xs text-red-700">
-                {gitLabError}
-              </div>
-            )}
-          </div>
-        </ModalContent>
-        <ModalFooter>
-          <Button variant="ghost" onClick={closeGitLabPreConnect} disabled={gitLabSubmitting}>
-            {t("oauthCloseButton")}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={submitGitLabPreConnect}
-            disabled={gitLabSubmitting}
-          >
-            {gitLabSubmitting
-              ? t("oauthSubmittingButton")
-              : gitLabMode === "oauth"
-                ? t("gitlabContinueOAuth")
-                : t("gitlabSavePat")}
-          </Button>
-        </ModalFooter>
-      </Modal>
-
 
       <ConfirmDialog
         isOpen={showConfirmOAuthDelete}

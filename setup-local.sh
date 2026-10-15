@@ -189,6 +189,8 @@ quota-exceeded:
   switch-preview-model: true
 routing:
   strategy: "round-robin"
+usage-statistics-enabled: true
+redis-usage-queue-retention-seconds: 3600
 EOF
 
     log_success "Created config.local.yaml (API key: ${api_key})"

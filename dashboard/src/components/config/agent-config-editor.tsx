@@ -11,7 +11,6 @@ import type {
   TlsConfig,
   PprofConfig,
   ClaudeHeaderDefaults,
-  AmpcodeConfig,
   PayloadConfig,
   OAuthModelAliasEntry,
 } from "@/app/dashboard/config/page";
@@ -26,7 +25,6 @@ interface AgentConfigEditorProps {
   updateTlsConfig: (key: keyof TlsConfig, value: string | boolean) => void;
   updatePprofConfig: (key: keyof PprofConfig, value: string | boolean) => void;
   updateClaudeHeaderDefaults: (key: keyof ClaudeHeaderDefaults, value: string) => void;
-  updateAmpcodeConfig: (key: keyof AmpcodeConfig, value: string | boolean | unknown) => void;
   updatePayloadConfig: (key: keyof PayloadConfig, value: unknown) => void;
   toggleProviderExpanded: (provider: string) => void;
   updateOAuthAliasEntry: (provider: string, index: number, field: keyof OAuthModelAliasEntry, value: string | boolean) => void;
@@ -44,7 +42,6 @@ export default function AgentConfigEditor({
   updateTlsConfig,
   updatePprofConfig,
   updateClaudeHeaderDefaults,
-  updateAmpcodeConfig,
   updatePayloadConfig,
   toggleProviderExpanded,
   updateOAuthAliasEntry,
@@ -84,9 +81,6 @@ export default function AgentConfigEditor({
           <ConfigField label={t("fieldPassthroughHeadersLabel")} description={t("fieldPassthroughHeadersDesc")}>
             <Toggle enabled={config["passthrough-headers"] ?? false} onChange={(value) => updateConfig("passthrough-headers", value)} />
           </ConfigField>
-          <ConfigField label={t("fieldIncognitoBrowserLabel")} description={t("fieldIncognitoBrowserDesc")}>
-            <Toggle enabled={config["incognito-browser"] ?? false} onChange={(value) => updateConfig("incognito-browser", value)} />
-          </ConfigField>
         </div>
       </section>
 
@@ -100,7 +94,7 @@ export default function AgentConfigEditor({
             <Input type="number" name="bootstrap-retries" value={String(config.streaming["bootstrap-retries"])} onChange={(value) => updateStreamingConfig("bootstrap-retries", Number(value))} className="font-mono" />
           </ConfigField>
           <ConfigField label={t("fieldNonstreamKeepaliveLabel")} description={t("fieldNonstreamKeepaliveDesc")}>
-            <Input type="number" name="nonstream-keepalive-interval" value={String(config.streaming["nonstream-keepalive-interval"] ?? 0)} onChange={(value) => updateStreamingConfig("nonstream-keepalive-interval", Number(value))} className="font-mono" />
+            <Input type="number" name="nonstream-keepalive-interval" value={String(config["nonstream-keepalive-interval"] ?? 0)} onChange={(value) => updateConfig("nonstream-keepalive-interval", Number(value))} className="font-mono" />
           </ConfigField>
         </div>
       </section>
@@ -170,15 +164,6 @@ export default function AgentConfigEditor({
       </section>
 
       <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <SectionHeader title={t("sectionKiro")} />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <ConfigField label={t("fieldKiroEndpointLabel")} description={t("fieldKiroEndpointDesc")}>
-            <Input type="text" name="kiro-preferred-endpoint" value={config["kiro-preferred-endpoint"] ?? ""} onChange={(value) => updateConfig("kiro-preferred-endpoint", value)} placeholder="https://..." className="font-mono" />
-          </ConfigField>
-        </div>
-      </section>
-
-      <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <SectionHeader title={t("sectionClaudeHeaderDefaults")} />
         <p className="text-xs text-[var(--text-muted)]">{t("claudeHeaderDesc")}</p>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -193,25 +178,6 @@ export default function AgentConfigEditor({
           </ConfigField>
           <ConfigField label={t("fieldTimeoutLabel")} description={t("fieldTimeoutDesc")}>
             <Input type="text" name="claude-header-timeout" value={config["claude-header-defaults"]?.["timeout"] ?? ""} onChange={(value) => updateClaudeHeaderDefaults("timeout", value)} className="font-mono" />
-          </ConfigField>
-        </div>
-      </section>
-
-      <section className="space-y-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <SectionHeader title={t("sectionAmpCode")} />
-        <p className="text-xs text-[var(--text-muted)]">{t("ampCodeDesc")}</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <ConfigField label={t("fieldAmpUpstreamUrlLabel")} description={t("fieldAmpUpstreamUrlDesc")}>
-            <Input type="text" name="ampcode-upstream-url" value={config.ampcode?.["upstream-url"] ?? ""} onChange={(value) => updateAmpcodeConfig("upstream-url", value)} className="font-mono" />
-          </ConfigField>
-          <ConfigField label={t("fieldAmpUpstreamApiKeyLabel")} description={t("fieldAmpUpstreamApiKeyDesc")}>
-            <Input type="password" name="ampcode-upstream-api-key" value={config.ampcode?.["upstream-api-key"] ?? ""} onChange={(value) => updateAmpcodeConfig("upstream-api-key", value)} className="font-mono" />
-          </ConfigField>
-          <ConfigField label={t("fieldAmpRestrictLocalhostLabel")} description={t("fieldAmpRestrictLocalhostDesc")}>
-            <Toggle enabled={config.ampcode?.["restrict-management-to-localhost"] ?? false} onChange={(value) => updateAmpcodeConfig("restrict-management-to-localhost", value)} />
-          </ConfigField>
-          <ConfigField label={t("fieldAmpForceModelMappingsLabel")} description={t("fieldAmpForceModelMappingsDesc")}>
-            <Toggle enabled={config.ampcode?.["force-model-mappings"] ?? false} onChange={(value) => updateAmpcodeConfig("force-model-mappings", value)} />
           </ConfigField>
         </div>
       </section>

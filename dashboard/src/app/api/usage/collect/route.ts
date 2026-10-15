@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
+import { getManagementUrl } from "@/lib/management-url";
 import { validateOrigin } from "@/lib/auth/origin";
 import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { randomUUID, timingSafeEqual } from "crypto";
 import { Errors } from "@/lib/errors";
+import { mergeConfigYaml } from "@/lib/config-yaml";
 
-const CLIPROXYAPI_MANAGEMENT_URL =
-  process.env.CLIPROXYAPI_MANAGEMENT_URL ||
-  "http://cliproxyapi:8317/v0/management";
+const CLIPROXYAPI_MANAGEMENT_URL = getManagementUrl();
 const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
 const COLLECTOR_API_KEY = process.env.COLLECTOR_API_KEY;
 
 const BATCH_SIZE = 500;
+// Caps one run at 10k records; anything left stays queued for the next run.
+const MAX_QUEUE_BATCHES = 20;
 const LATENCY_BACKFILL_BATCH_SIZE = 100;
 const COLLECTOR_LEASE_STALE_MS = 15 * 60 * 1000;
 
@@ -21,6 +23,75 @@ const COLLECTOR_LEASE_STALE_MS = 15 * 60 * 1000;
 // drain-on-read queue at `/usage-queue`. Each GET returns the events
 // recorded since the previous read, then empties the queue server-side.
 // The response is a flat array of QueueEntry objects.
+
+function fetchUsageQueueBatch(): Promise<Response> {
+  return fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/usage-queue?count=${BATCH_SIZE}`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+    signal: AbortSignal.timeout(30_000),
+  });
+}
+
+// /usage-queue returns a flat array. Be defensive about wrapped shapes
+// that some intermediates may add (e.g. {queue: [...]} or {events: [...]}).
+function extractQueueEntries(responseJson: unknown): unknown[] | null {
+  const rawEntries: unknown =
+    Array.isArray(responseJson)
+      ? responseJson
+      : typeof responseJson === "object" && responseJson !== null
+        ? (responseJson as Record<string, unknown>).queue ??
+          (responseJson as Record<string, unknown>).events ??
+          (responseJson as Record<string, unknown>).usage ??
+          null
+        : null;
+  return Array.isArray(rawEntries) ? rawEntries : null;
+}
+
+const QUEUE_RETENTION_KEY = "redis-usage-queue-retention-seconds";
+// Upstream maximum. The default (60 s) drops records before the 5-minute collector runs.
+const MIN_QUEUE_RETENTION_SECONDS = 3600;
+let queueRetentionEnsured = false;
+
+/**
+ * Existing installs keep their own config.yaml, so the template's retention never
+ * reaches them. Raise it once per process with a single config.yaml write (never
+ * lower it). Failures only log: collection must not depend on this.
+ */
+async function ensureUsageQueueRetention(runId: string): Promise<void> {
+  if (queueRetentionEnsured) return;
+  const headers = { Authorization: `Bearer ${MANAGEMENT_API_KEY}` };
+  const signal = () => AbortSignal.timeout(10_000);
+  try {
+    const configRes = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/config`, { headers, signal: signal() });
+    if (!configRes.ok) throw new Error(`GET /config returned ${configRes.status}`);
+    const config: unknown = await configRes.json();
+    const current =
+      typeof config === "object" && config !== null
+        ? Number((config as Record<string, unknown>)[QUEUE_RETENTION_KEY])
+        : Number.NaN;
+    if (current >= MIN_QUEUE_RETENTION_SECONDS) {
+      queueRetentionEnsured = true;
+      return;
+    }
+
+    const yamlRes = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/config.yaml`, { headers, signal: signal() });
+    if (!yamlRes.ok) throw new Error(`GET /config.yaml returned ${yamlRes.status}`);
+    const merged = mergeConfigYaml(await yamlRes.text(), { [QUEUE_RETENTION_KEY]: MIN_QUEUE_RETENTION_SECONDS });
+    const putRes = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/config.yaml`, {
+      method: "PUT",
+      headers: { ...headers, "Content-Type": "text/yaml" },
+      body: merged,
+      signal: signal(),
+    });
+    await putRes.body?.cancel().catch(() => undefined);
+    if (!putRes.ok) throw new Error(`PUT /config.yaml returned ${putRes.status}`);
+
+    queueRetentionEnsured = true;
+    logger.info({ runId, from: current, to: MIN_QUEUE_RETENTION_SECONDS }, "Raised CLIProxyAPI usage-queue retention");
+  } catch (error) {
+    logger.warn({ err: error, runId }, "Could not ensure usage-queue retention; collecting anyway");
+  }
+}
 
 function markCollectorError(runId: string, errorMessage: string): Promise<void> {
   return prisma.collectorState
@@ -217,15 +288,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await ensureUsageQueueRetention(runId);
+
     let usageResponse: Response;
     let authFilesResponse: Response | null = null;
     try {
       [usageResponse, authFilesResponse] = await Promise.all([
-        fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/usage-queue?count=${BATCH_SIZE}`, {
-          method: "GET",
-          headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
-          signal: AbortSignal.timeout(30_000),
-        }),
+        fetchUsageQueueBatch(),
         fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/auth-files`, {
           method: "GET",
           headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
@@ -282,20 +351,9 @@ export async function POST(request: NextRequest) {
     }
 
     const responseJson: unknown = await usageResponse.json();
+    const rawEntries = extractQueueEntries(responseJson);
 
-    // /usage-queue returns a flat array. Be defensive about wrapped shapes
-    // that some intermediates may add (e.g. {queue: [...]} or {events: [...]}).
-    const rawEntries: unknown =
-      Array.isArray(responseJson)
-        ? responseJson
-        : typeof responseJson === "object" && responseJson !== null
-          ? (responseJson as Record<string, unknown>).queue ??
-            (responseJson as Record<string, unknown>).events ??
-            (responseJson as Record<string, unknown>).usage ??
-            null
-          : null;
-
-    if (!Array.isArray(rawEntries)) {
+    if (!rawEntries) {
       logger.error(
         { response: JSON.stringify(responseJson).slice(0, 200) },
         "Unexpected usage-queue response format from CLIProxyAPI"
@@ -305,6 +363,24 @@ export async function POST(request: NextRequest) {
     }
 
     const entries = rawEntries.filter(isUsageQueueEntry);
+
+    // Each read pops up to BATCH_SIZE records, so keep reading until a short
+    // batch. Records already popped are gone upstream: a failing follow-up
+    // read ends the loop but still persists what we have.
+    let lastBatchSize = rawEntries.length;
+    for (let batches = 1; lastBatchSize >= BATCH_SIZE && batches < MAX_QUEUE_BATCHES; batches++) {
+      const nextResponse = await fetchUsageQueueBatch().catch(() => null);
+      const nextEntries = nextResponse?.ok
+        ? extractQueueEntries(await nextResponse.json().catch(() => null))
+        : null;
+      if (!nextEntries) {
+        await nextResponse?.body?.cancel().catch(() => undefined);
+        logger.warn({ runId, status: nextResponse?.status }, "Follow-up usage-queue read failed; persisting records collected so far");
+        break;
+      }
+      entries.push(...nextEntries.filter(isUsageQueueEntry));
+      lastBatchSize = nextEntries.length;
+    }
 
     const syncResult = await syncKeysToCliProxyApi();
     if (!syncResult.ok) {

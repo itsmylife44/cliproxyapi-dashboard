@@ -57,8 +57,9 @@
 		-Server
 	}
 	
+	# Every management API version (/v0, /v8, ...) is internal-only
 	@management {
-		path /v0/management/*
+		path_regexp ^/v[0-9]+/management(/|$)
 	}
 	handle @management {
 		respond "Management API not accessible via public domain" 403

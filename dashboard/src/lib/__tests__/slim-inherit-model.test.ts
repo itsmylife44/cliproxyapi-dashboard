@@ -72,6 +72,62 @@ describe("buildSlimConfig – inheritModelFrom", () => {
     expect(presetAgents([], { agents }).oracle).toEqual(inherit);
   });
 
+  // Upstream merges these over a base layer and keeps the base's variant unless the overlay cancels it.
+  describe("on an entry layered over another preset", () => {
+    type Fallback = OhMyOpenCodeSlimFullConfig["fallback"];
+    type EmitFixer = (fixer: SlimAgentConfig, fallback?: Fallback) => SlimAgentConfig | undefined;
+
+    function build(overrides: OhMyOpenCodeSlimFullConfig) {
+      const config = buildSlimConfigChecked(available, overrides);
+      expect(config).not.toBeNull();
+      return config as { agents: Agents; presets: { child: Agents; cliproxyapi: Agents } };
+    }
+
+    const rootFixer: EmitFixer = (fixer, fallback) => build({ agents: { fixer }, fallback }).agents.fixer;
+    const childFixer: EmitFixer = (fixer, fallback) =>
+      build({ presets: { child: { extends: "cliproxyapi", agents: { fixer } } }, fallback }).presets.child.fixer;
+
+    it("cancels the base variant on a root agent", () => {
+      expect(rootFixer({ inheritModelFrom: "session" })).toEqual({ inheritModelFrom: "session", variant: "" });
+    });
+
+    it("cancels the base variant in an extending preset", () => {
+      const { child, cliproxyapi } = build({
+        presets: { child: { extends: "cliproxyapi", agents: { fixer: { inheritModelFrom: "session" } } } },
+      }).presets;
+      expect(child.fixer).toEqual({ inheritModelFrom: "session", variant: "" });
+      // The base preset stays a valid standalone preset
+      expect(cliproxyapi.fixer).toEqual({ model: "cliproxyapi/model-a", variant: "low" });
+    });
+
+    describe.each([
+      ["a root agent", rootFixer],
+      ["an extending preset", childFixer],
+    ])("on %s", (_, emitted) => {
+      it("keeps a user-set variant", () => {
+        expect(emitted({ inheritModelFrom: "session", variant: "high" })).toEqual({
+          inheritModelFrom: "session",
+          variant: "high",
+        });
+      });
+
+      it("adds no marker next to a scalar model", () => {
+        expect(emitted({ inheritModelFrom: "session", model: "model-a" })).toEqual({
+          inheritModelFrom: "session",
+          model: "cliproxyapi/model-a",
+        });
+      });
+
+      it("still marks an inheriting agent whose model became a fallback chain", () => {
+        expect(emitted({ inheritModelFrom: "session" }, { chains: { fixer: ["model-a"] } })).toEqual({
+          inheritModelFrom: "session",
+          model: ["cliproxyapi/model-a"],
+          variant: "",
+        });
+      });
+    });
+  });
+
   it("applies to the legacy agents output", () => {
     const inherit = { inheritModelFrom: "orchestrator" } as const;
     const config = buildSlimConfigChecked(

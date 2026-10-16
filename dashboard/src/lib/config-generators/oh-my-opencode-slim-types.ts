@@ -33,7 +33,12 @@ export const SLIM_INTERNAL_AGENTS = [
 export type SlimAgentName = (typeof SLIM_AGENTS)[number];
 export type SlimInternalAgentName = (typeof SLIM_INTERNAL_AGENTS)[number];
 
-export const SLIM_MULTIPLEXER_TYPES = ["auto", "tmux", "zellij", "none"] as const;
+export const SLIM_MULTIPLEXER_TYPES = ["auto", "tmux", "zellij", "herdr", "kitty", "cmux-tui", "none"] as const;
+
+/** Which opencode TUI surface subagent panes open (`multiplexer.viewer`). */
+export const SLIM_MULTIPLEXER_VIEWERS = ["tui", "mini"] as const;
+
+export const SLIM_FALLBACK_CONTINUATION_POLICIES = ["retry-primary", "stick-to-fallback"] as const;
 
 export const SLIM_TMUX_LAYOUTS = [
   "main-horizontal",
@@ -78,6 +83,12 @@ const SLIM_PERMISSION_VALUES = ["ask", "allow", "deny"] as const;
 const SLIM_INHERIT_MODEL_FROM = ["session", "orchestrator"] as const;
 const SLIM_IMAGE_ROUTING = ["auto", "direct"] as const;
 const SLIM_DEEPWORK_GUARD_MODES = ["shadow", "enforce"] as const;
+
+/** Marketplace agent package id (`scope/name`), as the vendored slim schema defines it. */
+export const SLIM_PACKAGE_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}\/[a-z0-9][a-z0-9._-]{0,63}$/;
+
+/** Package-id lists a preset's `marketplace` accepts. */
+export const SLIM_MARKETPLACE_LISTS = ["agents", "agents_add", "agents_remove"] as const;
 
 /** Upstream default for `fallback.maxRetries` */
 export const SLIM_DEFAULT_MAX_RETRIES = 3;
@@ -143,6 +154,9 @@ export type SlimPermission =
   | SlimPermissionValue
   | Record<string, SlimPermissionValue | Record<string, SlimPermissionValue>>;
 
+/** Marketplace agent packages of a preset; `agents` replaces the inherited list, then add, then remove. */
+export type SlimPresetMarketplace = Partial<Record<(typeof SLIM_MARKETPLACE_LISTS)[number], string[]>>;
+
 /**
  * A named preset containing agent configurations.
  * Presets allow switching between different model/config combinations.
@@ -152,6 +166,8 @@ export type SlimPermission =
 export interface SlimPreset {
   /** Name of the preset this one inherits from */
   extends?: string;
+  /** Marketplace agent packages (not an agent) */
+  marketplace?: SlimPresetMarketplace;
   orchestrator?: SlimAgentConfig;
   oracle?: SlimAgentConfig;
   designer?: SlimAgentConfig;
@@ -163,12 +179,16 @@ export interface SlimPreset {
   observer?: SlimAgentConfig;
   councillor?: SlimAgentConfig;
   // Allow any other advanced agent keys
-  [key: string]: SlimAgentConfig | string | undefined;
+  [key: string]: SlimAgentConfig | SlimPresetMarketplace | string | undefined;
 }
 
 export interface SlimFallbackConfig {
   enabled?: boolean;
   retryDelayMs?: number;
+  /** Delay before the first fallback, giving intercepting plugins time to recover (0 disables) */
+  initialRetryDelayMs?: number;
+  /** Model policy for internal continuations after a confirmed fallback */
+  continuationPolicy?: (typeof SLIM_FALLBACK_CONTINUATION_POLICIES)[number];
   /** Retries on the current model before switching to the next one in its `model` array */
   maxRetries?: number;
   /** Removed upstream (2.0.2); folded into each agent's `model` array by the generator */
@@ -195,6 +215,9 @@ export interface SlimMultiplexerConfig {
   type?: (typeof SLIM_MULTIPLEXER_TYPES)[number];
   layout?: (typeof SLIM_TMUX_LAYOUTS)[number];
   main_pane_size?: number;
+  /** Explicit path to the cmux-tui binary (unset: slim probes PATH) */
+  cmux_tui_binary?: string;
+  viewer?: (typeof SLIM_MULTIPLEXER_VIEWERS)[number];
 }
 
 /** Interview feature config for browser-based Q&A flow */
@@ -209,6 +232,8 @@ export interface SlimInterviewConfig {
   port?: number;
   /** Enable dashboard integration mode */
   dashboard?: boolean;
+  /** Print the full interview state block in the TUI instead of submitting it via a tool */
+  printState?: boolean;
 }
 
 /**
@@ -354,6 +379,18 @@ function validateAgentConfig(entryObj: Record<string, unknown>): SlimAgentConfig
   return entry;
 }
 
+function validateMarketplace(value: unknown): SlimPresetMarketplace | undefined {
+  if (!isRecord(value)) return undefined;
+  const result: SlimPresetMarketplace = {};
+  for (const key of SLIM_MARKETPLACE_LISTS) {
+    const ids = boundedStrings(value[key])?.filter((id) => SLIM_PACKAGE_ID_PATTERN.test(id));
+    // An explicitly empty list is meaningful (`agents: []` replaces the inherited list with none);
+    // a list emptied by dropping invalid ids is not.
+    if (ids && (ids.length > 0 || (value[key] as unknown[]).length === 0)) result[key] = ids;
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
 function validatePermission(value: unknown): SlimPermission | undefined {
   const asValue = (v: unknown) => oneOf(v, SLIM_PERMISSION_VALUES);
   if (!isRecord(value)) return asValue(value);
@@ -404,10 +441,12 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
       if (typeof presetVal.extends === "string" && presetVal.extends.length >= 1 && presetVal.extends.length <= 128) {
         preset.extends = presetVal.extends;
       }
+      const marketplace = validateMarketplace(presetVal.marketplace);
+      if (marketplace) preset.marketplace = marketplace;
       // Upstream's `{ extends, agents: {...} }` form: the wrapper holds the agents.
       const agentsObj = isRecord(presetVal.agents) ? presetVal.agents : presetVal;
       for (const [agentName, agentVal] of Object.entries(agentsObj)) {
-        // `marketplace` (agent packages) is not supported by the dashboard and is not an agent.
+        // `marketplace` (agent packages, parsed above) is not an agent.
         if (agentName.length > 128 || agentName === "extends" || agentName === "marketplace") continue;
         if (typeof agentVal !== "object" || agentVal === null || Array.isArray(agentVal)) continue;
         preset[agentName] = validateAgentConfig(agentVal as Record<string, unknown>);
@@ -471,6 +510,11 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     if (typeof muxObj.main_pane_size === "number" && Number.isInteger(muxObj.main_pane_size)) {
       mux.main_pane_size = Math.max(20, Math.min(80, muxObj.main_pane_size));
     }
+    if (typeof muxObj.cmux_tui_binary === "string" && muxObj.cmux_tui_binary.length >= 1 && muxObj.cmux_tui_binary.length <= 1024) {
+      mux.cmux_tui_binary = muxObj.cmux_tui_binary;
+    }
+    const viewer = oneOf(muxObj.viewer, SLIM_MULTIPLEXER_VIEWERS);
+    if (viewer) mux.viewer = viewer;
     if (Object.keys(mux).length > 0) result.multiplexer = mux;
   }
 
@@ -481,6 +525,11 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     if (typeof fbObj.enabled === "boolean") fb.enabled = fbObj.enabled;
     if (typeof fbObj.retryDelayMs === "number" && fbObj.retryDelayMs >= 0 && fbObj.retryDelayMs <= 10000) fb.retryDelayMs = fbObj.retryDelayMs;
     if (Number.isSafeInteger(fbObj.maxRetries) && (fbObj.maxRetries as number) >= 0) fb.maxRetries = fbObj.maxRetries as number;
+    if (Number.isSafeInteger(fbObj.initialRetryDelayMs) && (fbObj.initialRetryDelayMs as number) >= 0) {
+      fb.initialRetryDelayMs = fbObj.initialRetryDelayMs as number;
+    }
+    const continuationPolicy = oneOf(fbObj.continuationPolicy, SLIM_FALLBACK_CONTINUATION_POLICIES);
+    if (continuationPolicy) fb.continuationPolicy = continuationPolicy;
     if (fbObj.chains && typeof fbObj.chains === "object" && !Array.isArray(fbObj.chains)) {
       const chainsObj = fbObj.chains as Record<string, unknown>;
       const validatedChains: Record<string, string[]> = {};
@@ -554,6 +603,9 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     }
     if (typeof intObj.dashboard === "boolean") {
       interview.dashboard = intObj.dashboard;
+    }
+    if (typeof intObj.printState === "boolean") {
+      interview.printState = intObj.printState;
     }
     if (Object.keys(interview).length > 0) result.interview = interview;
   }

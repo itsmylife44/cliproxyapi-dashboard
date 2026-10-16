@@ -250,16 +250,21 @@ export function buildSlimConfig(
       }
 
       // Preserve explicitly configured advanced agents without inventing defaults for them.
-      for (const [agentKey, agentConfig] of Object.entries(presetOverride ?? {})) {
+      const { marketplace, ...presetAgents } = presetOverride ?? {};
+      for (const [agentKey, agentConfig] of Object.entries(presetAgents)) {
         if (extendsPreset === undefined && SLIM_AGENTS.includes(agentKey as typeof SLIM_AGENTS[number])) continue;
-        const normalized = normalizeExplicitAgentConfig(agentKey, agentConfig, availableModels);
+        const normalized = normalizeExplicitAgentConfig(agentKey, agentConfig as SlimAgentConfig | string | undefined, availableModels);
         if (normalized) {
           presetOut[agentKey] = normalized;
         }
       }
 
       foldFallbackChains(presetOut, chains, availableModels);
-      presets[presetName] = extendsPreset === undefined ? presetOut : { extends: extendsPreset, ...presetOut };
+      presets[presetName] = {
+        ...(extendsPreset !== undefined && { extends: extendsPreset }),
+        ...(marketplace !== undefined && { marketplace }),
+        ...presetOut,
+      };
     }
 
     config.preset = activePresetName;
@@ -326,8 +331,14 @@ export function buildSlimConfig(
   // Fallback — `chains` are folded into agent models above. Slim's `fallback` is strict, so only
   // emit keys it still accepts (timeoutMs / retry_on_empty were removed upstream).
   if (overrides?.fallback) {
-    const { enabled = true, retryDelayMs = 500, maxRetries } = overrides.fallback;
-    config.fallback = { enabled, retryDelayMs, ...(maxRetries !== undefined && { maxRetries }) };
+    const { enabled = true, retryDelayMs = 500, maxRetries, initialRetryDelayMs, continuationPolicy } = overrides.fallback;
+    config.fallback = {
+      enabled,
+      retryDelayMs,
+      ...(maxRetries !== undefined && { maxRetries }),
+      ...(initialRetryDelayMs !== undefined && { initialRetryDelayMs }),
+      ...(continuationPolicy !== undefined && { continuationPolicy }),
+    };
   }
 
   // Newer upstream keys the dashboard only stores (validated by validateSlimConfig)

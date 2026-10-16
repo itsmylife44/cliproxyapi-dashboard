@@ -252,12 +252,15 @@ const ANTIGRAVITY_FAMILY_LABELS = {
 type AntigravityFamily = keyof typeof ANTIGRAVITY_FAMILY_LABELS;
 
 // The bucketId decides the family: "Gemini 4 Argon" also contains "gemini" and must not
-// land in the shared Gemini windows. The display name is only a fallback.
+// land in the shared Gemini windows. The display name is only used for buckets without one.
 function antigravityFamily(bucketId: string | undefined, displayName: string): AntigravityFamily | null {
-  const id = bucketId?.toLowerCase() ?? "";
-  if (id.startsWith("gemini-argon")) return "gemini-argon";
-  if (id.startsWith("gemini")) return "gemini";
-  if (id.startsWith("3p")) return "claude-gpt";
+  const id = bucketId?.toLowerCase();
+  if (id) {
+    if (id.startsWith("gemini-argon")) return "gemini-argon";
+    if (id.startsWith("gemini")) return "gemini";
+    if (id.startsWith("3p")) return "claude-gpt";
+    return null;
+  }
   const name = displayName.toLowerCase();
   if (name.includes("argon")) return "gemini-argon";
   if (name.includes("gemini")) return "gemini";
@@ -275,19 +278,19 @@ function parseAntigravitySummary(payload: unknown): QuotaGroup[] | null {
     if (!Array.isArray(family.buckets)) continue;
 
     for (const bucket of family.buckets) {
-      const id = antigravityFamily(bucket.bucketId, family.displayName ?? "");
+      const familyId = antigravityFamily(bucket.bucketId, family.displayName ?? "");
       const window = (bucket.window ?? bucket.bucketId ?? "").toLowerCase();
       const period = window.includes("week") ? "weekly" : /5h|five.hour/.test(window) ? "5h" : null;
-      if (!id || !period) continue;
+      if (!familyId || !period) continue;
 
-      const groupId = `${id}-${period}`;
+      const groupId = `${familyId}-${period}`;
       const resetTime = typeof bucket.resetTime === "string" && Number.isFinite(Date.parse(bucket.resetTime))
         ? bucket.resetTime : null;
       // Protobuf JSON omits zero values, so an exhausted bucket arrives without remainingFraction.
       const remaining = bucket.remainingFraction === undefined && resetTime ? 0 : bucket.remainingFraction;
       groups.set(groupId, {
         id: groupId,
-        label: `${ANTIGRAVITY_FAMILY_LABELS[id]} · ${period === "weekly" ? "Weekly" : "5-hour"}`,
+        label: `${ANTIGRAVITY_FAMILY_LABELS[familyId]} · ${period === "weekly" ? "Weekly" : "5-hour"}`,
         remainingFraction: typeof remaining === "number" && Number.isFinite(remaining) && remaining >= 0 && remaining <= 1
           ? remaining : null,
         resetTime,

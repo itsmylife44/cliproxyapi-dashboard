@@ -379,6 +379,17 @@ describe("GET /api/quota - Antigravity client identity and Argon quota (issue #3
     ]);
   });
 
+  it("drops buckets whose bucketId belongs to no known family instead of trusting the group name", async () => {
+    const unknownBucket = { bucketId: "x-weekly", window: "weekly", remainingFraction: 0.01, resetTime: "2026-10-23T12:00:00Z" };
+    mockAntigravity("antigravity", () => ({ groups: [{ ...geminiGroup, buckets: [...geminiGroup.buckets, unknownBucket] }] }));
+    const account = await fetchAccount();
+
+    expect(account.groups.map((group: QuotaGroup) => [group.id, group.remainingFraction])).toEqual([
+      ["gemini-weekly", 0.31],
+      ["gemini-5h", 0.82],
+    ]);
+  });
+
   it("tries the next summary endpoint when a response has no shared Gemini window", async () => {
     mockAntigravity("antigravity", (url) => ({ groups: url.includes("sandbox") ? [geminiGroup, claudeGroup] : [argonGroup, claudeGroup] }));
     const account = await fetchAccount();
@@ -402,7 +413,9 @@ describe("GET /api/quota - Antigravity client identity and Argon quota (issue #3
     const account = await fetchAccount();
 
     expect(account.error).toBeUndefined();
-    expect(apiCalls().filter((call) => call.url.includes("fetchAvailableModels"))).toHaveLength(1);
+    const modelCalls = apiCalls().filter((call) => call.url.includes("fetchAvailableModels"));
+    expect(modelCalls).toHaveLength(1);
+    expect(modelCalls[0].header["User-Agent"]).toBe("antigravity/hub/2.23.1 darwin/arm64");
   });
 });
 

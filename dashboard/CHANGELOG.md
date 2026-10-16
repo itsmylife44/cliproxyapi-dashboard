@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.1.89](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.88...dashboard-v0.1.89) (2026-10-16)
+
+
+### Features
+
+* **config:** pin OMO 5.1.33 / slim 3.0.4 and add upstream schema guard ([#296](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/296)) ([62d98d7](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/62d98d7762181aba0922f5d5e9546c40dd020296))
+* **omo:** 5.1.33 model chains and presets; deep-low/deep-high ([#301](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/301)) ([54376b9](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/54376b97cefa9a0502de6131a7d572e4eaef0380))
+* **omo:** accept new 5.x fields; 5.1.33 hook and skill lists in the UI ([#307](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/307)) ([0150330](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/0150330f61a0b5b57d0103911a0809d49d302b05))
+* **omo:** emit reasoning/models/providerOptions instead of deprecated fields ([#305](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/305)) ([c424760](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c424760fb0b1fa60af7f52b31458da7ec8cdfdd5)), closes [#293](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/293)
+* **omo:** notify sync users that OMO settings were not applied since OMO 4.19.3 and apply again after the next OpenCode start ([#311](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/311)) ([478b850](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/478b850959c12d022859f5ec2a8b4a4a7e3614fa))
+* **omo:** remove values invalid on 5.x (browser provider, commands, LSP, hooks, skills, permissions) ([#302](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/302)) ([2599d9e](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/2599d9e90a5a5e23d04f078d1dbd354d8ebb4092))
+* **quota:** show Codex per-model and code review limits as scoped groups ([#309](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/309)); install context-mode in cloud sessions ([#321](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/321)) ([620e6b3](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/620e6b3c1f05bc968864e21b9d612bde57239f09))
+* **settings:** warn admins when the CLIProxyAPI plugins volume is missing ([#281](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/281)) ([48aaca4](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/48aaca44d97da7128d336e1b2cd1e97ac0bb1967))
+* **slim:** accept new 3.x fields; UI for fallback.maxRetries and disabled hooks/skills ([#304](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/304)) ([4b0984d](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/4b0984de17c1bccf62c73a1b2179b5099c7464b7))
+* **slim:** fold stored fallback chains into each agent's model array ([#297](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/297)) ([46229e2](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/46229e29b21f9a757c68a5876cc4e3cc960b7041))
+* **slim:** stop writing default skills/MCPs; emit council without master ([#298](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/298)) ([9a9ea77](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/9a9ea7798c48c30476166859b7497ce4f12df9b6))
+* **slim:** validate backgroundJobs, companion, webfetch and acpAgents against the upstream schema ([#324](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/324)) ([b10f487](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/b10f487441688c6799dd2c2c667c3f881707a606)), closes [#313](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/313)
+
+
+### Bug Fixes
+
+* **quota:** keep Codex weekly windows in long-term capacity ([#306](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/306)) ([ec6f0d8](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/ec6f0d8763ab063f517c722192220ce603e34a5c))
+* **quota:** pool Codex windows by duration so mixed plans keep short and long-term bars apart ([#318](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/318)) ([32ce206](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/32ce20657481515e82ab0be4ce9b988bd4d515ec))
+* **quota:** send Chatgpt-Account-Id on the Codex usage request ([#322](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/322)) ([c5d1923](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c5d1923b59c8da82f9fcc5aa069aed353f17631e))
+* **quota:** send current Antigravity client identity and split Gemini 4 Argon quota ([#330](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/330)) ([96eecda](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/96eecda778dd532a067e39d5001abc32bacb1432))
+* **settings:** hide admin-only controls from non-admins ([#282](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/282)) ([d93655b](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/d93655ba9f6a847e809bed7b7a8c85ec9257468e))
+* **settings:** show notice instead of plugin store on no-plugin CLIProxyAPI builds ([#283](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/283)) ([2b453fe](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/2b453fe4b3fbe9d1381d8b40401953f1c946a5ec))
+* **slim:** cancel the base preset's default variant for inheriting overlay agents ([#331](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/331)) ([e7192ee](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/e7192ee6fb357e316b36d77ca59a2a247a2916d7))
+* **slim:** convert a stored legacy tmux block into multiplexer so tmux users keep their setting ([#317](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/317)) ([bcfa221](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/bcfa221bcd075245ab9c9a91f5b204d3c83ee35f))
+* **slim:** don't auto-pick a model or default variant for agents with inheritModelFrom ([#326](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/326)) ([42bd5e1](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/42bd5e1e55d38a9035c9e56bcef62d9ba0b7075a))
+* **slim:** show inherited models for extending presets and split SlimPreset ([#328](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/328)) ([95bd712](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/95bd712308fbf318375e01f7651052b72d3096aa)), closes [#316](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/316)
+* **slim:** show inheritModelFrom agents as inheriting instead of an auto-picked model ([#332](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/332)) ([22ba244](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/22ba244cab958a25371d6964bc63304f1c623daa)), closes [#329](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/329)
+
 ## [0.1.88](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.87...dashboard-v0.1.88) (2026-10-15)
 
 

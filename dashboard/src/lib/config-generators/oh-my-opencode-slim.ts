@@ -83,10 +83,11 @@ function processModelConfig(
  * 
  * Model resolution priority:
  * 1. If override.model is provided → process and prefix if available
- * 2. If no override → pick best model from availableModels based on tier
- * 
+ * 2. If override.inheritModelFrom is set → no model and no default variant (upstream inherits)
+ * 3. Otherwise → pick best model from availableModels based on tier
+ *
  * Supports both string and array model configurations.
- * Returns null if no model can be resolved and no override is provided.
+ * Returns null if no model can be picked for a non-inheriting agent without a model override.
  */
 function buildAgentEntry(
   agent: string,
@@ -95,7 +96,12 @@ function buildAgentEntry(
 ): SlimAgentConfig | null {
   const role = SLIM_AGENT_ROLES[agent];
   const overrideModel = override?.model;
-  
+
+  // Upstream lets a scalar model beat inheritance, so an inheriting agent gets no auto-pick or default variant.
+  if (override?.inheritModelFrom !== undefined && overrideModel === undefined) {
+    return copyAgentFields(override, availableModels);
+  }
+
   let model: SlimModelConfig;
   if (overrideModel !== undefined) {
     // User specified a model override — process it
@@ -163,7 +169,8 @@ function normalizeExplicitAgentConfig(
 /**
  * Slim 2.0.2 removed `fallback.chains`; an agent's array `model` is now its fallback chain.
  * Folds each stored chain into the matching agent's model as `[primary, ...chain]`, deduped by id.
- * Agents without an emitted model are skipped (there is no primary to put first).
+ * An inheriting agent without a model gets the chain alone (upstream follows the inherited model and
+ * uses the array as its fallback); other agents without an emitted model are skipped.
  */
 function foldFallbackChains(
   agents: Record<string, SlimAgentConfig>,
@@ -172,9 +179,10 @@ function foldFallbackChains(
 ): void {
   for (const [agent, chain] of Object.entries(chains)) {
     const entry = agents[agent];
-    if (entry?.model === undefined) continue;
+    if (entry === undefined) continue;
+    if (entry.model === undefined && (entry.inheritModelFrom === undefined || chain.length === 0)) continue;
     const seen = new Set<string>();
-    const primary = typeof entry.model === "string" ? [entry.model] : entry.model;
+    const primary = [entry.model ?? []].flat();
     entry.model = [...primary, ...chain.map((m) => prefixModel(m, availableModels))].filter((item) => {
       const id = typeof item === "string" ? item : item.id;
       if (seen.has(id)) return false;

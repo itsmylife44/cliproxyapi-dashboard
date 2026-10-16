@@ -243,7 +243,10 @@ describe("GET /api/quota - Gemini CLI support (issue #125)", () => {
     const response = await GET(new Request("http://localhost/api/quota") as NextRequest);
     const account = (await response.json()).accounts[0];
 
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    // All three summary endpoints are probed (selection prefers a
+    // Gemini-bearing payload; here only sandbox answers 200): auth-files +
+    // loadCodeAssist + daily(429) + sandbox(200) + cloudcode(429).
+    expect(fetchMock).toHaveBeenCalledTimes(5);
     expect(fetchMock.mock.calls.some((call) => String(call[1]?.body).includes("fetchAvailableModels"))).toBe(false);
     const summaryRequest = JSON.parse(String(fetchMock.mock.calls.find((call) => String(call[1]?.body).includes("sandbox.googleapis.com/v1internal:retrieveUserQuotaSummary"))?.[1]?.body));
     expect(summaryRequest.url).toContain("retrieveUserQuotaSummary");

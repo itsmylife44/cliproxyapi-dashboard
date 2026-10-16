@@ -10,6 +10,25 @@ export const ANTIGRAVITY_QUOTA_ENDPOINTS = [
   "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels",
 ] as const;
 
+/**
+ * Google moved the Gemini quota family off the `daily-` endpoints (observed
+ * 2026-10-17: daily-cloudcode-pa serves only "Claude and GPT models", plain
+ * cloudcode-pa serves both families). First-parseable-wins would accept the
+ * Gemini-less daily payload and the capacity chart would lose its only
+ * feeding family, so the route collects every parseable candidate and picks
+ * with this helper: prefer a candidate the predicate accepts (Gemini
+ * windows present), else keep the first parseable one.
+ */
+export function selectAntigravitySummary<T>(
+  candidates: readonly T[],
+  isPreferred: (candidate: T) => boolean
+): T | null {
+  for (const candidate of candidates) {
+    if (isPreferred(candidate)) return candidate;
+  }
+  return candidates.length > 0 ? candidates[0] ?? null : null;
+}
+
 export const MODEL_FIRST_SNAPSHOT_STALE_MS = 300_000;
 
 export const MODEL_FIRST_PROVIDERS = ["antigravity", "gemini-cli", "gemini"] as const;

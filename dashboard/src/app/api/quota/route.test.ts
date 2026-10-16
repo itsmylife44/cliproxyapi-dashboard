@@ -824,53 +824,48 @@ describe("GET /api/quota - Claude limits[] parsing (issue #230)", () => {
   });
 });
 
+/** Mocks one active Codex auth file whose wham/usage call returns `body`, and returns its groups. */
+async function fetchCodexGroups(body: Record<string, unknown>): Promise<QuotaGroup[]> {
+  fetchMock
+    .mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          files: [{ auth_index: 41, provider: "codex", name: "codex-synthetic.json", disabled: false, status: "active" }],
+        }),
+      body: { cancel: vi.fn() },
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ status_code: 200, body }),
+      body: { cancel: vi.fn() },
+    });
+
+  const { GET } = await import("./route");
+  const response = await GET(new NextRequest("http://localhost/api/quota"));
+  expect(response.status).toBe(200);
+  const data = await response.json();
+  return data.accounts[0].groups;
+}
+
 describe("GET /api/quota - Codex window duration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   async function fetchCodexGroup(key: string, limitWindowSeconds: unknown): Promise<QuotaGroup> {
-    const authFilesResponse = {
-      files: [
-        {
-          auth_index: 41,
-          provider: "codex",
-          name: "codex-synthetic.json",
-          disabled: false,
-          status: "active",
+    const groups = await fetchCodexGroups({
+      rate_limit: {
+        [`${key}_window`]: {
+          limit_window_seconds: limitWindowSeconds,
+          used_percent: 25,
+          reset_at: 1792108800,
         },
-      ],
-    };
-
-    fetchMock
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(authFilesResponse),
-        body: { cancel: vi.fn() },
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status_code: 200,
-            body: {
-              rate_limit: {
-                [`${key}_window`]: {
-                  limit_window_seconds: limitWindowSeconds,
-                  used_percent: 25,
-                  reset_at: 1792108800,
-                },
-              },
-            },
-          }),
-        body: { cancel: vi.fn() },
-      });
-
-    const { GET } = await import("./route");
-    const response = await GET(new NextRequest("http://localhost/api/quota"));
-    expect(response.status).toBe(200);
-    const data = await response.json();
-    return data.accounts[0].groups[0];
+      },
+    });
+    const [group] = groups;
+    if (!group) throw new Error("expected a Codex quota group");
+    return group;
   }
 
   it.each(["primary", "secondary"])("preserves the %s window duration from the account service", async (key) => {
@@ -900,31 +895,6 @@ describe("GET /api/quota - Codex additional and code review limits (issue #309)"
   beforeEach(() => {
     vi.clearAllMocks();
   });
-
-  async function fetchCodexGroups(body: Record<string, unknown>): Promise<QuotaGroup[]> {
-    fetchMock
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            files: [
-              { auth_index: 42, provider: "codex", name: "codex-extra.json", disabled: false, status: "active" },
-            ],
-          }),
-        body: { cancel: vi.fn() },
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status_code: 200, body }),
-        body: { cancel: vi.fn() },
-      });
-
-    const { GET } = await import("./route");
-    const response = await GET(new NextRequest("http://localhost/api/quota"));
-    expect(response.status).toBe(200);
-    const data = await response.json();
-    return data.accounts[0].groups;
-  }
 
   it("returns each additional limit and the code review limit as their own groups", async () => {
     const groups = await fetchCodexGroups({

@@ -11,11 +11,11 @@ export interface QuotaWindowLike {
   resetTime: string | null;
 }
 
-// Antigravity's Claude/GPT windows are shown for reference but excluded from
-// capacity bars and aggregates; only its Gemini windows count.
+// Antigravity's Claude/GPT and Pro-only Gemini 4 Argon windows are shown for reference
+// but excluded from capacity bars and aggregates; only its shared Gemini windows count.
 export function capacityQuotaGroups<T extends QuotaWindowLike>(provider: string, groups: readonly T[]): T[] {
   if (provider.toLowerCase() !== "antigravity") return [...groups];
-  return groups.filter((group) => group.id.startsWith("gemini-"));
+  return groups.filter((group) => group.id === "gemini-weekly" || group.id === "gemini-5h");
 }
 
 function hasExplicitShortTermMarker(group: QuotaWindowLike): boolean {

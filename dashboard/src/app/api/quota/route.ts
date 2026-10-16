@@ -8,6 +8,7 @@ import { Errors } from "@/lib/errors";
 import {
   ANTIGRAVITY_QUOTA_ENDPOINTS,
   ANTIGRAVITY_SUMMARY_ENDPOINTS,
+  ANTIGRAVITY_USER_AGENT,
   enrichModelFirstGroup,
   isModelFirstProvider,
   normalizeFraction,
@@ -17,6 +18,7 @@ import {
 } from "@/lib/model-first-monitoring";
 import { parseCodexQuota, type CodexWhamUsageResponse } from "@/lib/quota/codex";
 import { slugifyLabel } from "@/lib/quota/labels";
+import { capacityQuotaGroups } from "@/lib/quota-window-classification";
 
 const CLIPROXYAPI_MANAGEMENT_URL = getManagementUrl();
 const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
@@ -241,6 +243,31 @@ interface AntigravityQuotaSummary {
   }>;
 }
 
+// Output order: shared Gemini, then the Pro-only Argon pool, then Claude/GPT.
+const ANTIGRAVITY_FAMILY_LABELS = {
+  gemini: "Gemini",
+  "gemini-argon": "Gemini 4 Argon",
+  "claude-gpt": "Claude/GPT",
+} as const;
+type AntigravityFamily = keyof typeof ANTIGRAVITY_FAMILY_LABELS;
+
+// The bucketId decides the family: "Gemini 4 Argon" also contains "gemini" and must not
+// land in the shared Gemini windows. The display name is only used for buckets without one.
+function antigravityFamily(bucketId: string | undefined, displayName: string): AntigravityFamily | null {
+  const id = bucketId?.toLowerCase();
+  if (id) {
+    if (id.startsWith("gemini-argon")) return "gemini-argon";
+    if (id.startsWith("gemini")) return "gemini";
+    if (id.startsWith("3p")) return "claude-gpt";
+    return null;
+  }
+  const name = displayName.toLowerCase();
+  if (name.includes("argon")) return "gemini-argon";
+  if (name.includes("gemini")) return "gemini";
+  if (name.includes("claude") || name.includes("gpt")) return "claude-gpt";
+  return null;
+}
+
 function parseAntigravitySummary(payload: unknown): QuotaGroup[] | null {
   if (!payload || typeof payload !== "object") return null;
   const summary = payload as AntigravityQuotaSummary;
@@ -248,23 +275,22 @@ function parseAntigravitySummary(payload: unknown): QuotaGroup[] | null {
 
   const groups = new Map<string, QuotaGroup>();
   for (const family of summary.groups) {
-    const name = family.displayName?.toLowerCase() ?? "";
-    const id = name.includes("gemini") ? "gemini" : name.includes("claude") || name.includes("gpt") ? "claude-gpt" : null;
-    if (!id || !Array.isArray(family.buckets)) continue;
+    if (!Array.isArray(family.buckets)) continue;
 
     for (const bucket of family.buckets) {
+      const familyId = antigravityFamily(bucket.bucketId, family.displayName ?? "");
       const window = (bucket.window ?? bucket.bucketId ?? "").toLowerCase();
       const period = window.includes("week") ? "weekly" : /5h|five.hour/.test(window) ? "5h" : null;
-      if (!period) continue;
+      if (!familyId || !period) continue;
 
-      const groupId = `${id}-${period}`;
+      const groupId = `${familyId}-${period}`;
       const resetTime = typeof bucket.resetTime === "string" && Number.isFinite(Date.parse(bucket.resetTime))
         ? bucket.resetTime : null;
       // Protobuf JSON omits zero values, so an exhausted bucket arrives without remainingFraction.
       const remaining = bucket.remainingFraction === undefined && resetTime ? 0 : bucket.remainingFraction;
       groups.set(groupId, {
         id: groupId,
-        label: `${id === "gemini" ? "Gemini" : "Claude/GPT"} · ${period === "weekly" ? "Weekly" : "5-hour"}`,
+        label: `${ANTIGRAVITY_FAMILY_LABELS[familyId]} · ${period === "weekly" ? "Weekly" : "5-hour"}`,
         remainingFraction: typeof remaining === "number" && Number.isFinite(remaining) && remaining >= 0 && remaining <= 1
           ? remaining : null,
         resetTime,
@@ -273,7 +299,8 @@ function parseAntigravitySummary(payload: unknown): QuotaGroup[] | null {
     }
   }
 
-  const ordered = ["gemini-weekly", "gemini-5h", "claude-gpt-weekly", "claude-gpt-5h"]
+  const ordered = Object.keys(ANTIGRAVITY_FAMILY_LABELS)
+    .flatMap((family) => [`${family}-weekly`, `${family}-5h`])
     .flatMap((id) => { const group = groups.get(id); return group ? [group] : []; });
   return ordered.length > 0 ? ordered : null;
 }
@@ -304,7 +331,7 @@ async function fetchAntigravityProjectId(authIndex: string): Promise<string | nu
         header: {
           Authorization: "Bearer $TOKEN$",
           "Content-Type": "application/json",
-          "User-Agent": "antigravity/1.11.5 windows/amd64",
+          "User-Agent": ANTIGRAVITY_USER_AGENT,
         },
         data: JSON.stringify({
           metadata: {
@@ -351,15 +378,24 @@ async function fetchAntigravityProjectId(authIndex: string): Promise<string | nu
   }
 }
 
+interface AntigravityPayloadResult<T> {
+  data: T;
+  snapshotFetchedAt: string;
+  snapshotSource: string;
+}
+
 async function fetchAntigravityPayload<T>(
   authIndex: string,
   projectId: string | null,
   endpoints: readonly string[],
   parsePayload: (payload: unknown) => T | null,
-  timeoutMs = 30_000
-): Promise<{ data: T; snapshotFetchedAt: string; snapshotSource: string } | { error: string }> {
+  timeoutMs = 30_000,
+  // A valid response that fails this keeps the loop going; the first valid one is the fallback.
+  isComplete: (data: T) => boolean = () => true
+): Promise<AntigravityPayloadResult<T> | { error: string }> {
   const payload = JSON.stringify(projectId ? { project: projectId } : {});
   let lastError = "No Antigravity quota endpoints responded";
+  let fallback: AntigravityPayloadResult<T> | null = null;
 
   for (const endpoint of endpoints) {
     try {
@@ -377,7 +413,7 @@ async function fetchAntigravityPayload<T>(
           header: {
             Authorization: "Bearer $TOKEN$",
             "Content-Type": "application/json",
-            "User-Agent": "antigravity/1.11.5 windows/amd64",
+            "User-Agent": ANTIGRAVITY_USER_AGENT,
           },
           data: payload,
         }),
@@ -406,10 +442,10 @@ async function fetchAntigravityPayload<T>(
           
           if (statusCode === 403) {
             if (errorDetail.toLowerCase().includes("validation_required") || errorDetail.toLowerCase().includes("verify")) {
-              return { error: "Google account requires verification - visit accounts.google.com" };
+              return fallback ?? { error: "Google account requires verification - visit accounts.google.com" };
             }
             lastError = `Antigravity access denied${errorDetail ? `: ${errorDetail}` : ""}`;
-            return { error: lastError };
+            return fallback ?? { error: lastError };
           }
           if (statusCode === 429) {
             lastError = `Antigravity rate limited${errorDetail ? `: ${errorDetail}` : " - quota exhausted"}`;
@@ -420,7 +456,7 @@ async function fetchAntigravityPayload<T>(
             continue; // Try next endpoint
           }
           lastError = `Antigravity API error: ${statusCode}${errorDetail ? ` - ${errorDetail}` : ""}`;
-          return { error: lastError };
+          return fallback ?? { error: lastError };
         }
 
         parsedPayload = apiCallResult.body;
@@ -440,17 +476,15 @@ async function fetchAntigravityPayload<T>(
         continue;
       }
 
-      return {
-        data,
-        snapshotFetchedAt: new Date().toISOString(),
-        snapshotSource: endpoint,
-      };
+      const result = { data, snapshotFetchedAt: new Date().toISOString(), snapshotSource: endpoint };
+      if (isComplete(data)) return result;
+      fallback ??= result;
     } catch (error) {
       lastError = error instanceof Error ? error.message : "Unknown error";
     }
   }
 
-  return { error: lastError };
+  return fallback ?? { error: lastError };
 }
 
 async function fetchAntigravityModels(authIndex: string, projectId: string | null, timeoutMs?: number) {
@@ -464,7 +498,9 @@ async function fetchAntigravityModels(authIndex: string, projectId: string | nul
 
 async function fetchAntigravityQuota(authIndex: string): Promise<AntigravityQuotaSnapshot | { error: string }> {
   const projectId = await fetchAntigravityProjectId(authIndex);
-  const summary = await fetchAntigravityPayload(authIndex, projectId, ANTIGRAVITY_SUMMARY_ENDPOINTS, parseAntigravitySummary);
+  // Some endpoints answer with only the Claude/GPT group; keep looking for the shared Gemini windows.
+  const summary = await fetchAntigravityPayload(authIndex, projectId, ANTIGRAVITY_SUMMARY_ENDPOINTS, parseAntigravitySummary,
+    undefined, (groups) => capacityQuotaGroups("antigravity", groups).length > 0);
   if ("error" in summary) return summary;
 
   return {

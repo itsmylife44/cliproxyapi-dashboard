@@ -316,6 +316,109 @@ describe("GET /api/quota - Gemini CLI support (issue #125)", () => {
   });
 });
 
+describe("GET /api/quota - Antigravity client identity and Argon quota (issue #323)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const geminiGroup = { displayName: "Gemini Models", buckets: [
+    { bucketId: "gemini-weekly", window: "weekly", remainingFraction: 0.31, resetTime: "2026-10-21T12:00:00Z" },
+    { bucketId: "gemini-5h", window: "5h", remainingFraction: 0.82, resetTime: "2026-10-16T17:00:00Z" },
+  ] };
+  const argonGroup = { displayName: "Gemini 4 Argon", buckets: [
+    { bucketId: "gemini-argon-wtu-weekly", window: "weekly", remainingFraction: 0.05, resetTime: "2026-10-22T12:00:00Z" },
+  ] };
+  const claudeGroup = { displayName: "Claude and GPT models", buckets: [
+    { bucketId: "3p-weekly", window: "weekly", remainingFraction: 0.48, resetTime: "2026-10-21T18:00:00Z" },
+    { bucketId: "3p-5h", window: "5h", remainingFraction: 0.9, resetTime: "2026-10-16T18:00:00Z" },
+  ] };
+
+  /** Answers auth-files, loadCodeAssist and fetchAvailableModels; summary endpoints are answered by `summaryFor`. */
+  function mockAntigravity(provider: string, summaryFor: (url: string) => unknown) {
+    fetchMock.mockImplementation(async (url: string, options?: { body?: string }) => {
+      if (url.endsWith("/auth-files")) return { ok: true, json: async () => ({ files: [
+        { auth_index: 1, provider, disabled: false, status: "active" },
+      ] }) };
+      const call = JSON.parse(options?.body ?? "{}");
+      if (call.url.includes("loadCodeAssist")) return { ok: true, json: async () => ({ status_code: 200, body: { cloudaicompanionProject: "test-project" } }) };
+      if (call.url.includes("fetchAvailableModels")) return { ok: true, json: async () => ({ status_code: 200, body: { models: {} } }) };
+      return { ok: true, json: async () => ({ status_code: 200, body: summaryFor(call.url) }) };
+    });
+  }
+
+  function apiCalls() {
+    return fetchMock.mock.calls
+      .filter((call) => String(call[0]).endsWith("/api-call"))
+      .map((call) => JSON.parse(String(call[1]?.body)));
+  }
+
+  async function fetchAccount() {
+    const { GET } = await import("./route");
+    return (await (await GET(new Request("http://localhost/api/quota") as NextRequest)).json()).accounts[0];
+  }
+
+  it("sends the current Antigravity client identity on every call", async () => {
+    mockAntigravity("antigravity", () => ({ groups: [geminiGroup] }));
+    await fetchAccount();
+
+    const calls = apiCalls();
+    expect(calls.length).toBeGreaterThanOrEqual(2);
+    expect(calls.map((call) => call.header["User-Agent"])).toEqual(calls.map(() => "antigravity/hub/2.23.1 darwin/arm64"));
+  });
+
+  it("keeps Gemini 4 Argon in its own group instead of overwriting the shared Gemini weekly window", async () => {
+    mockAntigravity("antigravity", () => ({ groups: [claudeGroup, argonGroup, geminiGroup] }));
+    const account = await fetchAccount();
+
+    expect(account.groups.map((group: QuotaGroup) => [group.id, group.label, group.remainingFraction])).toEqual([
+      ["gemini-weekly", "Gemini · Weekly", 0.31],
+      ["gemini-5h", "Gemini · 5-hour", 0.82],
+      ["gemini-argon-weekly", "Gemini 4 Argon · Weekly", 0.05],
+      ["claude-gpt-weekly", "Claude/GPT · Weekly", 0.48],
+      ["claude-gpt-5h", "Claude/GPT · 5-hour", 0.9],
+    ]);
+  });
+
+  it("drops buckets whose bucketId belongs to no known family instead of trusting the group name", async () => {
+    const unknownBucket = { bucketId: "x-weekly", window: "weekly", remainingFraction: 0.01, resetTime: "2026-10-23T12:00:00Z" };
+    mockAntigravity("antigravity", () => ({ groups: [{ ...geminiGroup, buckets: [...geminiGroup.buckets, unknownBucket] }] }));
+    const account = await fetchAccount();
+
+    expect(account.groups.map((group: QuotaGroup) => [group.id, group.remainingFraction])).toEqual([
+      ["gemini-weekly", 0.31],
+      ["gemini-5h", 0.82],
+    ]);
+  });
+
+  it("tries the next summary endpoint when a response has no shared Gemini window", async () => {
+    mockAntigravity("antigravity", (url) => ({ groups: url.includes("sandbox") ? [geminiGroup, claudeGroup] : [argonGroup, claudeGroup] }));
+    const account = await fetchAccount();
+
+    expect(account.snapshotSource).toContain("daily-cloudcode-pa.sandbox.googleapis.com");
+    expect(account.groups.map((group: QuotaGroup) => group.id)).toEqual(["gemini-weekly", "gemini-5h", "claude-gpt-weekly", "claude-gpt-5h"]);
+  });
+
+  it("falls back to the first valid response when no endpoint returns a shared Gemini window", async () => {
+    mockAntigravity("antigravity", (url) => ({ groups: url.includes("sandbox") ? [] : [claudeGroup] }));
+    const account = await fetchAccount();
+
+    expect(apiCalls().filter((call) => call.url.includes("retrieveUserQuotaSummary"))).toHaveLength(3);
+    expect(account.error).toBeUndefined();
+    expect(account.snapshotSource).toBe("https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary");
+    expect(account.groups.map((group: QuotaGroup) => group.id)).toEqual(["claude-gpt-weekly", "claude-gpt-5h"]);
+  });
+
+  it("still stops fetchAvailableModels at the first valid response", async () => {
+    mockAntigravity("gemini-cli", () => ({}));
+    const account = await fetchAccount();
+
+    expect(account.error).toBeUndefined();
+    const modelCalls = apiCalls().filter((call) => call.url.includes("fetchAvailableModels"));
+    expect(modelCalls).toHaveLength(1);
+    expect(modelCalls[0].header["User-Agent"]).toBe("antigravity/hub/2.23.1 darwin/arm64");
+  });
+});
+
 describe("GET /api/quota - imported provider normalization", () => {
   beforeEach(() => {
     vi.clearAllMocks();

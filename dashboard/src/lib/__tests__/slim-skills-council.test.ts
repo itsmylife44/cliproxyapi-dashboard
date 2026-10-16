@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { buildSlimConfigChecked } from "./helpers/slim-schema-guard";
+import { buildSlimConfigChecked, type GeneratedSlimConfig } from "./helpers/slim-schema-guard";
 import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
 import { upstreamSchemaErrors } from "./helpers/upstream-schema";
 
 const available = ["claude-opus-4-6", "gpt-5-mini"];
 
-function generate(overrides?: OhMyOpenCodeSlimFullConfig): OhMyOpenCodeSlimFullConfig {
+function generate(overrides?: OhMyOpenCodeSlimFullConfig): GeneratedSlimConfig {
   const config = buildSlimConfigChecked(available, overrides);
   expect(config).not.toBeNull();
   expect(upstreamSchemaErrors("slim", config)).toEqual([]);
-  return config as OhMyOpenCodeSlimFullConfig;
+  return config as GeneratedSlimConfig;
 }
 
 describe("buildSlimConfig – skills and MCPs", () => {
@@ -28,9 +28,11 @@ describe("buildSlimConfig – skills and MCPs", () => {
     const config = generate({
       presets: {
         cliproxyapi: {
-          orchestrator: { skills: ["*", "!cartography"], mcps: ["*", "!grep_app"] },
-          librarian: { mcps: ["context7", "grep_app", "gh_grep"] },
-          oracle: { skills: [] },
+          agents: {
+            orchestrator: { skills: ["*", "!cartography"], mcps: ["*", "!grep_app"] },
+            librarian: { mcps: ["context7", "grep_app", "gh_grep"] },
+            oracle: { skills: [] },
+          },
         },
       },
       agents: { designer: { skills: ["cartography", "simplify"] } },
@@ -85,7 +87,7 @@ describe("buildSlimConfig – council", () => {
 
   it("drops the removed council-master agent from presets and root agents", () => {
     const config = generate({
-      presets: { cliproxyapi: { "council-master": { model: "claude-opus-4-6" }, observer: { model: "gpt-5-mini" } } },
+      presets: { cliproxyapi: { agents: { "council-master": { model: "claude-opus-4-6" }, observer: { model: "gpt-5-mini" } } } },
       agents: { "council-master": { model: "claude-opus-4-6" } },
     });
 

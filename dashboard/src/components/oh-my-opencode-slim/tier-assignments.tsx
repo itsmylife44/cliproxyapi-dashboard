@@ -6,11 +6,12 @@ import { AgentSkillsSection } from "@/components/oh-my-opencode-slim/skills-sect
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { useTranslations } from 'next-intl';
 
-interface SlimTierAssignmentItem {
+export interface SlimTierAssignmentItem {
   name: string;
   model: string;
   isOverride: boolean;
   isUnresolved?: boolean;
+  inheritedFrom?: string;
   config: SlimAgentConfig;
   tier: 1 | 2 | 3 | 4;
   label: string;
@@ -76,7 +77,7 @@ export function SlimTierAssignments({
                 <p className="text-[11px] text-[var(--text-muted)]">{t(tierHintKeys[tierKey])}</p>
             </div>
             <div className="space-y-2">
-              {tierAssignments.map(({ name, model, isOverride, isUnresolved, config, label }) => (
+              {tierAssignments.map(({ name, model, isOverride, isUnresolved, inheritedFrom, config, label }) => (
                 <div
                   key={name}
                   className="rounded-lg border border-[var(--surface-border)] bg-black/15 p-3 space-y-2.5"
@@ -92,6 +93,9 @@ export function SlimTierAssignments({
                       <p className={`text-[11px] ${isUnresolved ? "text-amber-500" : "text-[var(--text-muted)]"}`}>
                         {isUnresolved ? t("modelUnavailable") : label}
                       </p>
+                      {inheritedFrom !== undefined && (
+                        <p className="text-[11px] text-[var(--text-muted)]">{t("inheritedFrom", { preset: inheritedFrom })}</p>
+                      )}
                     </div>
                     <ModelBadge
                       name={name}

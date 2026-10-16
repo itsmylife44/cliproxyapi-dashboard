@@ -152,26 +152,13 @@ export type SlimPermission =
   | Record<string, SlimPermissionValue | Record<string, SlimPermissionValue>>;
 
 /**
- * A named preset containing agent configurations.
- * Presets allow switching between different model/config combinations.
- * Can contain standard agents plus any explicitly configured advanced agents.
- * Stored flat: upstream's `{ extends, agents: {...} }` wrapper form is unwrapped on read.
+ * A named preset: its agents, plus the preset it inherits from. Matches upstream's
+ * `{ extends, agents: {...} }` wrapper form; the flat form is wrapped on read.
  */
 export interface SlimPreset {
   /** Name of the preset this one inherits from */
   extends?: string;
-  orchestrator?: SlimAgentConfig;
-  oracle?: SlimAgentConfig;
-  designer?: SlimAgentConfig;
-  explorer?: SlimAgentConfig;
-  librarian?: SlimAgentConfig;
-  fixer?: SlimAgentConfig;
-  council?: SlimAgentConfig;
-  // Allow explicit advanced agent configs
-  observer?: SlimAgentConfig;
-  councillor?: SlimAgentConfig;
-  // Allow any other advanced agent keys
-  [key: string]: SlimAgentConfig | string | undefined;
+  agents: Record<string, SlimAgentConfig>;
 }
 
 export interface SlimFallbackConfig {
@@ -414,7 +401,7 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     for (const [presetName, presetVal] of Object.entries(presetsObj)) {
       if (typeof presetName !== "string" || presetName.length > 128) continue;
       if (!isRecord(presetVal)) continue;
-      const preset: SlimPreset = {};
+      const preset: SlimPreset = { agents: {} };
       if (typeof presetVal.extends === "string" && presetVal.extends.length >= 1 && presetVal.extends.length <= 128) {
         preset.extends = presetVal.extends;
       }
@@ -424,7 +411,7 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
         // `marketplace` (agent packages) is not supported by the dashboard and is not an agent.
         if (agentName.length > 128 || agentName === "extends" || agentName === "marketplace") continue;
         if (typeof agentVal !== "object" || agentVal === null || Array.isArray(agentVal)) continue;
-        preset[agentName] = validateAgentConfig(agentVal as Record<string, unknown>);
+        preset.agents[agentName] = validateAgentConfig(agentVal as Record<string, unknown>);
       }
       // Preserve empty presets so the UI can create/select a preset before any agents are configured.
       validatedPresets[presetName] = preset;

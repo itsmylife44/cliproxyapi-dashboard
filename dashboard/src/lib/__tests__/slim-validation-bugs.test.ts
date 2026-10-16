@@ -14,7 +14,7 @@ describe("slim validation regressions", () => {
     });
 
     expect(result.preset).toBe("review");
-    expect(result.presets).toEqual({ review: {} });
+    expect(result.presets).toEqual({ review: { agents: {} } });
   });
 
   it("preserves nested council preset councillor data and drops the removed preset master", () => {

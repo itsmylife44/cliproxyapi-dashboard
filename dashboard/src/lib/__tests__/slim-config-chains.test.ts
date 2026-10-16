@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildSlimConfigChecked } from "./helpers/slim-schema-guard";
-import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
+import { buildSlimConfigChecked, type GeneratedSlimConfig } from "./helpers/slim-schema-guard";
+import { validateSlimConfig } from "../config-generators/oh-my-opencode-slim-types";
 
-function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfigChecked>): OhMyOpenCodeSlimFullConfig {
+function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfigChecked>): GeneratedSlimConfig {
   expect(config).not.toBeNull();
-  return config as OhMyOpenCodeSlimFullConfig;
+  return config as GeneratedSlimConfig;
 }
 
 describe("buildSlimConfig – fallback chains behavior", () => {
@@ -62,10 +62,10 @@ describe("buildSlimConfig – preset and global override semantics", () => {
       preset: "custom",
       presets: {
         custom: {
-          orchestrator: { model: "model-a" },
+          agents: { orchestrator: { model: "model-a" } },
         },
         cliproxyapi: {
-          orchestrator: { model: "model-b" },
+          agents: { orchestrator: { model: "model-b" } },
         },
       },
     }, { presetName: "cliproxyapi" });
@@ -87,7 +87,7 @@ describe("buildSlimConfig – preset and global override semantics", () => {
       preset: "test",
       presets: {
         test: {
-          orchestrator: { model: "model-a", variant: "preset" },
+          agents: { orchestrator: { model: "model-a", variant: "preset" } },
         },
       },
       agents: {
@@ -131,7 +131,7 @@ describe("buildSlimConfig – preset and global override semantics", () => {
       preset: "test",
       presets: {
         test: {
-          oracle: { model: "model-a" },
+          agents: { oracle: { model: "model-a" } },
         },
       },
       agents: {

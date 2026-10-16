@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildSlimConfigChecked } from "./helpers/slim-schema-guard";
+import { buildSlimConfigChecked, type GeneratedSlimConfig } from "./helpers/slim-schema-guard";
 import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
 
-function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfigChecked>): OhMyOpenCodeSlimFullConfig {
+function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfigChecked>): GeneratedSlimConfig {
   expect(config).not.toBeNull();
-  return config as OhMyOpenCodeSlimFullConfig;
+  return config as GeneratedSlimConfig;
 }
 
 describe("buildSlimConfig fallback chains - folded into each agent's model array", () => {
@@ -12,7 +12,7 @@ describe("buildSlimConfig fallback chains - folded into each agent's model array
 
   it("passes through external models (not in available) without prefix", () => {
     const overrides: OhMyOpenCodeSlimFullConfig = {
-      presets: { cliproxyapi: { orchestrator: { model: "claude-sonnet-4" } } },
+      presets: { cliproxyapi: { agents: { orchestrator: { model: "claude-sonnet-4" } } } },
       fallback: {
         enabled: true,
         chains: {
@@ -33,7 +33,7 @@ describe("buildSlimConfig fallback chains - folded into each agent's model array
 
   it("mixed available/external chains — available get prefixed, external pass through", () => {
     const overrides: OhMyOpenCodeSlimFullConfig = {
-      presets: { cliproxyapi: { orchestrator: { model: "claude-sonnet-4" }, fixer: { model: "gemini-2.5-pro" } } },
+      presets: { cliproxyapi: { agents: { orchestrator: { model: "claude-sonnet-4" }, fixer: { model: "gemini-2.5-pro" } } } },
       fallback: {
         enabled: true,
         chains: {
@@ -60,7 +60,7 @@ describe("buildSlimConfig fallback chains - folded into each agent's model array
     const overrides: OhMyOpenCodeSlimFullConfig = {
       presets: {
         cliproxyapi: {
-          orchestrator: { model: ["claude-sonnet-4", { id: "gemini-2.5-pro", variant: "high" }] },
+          agents: { orchestrator: { model: ["claude-sonnet-4", { id: "gemini-2.5-pro", variant: "high" }] } },
         },
       },
       fallback: {
@@ -82,7 +82,7 @@ describe("buildSlimConfig fallback chains - folded into each agent's model array
 
   it("does not fold chains when fallback is disabled", () => {
     const overrides: OhMyOpenCodeSlimFullConfig = {
-      presets: { cliproxyapi: { orchestrator: { model: "claude-sonnet-4" } } },
+      presets: { cliproxyapi: { agents: { orchestrator: { model: "claude-sonnet-4" } } } },
       fallback: { enabled: false, chains: { orchestrator: ["gemini-2.5-pro"] } },
     };
 

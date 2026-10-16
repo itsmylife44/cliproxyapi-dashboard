@@ -980,3 +980,75 @@ describe("GET /api/quota - Codex additional and code review limits (issue #309)"
     expect(groups.map((group) => group.id)).toEqual(["primary-window"]);
   });
 });
+
+describe("GET /api/quota - Codex Chatgpt-Account-Id header (issue #310)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /** Runs the route for one Codex auth file and returns the `header` sent to the wham/usage api-call. */
+  async function codexUsageHeader(authFileExtra: Record<string, unknown>): Promise<Record<string, string>> {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            files: [
+              {
+                auth_index: 42,
+                provider: "codex",
+                name: "codex-workspace.json",
+                disabled: false,
+                status: "active",
+                ...authFileExtra,
+              },
+            ],
+          }),
+        body: { cancel: vi.fn() },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ status_code: 200, body: { rate_limit: {} } }),
+        body: { cancel: vi.fn() },
+      });
+
+    const { GET } = await import("./route");
+    const response = await GET(new NextRequest("http://localhost/api/quota"));
+    expect(response.status).toBe(200);
+
+    const usageCall = fetchMock.mock.calls.find(([url, init]) =>
+      String(url).endsWith("/api-call") && String(init?.body).includes("wham/usage")
+    );
+    if (!usageCall) throw new Error("expected a wham/usage api-call");
+    return JSON.parse(String(usageCall[1].body)).header;
+  }
+
+  it("sends the account id from id_token.chatgpt_account_id", async () => {
+    const header = await codexUsageHeader({ id_token: { chatgpt_account_id: "acc-123" } });
+    expect(header).toEqual({
+      Authorization: "Bearer $TOKEN$",
+      "User-Agent": "codex-cli/1.0.0",
+      "Chatgpt-Account-Id": "acc-123",
+    });
+  });
+
+  it("trims surrounding whitespace from the account id", async () => {
+    const header = await codexUsageHeader({ id_token: { chatgpt_account_id: "  acc-456 \n" } });
+    expect(header["Chatgpt-Account-Id"]).toBe("acc-456");
+  });
+
+  it.each([
+    ["no id_token", {}],
+    ["an id_token without an account id", { id_token: { plan_type: "plus" } }],
+    ["an empty account id", { id_token: { chatgpt_account_id: "" } }],
+    ["a whitespace account id", { id_token: { chatgpt_account_id: "   " } }],
+    ["a non-string account id", { id_token: { chatgpt_account_id: 123 } }],
+    ["a non-object id_token", { id_token: "raw.jwt.token" }],
+  ])("omits the header for %s", async (_label, extra) => {
+    const header = await codexUsageHeader(extra);
+    expect(header).toEqual({
+      Authorization: "Bearer $TOKEN$",
+      "User-Agent": "codex-cli/1.0.0",
+    });
+  });
+});

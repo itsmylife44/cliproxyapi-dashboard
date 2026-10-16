@@ -922,9 +922,16 @@ describe("GET /api/quota - Codex additional and code review limits (issue #309)"
     expect(groups.map((group) => group.id)).toEqual([
       "primary-window",
       "secondary-window",
-      "gpt-5-3-codex-spark-primary-window",
-      "gpt-5-3-codex-spark-secondary-window",
+      "codex-bengalfox-primary-window",
+      "codex-bengalfox-secondary-window",
       "code-review-primary-window",
+    ]);
+    expect(groups.map((group) => group.scope)).toEqual([
+      undefined,
+      undefined,
+      { id: "codex-bengalfox", label: "GPT-5.3-Codex-Spark" },
+      { id: "codex-bengalfox", label: "GPT-5.3-Codex-Spark" },
+      { id: "code-review", label: "Code Review" },
     ]);
     expect(groups[2]).toMatchObject({
       label: "GPT-5.3-Codex-Spark 5h Window",

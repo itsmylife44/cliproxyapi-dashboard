@@ -1,4 +1,4 @@
-import type { QuotaGroup } from "@/lib/model-first-monitoring";
+import type { QuotaGroup, QuotaGroupScope } from "@/lib/model-first-monitoring";
 import { formatWindowLabel, slugifyLabel } from "@/lib/quota/labels";
 
 // Payload shapes of chatgpt.com `/backend-api/wham/usage` (mirrors openai/codex).
@@ -28,18 +28,17 @@ export interface CodexWhamUsageResponse {
 }
 
 /**
- * Turns one Codex rate-limit block into quota groups. Scoped limits (additional
- * per-model limits, code review) prefix ids with `<scope>-` and labels with their
- * name; the `-primary-window`/`-secondary-window` id suffix is shared with the main
- * limit so provider pooling can tell scopes apart (see provider-summary).
+ * Turns one Codex rate-limit block into quota groups. Secondary limits (additional
+ * per-model limits, code review) carry their `scope`, and prefix ids with the scope
+ * id and labels with the scope label; the main limit stays unscoped.
  */
 function parseCodexRateLimit(
   rateLimit: CodexRateLimitDetails | null | undefined,
-  scope?: { id: string; name: string }
+  scope?: QuotaGroupScope
 ): QuotaGroup[] {
   const groups: QuotaGroup[] = [];
   const idPrefix = scope ? `${scope.id}-` : "";
-  const labelPrefix = scope ? `${scope.name} ` : "";
+  const labelPrefix = scope ? `${scope.label} ` : "";
 
   const windows: Array<{ key: string; window: CodexRateWindow | null | undefined }> = [
     { key: "primary", window: rateLimit?.primary_window },
@@ -66,6 +65,7 @@ function parseCodexRateLimit(
     groups.push({
       id,
       label,
+      ...(scope ? { scope } : {}),
       windowSeconds,
       remainingFraction,
       resetTime,
@@ -83,20 +83,39 @@ function parseCodexRateLimit(
   return groups;
 }
 
+const CODE_REVIEW_SCOPE: QuotaGroupScope = { id: "code-review", label: "Code Review" };
+
+/**
+ * Scope for one `additional_rate_limits` entry. The id prefers `metered_feature`
+ * (stable when the model behind the limit is renamed), then `limit_name`, then the
+ * 1-based position; the label prefers the human-readable `limit_name`.
+ */
+function additionalLimitScope(
+  limit: CodexAdditionalRateLimit,
+  position: number,
+  usedIds: Set<string>
+): QuotaGroupScope {
+  const meteredFeature = limit.metered_feature?.trim() ?? "";
+  const limitName = limit.limit_name?.trim() ?? "";
+  const label = limitName || meteredFeature || `Additional Limit ${position}`;
+  const baseId = slugifyLabel(meteredFeature) || slugifyLabel(limitName) || `additional-${position}`;
+
+  let id = baseId;
+  for (let suffix = position; usedIds.has(id); suffix++) id = `${baseId}-${suffix}`;
+  usedIds.add(id);
+  return { id, label };
+}
+
 export function parseCodexQuota(data: CodexWhamUsageResponse): QuotaGroup[] {
   const groups = parseCodexRateLimit(data.rate_limit);
-  const usedScopeIds = new Set<string>(["code-review"]);
+  const usedScopeIds = new Set<string>([CODE_REVIEW_SCOPE.id]);
 
   (data.additional_rate_limits ?? []).forEach((limit, index) => {
     if (!limit) return;
-    const name = limit.limit_name?.trim() || limit.metered_feature?.trim() || `Additional Limit ${index + 1}`;
-    let scopeId = slugifyLabel(name) || `additional-${index + 1}`;
-    if (usedScopeIds.has(scopeId)) scopeId = `${scopeId}-${index + 1}`;
-    usedScopeIds.add(scopeId);
-    groups.push(...parseCodexRateLimit(limit.rate_limit, { id: scopeId, name }));
+    groups.push(...parseCodexRateLimit(limit.rate_limit, additionalLimitScope(limit, index + 1, usedScopeIds)));
   });
 
-  groups.push(...parseCodexRateLimit(data.code_review_rate_limit, { id: "code-review", name: "Code Review" }));
+  groups.push(...parseCodexRateLimit(data.code_review_rate_limit, CODE_REVIEW_SCOPE));
 
   return groups;
 }

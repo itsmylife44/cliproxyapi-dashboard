@@ -6,6 +6,7 @@ import {
   type ModelFirstProviderSummary,
   type QuotaAccount,
   type QuotaGroup,
+  type QuotaGroupScope,
   type QuotaMonitorMode,
 } from "@/lib/model-first-monitoring";
 
@@ -15,6 +16,8 @@ export interface WindowCapacity {
   capacity: number;
   resetTime: string | null;
   isShortTerm: boolean;
+  /** Present when the pooled windows belong to a scoped (secondary) limit. */
+  scope?: QuotaGroupScope;
 }
 
 export interface ProviderSummary {
@@ -27,16 +30,13 @@ export interface ProviderSummary {
   modelFirstSummary?: ModelFirstProviderSummary;
 }
 
-const POSITIONAL_WINDOW_SUFFIX = /(?:^|-)(?:primary|secondary)-window$/;
-
 // Codex reuses position ids across plans (`primary-window` is 5h on Plus, weekly on Pro),
-// so windows with a known duration pool by that duration instead of by id. Scoped Codex
-// limits (`<scope>-primary-window`, e.g. per-model or code review) pool by scope + duration
-// so they never merge into the main limit's bars.
+// so windows with a known duration pool by that duration instead of by id. Scoped limits
+// (e.g. Codex per-model or code review) pool within their own scope so they never merge
+// into the main limit's bars.
 function poolKey(group: QuotaGroup): string {
-  if (!group.windowSeconds) return group.id;
-  const scope = group.id.replace(POSITIONAL_WINDOW_SUFFIX, "");
-  return scope && scope !== group.id ? `${scope}:${group.windowSeconds}s` : `${group.windowSeconds}s`;
+  const windowKey = group.windowSeconds ? `${group.windowSeconds}s` : group.id;
+  return group.scope ? `${group.scope.id}:${windowKey}` : windowKey;
 }
 
 export function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
@@ -103,6 +103,7 @@ export function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
       capacity: Math.max(0, Math.min(1, capacity)),
       resetTime: earliestReset,
       isShortTerm: isShortTermQuotaWindow(first, firstSiblings),
+      ...(first.scope ? { scope: first.scope } : {}),
     });
   }
 

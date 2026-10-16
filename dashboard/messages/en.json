@@ -1774,6 +1774,8 @@
     "modelUnavailable": "Model unavailable",
     "inheritedFrom": "Inherited from {preset}",
     "inheritedModelUnknown": "inherited",
+    "inheritsModelFromSession": "Model inherited from the session",
+    "inheritsModelFromOrchestrator": "Model inherited from the orchestrator",
     "editingDefaultPreset": "Editing: cliproxyapi (default)",
     "editingPreset": "Editing preset: {preset}",
     "editingGlobalOverrides": "Editing: global overrides",

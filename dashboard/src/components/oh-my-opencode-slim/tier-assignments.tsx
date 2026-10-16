@@ -1,21 +1,10 @@
 "use client";
 
-import type { SlimAgentConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
+import type { SlimTierAssignmentItem } from "@/lib/config-generators/oh-my-opencode-slim-assignments";
 import { ModelBadge } from "@/components/oh-my-opencode/model-badge";
 import { AgentSkillsSection } from "@/components/oh-my-opencode-slim/skills-section";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { useTranslations } from 'next-intl';
-
-export interface SlimTierAssignmentItem {
-  name: string;
-  model: string;
-  isOverride: boolean;
-  isUnresolved?: boolean;
-  inheritedFrom?: string;
-  config: SlimAgentConfig;
-  tier: 1 | 2 | 3 | 4;
-  label: string;
-}
 
 interface SlimTierAssignmentsProps {
   agentAssignments: SlimTierAssignmentItem[];
@@ -77,7 +66,7 @@ export function SlimTierAssignments({
                 <p className="text-[11px] text-[var(--text-muted)]">{t(tierHintKeys[tierKey])}</p>
             </div>
             <div className="space-y-2">
-              {tierAssignments.map(({ name, model, isOverride, isUnresolved, inheritedFrom, config, label }) => (
+              {tierAssignments.map(({ name, model, isOverride, isUnresolved, inheritedFrom, inheritsModelFrom, config, label }) => (
                 <div
                   key={name}
                   className="rounded-lg border border-[var(--surface-border)] bg-black/15 p-3 space-y-2.5"
@@ -95,6 +84,11 @@ export function SlimTierAssignments({
                       </p>
                       {inheritedFrom !== undefined && (
                         <p className="text-[11px] text-[var(--text-muted)]">{t("inheritedFrom", { preset: inheritedFrom })}</p>
+                      )}
+                      {inheritsModelFrom !== undefined && (
+                        <p className="text-[11px] text-[var(--text-muted)]">
+                          {t(inheritsModelFrom === "session" ? "inheritsModelFromSession" : "inheritsModelFromOrchestrator")}
+                        </p>
                       )}
                     </div>
                     <ModelBadge

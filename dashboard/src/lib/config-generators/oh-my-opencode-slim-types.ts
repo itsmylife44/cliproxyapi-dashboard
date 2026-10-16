@@ -8,7 +8,15 @@
  * @see https://github.com/alvinunreal/oh-my-opencode-slim
  */
 
+import type { z } from "zod";
+
 import { boundedObject, boundedStrings, isRecord, oneOf } from "@/lib/utils";
+import {
+  SlimAcpAgentsSchema,
+  SlimBackgroundJobsSchema,
+  SlimCompanionSchema,
+  SlimWebfetchSchema,
+} from "@/lib/validation/slim-upstream";
 
 // ============================================================================
 // CONSTANTS
@@ -246,13 +254,19 @@ export interface OhMyOpenCodeSlimFullConfig {
   disabled_skills?: string[];
   disabled_hooks?: string[];
   disabled_commands?: string[];
-  // ponytail: kept as opaque objects (size-bounded, not validated field by field); add typed
-  // validators when the dashboard grows UI for them.
-  backgroundJobs?: Record<string, unknown>;
-  companion?: Record<string, unknown>;
-  webfetch?: Record<string, unknown>;
-  acpAgents?: Record<string, unknown>;
+  backgroundJobs?: z.infer<typeof SlimBackgroundJobsSchema>;
+  companion?: z.infer<typeof SlimCompanionSchema>;
+  webfetch?: z.infer<typeof SlimWebfetchSchema>;
+  acpAgents?: z.infer<typeof SlimAcpAgentsSchema>;
 }
+
+/** Raw-JSON-only objects, checked against the upstream shape on read. */
+const SLIM_UPSTREAM_OBJECTS = {
+  backgroundJobs: SlimBackgroundJobsSchema,
+  companion: SlimCompanionSchema,
+  webfetch: SlimWebfetchSchema,
+  acpAgents: SlimAcpAgentsSchema,
+};
 
 /** Top-level keys the generator copies to the output unchanged. */
 export const SLIM_PASSTHROUGH_KEYS = [
@@ -576,9 +590,10 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     if (list?.length) result[key] = list;
   }
 
-  for (const key of ["backgroundJobs", "companion", "webfetch", "acpAgents"] as const) {
-    const value = boundedObject(obj[key]);
-    if (value) result[key] = value;
+  // A stored value that no longer fits upstream is dropped; slim would reject the whole file otherwise.
+  for (const [key, schema] of Object.entries(SLIM_UPSTREAM_OBJECTS)) {
+    const parsed = schema.safeParse(boundedObject(obj[key]));
+    if (parsed.success) Object.assign(result, { [key]: parsed.data });
   }
 
   return result;

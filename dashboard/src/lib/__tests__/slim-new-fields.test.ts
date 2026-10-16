@@ -83,6 +83,96 @@ describe("slim 3.x fields survive the dashboard", () => {
     expect(config?.disabled_commands).toEqual(["loop"]);
   });
 
+  it("round-trips fully populated backgroundJobs, companion, webfetch and acpAgents unchanged", () => {
+    const full = {
+      backgroundJobs: {
+        strategy: "checkpoint-compatible",
+        maxSessionsPerAgent: 10,
+        maxContextLines: 0,
+        readContextMinLines: 10,
+        readContextMaxFiles: 50,
+        maxRetainedSnapshots: 100,
+        orchestratorWake: {
+          enabled: true,
+          intervalMs: 60000,
+          mode: "children",
+          periodicWakeEnabled: false,
+          wakeOnTerminalPublication: true,
+          publicationWakeMinIntervalMs: 1000,
+        },
+        wallClockTimeoutMs: 0,
+        abortGraceMs: 60000,
+        stopConfirmationMs: 1000,
+        concurrency: { defaultConcurrency: 4, providerConcurrency: { anthropic: 2 }, modelConcurrency: { "openai/gpt-5": 0 } },
+        sameProviderPolicy: { anthropic: "foreground" },
+        waitForUserGuard: false,
+        boardInjection: false,
+        childInputWake: false,
+        pruneEvictedSessions: true,
+      },
+      companion: {
+        enabled: true,
+        binaryPath: "/usr/local/bin/companion",
+        position: "bottom-left",
+        size: "large",
+        gifPack: "default",
+        loopStyle: "smooth",
+        speed: 0.25,
+        debug: true,
+      },
+      webfetch: { enabled: true, model: ["model-a", { id: "model-b", variant: "high" }] },
+      acpAgents: {
+        gemini: {
+          command: "gemini",
+          args: ["--experimental-acp"],
+          env: { GEMINI_API_KEY: "x" },
+          cwd: "/work",
+          description: "Gemini CLI",
+          prompt: "Be terse.",
+          orchestratorPrompt: "Use for research.",
+          wrapperModel: "cliproxyapi/model-a",
+          timeoutMs: 120000,
+          permissionMode: "reject",
+        },
+      },
+    };
+
+    const config = buildSlimConfig(available, store(full));
+
+    expect({
+      backgroundJobs: config?.backgroundJobs,
+      companion: config?.companion,
+      webfetch: config?.webfetch,
+      acpAgents: config?.acpAgents,
+    }).toEqual(full);
+  });
+
+  it("drops a stored object that no longer fits the upstream shape", () => {
+    const config = buildSlimConfig(available, validateSlimConfig({ companion: { speed: 9 }, webfetch: { enabled: false } }));
+
+    expect(config?.companion).toBeUndefined();
+    expect(config?.webfetch).toEqual({ enabled: false });
+  });
+
+  it.each([
+    ["backgroundJobs", { strategy: "newest" }],
+    ["backgroundJobs", { maxSessionsPerAgent: 11 }],
+    ["backgroundJobs", { wallClockTimeoutMs: 1000 }],
+    ["backgroundJobs", { concurrency: { defaultConcurrency: 1, perAgent: 2 } }],
+    ["companion", { speed: 5 }],
+    ["companion", { position: "center" }],
+    ["companion", { enabled: "yes" }],
+    ["webfetch", { model: [] }],
+    ["webfetch", { model: [{ variant: "high" }] }],
+    ["webfetch", { enabled: true, timeoutMs: 5000 }],
+    ["acpAgents", { gemini: { args: ["--experimental-acp"] } }],
+    ["acpAgents", { gemini: { command: "gemini", wrapperModel: "no-provider" } }],
+    ["acpAgents", { gemini: { command: "gemini", shell: true } }],
+    ["acpAgents", { gemini: "gemini" }],
+  ])("rejects an invalid %s", (key, value) => {
+    expect(() => store({ [key]: value })).toThrow();
+  });
+
   it("parses an `agents`-wrapper preset as a preset of agents and keeps `extends`", () => {
     const stored = store({
       presets: {

@@ -11,7 +11,8 @@ vi.mock("@/lib/errors", () => ({
   Errors: {
     unauthorized: () => new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 }),
     internal: () => new Response(JSON.stringify({ error: "internal" }), { status: 500 }),
-    zodValidation: () => new Response(JSON.stringify({ error: "validation" }), { status: 400 }),
+    zodValidation: (issues: { path: (string | number)[] }[]) =>
+      new Response(JSON.stringify({ error: "validation", fields: issues.map((issue) => issue.path.join(".")) }), { status: 400 }),
   },
   apiSuccess: (data: unknown) => new Response(JSON.stringify(data), { status: 200 }),
 }));
@@ -38,6 +39,21 @@ describe("PUT /api/agent-config-slim", () => {
     upsertMock.mockImplementation(async ({ create }: { create: { slimOverrides: unknown } }) => ({
       slimOverrides: create.slimOverrides,
     }));
+  });
+
+  it("rejects an out-of-range companion speed with a 400 naming the field", async () => {
+    const { PUT } = await import("./route");
+
+    const response = await PUT(
+      new Request("http://localhost/api/agent-config-slim", {
+        method: "PUT",
+        body: JSON.stringify({ overrides: { companion: { speed: 9 } } }),
+      }) as unknown as NextRequest,
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ fields: ["overrides.companion.speed"] });
+    expect(upsertMock).not.toHaveBeenCalled();
   });
 
   it("accepts advanced slim config shapes and drops keys slim 3.x removed", async () => {

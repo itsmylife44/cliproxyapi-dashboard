@@ -1,5 +1,12 @@
 import { z } from "zod";
 import {
+  SlimAcpAgentsSchema,
+  SlimBackgroundJobsSchema,
+  SlimCompanionSchema,
+  SlimModelEntrySchema,
+  SlimWebfetchSchema,
+} from "@/lib/validation/slim-upstream";
+import {
   PASSWORD_MIN_LENGTH,
   PASSWORD_MAX_LENGTH,
 } from "@/lib/auth/validation";
@@ -185,16 +192,7 @@ export const AgentConfigSchema = z.object({
 // ============================================================================
 
 const SlimAgentEntrySchema = z.object({
-  model: z.union([
-    z.string(),
-    z.array(z.union([
-      z.string(),
-      z.object({
-        id: z.string(),
-        variant: z.string().optional(),
-      })
-    ]))
-  ]).optional(),
+  model: z.union([z.string(), z.array(SlimModelEntrySchema)]).optional(),
   temperature: z.number().min(0).max(2).optional(),
   variant: z.string().optional(),
   skills: z.array(z.string()).optional(),
@@ -280,10 +278,10 @@ const SlimConfigOverridesSchema = z.object({
   // Unknown hook/command names are dropped by validateSlimConfig, as upstream does.
   disabled_hooks: z.array(z.string()).optional(),
   disabled_commands: z.array(z.string()).optional(),
-  backgroundJobs: z.record(z.string(), z.unknown()).optional(),
-  companion: z.record(z.string(), z.unknown()).optional(),
-  webfetch: z.record(z.string(), z.unknown()).optional(),
-  acpAgents: z.record(z.string(), z.unknown()).optional(),
+  backgroundJobs: SlimBackgroundJobsSchema.optional(),
+  companion: SlimCompanionSchema.optional(),
+  webfetch: SlimWebfetchSchema.optional(),
+  acpAgents: SlimAcpAgentsSchema.optional(),
 });
 
 export const SlimAgentConfigSchema = z.object({

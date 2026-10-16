@@ -35,7 +35,7 @@
 
 ## What is this?
 
-[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) wraps OAuth-based CLI tools (Claude Code, Gemini CLI, Codex, GitHub Copilot, Kiro, Antigravity, Kimi, Qwen) into **OpenAI-compatible APIs**. This dashboard gives you a web UI to manage everything — providers, API keys, configs, logs, and updates — without touching YAML files.
+[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) wraps OAuth-based CLI tools (Claude Code, Codex, Antigravity, Kimi, xAI, Devin and more; Gemini CLI, GitHub Copilot, Kiro and Cursor through CLIProxyAPI plugins) into **OpenAI-compatible APIs**. This dashboard gives you a web UI to manage everything — providers, API keys, configs, logs, and updates — without touching YAML files.
 
 ## Quick Start
 
@@ -52,23 +52,28 @@ The local setup scripts start Docker Compose with a local dashboard build (`--bu
 
 Open **http://localhost:3000** → create admin account → done.
 
-> **Server deployment**: See the full [Installation Guide](docs/INSTALLATION.md).
+> **Server deployment**: See the full [Installation Guide](docs/INSTALLATION.md). Already running CLIProxyAPI? `sudo ./install.sh --dashboard-only` installs just the dashboard and its database.
 
 ## Features
 
 - **Visual Configuration** — Manage CLIProxyAPI settings through structured forms, no YAML editing
-- **Multi-Provider OAuth** — Connect Claude, Gemini, Codex, Copilot, Kiro, Antigravity, iFlow, Kimi, and Qwen accounts
+- **Multi-Provider OAuth** — Connect Claude Code, Codex, xAI (Grok), Antigravity, Kimi, Kimi.ai, Devin, and Meta AI accounts; Gemini CLI, GitHub Copilot, Kiro, and Cursor appear once their CLIProxyAPI plugin is enabled
+- **CLIProxyAPI Plugins** — Install, enable, configure, and remove plugins from the CLIProxyAPI plugin store (Settings), with a warning when the persistent plugins volume is missing
 - **Custom Providers** — Add any OpenAI-compatible endpoint (OpenRouter, Ollama, etc.) with model mappings; admins can mark a provider as **Shared** so all team members see and use it
+- **Perplexity Pro Sidecar** — Optional OpenAI-compatible wrapper for a Perplexity Pro subscription, enabled during setup
 - **API Key Management** — Create, revoke, and track API keys with per-user ownership
+- **User Management** — Admins create, edit, and delete users and grant admin rights
 - **Real-time Monitoring** — Live log streaming, container health, and service management
-- **Quota Tracking** — Rate limits and usage per provider (Claude, Codex, Kimi, Antigravity)
-- **Telegram Quota Alerts** — Automatic notifications when OAuth quota drops below threshold (configurable per-provider, 1-hour cooldown)
-- **Usage Analytics** — Request counts, provider breakdown, model stats, error rates
-- **Oh-My-Open-Agent Variant Toggle** — Choose between [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (9 agents + categories) and [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (6 agents, lower tokens, fallback chains) with per-agent model/skills configuration
+- **Quota Tracking** — Rate limits and usage per provider (Claude, Codex incl. per-model and code review limits, Kimi, GitHub Copilot, Antigravity and Gemini per model)
+- **Telegram Quota Alerts** — Automatic notifications when OAuth quota drops below threshold (configurable providers, check interval, and cooldown)
+- **Usage Analytics** — Request counts, provider breakdown, model stats, error rates, estimated cost per model and provider
+- **Oh-My-Open-Agent Variant Toggle** — Choose between [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (11 agents + 9 categories) and [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (7 agents, lower tokens, fallback chains) with per-agent model/skills configuration
 - **Config Sync** — Auto-sync OpenCode configs via the [`opencode-cliproxyapi-sync`](https://github.com/itsmylife44/opencode-cliproxyapi-sync) plugin (includes slim config)
 - **Config Sharing** — Share model configs with others via share codes (`XXXX-XXXX`)
 - **One-Click Updates** — Update both Dashboard (GHCR) and CLIProxyAPI (Docker Hub) from the admin panel
 - **Container Management** — Start, stop, restart containers directly from the UI
+- **Backup & Restore** — Create, schedule, upload, preview, and restore dashboard backups (Settings → Backup)
+- **Light/Dark Theme & Languages** — Theme toggle; UI in English, German, Spanish, and Simplified Chinese
 - **Automatic TLS** — Let's Encrypt certificates via Caddy, auto-renewed
 
 ## Local Providers (Ollama / LM Studio / llama.cpp)
@@ -85,18 +90,19 @@ Cloud instance-metadata addresses (`169.254.169.254`, `100.100.100.200`) stay bl
 
 Get notified on Telegram when your OAuth provider quota is running low.
 
-**Setup** (Admin → Settings → Telegram Alerts):
+**Setup** (Quota → Telegram Alerts, admins only):
 
 1. Create a Telegram bot via [@BotFather](https://t.me/BotFather) and copy the bot token
 2. Get your chat ID (send a message to the bot, then check `https://api.telegram.org/bot<TOKEN>/getUpdates`)
-3. In the dashboard, go to **Admin → Settings → Telegram** and enter:
+3. In the dashboard, open the **Quota** page, scroll to **Telegram Alerts**, and enter:
    - Bot token
    - Chat ID
    - Quota threshold (e.g. 20% remaining)
-   - Which providers to monitor (Claude, Codex, Kimi, Antigravity)
-4. Enable alerts — the scheduler checks every 5 minutes with a 1-hour cooldown between notifications
+   - Check interval and cooldown (minutes)
+   - Which providers to monitor (Claude, Antigravity, Gemini CLI, Gemini, Codex, Copilot, Kimi)
+4. Enable alerts — the scheduler checks every 5 minutes with a 1-hour cooldown between notifications by default
 
-Use the **Test Message** button to verify your configuration before enabling.
+Use the **Send Test** button to verify your configuration before enabling, and **Check Now** to run a check immediately.
 
 ## Oh-My-Open-Agent Integration
 
@@ -104,21 +110,23 @@ The dashboard supports two OpenCode orchestration variants. Toggle between them 
 
 | Variant | Agents | Description |
 |---------|--------|-------------|
-| **Oh-My-Open-Agent** | 9 agents + 8 categories | Full-featured orchestration with sisyphus, atlas, prometheus, oracle, and more |
-| **Oh-My-OpenCode Slim** | 6 agents | Lightweight: orchestrator, oracle, designer, explorer, librarian, fixer. Lower token usage with dedicated fallback chains |
+| **Oh-My-Open-Agent** | 11 agents + 9 categories | Full-featured orchestration with sisyphus, hephaestus, atlas, prometheus, oracle, and more |
+| **Oh-My-OpenCode Slim** | 7 agents | Lightweight: orchestrator, oracle, council, designer, explorer, librarian, fixer. Lower token usage with dedicated fallback chains |
+
+Generated configs target oh-my-openagent 5.1.33 and oh-my-opencode-slim 3.0.4 and are checked against their upstream schemas.
 
 **How it works:**
 
 1. Select your variant in the dashboard -- the plugin in `opencode.json` switches automatically
 2. Assign models to agents (auto-assigned by tier, or manually override)
-3. Toggle skills per agent (simplify, cartography, agent-browser)
+3. Toggle skills (per agent in Slim: simplify, codemap; disabled skills and hooks in Oh-My-Open-Agent)
 4. Config syncs automatically via the sync plugin
 
 **First-time setup** (run once per variant):
 
 ```bash
-bunx oh-my-openagent@latest install          # Normal variant
-bunx oh-my-opencode-slim@latest install     # Slim variant
+bunx oh-my-openagent@latest install                  # Normal variant
+bunx oh-my-opencode-slim@latest install --no-tui     # Slim variant
 ```
 
 Each variant has its own config file (`oh-my-openagent.json` / `oh-my-opencode-slim.jsonc`) -- they don't conflict.
@@ -147,7 +155,7 @@ Each variant has its own config file (`oh-my-openagent.json` / `oh-my-opencode-s
 
 ## Architecture
 
-Six Docker containers, two isolated networks:
+Seven Docker containers plus the optional Perplexity sidecar, on two networks (`frontend`, and `backend` with no internet access):
 
 <p align="center">
   <img src="docs/code-snippets/architecture.png" alt="Architecture" width="700">
@@ -158,9 +166,11 @@ Six Docker containers, two isolated networks:
 | **Caddy** | Reverse proxy, automatic TLS, HTTP/3 |
 | **Dashboard** | Next.js web app, JWT auth, Docker management via socket proxy |
 | **CLIProxyAPI** | AI proxy server, OAuth callbacks, management API |
-| **Perplexity Sidecar** | OpenAI-compatible wrapper for Perplexity Pro subscription |
-| **Docker Socket Proxy** | Restricted Docker API access (containers/images only) |
+| **Perplexity Sidecar** | Optional (`perplexity` profile): OpenAI-compatible wrapper for Perplexity Pro subscription |
+| **Docker Socket Proxy** | Restricted Docker API access (containers, images, networks only) |
 | **PostgreSQL** | Database on isolated internal network |
+| **Usage Collector** | Cron container that triggers usage collection every 5 minutes |
+| **Backup Scheduler** | Cron container that runs due scheduled backups (checks every 5 minutes) |
 
 ## Project Structure
 
@@ -193,7 +203,7 @@ Or manually:
 ```bash
 cd dashboard
 npm install
-cp .env.example .env.local  # Edit with your DB credentials
+cp .env.development .env.local  # Edit with your DB credentials
 npx prisma migrate dev
 npm run dev
 ```
@@ -217,11 +227,13 @@ Opens all routes as a fake admin user — useful for testing themes, layouts, an
 |-------|-------------|
 | **[Installation](docs/INSTALLATION.md)** | Server deployment, local setup, manual installation |
 | **[Configuration](docs/CONFIGURATION.md)** | Environment variables, config.yaml, config sync |
+| **[Environment Variables](docs/ENV.md)** | Full environment variable reference |
 | **[Usage Collection](infrastructure/docs/USAGE_COLLECTION.md)** | Usage tracking service, troubleshooting, manual collection |
 | **[Troubleshooting](docs/TROUBLESHOOTING.md)** | Common issues and solutions |
 | **[Security](docs/SECURITY.md)** | Best practices for production |
 | **[Backup & Restore](docs/BACKUP.md)** | Automated and manual backups |
 | **[Service Management](docs/SERVICE-MANAGEMENT.md)** | Systemd and Docker Compose commands |
+| **[Runbook](docs/RUNBOOK.md)** | Health check, deployment, database, updates, monitoring |
 
 ## Contributing
 
@@ -229,7 +241,7 @@ Opens all routes as a fake admin user — useful for testing themes, layouts, an
 2. Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`)
 3. Test locally before submitting
 
-Release-Please auto-generates releases from commit messages.
+Release-Please auto-generates releases from commit messages. See the [Contributing Guide](docs/CONTRIBUTING.md) for setup, scripts, code style, and the PR checklist.
 
 ## Contributors
 
@@ -257,7 +269,7 @@ Thanks to these wonderful people ([emoji key](https://allcontributors.org/docs/e
 
 ## Adding a Language
 
-The dashboard supports multi-language UI. Currently, we offer **English (en)** and **German (de)**. We welcome community contributions for additional languages!
+The dashboard supports multi-language UI. Currently, we offer **English (en)**, **German (de)**, **Spanish (es)**, and **Simplified Chinese (zh-CN)**. We welcome community contributions for additional languages!
 
 ### How to contribute a new language
 
@@ -284,13 +296,15 @@ The dashboard supports multi-language UI. Currently, we offer **English (en)** a
    - Edit `dashboard/src/i18n/config.ts`
    - Add your locale to the `supportedLocales` array:
      ```ts
-     export const supportedLocales = ["en", "de", "fr"] as const;
+     export const supportedLocales = ["en", "de", "es", "zh-CN", "fr"] as const;
      ```
    - Add the display name to `localeNames`:
      ```ts
      export const localeNames: Record<Locale, string> = {
        en: "English",
        de: "Deutsch",
+       es: "Español",
+       "zh-CN": "简体中文",
        fr: "Français",  // Add this
      };
      ```
@@ -304,7 +318,7 @@ The dashboard supports multi-language UI. Currently, we offer **English (en)** a
 
 5. **Submit a PR**:
    - Title: `feat(i18n): add {language} translation`
-   - Include the three files: `messages/{locale}.json`, and changes to `src/i18n/config.ts`
+   - Include both files: `messages/{locale}.json`, and changes to `src/i18n/config.ts`
    - PR description: Link to any external translation resources or notes
 
 ### Translation Quality Guidelines
@@ -322,6 +336,8 @@ The dashboard supports multi-language UI. Currently, we offer **English (en)** a
 |------|----------|--------|
 | `en` | English | ✓ Complete |
 | `de` | German | ✓ Complete |
+| `es` | Spanish | Nearly complete |
+| `zh-CN` | Simplified Chinese | Nearly complete |
 
 Add more by following the steps above!
 
@@ -330,7 +346,6 @@ Add more by following the steps above!
 - **[Discord](https://discord.gg/7SrXxNueGA)** — Community chat, installation help, announcements
 - **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)** — Core proxy documentation
 - **[Issues](https://github.com/itsmylife44/cliproxyapi-dashboard/issues)** — Bug reports and feature requests
-- **[Discussions](https://github.com/itsmylife44/cliproxyapi-dashboard/discussions)** — Questions and community
 
 ## Star History
 

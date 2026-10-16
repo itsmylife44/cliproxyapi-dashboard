@@ -118,11 +118,11 @@ describe("PUT /api/agent-config-slim", () => {
     expect(data.overrides.multiplexer.type).toBe("zellij");
     expect(data.overrides.disabled_agents).toEqual(["observer"]);
     expect(data.overrides.fallback).toEqual({ enabled: true, chains: requestBody.overrides.fallback.chains });
-    expect(data.overrides.presets.review.orchestrator.model).toEqual([
+    expect(data.overrides.presets.review.agents.orchestrator.model).toEqual([
       "gemini-2.5-pro",
       { id: "claude-opus-4.6", variant: "high" },
     ]);
-    expect(data.overrides.presets.review.observer.model).toBe("openai/gpt-4.1-mini");
+    expect(data.overrides.presets.review.agents.observer.model).toBe("openai/gpt-4.1-mini");
     expect(data.overrides.agents["council-master"].model).toBe("anthropic/claude-opus-4-6");
     expect(data.overrides.council.presets.default.councillors.alpha.model).toBe("openai/gpt-5-mini");
     expect(data.overrides.council).toEqual({

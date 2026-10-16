@@ -183,9 +183,9 @@ describe("slim 3.x fields survive the dashboard", () => {
 
     expect(stored.presets?.review).toEqual({
       extends: "cliproxyapi",
-      oracle: { model: "model-b" },
-      "code-reviewer": { model: "model-a" },
+      agents: { oracle: { model: "model-b" }, "code-reviewer": { model: "model-a" } },
     });
+    expect(stored.presets?.inline).toEqual({ extends: "review", agents: { fixer: { temperature: 0.2 } } });
 
     const config = buildSlimConfigChecked(available, stored) as { presets: Record<string, unknown> };
 

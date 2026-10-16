@@ -96,7 +96,7 @@ describe("upstream schema guard: OMO", () => {
 describe("upstream schema guard: slim", () => {
   it("a config with stored fallback chains validates against the vendored schema", () => {
     const config = buildSlimConfigChecked(["model-a", "model-b"], {
-      presets: { cliproxyapi: { orchestrator: { model: ["model-a", { id: "model-b", variant: "high" }] } } },
+      presets: { cliproxyapi: { agents: { orchestrator: { model: ["model-a", { id: "model-b", variant: "high" }] } } } },
       agents: { oracle: { model: "model-b" } },
       fallback: {
         enabled: true,

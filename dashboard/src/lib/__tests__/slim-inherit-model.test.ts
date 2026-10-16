@@ -19,7 +19,7 @@ describe("buildSlimConfig – inheritModelFrom", () => {
   const available = ["model-a"];
 
   it.each(["session", "orchestrator"] as const)("emits no model for an agent inheriting from %s", (from) => {
-    const { fixer } = presetAgents(available, { presets: { cliproxyapi: { fixer: { inheritModelFrom: from } } } });
+    const { fixer } = presetAgents(available, { presets: { cliproxyapi: { agents: { fixer: { inheritModelFrom: from } } } } });
     expect(fixer).toEqual({ inheritModelFrom: from });
   });
 
@@ -27,8 +27,10 @@ describe("buildSlimConfig – inheritModelFrom", () => {
     const { orchestrator, oracle } = presetAgents(available, {
       presets: {
         cliproxyapi: {
-          orchestrator: { inheritModelFrom: "session", variant: "max" },
-          oracle: { inheritModelFrom: "orchestrator" },
+          agents: {
+            orchestrator: { inheritModelFrom: "session", variant: "max" },
+            oracle: { inheritModelFrom: "orchestrator" },
+          },
         },
       },
     });
@@ -38,7 +40,7 @@ describe("buildSlimConfig – inheritModelFrom", () => {
 
   it("emits the fallback chain alone as the model, prefixed and deduped", () => {
     const { fixer } = presetAgents(available, {
-      presets: { cliproxyapi: { fixer: { inheritModelFrom: "session" } } },
+      presets: { cliproxyapi: { agents: { fixer: { inheritModelFrom: "session" } } } },
       fallback: { chains: { fixer: ["model-a", "external/x", "model-a"] } },
     });
     expect(fixer).toEqual({ inheritModelFrom: "session", model: ["cliproxyapi/model-a", "external/x"] });
@@ -49,7 +51,7 @@ describe("buildSlimConfig – inheritModelFrom", () => {
     ["empty", { chains: { fixer: [] } }],
   ])("emits no model when the fallback chain is %s", (_, fallback) => {
     const { fixer } = presetAgents(available, {
-      presets: { cliproxyapi: { fixer: { inheritModelFrom: "session" } } },
+      presets: { cliproxyapi: { agents: { fixer: { inheritModelFrom: "session" } } } },
       fallback,
     });
     expect(fixer).toEqual({ inheritModelFrom: "session" });
@@ -57,7 +59,7 @@ describe("buildSlimConfig – inheritModelFrom", () => {
 
   it("keeps an explicit user model next to inheritModelFrom", () => {
     const { fixer } = presetAgents(available, {
-      presets: { cliproxyapi: { fixer: { inheritModelFrom: "session", model: "model-a" } } },
+      presets: { cliproxyapi: { agents: { fixer: { inheritModelFrom: "session", model: "model-a" } } } },
     });
     expect(fixer).toEqual({ inheritModelFrom: "session", model: "cliproxyapi/model-a", variant: "low" });
   });
@@ -65,7 +67,7 @@ describe("buildSlimConfig – inheritModelFrom", () => {
   it("builds a config with no available models when every primary agent inherits", () => {
     const inherit = { inheritModelFrom: "session" } as const;
     const agents = Object.fromEntries(SLIM_AGENTS.map((agent) => [agent, inherit]));
-    expect(presetAgents([], { presets: { cliproxyapi: agents } }).oracle).toEqual(inherit);
+    expect(presetAgents([], { presets: { cliproxyapi: { agents } } }).oracle).toEqual(inherit);
     // The root-agents fallback merge used when no models are available
     expect(presetAgents([], { agents }).oracle).toEqual(inherit);
   });

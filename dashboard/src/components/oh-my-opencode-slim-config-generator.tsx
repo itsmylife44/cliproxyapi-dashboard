@@ -6,19 +6,18 @@ import { useTranslations } from "next-intl";
 
 import { CopyBlock } from "@/components/copy-block";
 import { downloadFile } from "@/components/oh-my-opencode/model-badge";
-import { SlimTierAssignments, type SlimTierAssignmentItem } from "@/components/oh-my-opencode-slim/tier-assignments";
+import { SlimTierAssignments } from "@/components/oh-my-opencode-slim/tier-assignments";
 import { SlimToggleSections } from "@/components/oh-my-opencode-slim/toggle-sections";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import {
-  SLIM_AGENT_ROLES,
   buildSlimConfig,
-  pickBestModel,
   resolveInheritedModel,
   type ConfigData,
   type OAuthAccount,
 } from "@/lib/config-generators/oh-my-opencode-slim";
+import { buildSlimAgentAssignments } from "@/lib/config-generators/oh-my-opencode-slim-assignments";
 import {
   validateSlimConfig,
   type OhMyOpenCodeSlimFullConfig,
@@ -412,65 +411,13 @@ export function OhMyOpenCodeSlimConfigGenerator(props: OhMyOpenCodeSlimConfigGen
     );
   }
 
-  const agentAssignments: SlimTierAssignmentItem[] = [];
-
-  for (const [agent, role] of Object.entries(SLIM_AGENT_ROLES)) {
-    const agentConfig = currentEditableAgents[agent] ?? {};
-    const overrideModel = agentConfig.model;
-
-    if (typeof overrideModel === "string" && availableModelIds.includes(overrideModel)) {
-      agentAssignments.push({
-        name: agent,
-        model: overrideModel,
-        isOverride: true,
-        isUnresolved: false,
-        config: agentConfig,
-        tier: role.tier,
-        label: role.label,
-      });
-      continue;
-    }
-
-    // Slim takes this agent's model from the parent preset, so show that instead of an auto-pick.
-    if (inheritedFrom !== undefined && overrideModel === undefined && agentConfig.inheritModelFrom === undefined) {
-      agentAssignments.push({
-        name: agent,
-        model: resolveInheritedModel(slimConfig, activePreset, agent)?.replace(/^cliproxyapi\//, "") ?? t("inheritedModelUnknown"),
-        isOverride: false,
-        inheritedFrom,
-        config: agentConfig,
-        tier: role.tier,
-        label: role.label,
-      });
-      continue;
-    }
-
-    const model = pickBestModel(availableModelIds, role.tier);
-    if (model) {
-      agentAssignments.push({
-        name: agent,
-        model,
-        isOverride: overrideModel !== undefined,
-        isUnresolved: false,
-        config: agentConfig,
-        tier: role.tier,
-        label: role.label,
-      });
-      continue;
-    }
-
-    agentAssignments.push({
-      name: agent,
-      model: typeof overrideModel === "string" ? overrideModel : `unresolved-tier-${role.tier}` ,
-      isOverride: overrideModel !== undefined,
-      isUnresolved: true,
-      config: agentConfig,
-      tier: role.tier,
-      label: role.label,
-    });
-  }
-
-  agentAssignments.sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
+  const agentAssignments = buildSlimAgentAssignments({
+    agents: currentEditableAgents,
+    availableModelIds,
+    inheritedFrom,
+    resolveParentModel: (agent) => resolveInheritedModel(slimConfig, activePreset, agent),
+    inheritedModelLabel: t("inheritedModelUnknown"),
+  });
 
   const handleDownload = () => {
     if (configJson) {

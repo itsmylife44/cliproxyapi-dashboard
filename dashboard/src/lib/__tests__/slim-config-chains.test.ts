@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildSlimConfig } from "./helpers/slim-schema-guard";
+import { buildSlimConfigChecked } from "./helpers/slim-schema-guard";
 import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
 
-function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfig>): OhMyOpenCodeSlimFullConfig {
+function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfigChecked>): OhMyOpenCodeSlimFullConfig {
   expect(config).not.toBeNull();
   return config as OhMyOpenCodeSlimFullConfig;
 }
@@ -10,7 +10,7 @@ function expectGeneratedConfig(config: ReturnType<typeof buildSlimConfig>): OhMy
 describe("buildSlimConfig – fallback chains behavior", () => {
   it("should passthrough external models and prefix available ones", () => {
     const available = ["model-a", "model-b"];
-    const config = buildSlimConfig(available, {
+    const config = buildSlimConfigChecked(available, {
       fallback: {
         enabled: true,
         chains: {
@@ -35,7 +35,7 @@ describe("buildSlimConfig – fallback chains behavior", () => {
 
   it("should preserve chains with all external models", () => {
     const available = ["model-a"];
-    const config = buildSlimConfig(available, {
+    const config = buildSlimConfigChecked(available, {
       fallback: {
         enabled: true,
         chains: {
@@ -58,7 +58,7 @@ describe("buildSlimConfig – preset and global override semantics", () => {
   const available = ["model-a", "model-b"];
 
   it("should use overrides.preset for active preset selection", () => {
-    const config = buildSlimConfig(available, {
+    const config = buildSlimConfigChecked(available, {
       preset: "custom",
       presets: {
         custom: {
@@ -76,14 +76,14 @@ describe("buildSlimConfig – preset and global override semantics", () => {
   });
 
   it("should fall back to options.presetName when overrides.preset is missing", () => {
-    const config = buildSlimConfig(available, {}, { presetName: "fallback" });
+    const config = buildSlimConfigChecked(available, {}, { presetName: "fallback" });
 
     const generated = expectGeneratedConfig(config);
     expect(generated.preset).toBe("fallback");
   });
 
   it("should prioritize root agents over preset agents (upstream semantics)", () => {
-    const config = buildSlimConfig(available, {
+    const config = buildSlimConfigChecked(available, {
       preset: "test",
       presets: {
         test: {
@@ -108,7 +108,7 @@ describe("buildSlimConfig – preset and global override semantics", () => {
   });
 
   it("should preserve explicit advanced agent configs", () => {
-    const config = buildSlimConfig(available, {
+    const config = buildSlimConfigChecked(available, {
       agents: {
         observer: { model: "external/observer-model" },
         councillor: { model: "model-a" },
@@ -127,7 +127,7 @@ describe("buildSlimConfig – preset and global override semantics", () => {
   });
 
   it("preserves partial root overrides without inventing a new model", () => {
-    const config = buildSlimConfig(available, {
+    const config = buildSlimConfigChecked(available, {
       preset: "test",
       presets: {
         test: {
@@ -145,7 +145,7 @@ describe("buildSlimConfig – preset and global override semantics", () => {
   });
 
   it("emits council presets but not the master slim 3.x removed", () => {
-    const config = buildSlimConfig(available, validateSlimConfig({
+    const config = buildSlimConfigChecked(available, validateSlimConfig({
       council: {
         master: {
           variant: "high-precision",
@@ -168,7 +168,7 @@ describe("buildSlimConfig – preset and global override semantics", () => {
   });
 
   it("should handle disabled_agents field", () => {
-    const config = buildSlimConfig(available, {
+    const config = buildSlimConfigChecked(available, {
       disabled_agents: ["observer", "councillor"],
     });
 

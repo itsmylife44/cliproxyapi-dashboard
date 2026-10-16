@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildSlimConfig } from "./helpers/slim-schema-guard";
+import { buildSlimConfigChecked } from "./helpers/slim-schema-guard";
 import { validateSlimConfig } from "../config-generators/oh-my-opencode-slim-types";
 import { SlimAgentConfigSchema } from "../validation/schemas";
 import { LEGACY_SLIM_OVERRIDES } from "./helpers/legacy-slim-overrides";
@@ -20,7 +20,7 @@ const DEAD_TOP_LEVEL_KEYS = [
 
 describe("slim dead config keys", () => {
   it("generator drops dead keys present in stored config (legacy tmux becomes multiplexer)", () => {
-    const config = buildSlimConfig(["model-a", "model-b"], validateSlimConfig(LEGACY_SLIM_OVERRIDES));
+    const config = buildSlimConfigChecked(["model-a", "model-b"], validateSlimConfig(LEGACY_SLIM_OVERRIDES));
 
     expect(config).not.toBeNull();
     for (const key of DEAD_TOP_LEVEL_KEYS) expect(config).not.toHaveProperty(key);

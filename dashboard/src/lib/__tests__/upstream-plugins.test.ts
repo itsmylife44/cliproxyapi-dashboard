@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSlimConfig } from "./helpers/slim-schema-guard";
+import { buildSlimConfigChecked } from "./helpers/slim-schema-guard";
 import {
   OMO_PLUGIN,
   resolvePluginList,
@@ -19,7 +19,7 @@ describe("pinned plugin entries", () => {
 
 describe("generated $schema URLs", () => {
   it("slim config points at the pinned unpkg version", () => {
-    expect(buildSlimConfig(["gpt-5.4"])?.$schema).toBe(
+    expect(buildSlimConfigChecked(["gpt-5.4"])?.$schema).toBe(
       "https://unpkg.com/oh-my-opencode-slim@3.0.4/oh-my-opencode-slim.schema.json",
     );
   });

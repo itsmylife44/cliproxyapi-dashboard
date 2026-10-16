@@ -10,6 +10,7 @@ import {
   enrichModelFirstGroup,
   isModelFirstProvider,
   normalizeFraction,
+  selectAntigravitySummary,
   type QuotaAccount,
   type QuotaGroup,
   type QuotaResponse,
@@ -355,6 +356,12 @@ async function fetchAntigravityPayload<T>(
 ): Promise<{ data: T; snapshotFetchedAt: string; snapshotSource: string } | { error: string }> {
   const payload = JSON.stringify(projectId ? { project: projectId } : {});
   let lastError = "No Antigravity quota endpoints responded";
+  const candidates: T[] = [];
+  const endpointSources = new Map<T, string>();
+  // The capacity chart is fed only by Gemini windows (capacityQuotaGroups),
+  // so a summary that lacks them is a degraded fallback, not a success.
+  const isPreferredPayload = (candidate: T): boolean =>
+    Array.isArray(candidate) && (candidate as QuotaGroup[]).some((group) => group.id.startsWith("gemini-"));
 
   for (const endpoint of endpoints) {
     try {
@@ -435,17 +442,23 @@ async function fetchAntigravityPayload<T>(
         continue;
       }
 
-      return {
-        data,
-        snapshotFetchedAt: new Date().toISOString(),
-        snapshotSource: endpoint,
-      };
+      candidates.push(data);
+      endpointSources.set(data, endpoint);
     } catch (error) {
       lastError = error instanceof Error ? error.message : "Unknown error";
     }
   }
 
-  return { error: lastError };
+  const selected = selectAntigravitySummary(candidates, isPreferredPayload);
+  if (selected === null) {
+    return { error: lastError };
+  }
+
+  return {
+    data: selected,
+    snapshotFetchedAt: new Date().toISOString(),
+    snapshotSource: endpointSources.get(selected) ?? endpoints[endpoints.length - 1] ?? "",
+  };
 }
 
 async function fetchAntigravityModels(authIndex: string, projectId: string | null, timeoutMs?: number) {

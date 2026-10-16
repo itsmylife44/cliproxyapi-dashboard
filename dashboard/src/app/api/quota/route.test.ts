@@ -895,3 +895,111 @@ describe("GET /api/quota - Codex window duration", () => {
     expect(group.label).toBe("Primary Window");
   });
 });
+
+describe("GET /api/quota - Codex additional and code review limits (issue #309)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  async function fetchCodexGroups(body: Record<string, unknown>): Promise<QuotaGroup[]> {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            files: [
+              { auth_index: 42, provider: "codex", name: "codex-extra.json", disabled: false, status: "active" },
+            ],
+          }),
+        body: { cancel: vi.fn() },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ status_code: 200, body }),
+        body: { cancel: vi.fn() },
+      });
+
+    const { GET } = await import("./route");
+    const response = await GET(new NextRequest("http://localhost/api/quota"));
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    return data.accounts[0].groups;
+  }
+
+  it("returns each additional limit and the code review limit as their own groups", async () => {
+    const groups = await fetchCodexGroups({
+      plan_type: "pro",
+      rate_limit: {
+        primary_window: { limit_window_seconds: 18000, used_percent: 10, reset_at: 1792108800 },
+        secondary_window: { limit_window_seconds: 604800, used_percent: 20, reset_at: 1792195200 },
+      },
+      additional_rate_limits: [
+        {
+          limit_name: "GPT-5.3-Codex-Spark",
+          metered_feature: "codex_bengalfox",
+          rate_limit: {
+            primary_window: { limit_window_seconds: 18000, used_percent: 40, reset_at: 1792108800 },
+            secondary_window: { limit_window_seconds: 604800, used_percent: 70, reset_at: 1792195200 },
+          },
+        },
+      ],
+      code_review_rate_limit: {
+        primary_window: { limit_window_seconds: 604800, used_percent: 5, reset_at: 1792195200 },
+        secondary_window: null,
+      },
+    });
+
+    expect(groups.map((group) => group.id)).toEqual([
+      "primary-window",
+      "secondary-window",
+      "gpt-5-3-codex-spark-primary-window",
+      "gpt-5-3-codex-spark-secondary-window",
+      "code-review-primary-window",
+    ]);
+    expect(groups[2]).toMatchObject({
+      label: "GPT-5.3-Codex-Spark 5h Window",
+      windowSeconds: 18000,
+      remainingFraction: expect.closeTo(0.6, 5),
+    });
+    expect(groups[3]).toMatchObject({
+      label: "GPT-5.3-Codex-Spark 168h Window",
+      windowSeconds: 604800,
+      remainingFraction: expect.closeTo(0.3, 5),
+    });
+    expect(groups[4]).toMatchObject({
+      label: "Code Review 168h Window",
+      windowSeconds: 604800,
+      remainingFraction: expect.closeTo(0.95, 5),
+    });
+  });
+
+  it("falls back to the metered feature when an additional limit has no name", async () => {
+    const groups = await fetchCodexGroups({
+      additional_rate_limits: [
+        {
+          limit_name: "",
+          metered_feature: "codex_bengalfox",
+          rate_limit: { primary_window: { limit_window_seconds: 604800, used_percent: 50, reset_at: 1792195200 } },
+        },
+      ],
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({
+      id: "codex-bengalfox-primary-window",
+      label: "codex_bengalfox 168h Window",
+      windowSeconds: 604800,
+      remainingFraction: 0.5,
+    });
+  });
+
+  it("ignores null additional limits and null code review limits", async () => {
+    const groups = await fetchCodexGroups({
+      rate_limit: { primary_window: { limit_window_seconds: 18000, used_percent: 0, reset_at: 1792108800 } },
+      additional_rate_limits: null,
+      code_review_rate_limit: null,
+    });
+
+    expect(groups.map((group) => group.id)).toEqual(["primary-window"]);
+  });
+});

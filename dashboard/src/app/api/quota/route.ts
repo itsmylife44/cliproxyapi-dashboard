@@ -476,11 +476,22 @@ interface CodexRateWindow {
   reset_at?: number;
 }
 
+interface CodexRateLimitDetails {
+  primary_window?: CodexRateWindow | null;
+  secondary_window?: CodexRateWindow | null;
+}
+
+// Mirrors openai/codex `AdditionalRateLimitDetails` (e.g. per-model weekly limits).
+interface CodexAdditionalRateLimit {
+  limit_name?: string | null;
+  metered_feature?: string | null;
+  rate_limit?: CodexRateLimitDetails | null;
+}
+
 interface CodexWhamUsageResponse {
-  rate_limit?: {
-    primary_window?: CodexRateWindow;
-    secondary_window?: CodexRateWindow;
-  };
+  rate_limit?: CodexRateLimitDetails | null;
+  additional_rate_limits?: CodexAdditionalRateLimit[] | null;
+  code_review_rate_limit?: CodexRateLimitDetails | null;
   plan_type?: string;
 }
 
@@ -490,16 +501,31 @@ function formatWindowLabel(seconds: number): string {
   return `${Math.round(minutes / 60)}h Window`;
 }
 
-function parseCodexQuota(data: CodexWhamUsageResponse): QuotaGroup[] {
-  const groups: QuotaGroup[] = [];
+function slugifyCodexLimit(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
 
-  const windows: Array<{ key: string; label: string; window: CodexRateWindow | undefined }> = [
-    { key: "primary", label: "Primary", window: data.rate_limit?.primary_window },
-    { key: "secondary", label: "Secondary", window: data.rate_limit?.secondary_window },
+/**
+ * Turns one Codex rate-limit block into quota groups. Scoped limits (additional
+ * per-model limits, code review) prefix ids with `<scope>-` and labels with their
+ * name; the `-primary-window`/`-secondary-window` id suffix is shared with the main
+ * limit so provider pooling can tell scopes apart (see provider-summary).
+ */
+function parseCodexRateLimit(
+  rateLimit: CodexRateLimitDetails | null | undefined,
+  scope?: { id: string; name: string }
+): QuotaGroup[] {
+  const groups: QuotaGroup[] = [];
+  const idPrefix = scope ? `${scope.id}-` : "";
+  const labelPrefix = scope ? `${scope.name} ` : "";
+
+  const windows: Array<{ key: string; window: CodexRateWindow | null | undefined }> = [
+    { key: "primary", window: rateLimit?.primary_window },
+    { key: "secondary", window: rateLimit?.secondary_window },
   ];
 
   for (const { key, window } of windows) {
-    if (!window || window.used_percent === undefined) continue;
+    if (!window || typeof window.used_percent !== "number") continue;
 
     const remainingFraction = Math.max(0, Math.min(1, 1 - window.used_percent / 100));
     const resetTime = window.reset_at
@@ -510,19 +536,20 @@ function parseCodexQuota(data: CodexWhamUsageResponse): QuotaGroup[] {
     const windowSeconds = Number.isFinite(parsedWindowSeconds) && parsedWindowSeconds > 0
       ? parsedWindowSeconds
       : undefined;
-    const label = windowSeconds
+    const label = labelPrefix + (windowSeconds
       ? formatWindowLabel(windowSeconds)
-      : `${key.charAt(0).toUpperCase() + key.slice(1)} Window`;
+      : `${key.charAt(0).toUpperCase() + key.slice(1)} Window`);
+    const id = `${idPrefix}${key}-window`;
 
     groups.push({
-      id: `${key}-window`,
+      id,
       label,
       windowSeconds,
       remainingFraction,
       resetTime,
       models: [
         {
-          id: `${key}-window`,
+          id,
           displayName: label,
           remainingFraction,
           resetTime,
@@ -530,6 +557,24 @@ function parseCodexQuota(data: CodexWhamUsageResponse): QuotaGroup[] {
       ],
     });
   }
+
+  return groups;
+}
+
+function parseCodexQuota(data: CodexWhamUsageResponse): QuotaGroup[] {
+  const groups = parseCodexRateLimit(data.rate_limit);
+  const usedScopeIds = new Set<string>(["code-review"]);
+
+  (data.additional_rate_limits ?? []).forEach((limit, index) => {
+    if (!limit) return;
+    const name = limit.limit_name?.trim() || limit.metered_feature?.trim() || `Additional Limit ${index + 1}`;
+    let scopeId = slugifyCodexLimit(name) || `additional-${index + 1}`;
+    if (usedScopeIds.has(scopeId)) scopeId = `${scopeId}-${index + 1}`;
+    usedScopeIds.add(scopeId);
+    groups.push(...parseCodexRateLimit(limit.rate_limit, { id: scopeId, name }));
+  });
+
+  groups.push(...parseCodexRateLimit(data.code_review_rate_limit, { id: "code-review", name: "Code Review" }));
 
   return groups;
 }

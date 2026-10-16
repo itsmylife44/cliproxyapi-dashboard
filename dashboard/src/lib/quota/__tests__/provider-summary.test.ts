@@ -52,4 +52,29 @@ describe("calcProviderSummary", () => {
       expect.objectContaining({ isShortTerm: true, capacity: 0.5 }),
     ]);
   });
+
+  it("keeps additional and code review limits out of the main weekly pool (issue #309)", () => {
+    const scoped = (id: string, label: string, remainingFraction: number): QuotaGroup => ({
+      ...codexWindow(id, 168 * HOUR, remainingFraction),
+      label,
+    });
+    const plus = codexAccount("plus", [
+      codexWindow("secondary-window", 168 * HOUR, 0.5),
+      scoped("gpt-5-3-codex-spark-secondary-window", "GPT-5.3-Codex-Spark 168h Window", 0.2),
+      scoped("code-review-primary-window", "Code Review 168h Window", 0.9),
+    ]);
+    const pro = codexAccount("pro", [
+      codexWindow("primary-window", 168 * HOUR, 0.5),
+      scoped("gpt-5-3-codex-spark-primary-window", "GPT-5.3-Codex-Spark 168h Window", 0.5),
+    ]);
+
+    const { windowCapacities } = calcProviderSummary([plus, pro]);
+
+    expect(windowCapacities).toHaveLength(3);
+    expect(windowCapacities.find((window) => window.label === "168h Window")?.capacity).toBeCloseTo(0.75, 5);
+    expect(
+      windowCapacities.find((window) => window.label === "GPT-5.3-Codex-Spark 168h Window")?.capacity
+    ).toBeCloseTo(0.6, 5);
+    expect(windowCapacities.find((window) => window.label === "Code Review 168h Window")?.capacity).toBeCloseTo(0.9, 5);
+  });
 });

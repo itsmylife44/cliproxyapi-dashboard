@@ -27,6 +27,18 @@ export interface ProviderSummary {
   modelFirstSummary?: ModelFirstProviderSummary;
 }
 
+const POSITIONAL_WINDOW_SUFFIX = /(?:^|-)(?:primary|secondary)-window$/;
+
+// Codex reuses position ids across plans (`primary-window` is 5h on Plus, weekly on Pro),
+// so windows with a known duration pool by that duration instead of by id. Scoped Codex
+// limits (`<scope>-primary-window`, e.g. per-model or code review) pool by scope + duration
+// so they never merge into the main limit's bars.
+function poolKey(group: QuotaGroup): string {
+  if (!group.windowSeconds) return group.id;
+  const scope = group.id.replace(POSITIONAL_WINDOW_SUFFIX, "");
+  return scope && scope !== group.id ? `${scope}:${group.windowSeconds}s` : `${group.windowSeconds}s`;
+}
+
 export function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
   const totalAccounts = accounts.length;
   const healthy = accounts
@@ -47,13 +59,11 @@ export function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
     };
   }
 
-  // Codex reuses position ids across plans (`primary-window` is 5h on Plus, weekly on Pro),
-  // so windows with a known duration pool by that duration instead of by id.
   const pools = new Map<string, { groups: QuotaGroup[]; first: QuotaGroup; firstSiblings: QuotaGroup[] }>();
   for (const account of healthy) {
     for (const group of account.groups) {
       if (group.id === "extra-usage") continue;
-      const key = group.windowSeconds ? `${group.windowSeconds}s` : group.id;
+      const key = poolKey(group);
       const pool = pools.get(key);
       if (pool) pool.groups.push(group);
       else pools.set(key, { groups: [group], first: group, firstSiblings: account.groups });

@@ -83,9 +83,9 @@ export const SLIM_BUNDLED_SKILLS = [
 ] as const;
 
 const SLIM_PERMISSION_VALUES = ["ask", "allow", "deny"] as const;
-const SLIM_INHERIT_MODEL_FROM = ["session", "orchestrator"] as const;
-const SLIM_IMAGE_ROUTING = ["auto", "direct"] as const;
-const SLIM_DEEPWORK_GUARD_MODES = ["shadow", "enforce"] as const;
+export const SLIM_INHERIT_MODEL_FROM = ["session", "orchestrator"] as const;
+export const SLIM_IMAGE_ROUTING = ["auto", "direct"] as const;
+export const SLIM_DEEPWORK_GUARD_MODES = ["shadow", "enforce"] as const;
 
 /** Upstream default for `fallback.maxRetries` */
 export const SLIM_DEFAULT_MAX_RETRIES = 3;

@@ -8,7 +8,7 @@ import {
 import { getBundledOhMyOpenCodePresets } from "../config-generators/oh-my-opencode-presets";
 import { validateFullConfig } from "../config-generators/oh-my-opencode-types";
 import { buildOhMyOpenCodeConfig } from "./helpers/omo-schema-guard";
-import { buildSlimConfig } from "./helpers/slim-schema-guard";
+import { buildSlimConfigChecked } from "./helpers/slim-schema-guard";
 import { deprecatedOmoKeys, upstreamSchemaErrors } from "./helpers/upstream-schema";
 
 const ALL_CHAIN_MODELS = [
@@ -95,7 +95,7 @@ describe("upstream schema guard: OMO", () => {
 
 describe("upstream schema guard: slim", () => {
   it("a config with stored fallback chains validates against the vendored schema", () => {
-    const config = buildSlimConfig(["model-a", "model-b"], {
+    const config = buildSlimConfigChecked(["model-a", "model-b"], {
       presets: { cliproxyapi: { orchestrator: { model: ["model-a", { id: "model-b", variant: "high" }] } } },
       agents: { oracle: { model: "model-b" } },
       fallback: {

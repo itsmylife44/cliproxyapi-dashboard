@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildSlimConfig } from "./helpers/slim-schema-guard";
+import { buildSlimConfigChecked } from "./helpers/slim-schema-guard";
 import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "../config-generators/oh-my-opencode-slim-types";
 import { upstreamSchemaErrors } from "./helpers/upstream-schema";
 
 const available = ["claude-opus-4-6", "gpt-5-mini"];
 
 function generate(overrides?: OhMyOpenCodeSlimFullConfig): OhMyOpenCodeSlimFullConfig {
-  const config = buildSlimConfig(available, overrides);
+  const config = buildSlimConfigChecked(available, overrides);
   expect(config).not.toBeNull();
   expect(upstreamSchemaErrors("slim", config)).toEqual([]);
   return config as OhMyOpenCodeSlimFullConfig;

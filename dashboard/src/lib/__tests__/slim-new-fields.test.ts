@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { validateSlimConfig } from "../config-generators/oh-my-opencode-slim-types";
 import { SlimAgentConfigSchema } from "../validation/schemas";
-import { buildSlimConfig } from "./helpers/slim-schema-guard";
+import { buildSlimConfigChecked } from "./helpers/slim-schema-guard";
 
 vi.mock("server-only", () => ({}));
 
@@ -54,7 +54,7 @@ describe("slim 3.x fields survive the dashboard", () => {
       agents: { "code-reviewer": { model: "model-b", ...NEW_AGENT_FIELDS } },
     });
 
-    const config = buildSlimConfig(available, stored);
+    const config = buildSlimConfigChecked(available, stored);
 
     expect(config).toMatchObject({
       ...NEW_TOP_LEVEL,
@@ -70,11 +70,11 @@ describe("slim 3.x fields survive the dashboard", () => {
   });
 
   it("keeps fallback.maxRetries above the UI's usual range", () => {
-    expect(buildSlimConfig(available, store({ fallback: { maxRetries: 200 } }))?.fallback).toMatchObject({ maxRetries: 200 });
+    expect(buildSlimConfigChecked(available, store({ fallback: { maxRetries: 200 } }))?.fallback).toMatchObject({ maxRetries: 200 });
   });
 
   it("drops hook and command names slim does not know", () => {
-    const config = buildSlimConfig(available, store({
+    const config = buildSlimConfigChecked(available, store({
       disabled_hooks: ["phase-reminder", "ralph-loop"],
       disabled_commands: ["init-deep", "loop"],
     }));
@@ -137,7 +137,7 @@ describe("slim 3.x fields survive the dashboard", () => {
       },
     };
 
-    const config = buildSlimConfig(available, store(full));
+    const config = buildSlimConfigChecked(available, store(full));
 
     expect({
       backgroundJobs: config?.backgroundJobs,
@@ -148,7 +148,7 @@ describe("slim 3.x fields survive the dashboard", () => {
   });
 
   it("drops a stored object that no longer fits the upstream shape", () => {
-    const config = buildSlimConfig(available, validateSlimConfig({ companion: { speed: 9 }, webfetch: { enabled: false } }));
+    const config = buildSlimConfigChecked(available, validateSlimConfig({ companion: { speed: 9 }, webfetch: { enabled: false } }));
 
     expect(config?.companion).toBeUndefined();
     expect(config?.webfetch).toEqual({ enabled: false });
@@ -187,7 +187,7 @@ describe("slim 3.x fields survive the dashboard", () => {
       "code-reviewer": { model: "model-a" },
     });
 
-    const config = buildSlimConfig(available, stored) as { presets: Record<string, unknown> };
+    const config = buildSlimConfigChecked(available, stored) as { presets: Record<string, unknown> };
 
     // An extending preset only carries what it changes; the rest is inherited upstream.
     expect(config.presets.review).toEqual({

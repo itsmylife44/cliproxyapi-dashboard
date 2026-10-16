@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildSlimConfig } from "./helpers/slim-schema-guard";
+import { buildSlimConfigChecked } from "./helpers/slim-schema-guard";
 import { validateSlimConfig } from "../config-generators/oh-my-opencode-slim-types";
 import { upstreamSchemaErrors } from "./helpers/upstream-schema";
 
 vi.mock("server-only", () => ({}));
 
 function generate(stored: unknown) {
-  return buildSlimConfig(["model-a"], validateSlimConfig(stored));
+  return buildSlimConfigChecked(["model-a"], validateSlimConfig(stored));
 }
 
 describe("slim legacy tmux block", () => {

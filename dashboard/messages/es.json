@@ -1840,7 +1840,18 @@
     "advancedSectionLabel": "Avanzado",
     "advancedSectionTooltip": "Edita el objeto de sobrescritura de slim completo como JSON.",
     "jsonEditorWarning": "Solo para usuarios avanzados. El JSON inválido será rechazado.",
-    "jsonEditorPlaceholder": "{\"preset\":\"review\",\"presets\":{},\"agents\":{}}"
+    "jsonEditorPlaceholder": "{\"preset\":\"review\",\"presets\":{},\"agents\":{}}",
+    "initialRetryDelayLabel": "Retraso inicial",
+    "continuationPolicyLabel": "Tras el fallback",
+    "continuationPolicyRetryPrimary": "Reintentar modelo principal",
+    "continuationPolicyStickToFallback": "Mantener modelo de fallback",
+    "cmuxTuiBinaryLabel": "Binario",
+    "cmuxTuiBinaryPlaceholder": "Detectar cmux-tui en el PATH",
+    "viewerLabel": "Visor",
+    "viewerDefault": "Predeterminado",
+    "viewerTui": "TUI completa",
+    "viewerMini": "Mini",
+    "interviewPrintStateLabel": "Mostrar el estado de la entrevista en la TUI"
   },
   "copyBlock": {
     "copiedToClipboard": "Copiado al portapapeles",

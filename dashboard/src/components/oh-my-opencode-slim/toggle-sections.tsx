@@ -13,9 +13,11 @@ import type {
 import {
   SLIM_BUNDLED_SKILLS,
   SLIM_DEFAULT_MAX_RETRIES,
+  SLIM_FALLBACK_CONTINUATION_POLICIES,
   SLIM_HOOKS,
   SLIM_TMUX_LAYOUTS,
   SLIM_MULTIPLEXER_TYPES,
+  SLIM_MULTIPLEXER_VIEWERS,
 } from "@/lib/config-generators/oh-my-opencode-slim-types";
 import { ToggleListSection } from "@/components/oh-my-opencode/sections/toggle-list-section";
 import { HelpTooltip } from "@/components/ui/tooltip";
@@ -235,6 +237,36 @@ export function SlimToggleSections({
               </div>
             </>
           )}
+          {multiplexer.type === "cmux-tui" && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--text-muted)] w-16">{t("cmuxTuiBinaryLabel")}</span>
+              <input
+                type="text"
+                value={multiplexer.cmux_tui_binary ?? ""}
+                onChange={(event) => onMultiplexerChange({ ...multiplexer, cmux_tui_binary: event.target.value || undefined })}
+                placeholder={t("cmuxTuiBinaryPlaceholder")}
+                className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)] placeholder:text-[var(--text-muted)]"
+              />
+            </div>
+          )}
+          {multiplexer.type !== "none" && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--text-muted)] w-16">{t("viewerLabel")}</span>
+              <select
+                value={multiplexer.viewer ?? ""}
+                onChange={(event) => onMultiplexerChange({
+                  ...multiplexer,
+                  viewer: (event.target.value || undefined) as SlimMultiplexerConfig["viewer"],
+                })}
+                className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+              >
+                <option value="">{t("viewerDefault")}</option>
+                {SLIM_MULTIPLEXER_VIEWERS.map((viewer) => (
+                  <option key={viewer} value={viewer}>{t(viewer === "tui" ? "viewerTui" : "viewerMini")}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </Section>
 
         <Section
@@ -317,6 +349,36 @@ export function SlimToggleSections({
               }}
               className="w-24 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
             />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--text-muted)] w-24">{t("initialRetryDelayLabel")}</span>
+            <input
+              type="number"
+              min={0}
+              value={fallback.initialRetryDelayMs ?? 0}
+              onChange={(event) => {
+                const next = parseInt(event.target.value, 10);
+                onFallbackChange({ ...fallback, initialRetryDelayMs: Number.isNaN(next) ? undefined : Math.max(0, next) });
+              }}
+              className="w-24 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--text-muted)] w-24">{t("continuationPolicyLabel")}</span>
+            <select
+              value={fallback.continuationPolicy ?? "retry-primary"}
+              onChange={(event) => onFallbackChange({
+                ...fallback,
+                continuationPolicy: event.target.value as SlimFallbackConfig["continuationPolicy"],
+              })}
+              className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+            >
+              {SLIM_FALLBACK_CONTINUATION_POLICIES.map((policy) => (
+                <option key={policy} value={policy}>
+                  {t(policy === "retry-primary" ? "continuationPolicyRetryPrimary" : "continuationPolicyStickToFallback")}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1">
             <p className="text-[11px] font-medium text-[var(--text-muted)]">{t("fallbackChainsLabel")}</p>
@@ -477,6 +539,15 @@ export function SlimToggleSections({
               className="accent-black"
             />
             {t("interviewDashboardLabel")}
+          </label>
+          <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+            <input
+              type="checkbox"
+              checked={interview.printState ?? false}
+              onChange={() => onInterviewChange({ ...interview, printState: !(interview.printState ?? false) })}
+              className="accent-black"
+            />
+            {t("interviewPrintStateLabel")}
           </label>
         </Section>
 

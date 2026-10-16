@@ -1847,7 +1847,18 @@
     "advancedSectionLabel": "Erweitert",
     "advancedSectionTooltip": "Bearbeiten Sie das vollständige Slim-Override-Objekt als JSON.",
     "jsonEditorWarning": "Nur für fortgeschrittene Nutzer. Ungültiges JSON wird abgelehnt.",
-    "jsonEditorPlaceholder": "{\"preset\":\"review\",\"presets\":{},\"agents\":{}}"
+    "jsonEditorPlaceholder": "{\"preset\":\"review\",\"presets\":{},\"agents\":{}}",
+    "initialRetryDelayLabel": "Anfangsverzögerung",
+    "continuationPolicyLabel": "Nach Fallback",
+    "continuationPolicyRetryPrimary": "Primärmodell erneut versuchen",
+    "continuationPolicyStickToFallback": "Beim Fallback-Modell bleiben",
+    "cmuxTuiBinaryLabel": "Binärdatei",
+    "cmuxTuiBinaryPlaceholder": "cmux-tui automatisch im PATH suchen",
+    "viewerLabel": "Ansicht",
+    "viewerDefault": "Standard",
+    "viewerTui": "Volle TUI",
+    "viewerMini": "Mini",
+    "interviewPrintStateLabel": "Interview-Status in der TUI ausgeben"
   },
   "copyBlock": {
     "copiedToClipboard": "In Zwischenablage kopiert",

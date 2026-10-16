@@ -1847,7 +1847,18 @@
     "advancedSectionLabel": "Advanced",
     "advancedSectionTooltip": "Edit the full slim override object as JSON.",
     "jsonEditorWarning": "Advanced users only. Invalid JSON will be rejected.",
-    "jsonEditorPlaceholder": "{\"preset\":\"review\",\"presets\":{},\"agents\":{}}"
+    "jsonEditorPlaceholder": "{\"preset\":\"review\",\"presets\":{},\"agents\":{}}",
+    "initialRetryDelayLabel": "Initial delay",
+    "continuationPolicyLabel": "After fallback",
+    "continuationPolicyRetryPrimary": "Retry primary model",
+    "continuationPolicyStickToFallback": "Stick to fallback model",
+    "cmuxTuiBinaryLabel": "Binary",
+    "cmuxTuiBinaryPlaceholder": "Auto-detect cmux-tui on PATH",
+    "viewerLabel": "Viewer",
+    "viewerDefault": "Default",
+    "viewerTui": "Full TUI",
+    "viewerMini": "Mini",
+    "interviewPrintStateLabel": "Print interview state in the TUI"
   },
   "copyBlock": {
     "copiedToClipboard": "Copied to clipboard",

@@ -1845,7 +1845,18 @@
     "advancedSectionLabel": "高级",
     "advancedSectionTooltip": "以 JSON 格式编辑完整的 Slim 覆盖对象。",
     "jsonEditorWarning": "仅供高级用户使用，无效 JSON 将被拒绝。",
-    "jsonEditorPlaceholder": "'{\"preset\":\"review\",\"presets\":{},\"agents\":{}}'"
+    "jsonEditorPlaceholder": "'{\"preset\":\"review\",\"presets\":{},\"agents\":{}}'",
+    "initialRetryDelayLabel": "初始延迟",
+    "continuationPolicyLabel": "回退后",
+    "continuationPolicyRetryPrimary": "重试主模型",
+    "continuationPolicyStickToFallback": "保持使用回退模型",
+    "cmuxTuiBinaryLabel": "可执行文件",
+    "cmuxTuiBinaryPlaceholder": "自动在 PATH 中查找 cmux-tui",
+    "viewerLabel": "查看器",
+    "viewerDefault": "默认",
+    "viewerTui": "完整 TUI",
+    "viewerMini": "迷你",
+    "interviewPrintStateLabel": "在 TUI 中打印访谈状态"
   },
   "copyBlock": {
     "copiedToClipboard": "已复制到剪贴板",

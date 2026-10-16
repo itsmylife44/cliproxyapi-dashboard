@@ -407,6 +407,9 @@ async function fetchAntigravityPayload<T>(
           }
           
           if (statusCode === 403) {
+            // A late-endpoint failure must not discard an earlier usable
+            // candidate — fail open on what we already collected.
+            if (candidates.length > 0) break;
             if (errorDetail.toLowerCase().includes("validation_required") || errorDetail.toLowerCase().includes("verify")) {
               return { error: "Google account requires verification - visit accounts.google.com" };
             }
@@ -422,6 +425,7 @@ async function fetchAntigravityPayload<T>(
             continue; // Try next endpoint
           }
           lastError = `Antigravity API error: ${statusCode}${errorDetail ? ` - ${errorDetail}` : ""}`;
+          if (candidates.length > 0) break;
           return { error: lastError };
         }
 
@@ -444,6 +448,7 @@ async function fetchAntigravityPayload<T>(
 
       candidates.push(data);
       endpointSources.set(data, endpoint);
+      if (isPreferredPayload(data)) break; // preferred candidate in hand — stop probing
     } catch (error) {
       lastError = error instanceof Error ? error.message : "Unknown error";
     }

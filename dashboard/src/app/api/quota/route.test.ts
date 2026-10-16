@@ -214,6 +214,54 @@ describe("GET /api/quota - Gemini CLI support (issue #125)", () => {
     expect(account.groups).toBeDefined();
   });
 
+  it("keeps an earlier valid candidate when a later endpoint 403s", async () => {
+    const authFilesResponse = {
+      files: [{ auth_index: 0, provider: "antigravity", email: "test@gmail.com", disabled: false, status: "active" }],
+    };
+    const summary = {
+      groups: [
+        { displayName: "Gemini Models", buckets: [
+          { bucketId: "gemini-weekly", window: "weekly", remainingFraction: 0.31, resetTime: "2026-04-14T12:00:00Z" },
+        ] },
+      ],
+    };
+    let calls = 0;
+    fetchMock.mockImplementation(async (_url: string) => {
+      calls += 1;
+      if (calls === 1) return { ok: true, json: async () => authFilesResponse };
+      if (calls === 2) return { ok: true, json: async () => ({ status_code: 200, body: { cloudaicompanionProject: "p" } }) };
+      if (calls === 3) return { ok: true, json: async () => ({ status_code: 200, body: JSON.stringify(summary) }) };
+      return { ok: true, json: async () => ({ status_code: 403, body: JSON.stringify({ error: { message: "Access denied" } }) }) };
+    });
+    const { GET } = await import("./route");
+    const response = await GET(new Request("http://localhost/api/quota") as NextRequest);
+    const body = await response.json();
+    // The Gemini-bearing candidate collected on the FIRST endpoint survives
+    // the later endpoints' fatal 403 (fail-open on collected candidates).
+    expect(body.accounts[0].groups.map((group: QuotaGroup) => group.id)).toEqual(["gemini-weekly"]);
+    expect(body.accounts[0].snapshotSource).toContain("daily-cloudcode-pa.googleapis.com");
+  });
+  it("does not probe further after a preferred candidate succeeds", async () => {
+    const authFilesResponse = {
+      files: [{ auth_index: 0, provider: "antigravity", email: "test@gmail.com", disabled: false, status: "active" }],
+    };
+    const summary = {
+      groups: [{ displayName: "Gemini Models", buckets: [
+        { bucketId: "gemini-weekly", window: "weekly", remainingFraction: 0.5, resetTime: "2026-04-14T12:00:00Z" },
+      ] }],
+    };
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(authFilesResponse) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ status_code: 200, body: { cloudaicompanionProject: "p" } }) })
+      .mockResolvedValueOnce({ ok: true, json: () => ({ status_code: 200, body: JSON.stringify(summary) }) })
+      .mockImplementation(async () => ({ ok: false, status: 500 }));
+    const { GET } = await import("./route");
+    const response = await GET(new Request("http://localhost/api/quota") as NextRequest);
+    const body = await response.json();
+    // Early exit on preferred: the hanging/failing later endpoints are never hit.
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(body.accounts[0].groups.map((group: QuotaGroup) => group.id)).toEqual(["gemini-weekly"]);
+  });
   it("falls back to the next summary endpoint and returns only shared quota windows", async () => {
     const authFilesResponse = {
       files: [{ auth_index: 0, provider: "antigravity", email: "test@gmail.com", disabled: false, status: "active" }],
@@ -243,10 +291,10 @@ describe("GET /api/quota - Gemini CLI support (issue #125)", () => {
     const response = await GET(new Request("http://localhost/api/quota") as NextRequest);
     const account = (await response.json()).accounts[0];
 
-    // All three summary endpoints are probed (selection prefers a
-    // Gemini-bearing payload; here only sandbox answers 200): auth-files +
-    // loadCodeAssist + daily(429) + sandbox(200) + cloudcode(429).
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    // Early exit once a PREFERRED (Gemini-bearing) candidate is in hand:
+    // auth-files + loadCodeAssist + daily(429) + sandbox(200, preferred) —
+    // the trailing cloudcode probe is skipped.
+    expect(fetchMock).toHaveBeenCalledTimes(4);
     expect(fetchMock.mock.calls.some((call) => String(call[1]?.body).includes("fetchAvailableModels"))).toBe(false);
     const summaryRequest = JSON.parse(String(fetchMock.mock.calls.find((call) => String(call[1]?.body).includes("sandbox.googleapis.com/v1internal:retrieveUserQuotaSummary"))?.[1]?.body));
     expect(summaryRequest.url).toContain("retrieveUserQuotaSummary");

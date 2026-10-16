@@ -6,7 +6,6 @@ import {
 import { DOCKER_TAG_PATTERN } from "@/lib/proxy-image-pin";
 import {
   SLIM_FALLBACK_CONTINUATION_POLICIES,
-  SLIM_MARKETPLACE_LISTS,
   SLIM_MULTIPLEXER_TYPES,
   SLIM_MULTIPLEXER_VIEWERS,
   SLIM_PACKAGE_ID_PATTERN,
@@ -247,11 +246,13 @@ const SlimCouncilSchema = z.object({
 
 // Upstream's `{ extends, agents: {...} }` wrapper form, or flat agents with an optional `extends`.
 // `marketplace` sits beside the agents (or the `agents` wrapper) and is never an agent.
-const SlimPresetMarketplaceSchema = z.object(
-  Object.fromEntries(
-    SLIM_MARKETPLACE_LISTS.map((key) => [key, z.array(z.string().regex(SLIM_PACKAGE_ID_PATTERN)).optional()]),
-  ) as Record<(typeof SLIM_MARKETPLACE_LISTS)[number], z.ZodOptional<z.ZodArray<z.ZodString>>>,
-);
+const SlimPackageIdListSchema = z.array(z.string().regex(SLIM_PACKAGE_ID_PATTERN)).optional();
+
+const SlimPresetMarketplaceSchema = z.object({
+  agents: SlimPackageIdListSchema,
+  agents_add: SlimPackageIdListSchema,
+  agents_remove: SlimPackageIdListSchema,
+});
 
 const SlimPresetSchema = z.union([
   z.object({
@@ -269,7 +270,7 @@ const SlimMultiplexerSchema = z.object({
   type: z.enum(SLIM_MULTIPLEXER_TYPES).optional(),
   layout: z.enum(SLIM_TMUX_LAYOUTS).optional(),
   main_pane_size: z.number().min(20).max(80).optional(),
-  cmux_tui_binary: z.string().min(1).max(1024).optional(),
+  cmux_tui_binary: z.string().min(1).optional(),
   viewer: z.enum(SLIM_MULTIPLEXER_VIEWERS).optional(),
 });
 

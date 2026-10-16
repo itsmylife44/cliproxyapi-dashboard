@@ -510,7 +510,7 @@ export function validateSlimConfig(raw: unknown): OhMyOpenCodeSlimFullConfig {
     if (typeof muxObj.main_pane_size === "number" && Number.isInteger(muxObj.main_pane_size)) {
       mux.main_pane_size = Math.max(20, Math.min(80, muxObj.main_pane_size));
     }
-    if (typeof muxObj.cmux_tui_binary === "string" && muxObj.cmux_tui_binary.length >= 1 && muxObj.cmux_tui_binary.length <= 1024) {
+    if (typeof muxObj.cmux_tui_binary === "string" && muxObj.cmux_tui_binary.length >= 1) {
       mux.cmux_tui_binary = muxObj.cmux_tui_binary;
     }
     const viewer = oneOf(muxObj.viewer, SLIM_MULTIPLEXER_VIEWERS);

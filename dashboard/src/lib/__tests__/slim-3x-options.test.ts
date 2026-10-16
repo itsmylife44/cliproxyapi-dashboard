@@ -61,6 +61,13 @@ describe("slim multiplexer options (#312)", () => {
     expect(config?.multiplexer).toMatchObject({ type: "cmux-tui", cmux_tui_binary: "/opt/bin/cmux-tui", viewer: "mini" });
   });
 
+  it("accepts a cmux_tui_binary longer than 1024 characters, as the upstream schema has no max length", () => {
+    const binary = `/${"a".repeat(1100)}`;
+
+    expect(buildSlimConfig(available, store({ multiplexer: { type: "cmux-tui", cmux_tui_binary: binary } }))?.multiplexer)
+      .toMatchObject({ cmux_tui_binary: binary });
+  });
+
   it("does not emit cmux_tui_binary or viewer when unset", () => {
     const multiplexer = buildSlimConfig(available, store({ multiplexer: { type: "tmux" } }))?.multiplexer;
 

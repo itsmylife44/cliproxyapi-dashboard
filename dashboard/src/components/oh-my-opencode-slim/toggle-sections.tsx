@@ -23,6 +23,22 @@ import { ToggleListSection } from "@/components/oh-my-opencode/sections/toggle-l
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { isRecord } from "@/lib/utils";
 
+type SlimViewer = (typeof SLIM_MULTIPLEXER_VIEWERS)[number];
+type SlimContinuationPolicy = (typeof SLIM_FALLBACK_CONTINUATION_POLICIES)[number];
+
+const VIEWER_LABEL_KEYS: Record<SlimViewer, "viewerTui" | "viewerMini"> = {
+  tui: "viewerTui",
+  mini: "viewerMini",
+};
+
+const CONTINUATION_POLICY_LABEL_KEYS: Record<
+  SlimContinuationPolicy,
+  "continuationPolicyRetryPrimary" | "continuationPolicyStickToFallback"
+> = {
+  "retry-primary": "continuationPolicyRetryPrimary",
+  "stick-to-fallback": "continuationPolicyStickToFallback",
+};
+
 function Section({
   label,
   isExpanded,
@@ -149,6 +165,7 @@ export function SlimToggleSections({
   onRawOverridesChange,
 }: SlimToggleSectionsProps) {
   const t = useTranslations("ohMyOpenCodeSlim");
+  const tCommon = useTranslations("common");
   const [showFallback, setShowFallback] = useState(false);
   const [showMcps, setShowMcps] = useState(false);
   const [showDefaultAgent, setShowDefaultAgent] = useState(false);
@@ -237,7 +254,7 @@ export function SlimToggleSections({
               </div>
             </>
           )}
-          {multiplexer.type === "cmux-tui" && (
+          {(multiplexer.type === "cmux-tui" || multiplexer.cmux_tui_binary !== undefined) && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-[var(--text-muted)] w-16">{t("cmuxTuiBinaryLabel")}</span>
               <input
@@ -262,7 +279,7 @@ export function SlimToggleSections({
               >
                 <option value="">{t("viewerDefault")}</option>
                 {SLIM_MULTIPLEXER_VIEWERS.map((viewer) => (
-                  <option key={viewer} value={viewer}>{t(viewer === "tui" ? "viewerTui" : "viewerMini")}</option>
+                  <option key={viewer} value={viewer}>{t(VIEWER_LABEL_KEYS[viewer])}</option>
                 ))}
               </select>
             </div>
@@ -366,17 +383,16 @@ export function SlimToggleSections({
           <div className="flex items-center gap-2">
             <span className="text-xs text-[var(--text-muted)] w-24">{t("continuationPolicyLabel")}</span>
             <select
-              value={fallback.continuationPolicy ?? "retry-primary"}
+              value={fallback.continuationPolicy ?? ""}
               onChange={(event) => onFallbackChange({
                 ...fallback,
-                continuationPolicy: event.target.value as SlimFallbackConfig["continuationPolicy"],
+                continuationPolicy: (event.target.value || undefined) as SlimFallbackConfig["continuationPolicy"],
               })}
               className="flex-1 rounded border border-[var(--surface-border)] bg-[var(--surface-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]"
             >
+              <option value="">{tCommon("default")}</option>
               {SLIM_FALLBACK_CONTINUATION_POLICIES.map((policy) => (
-                <option key={policy} value={policy}>
-                  {t(policy === "retry-primary" ? "continuationPolicyRetryPrimary" : "continuationPolicyStickToFallback")}
-                </option>
+                <option key={policy} value={policy}>{t(CONTINUATION_POLICY_LABEL_KEYS[policy])}</option>
               ))}
             </select>
           </div>

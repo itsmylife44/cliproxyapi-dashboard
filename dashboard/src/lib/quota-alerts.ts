@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import type { QuotaGroupScope } from "@/lib/model-first-monitoring";
 import { sendTelegramMessage, formatQuotaAlertBatch } from "@/lib/telegram";
 
 const SETTING_KEYS = {
@@ -21,6 +22,7 @@ const DEFAULT_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 interface QuotaGroup {
   id: string;
   label: string;
+  scope?: QuotaGroupScope;
   remainingFraction?: number | null;
   resetTime: string | null;
 }
@@ -72,6 +74,9 @@ function calcPooledCapacity(accounts: QuotaAccount[]): CapacityEntry[] {
 
     for (const group of account.groups) {
       if (group.id === "extra-usage") continue;
+      // Scoped limits (e.g. Codex per-model or code review) are informational;
+      // alerts track the account's main quota only.
+      if (group.scope) continue;
       const fraction =
         typeof group.remainingFraction === "number" &&
         Number.isFinite(group.remainingFraction)

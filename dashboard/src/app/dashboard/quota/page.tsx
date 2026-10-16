@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { QuotaToolbar } from "@/components/quota/quota-toolbar";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { headlineQuotaWindows } from "@/lib/quota/headline";
 import { calcProviderSummary, type ProviderSummary } from "@/lib/quota/provider-summary";
 import {
   enrichModelFirstGroup,
@@ -129,8 +130,9 @@ function calcOverallCapacity(
       continue;
     }
 
-    const longTerm = summary.windowCapacities.filter((window) => !window.isShortTerm);
-    const shortTerm = summary.windowCapacities.filter((window) => window.isShortTerm);
+    const headlineWindows = headlineQuotaWindows(summary.windowCapacities);
+    const longTerm = headlineWindows.filter((window) => !window.isShortTerm);
+    const shortTerm = headlineWindows.filter((window) => window.isShortTerm);
     const relevantWindows = longTerm.length > 0 ? longTerm : shortTerm;
 
     if (relevantWindows.length === 0) continue;
@@ -249,7 +251,7 @@ export default function QuotaPage() {
     if (summary.monitorMode === "model-first") {
       return (summary.modelFirstSummary?.minRemainingFraction ?? 1) < 0.2 && summary.totalAccounts > 0;
     }
-    return summary.windowCapacities.some((window) => window.capacity < 0.2) && summary.totalAccounts > 0;
+    return headlineQuotaWindows(summary.windowCapacities).some((window) => window.capacity < 0.2) && summary.totalAccounts > 0;
   }).length;
 
   const toggleCard = (accountId: string) => {

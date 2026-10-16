@@ -6,6 +6,7 @@ import {
   type ModelFirstProviderSummary,
   type QuotaAccount,
   type QuotaGroup,
+  type QuotaGroupScope,
   type QuotaMonitorMode,
 } from "@/lib/model-first-monitoring";
 
@@ -15,6 +16,8 @@ export interface WindowCapacity {
   capacity: number;
   resetTime: string | null;
   isShortTerm: boolean;
+  /** Present when the pooled windows belong to a scoped (secondary) limit. */
+  scope?: QuotaGroupScope;
 }
 
 export interface ProviderSummary {
@@ -25,6 +28,15 @@ export interface ProviderSummary {
   errorAccounts: number;
   windowCapacities: WindowCapacity[];
   modelFirstSummary?: ModelFirstProviderSummary;
+}
+
+// Codex reuses position ids across plans (`primary-window` is 5h on Plus, weekly on Pro),
+// so windows with a known duration pool by that duration instead of by id. Scoped limits
+// (e.g. Codex per-model or code review) pool within their own scope so they never merge
+// into the main limit's bars.
+function poolKey(group: QuotaGroup): string {
+  const windowKey = group.windowSeconds ? `${group.windowSeconds}s` : group.id;
+  return group.scope ? `${group.scope.id}:${windowKey}` : windowKey;
 }
 
 export function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
@@ -47,13 +59,11 @@ export function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
     };
   }
 
-  // Codex reuses position ids across plans (`primary-window` is 5h on Plus, weekly on Pro),
-  // so windows with a known duration pool by that duration instead of by id.
   const pools = new Map<string, { groups: QuotaGroup[]; first: QuotaGroup; firstSiblings: QuotaGroup[] }>();
   for (const account of healthy) {
     for (const group of account.groups) {
       if (group.id === "extra-usage") continue;
-      const key = group.windowSeconds ? `${group.windowSeconds}s` : group.id;
+      const key = poolKey(group);
       const pool = pools.get(key);
       if (pool) pool.groups.push(group);
       else pools.set(key, { groups: [group], first: group, firstSiblings: account.groups });
@@ -93,6 +103,7 @@ export function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
       capacity: Math.max(0, Math.min(1, capacity)),
       resetTime: earliestReset,
       isShortTerm: isShortTermQuotaWindow(first, firstSiblings),
+      ...(first.scope ? { scope: first.scope } : {}),
     });
   }
 

@@ -9,5 +9,17 @@
   },
   "enabledPlugins": {
     "context-mode@context-mode": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/install-context-mode.sh"
+          }
+        ]
+      }
+    ]
   }
 }

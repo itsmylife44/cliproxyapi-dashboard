@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { capacityQuotaGroups, isShortTermQuotaWindow } from "@/lib/quota-window-classification";
+import { headlineQuotaWindows } from "@/lib/quota/headline";
 import { canonicalizeQuotaProvider } from "@/lib/quota/query-state";
 import { maskEmail } from "@/lib/mask-email";
 import {
@@ -160,7 +161,9 @@ export function QuotaDetails({
 
                 {section.accounts.map((account) => {
                   const isRowExpanded = expandedCards[account.auth_index];
-                  const scores = account.groups ? Object.values(calcAccountWindowScores(capacityQuotaGroups(account.provider, account.groups))) : [];
+                  const scores = account.groups
+                    ? Object.values(calcAccountWindowScores(headlineQuotaWindows(capacityQuotaGroups(account.provider, account.groups))))
+                    : [];
                   const longScores = scores.filter((score) => !score.isShortTerm);
                   const shortScores = scores.filter((score) => score.isShortTerm);
                   const longMin = longScores.length > 0 ? Math.min(...longScores.map((score) => score.score)) : null;

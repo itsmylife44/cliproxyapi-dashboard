@@ -6,23 +6,8 @@ import { useTranslations } from "next-intl";
 import { CHART_COLORS, ChartContainer, ChartEmpty, useChartTheme } from "@/components/ui/chart-theme";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { isModelFirstProviderQuotaUnverified, type ModelFirstProviderSummary } from "@/lib/model-first-monitoring";
-interface WindowCapacity {
-  id: string;
-  label: string;
-  capacity: number;
-  resetTime: string | null;
-  isShortTerm: boolean;
-}
-
-interface ProviderSummary {
-  provider: string;
-  monitorMode: "window-based" | "model-first";
-  totalAccounts: number;
-  healthyAccounts: number;
-  errorAccounts: number;
-  windowCapacities: WindowCapacity[];
-  modelFirstSummary?: ModelFirstProviderSummary;
-}
+import { headlineQuotaWindows } from "@/lib/quota/headline";
+import type { ProviderSummary, WindowCapacity } from "@/lib/quota/provider-summary";
 
 interface QuotaChartProps {
   overallCapacity: { value: number; label: string; provider: string };
@@ -37,6 +22,19 @@ export function getComparableProviderSummaries(providerSummaries: ProviderSummar
       ? summary.modelFirstSummary?.minRemainingFraction != null
       : summary.windowCapacities.length > 0
   );
+}
+
+/** Lowest long- and short-term headline capacity of a window-based provider, in whole percent. */
+export function getProviderCapacityBars(windowCapacities: WindowCapacity[]): {
+  longTerm: number | null;
+  shortTerm: number | null;
+} {
+  const windows = headlineQuotaWindows(windowCapacities);
+  const lowest = (isShortTerm: boolean) => {
+    const capacities = windows.filter((window) => window.isShortTerm === isShortTerm).map((window) => window.capacity);
+    return capacities.length > 0 ? Math.round(Math.min(...capacities) * 100) : null;
+  };
+  return { longTerm: lowest(false), shortTerm: lowest(true) };
 }
 
 export function QuotaChart({
@@ -235,17 +233,12 @@ export function QuotaChart({
               };
             }
 
-            const longTerm = summary.windowCapacities.filter((window) => !window.isShortTerm);
-            const shortTerm = summary.windowCapacities.filter((window) => window.isShortTerm);
-            const longMin =
-              longTerm.length > 0 ? Math.round(Math.min(...longTerm.map((window) => window.capacity)) * 100) : null;
-            const shortMin =
-              shortTerm.length > 0 ? Math.round(Math.min(...shortTerm.map((window) => window.capacity)) * 100) : null;
+            const { longTerm, shortTerm } = getProviderCapacityBars(summary.windowCapacities);
 
             return {
               provider: summary.provider,
-              longTerm: longMin,
-              shortTerm: shortMin,
+              longTerm,
+              shortTerm,
               healthy: summary.healthyAccounts,
               total: summary.totalAccounts,
               issues: summary.errorAccounts,

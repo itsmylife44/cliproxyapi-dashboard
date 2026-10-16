@@ -23,9 +23,23 @@ export interface QuotaModel {
   resetTime: string | null;
 }
 
+/**
+ * A secondary limit that sits beside an account's main quota (e.g. a Codex per-model
+ * limit or the code review limit). Scoped groups are listed on their own but never
+ * pooled with, or allowed to drag down, the account's headline capacity.
+ */
+export interface QuotaGroupScope {
+  /** Stable identifier, unique per account; pooling key across accounts. */
+  id: string;
+  /** Human-readable name of the limit. */
+  label: string;
+}
+
 export interface QuotaGroup {
   id: string;
   label: string;
+  /** Set on secondary limits; absent for the account's main quota windows. */
+  scope?: QuotaGroupScope;
   windowSeconds?: number;
   remainingFraction?: number | null;
   resetTime: string | null;

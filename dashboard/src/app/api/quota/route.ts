@@ -15,6 +15,8 @@ import {
   type QuotaGroup,
   type QuotaResponse,
 } from "@/lib/model-first-monitoring";
+import { parseCodexQuota, type CodexWhamUsageResponse } from "@/lib/quota/codex";
+import { slugifyLabel } from "@/lib/quota/labels";
 
 const CLIPROXYAPI_MANAGEMENT_URL = getManagementUrl();
 const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
@@ -468,70 +470,6 @@ async function fetchAntigravityQuota(authIndex: string): Promise<AntigravityQuot
     snapshotFetchedAt: summary.snapshotFetchedAt,
     snapshotSource: summary.snapshotSource,
   };
-}
-
-interface CodexRateWindow {
-  limit_window_seconds?: number | string | null;
-  used_percent?: number;
-  reset_at?: number;
-}
-
-interface CodexWhamUsageResponse {
-  rate_limit?: {
-    primary_window?: CodexRateWindow;
-    secondary_window?: CodexRateWindow;
-  };
-  plan_type?: string;
-}
-
-function formatWindowLabel(seconds: number): string {
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m Window`;
-  return `${Math.round(minutes / 60)}h Window`;
-}
-
-function parseCodexQuota(data: CodexWhamUsageResponse): QuotaGroup[] {
-  const groups: QuotaGroup[] = [];
-
-  const windows: Array<{ key: string; label: string; window: CodexRateWindow | undefined }> = [
-    { key: "primary", label: "Primary", window: data.rate_limit?.primary_window },
-    { key: "secondary", label: "Secondary", window: data.rate_limit?.secondary_window },
-  ];
-
-  for (const { key, window } of windows) {
-    if (!window || window.used_percent === undefined) continue;
-
-    const remainingFraction = Math.max(0, Math.min(1, 1 - window.used_percent / 100));
-    const resetTime = window.reset_at
-      ? new Date(window.reset_at * 1000).toISOString()
-      : null;
-    // Normalize once so the label and the capacity classifier always agree on the duration.
-    const parsedWindowSeconds = Number(window.limit_window_seconds);
-    const windowSeconds = Number.isFinite(parsedWindowSeconds) && parsedWindowSeconds > 0
-      ? parsedWindowSeconds
-      : undefined;
-    const label = windowSeconds
-      ? formatWindowLabel(windowSeconds)
-      : `${key.charAt(0).toUpperCase() + key.slice(1)} Window`;
-
-    groups.push({
-      id: `${key}-window`,
-      label,
-      windowSeconds,
-      remainingFraction,
-      resetTime,
-      models: [
-        {
-          id: `${key}-window`,
-          displayName: label,
-          remainingFraction,
-          resetTime,
-        },
-      ],
-    });
-  }
-
-  return groups;
 }
 
 async function fetchCodexQuota(
@@ -1022,13 +960,6 @@ async function callClaudeUsageEndpoint(
 
   logger.warn({ authIndex }, "Claude OAuth usage endpoint persistently 429, falling back to messages endpoint");
   return null;
-}
-
-function slugifyLabel(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 function humanizeLimitKind(value: string): string {

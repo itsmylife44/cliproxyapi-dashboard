@@ -192,6 +192,19 @@ function foldFallbackChains(
   }
 }
 
+/**
+ * Upstream merges an overlay entry (root `agents`, extending preset) over its base and keeps the base's
+ * variant. An inheriting entry without a scalar model gets `variant: ""` so the base's default is cancelled.
+ * Run after `foldFallbackChains`, which can turn an inheriting agent's model into an array.
+ */
+function cancelBaseVariants(agents: Record<string, SlimAgentConfig>): void {
+  for (const entry of Object.values(agents)) {
+    if (entry.inheritModelFrom !== undefined && typeof entry.model !== "string" && entry.variant === undefined) {
+      entry.variant = "";
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main config builder
 // ---------------------------------------------------------------------------
@@ -273,6 +286,7 @@ export function buildSlimConfig(
       }
 
       foldFallbackChains(presetOut, chains, availableModels);
+      if (extendsPreset !== undefined) cancelBaseVariants(presetOut);
       presets[presetName] = extendsPreset === undefined ? presetOut : { extends: extendsPreset, ...presetOut };
     }
 
@@ -290,6 +304,7 @@ export function buildSlimConfig(
       }
       if (Object.keys(rootAgents).length > 0) {
         foldFallbackChains(rootAgents, chains, availableModels);
+        cancelBaseVariants(rootAgents);
         config.agents = rootAgents;
       }
     }

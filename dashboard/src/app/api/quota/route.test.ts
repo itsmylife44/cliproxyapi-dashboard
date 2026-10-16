@@ -824,14 +824,29 @@ describe("GET /api/quota - Claude limits[] parsing (issue #230)", () => {
   });
 });
 
-/** Mocks one active Codex auth file whose wham/usage call returns `body`, and returns its groups. */
-async function fetchCodexGroups(body: Record<string, unknown>): Promise<QuotaGroup[]> {
+/**
+ * Mocks one active Codex auth file (extended with `authFileExtra`) whose wham/usage call returns `body`,
+ * runs the route, and returns its first account.
+ */
+async function fetchCodexAccount(
+  body: Record<string, unknown>,
+  authFileExtra: Record<string, unknown> = {}
+): Promise<{ groups: QuotaGroup[] }> {
   fetchMock
     .mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
-          files: [{ auth_index: 41, provider: "codex", name: "codex-synthetic.json", disabled: false, status: "active" }],
+          files: [
+            {
+              auth_index: 41,
+              provider: "codex",
+              name: "codex-synthetic.json",
+              disabled: false,
+              status: "active",
+              ...authFileExtra,
+            },
+          ],
         }),
       body: { cancel: vi.fn() },
     })
@@ -845,7 +860,12 @@ async function fetchCodexGroups(body: Record<string, unknown>): Promise<QuotaGro
   const response = await GET(new NextRequest("http://localhost/api/quota"));
   expect(response.status).toBe(200);
   const data = await response.json();
-  return data.accounts[0].groups;
+  return data.accounts[0];
+}
+
+/** Mocks one active Codex auth file whose wham/usage call returns `body`, and returns its groups. */
+async function fetchCodexGroups(body: Record<string, unknown>): Promise<QuotaGroup[]> {
+  return (await fetchCodexAccount(body)).groups;
 }
 
 describe("GET /api/quota - Codex window duration", () => {
@@ -986,36 +1006,11 @@ describe("GET /api/quota - Codex Chatgpt-Account-Id header (issue #310)", () => 
     vi.clearAllMocks();
   });
 
+  const baseHeader = { Authorization: "Bearer $TOKEN$", "User-Agent": "codex-cli/1.0.0" };
+
   /** Runs the route for one Codex auth file and returns the `header` sent to the wham/usage api-call. */
   async function codexUsageHeader(authFileExtra: Record<string, unknown>): Promise<Record<string, string>> {
-    fetchMock
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            files: [
-              {
-                auth_index: 42,
-                provider: "codex",
-                name: "codex-workspace.json",
-                disabled: false,
-                status: "active",
-                ...authFileExtra,
-              },
-            ],
-          }),
-        body: { cancel: vi.fn() },
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status_code: 200, body: { rate_limit: {} } }),
-        body: { cancel: vi.fn() },
-      });
-
-    const { GET } = await import("./route");
-    const response = await GET(new NextRequest("http://localhost/api/quota"));
-    expect(response.status).toBe(200);
-
+    await fetchCodexAccount({ rate_limit: {} }, authFileExtra);
     const usageCall = fetchMock.mock.calls.find(([url, init]) =>
       String(url).endsWith("/api-call") && String(init?.body).includes("wham/usage")
     );
@@ -1025,11 +1020,7 @@ describe("GET /api/quota - Codex Chatgpt-Account-Id header (issue #310)", () => 
 
   it("sends the account id from id_token.chatgpt_account_id", async () => {
     const header = await codexUsageHeader({ id_token: { chatgpt_account_id: "acc-123" } });
-    expect(header).toEqual({
-      Authorization: "Bearer $TOKEN$",
-      "User-Agent": "codex-cli/1.0.0",
-      "Chatgpt-Account-Id": "acc-123",
-    });
+    expect(header).toEqual({ ...baseHeader, "Chatgpt-Account-Id": "acc-123" });
   });
 
   it("trims surrounding whitespace from the account id", async () => {
@@ -1046,9 +1037,6 @@ describe("GET /api/quota - Codex Chatgpt-Account-Id header (issue #310)", () => 
     ["a non-object id_token", { id_token: "raw.jwt.token" }],
   ])("omits the header for %s", async (_label, extra) => {
     const header = await codexUsageHeader(extra);
-    expect(header).toEqual({
-      Authorization: "Bearer $TOKEN$",
-      "User-Agent": "codex-cli/1.0.0",
-    });
+    expect(header).toEqual(baseHeader);
   });
 });

@@ -32,8 +32,8 @@ interface AuthFile {
   label?: string;
   disabled: boolean;
   status: string;
-  /** Claims CLIProxyAPI decodes from a Codex auth file's stored id_token, e.g. `chatgpt_account_id`. */
-  id_token?: unknown;
+  /** Claims CLIProxyAPI decodes from a Codex auth file's stored id_token. */
+  id_token?: { chatgpt_account_id?: string };
 }
 
 interface AuthFilesResponse {
@@ -476,16 +476,17 @@ async function fetchAntigravityQuota(authIndex: string): Promise<AntigravityQuot
 
 /** Returns the ChatGPT workspace id of a Codex auth file, or undefined when it has none. */
 function codexAccountId(account: AuthFile): string | undefined {
-  const idToken = account.id_token;
+  // The management API response is untrusted JSON, so check the shape at runtime.
+  const idToken: unknown = account.id_token;
   if (!idToken || typeof idToken !== "object") return undefined;
-  const accountId = (idToken as { chatgpt_account_id?: unknown }).chatgpt_account_id;
+  const accountId: unknown = (idToken as Record<string, unknown>).chatgpt_account_id;
   if (typeof accountId !== "string") return undefined;
   return accountId.trim() || undefined;
 }
 
 async function fetchCodexQuota(
   authIndex: string,
-  accountId: string | undefined
+  accountId?: string
 ): Promise<QuotaGroup[] | { error: string }> {
   try {
     const response = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/api-call`, {
@@ -502,7 +503,7 @@ async function fetchCodexQuota(
         header: {
           Authorization: "Bearer $TOKEN$",
           "User-Agent": "codex-cli/1.0.0",
-          // Selects the workspace CLIProxyAPI bills requests to, for accounts in several workspaces.
+          // Picks the same workspace CLIProxyAPI's Codex executor uses, for accounts in several workspaces.
           ...(accountId ? { "Chatgpt-Account-Id": accountId } : {}),
         },
       }),

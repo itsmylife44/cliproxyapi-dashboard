@@ -122,11 +122,11 @@ describe("isShortTermQuotaWindow", () => {
 });
 
 describe("capacityQuotaGroups", () => {
-  const groups = ["gemini-weekly", "gemini-5h", "claude-gpt-weekly", "claude-gpt-5h"].map((id) => ({ id, label: id, resetTime: null }));
-  it("keeps only Gemini windows for Antigravity", () => {
+  const groups = ["gemini-weekly", "gemini-5h", "gemini-argon-weekly", "claude-gpt-weekly", "claude-gpt-5h"].map((id) => ({ id, label: id, resetTime: null }));
+  it("keeps only the shared Gemini windows for Antigravity", () => {
     expect(capacityQuotaGroups("antigravity", groups).map(({ id }) => id)).toEqual(["gemini-weekly", "gemini-5h"]);
   });
   it("keeps every window for other providers", () => {
-    expect(capacityQuotaGroups("claude", groups)).toHaveLength(4);
+    expect(capacityQuotaGroups("claude", groups)).toHaveLength(5);
   });
 });

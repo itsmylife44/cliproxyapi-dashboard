@@ -10,6 +10,11 @@ export const ANTIGRAVITY_QUOTA_ENDPOINTS = [
   "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels",
 ] as const;
 
+// Cloud Code withholds newer quota groups and models (e.g. the Gemini summary windows)
+// from antigravity/hub/ clients below roughly 2.19–2.23; upstream CLIProxyAPI's fallback
+// floor is 2.23.0. Bump this when Google raises the gate again.
+export const ANTIGRAVITY_USER_AGENT = "antigravity/hub/2.23.1 darwin/arm64";
+
 export const MODEL_FIRST_SNAPSHOT_STALE_MS = 300_000;
 
 export const MODEL_FIRST_PROVIDERS = ["antigravity", "gemini-cli", "gemini"] as const;

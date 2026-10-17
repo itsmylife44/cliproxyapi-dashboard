@@ -352,18 +352,13 @@ async function fetchAntigravityPayload<T>(
   projectId: string | null,
   endpoints: readonly string[],
   parsePayload: (payload: unknown) => T | null,
-  timeoutMs = 30_000,
-  preferGemini = false
+  isPreferred?: (candidate: T) => boolean,
+  timeoutMs = 30_000
 ): Promise<{ data: T; snapshotFetchedAt: string; snapshotSource: string } | { error: string }> {
   const payload = JSON.stringify(projectId ? { project: projectId } : {});
   let lastError = "No Antigravity quota endpoints responded";
   const candidates: T[] = [];
   const endpointSources = new Map<T, string>();
-  // Gemini preference applies to SUMMARY selection only (capacity chart is fed
-  // by Gemini windows); the models fetcher keeps plain first-success.
-  const isPreferredPayload = (candidate: T): boolean =>
-    preferGemini &&
-    Array.isArray(candidate) && (candidate as QuotaGroup[]).some((group) => group.id.startsWith("gemini-"));
 
   for (const endpoint of endpoints) {
     try {
@@ -450,13 +445,13 @@ async function fetchAntigravityPayload<T>(
 
       candidates.push(data);
       endpointSources.set(data, endpoint);
-      if (!preferGemini || isPreferredPayload(data)) break; // models: first success wins; summary: stop on Gemini-bearing
+      if (!isPreferred || isPreferred(data)) break; // first success wins unless a preference predicate says keep probing
     } catch (error) {
       lastError = error instanceof Error ? error.message : "Unknown error";
     }
   }
 
-  const selected = selectAntigravitySummary(candidates, isPreferredPayload);
+  const selected = selectAntigravitySummary(candidates, isPreferred ?? (() => false));
   if (selected === null) {
     return { error: lastError };
   }
@@ -469,7 +464,7 @@ async function fetchAntigravityPayload<T>(
 }
 
 async function fetchAntigravityModels(authIndex: string, projectId: string | null, timeoutMs?: number) {
-  const result = await fetchAntigravityPayload(authIndex, projectId, ANTIGRAVITY_QUOTA_ENDPOINTS, parseAntigravityPayload, timeoutMs);
+  const result = await fetchAntigravityPayload(authIndex, projectId, ANTIGRAVITY_QUOTA_ENDPOINTS, parseAntigravityPayload, undefined, timeoutMs);
   return "error" in result ? result : {
     groups: groupAntigravityModels(result.data),
     snapshotFetchedAt: result.snapshotFetchedAt,
@@ -479,7 +474,10 @@ async function fetchAntigravityModels(authIndex: string, projectId: string | nul
 
 async function fetchAntigravityQuota(authIndex: string): Promise<AntigravityQuotaSnapshot | { error: string }> {
   const projectId = await fetchAntigravityProjectId(authIndex);
-  const summary = await fetchAntigravityPayload(authIndex, projectId, ANTIGRAVITY_SUMMARY_ENDPOINTS, parseAntigravitySummary, 30_000, true);
+  // The capacity chart is fed only by Gemini windows, so a summary that lacks
+  // them is a degraded fallback, not a success — keep probing for one that has them.
+  const isGeminiBearing = (groups: QuotaGroup[]): boolean => groups.some((group) => group.id.startsWith("gemini-"));
+  const summary = await fetchAntigravityPayload(authIndex, projectId, ANTIGRAVITY_SUMMARY_ENDPOINTS, parseAntigravitySummary, isGeminiBearing);
   if ("error" in summary) return summary;
 
   return {

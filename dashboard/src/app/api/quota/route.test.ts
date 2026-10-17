@@ -241,7 +241,10 @@ describe("GET /api/quota - Gemini CLI support (issue #125)", () => {
     expect(body.accounts[0].groups.map((group: QuotaGroup) => group.id)).toEqual(["gemini-weekly"]);
     expect(body.accounts[0].snapshotSource).toContain("daily-cloudcode-pa.googleapis.com");
   });
-  it("keeps a non-preferred candidate when the NEXT endpoint 403s", async () => {
+  it.each([
+    [403, "Access denied"],
+    [422, "Unprocessable"],
+  ])("retains a non-preferred summary when the next endpoint returns %i", async (statusCode, errorMessage) => {
     const authFilesResponse = {
       files: [{ auth_index: 0, provider: "antigravity", email: "test@gmail.com", disabled: false, status: "active" }],
     };
@@ -252,56 +255,27 @@ describe("GET /api/quota - Gemini CLI support (issue #125)", () => {
         { bucketId: "3p-weekly", window: "weekly", remainingFraction: 0.48, resetTime: "2026-04-14T18:00:00Z" },
       ] }],
     };
-    let saw403 = false;
+    let sawFailure = false;
     fetchMock.mockImplementation(async (_url: string, options?: { body?: string }) => {
       const body = String(options?.body ?? "");
       if (String(_url).endsWith("/auth-files")) return { ok: true, json: async () => authFilesResponse };
       if (body.includes("loadCodeAssist")) return { ok: true, json: async () => ({ status_code: 200, body: { cloudaicompanionProject: "p" } }) };
       if (body.includes("daily-cloudcode-pa.googleapis.com")) return { ok: true, json: async () => ({ status_code: 200, body: JSON.stringify(claudeOnlySummary) }) };
       if (body.includes("daily-cloudcode-pa.sandbox.googleapis.com")) {
-        saw403 = true;
-        return { ok: true, json: async () => ({ status_code: 403, body: JSON.stringify({ error: { message: "Access denied" } }) }) };
+        sawFailure = true;
+        return { ok: true, json: async () => ({ status_code: statusCode, body: JSON.stringify({ error: { message: errorMessage } }) }) };
       }
       return { ok: true, json: async () => ({ status_code: 200, body: JSON.stringify(claudeOnlySummary) }) };
     });
     const { GET } = await import("./route");
     const response = await GET(new Request("http://localhost/api/quota") as NextRequest);
     const body = await response.json();
-    // The 403 branch ACTUALLY executed (retention break, not the preferred break).
-    expect(saw403).toBe(true);
-    // The loop broke at the sandbox 403 — no probe past it.
+    // The failure branch ACTUALLY executed (retention break, not the preferred break).
+    expect(sawFailure).toBe(true);
+    // The loop broke at the sandbox failure — no probe past it.
     const summaryCalls = fetchMock.mock.calls.filter((c) => String(c[1]?.body).includes("retrieveUserQuotaSummary"));
     expect(summaryCalls.length).toBe(2);
-    // The non-preferred candidate collected BEFORE the 403 survives (fail-open).
-    expect(body.accounts[0].groups.map((group: QuotaGroup) => group.id)).toEqual(["claude-gpt-weekly"]);
-    expect(body.accounts[0].snapshotSource).toContain("daily-cloudcode-pa.googleapis.com");
-  });
-
-  it("retains a non-preferred summary when the next endpoint returns a generic 4xx", async () => {
-    const authFilesResponse = {
-      files: [{ auth_index: 0, provider: "antigravity", email: "test@gmail.com", disabled: false, status: "active" }],
-    };
-    const claudeOnlySummary = {
-      groups: [{ displayName: "Claude and GPT models", buckets: [
-        { bucketId: "3p-weekly", window: "weekly", remainingFraction: 0.55, resetTime: "2026-04-14T19:00:00Z" },
-      ] }],
-    };
-    let saw422 = false;
-    fetchMock.mockImplementation(async (_url: string, options?: { body?: string }) => {
-      const body = String(options?.body ?? "");
-      if (String(_url).endsWith("/auth-files")) return { ok: true, json: async () => authFilesResponse };
-      if (body.includes("loadCodeAssist")) return { ok: true, json: async () => ({ status_code: 200, body: { cloudaicompanionProject: "p" } }) };
-      if (body.includes("daily-cloudcode-pa.googleapis.com")) return { ok: true, json: async () => ({ status_code: 200, body: JSON.stringify(claudeOnlySummary) }) };
-      if (body.includes("daily-cloudcode-pa.sandbox.googleapis.com")) {
-        saw422 = true;
-        return { ok: true, json: async () => ({ status_code: 422, body: JSON.stringify({ error: { message: "Unprocessable" } }) }) };
-      }
-      return { ok: true, json: async () => ({ status_code: 200, body: JSON.stringify(claudeOnlySummary) }) };
-    });
-    const { GET } = await import("./route");
-    const response = await GET(new Request("http://localhost/api/quota") as NextRequest);
-    const body = await response.json();
-    expect(saw422).toBe(true);
+    // The non-preferred candidate collected BEFORE the failure survives (fail-open).
     expect(body.accounts[0].groups.map((group: QuotaGroup) => group.id)).toEqual(["claude-gpt-weekly"]);
     expect(body.accounts[0].snapshotSource).toContain("daily-cloudcode-pa.googleapis.com");
   });

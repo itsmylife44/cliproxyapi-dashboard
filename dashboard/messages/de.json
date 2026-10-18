@@ -257,7 +257,7 @@
       "setupStandardLabel": "Standard:",
       "setupStandardPath": "~/.config/opencode-cliproxyapi-sync/config.json",
       "setupOcxProfileLabel": "Mit OCX-Profil:",
-      "setupOcxProfilePath": "~/.config/opencode/profiles/<profilename>/opencode-cliproxyapi-sync/config.json",
+      "setupOcxProfilePath": "~/.config/opencode/profiles/[profilename]/opencode-cliproxyapi-sync/config.json",
       "setupAutoInstallNote": "Das Plugin wird beim Start von opencode automatisch von npm installiert."
     },
     "pageTitle": "Einstellungen",
@@ -350,7 +350,7 @@
         "invalidInteger": "Gib eine ganze Zahl ein.",
         "invalidJson": "Das ist kein gültiges JSON.",
         "notArray": "Gib eine JSON-Liste ein, zum Beispiel [\"a\", \"b\"].",
-        "notObject": "Gib ein JSON-Objekt ein, zum Beispiel {\"key\": \"value\"}."
+        "notObject": "Gib ein JSON-Objekt ein, zum Beispiel '{\"key\": \"value\"}'."
       }
     }
   },

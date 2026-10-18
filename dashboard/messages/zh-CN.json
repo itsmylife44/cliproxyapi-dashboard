@@ -189,7 +189,9 @@
     "claudeCodeApiKeysLink": "API 密钥",
     "claudeCodePageSuffix": "页面。",
     "modelSourceOAuthAlias": "OAuth 别名",
-    "quickStartTitle": "快速开始"
+    "quickStartTitle": "快速开始",
+    "omoNoticeTitle": "自 OMO 4.19.3 起，您的 OMO 设置一直未生效",
+    "omoNoticeBody": "自 OMO 4.19.3（2026 年 7 月下旬）起，从此仪表盘同步的智能体和模型设置一直未生效。同步插件会通过 @latest 自动更新并修复此问题；下次启动 OpenCode 后，您的设置将重新生效。"
   },
   "settings": {
     "password": {
@@ -255,7 +257,7 @@
       "setupStandardLabel": "标准路径：",
       "setupStandardPath": "~/.config/opencode-cliproxyapi-sync/config.json",
       "setupOcxProfileLabel": "使用 OCX 配置时：",
-      "setupOcxProfilePath": "~/.config/opencode/profiles/'<profilename>'/opencode-cliproxyapi-sync/config.json",
+      "setupOcxProfilePath": "~/.config/opencode/profiles/[profilename]/opencode-cliproxyapi-sync/config.json",
       "setupAutoInstallNote": "OpenCode 启动时会从 npm 自动安装此插件。"
     },
     "pageTitle": "设置",
@@ -311,7 +313,7 @@
       "globalLabel": "加载插件",
       "globalHelp": "仅在此开关开启时运行已安装的插件。更改会在几秒内生效，无需重启。",
       "confirmEnableTitle": "加载插件？",
-      "confirmEnableMessage": "插件是从第三方 GitHub 发布下载的原生库，在 CLIProxyAPI 进程内运行，可完全访问其凭据。仅使用同一发布中的校验和进行检查，没有签名。请只安装你信任的插件。",
+      "confirmEnableMessage": "插件是从第三方 GitHub 发布下载的原生库，在 CLIProxyAPI 进程内运行，可完全访问其凭据。仅使用同一发布中的校验和进行检查，不验证签名。请只安装你信任的插件。",
       "confirmEnableLabel": "加载插件",
       "confirmUninstallTitle": "卸载插件？",
       "confirmUninstallMessage": "这将删除 {name} 及其已保存的插件设置。",
@@ -319,7 +321,7 @@
       "filterPlaceholder": "按名称或标签筛选",
       "empty": "没有匹配的插件。",
       "byAuthor": "作者：{author}",
-      "statusActive": "已启用",
+      "statusActive": "运行中",
       "statusNotLoaded": "已安装，未加载",
       "statusDisabled": "已停用",
       "statusApplying": "正在应用…",
@@ -348,7 +350,7 @@
         "invalidInteger": "请输入整数。",
         "invalidJson": "不是有效的 JSON。",
         "notArray": "请输入 JSON 列表，例如 [\"a\", \"b\"]。",
-        "notObject": "请输入 JSON 对象，例如 {\"key\": \"value\"}。"
+        "notObject": "请输入 JSON 对象，例如 '{\"key\": \"value\"}'。"
       }
     }
   },
@@ -807,7 +809,7 @@
     "readyAccountsTooltip": "分组快照在有效期内，且至少有一个模型系列就绪的账号。",
     "staleSnapshotsLabel": "过期快照",
     "staleSnapshotsTooltip": "最新模型分组快照已超过时效阈值的账号。",
-    "closestResetLabel": "最近重置时间",
+    "closestResetLabel": "最早重置倒计时",
     "closestResetTooltip": "最新 Antigravity 快照中，各模型分组最早的重置时间。",
     "modelFamiliesLabel": "模型系列",
     "modelFamiliesTooltip": "根据 Antigravity 模型 ID 推断出的配额分组。",
@@ -1770,6 +1772,10 @@
     "skillsLabelTooltip": "设置网格中主要智能体的技能。模型数组、提供商选项，以及 observer、councillor 等非网格智能体，请使用高级 JSON 编辑器配置。",
     "modelNotAvailableTooltip": "模型不可用，请选择其他模型",
     "modelUnavailable": "模型不可用",
+    "inheritedFrom": "继承自{preset}",
+    "inheritedModelUnknown": "已继承",
+    "inheritsModelFromSession": "模型继承自当前会话",
+    "inheritsModelFromOrchestrator": "模型继承自编排器",
     "editingDefaultPreset": "正在编辑：cliproxyapi（默认）",
     "editingPreset": "正在编辑预设：{preset}",
     "editingGlobalOverrides": "正在编辑：全局覆盖项",
@@ -1814,14 +1820,14 @@
     "agentNamePlaceholder": "智能体名称…",
     "agentAddButton": "添加",
     "fallbackSectionLabel": "回退",
-    "fallbackSectionTooltip": "配置超时重试及各智能体的回退链。主模型超时或返回空响应后，Slim 会依次尝试回退链中的模型。",
+    "fallbackSectionTooltip": "配置重试及各智能体的回退链。每条回退链都会追加到对应智能体的模型列表中，Slim 会先尝试主模型，再按顺序尝试回退链中的模型。",
     "enableFallback": "启用回退",
     "retryDelayLabel": "重试延迟",
     "maxRetriesLabel": "最大重试次数",
     "disabledHooksSectionLabel": "钩子",
     "disabledSkillsSectionLabel": "内置技能",
     "fallbackChainsLabel": "回退链 JSON",
-    "fallbackChainsHelp": "示例：为每个智能体指定有序的回退模型列表。若需强制使用指定上游模型，请填写包含提供商前缀的完整 ID。",
+    "fallbackChainsHelp": "为每个智能体指定有序的回退模型列表。回退模型会追加在该智能体的主模型之后，生成 model: [primary, ...chain]，并移除重复项。若需强制使用指定上游模型，请填写包含提供商前缀的完整 ID。对于继承其他预设的预设，回退链仅应用于当前预设中显式设置的智能体；其余继承的智能体保留父预设的回退链。",
     "fallbackChainsPlaceholder": "'{\n  \"orchestrator\": [\"openai/gpt-5\", \"anthropic/claude-sonnet-4-6\"],\n  \"observer\": [\"openai/gpt-4.1-mini\"]\n}'",
     "disabledMcpsSectionLabel": "已禁用的 MCP",
     "disabledMcpsSectionTooltip": "对所有智能体全局禁用的 MCP 服务器。",

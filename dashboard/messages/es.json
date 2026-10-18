@@ -189,6 +189,8 @@
     "claudeCodeApiKeysLink": "Claves API",
     "claudeCodePageSuffix": ".",
     "modelSourceOAuthAlias": "Alias de OAuth",
+    "omoNoticeTitle": "Tu configuración de OMO no se ha aplicado desde OMO 4.19.3",
+    "omoNoticeBody": "Desde OMO 4.19.3 (finales de julio de 2026), la configuración de agentes y modelos sincronizada desde este panel no se aplicaba. El plugin de sincronización se actualiza solo vía @latest y lo corrige: tras el próximo inicio de OpenCode, tu configuración vuelve a aplicarse.",
     "quickStartTitle": "Inicio Rápido"
   },
   "settings": {
@@ -729,7 +731,12 @@
     "errorOAuthFailed": "Autorización OAuth fallida.",
     "errorOwnershipClaimFailed": "Error al completar la reclamación de propiedad de OAuth.",
     "errorRelayCallbackFailed": "Error al retransmitir la URL de callback de OAuth.",
-    "errorImportCredentialFailed": "Error al importar la credencial."
+    "errorImportCredentialFailed": "Error al importar la credencial.",
+    "shareLabel": "Compartir con todos los usuarios",
+    "shareDescription": "Haz que este proveedor sea visible y utilizable para todos los usuarios del panel. Solo los administradores pueden cambiar esto.",
+    "sharedBadge": "Compartido",
+    "sharedOwnerLabel": "Propietario: {username}",
+    "sharedReadOnlyTooltip": "Los proveedores compartidos solo pueden ser editados por su propietario o por un administrador."
   },
   "quota": {
     "pageTitle": "Gestión de Cuotas",
@@ -1570,11 +1577,11 @@
     "customSavedValue": "Valor personalizado guardado ({model})",
     "defaultModelHint": "Elige un modelo descubierto, o déjalo en auto fallback para usar",
     "variantLabel": "Variante de Oh My Open Agent",
-    "variantTooltip": "Normal: 9 agentes especializados con categorías para un control minucioso. Slim: 6 agentes, menor uso de tokens, cadenas de fallback integradas. Ambos usan tus modelos de proxy.",
+    "variantTooltip": "Normal: {agents} agentes especializados con categorías para un control minucioso. Slim: {slimAgents} agentes, menor uso de tokens, cadenas de fallback integradas. Ambos usan tus modelos de proxy.",
     "variantNormalTitle": "Oh My Open Agent",
-    "variantNormalSubtitle": "9 agentes + categorías",
+    "variantNormalSubtitle": "{agents} agentes + {categories} categorías",
     "variantSlimTitle": "Oh My OpenCode Slim",
-    "variantSlimSubtitle": "6 agentes, menos tokens",
+    "variantSlimSubtitle": "{slimAgents} agentes, menos tokens",
     "hideConfig": "Ocultar config",
     "showConfig": "Mostrar config",
     "download": "Descargar",
@@ -1765,6 +1772,10 @@
     "skillsLabelTooltip": "Alterna habilidades para un agente de la cuadrícula principal. Usa el editor JSON avanzado para arrays de modelos, opciones de proveedor o agentes que no pertenecen a la cuadrícula.",
     "modelNotAvailableTooltip": "Modelo no disponible — selecciona un modelo diferente",
     "modelUnavailable": "Modelo no disponible",
+    "inheritedFrom": "Heredado de {preset}",
+    "inheritedModelUnknown": "heredado",
+    "inheritsModelFromSession": "Modelo heredado de la sesión",
+    "inheritsModelFromOrchestrator": "Modelo heredado del orquestador",
     "editingDefaultPreset": "Editando: cliproxyapi (defecto)",
     "editingPreset": "Editando preajuste: {preset}",
     "editingGlobalOverrides": "Editando: sobrescrituras globales",

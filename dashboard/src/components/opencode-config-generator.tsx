@@ -17,6 +17,8 @@ import {
   generateConfigJson,
 } from "@/lib/config-generators/opencode";
 import { PROVIDER_CONFIG_KEYS } from "@/lib/providers/constants";
+import { AGENT_ROLES, CATEGORY_ROLES } from "@/lib/config-generators/oh-my-opencode";
+import { SLIM_AGENT_ROLES } from "@/lib/config-generators/oh-my-opencode-slim";
 import { isOmoPlugin, isSlimPlugin, normalizePlugin, OMO_PLUGIN, SLIM_PLUGIN, SYNC_PLUGIN } from "@/lib/config-generators/upstream/plugins";
 
 interface ApiKeyEntry {
@@ -49,6 +51,12 @@ function downloadFile(content: string, filename: string) {
 }
 
 const DEFAULT_PLUGINS = [SYNC_PLUGIN, OMO_PLUGIN];
+
+const variantCounts = {
+  agents: Object.keys(AGENT_ROLES).length,
+  categories: Object.keys(CATEGORY_ROLES).length,
+  slimAgents: Object.keys(SLIM_AGENT_ROLES).length,
+};
 
 export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
   const { apiKeys, config, oauthAccounts, models: allModels, excludedModels, proxyUrl, onVariantChange } = props;
@@ -443,7 +451,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">{t("variantLabel")} <HelpTooltip content={t("variantTooltip")} /></p>
+            <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">{t("variantLabel")} <HelpTooltip content={t("variantTooltip", variantCounts)} /></p>
            <div className="flex gap-2">
              <button
                type="button"
@@ -455,7 +463,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
                }`}
              >
                 <div className="font-semibold">{t("variantNormalTitle")}</div>
-               <div className="mt-0.5 text-[10px] opacity-70">{t("variantNormalSubtitle")}</div>
+               <div className="mt-0.5 text-[10px] opacity-70">{t("variantNormalSubtitle", variantCounts)}</div>
              </button>
              <button
                type="button"
@@ -467,7 +475,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
                }`}
              >
                 <div className="font-semibold">{t("variantSlimTitle")}</div>
-               <div className="mt-0.5 text-[10px] opacity-70">{t("variantSlimSubtitle")}</div>
+               <div className="mt-0.5 text-[10px] opacity-70">{t("variantSlimSubtitle", variantCounts)}</div>
              </button>
            </div>
          </div>

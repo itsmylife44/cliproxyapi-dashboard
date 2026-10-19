@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.90](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.89...dashboard-v0.1.90) (2026-10-19)
+
+
+### Bug Fixes
+
+* **i18n:** complete and correct Simplified Chinese for v0.1.89 ([#337](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/337)) ([ad540c5](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/ad540c5815732e7ceb3884f0a50690362de1d7ac))
+* **i18n:** make JSON example and OCX path placeholder valid ICU in en/de/es ([#341](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/341)) ([561146e](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/561146e5174be50355f929ef3fc94a9f90759e0d))
+* **i18n:** repair mojibake, derive OMO/slim agent counts, add missing es keys ([#342](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/342)) ([9916718](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/9916718dff067c6b1c41b770faf2e805f1cb40a8)), closes [#335](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/335)
+
 ## [0.1.89](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.88...dashboard-v0.1.89) (2026-10-16)
 
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.91](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.90...dashboard-v0.1.91) (2026-10-24)
+
+
+### Bug Fixes
+
+* **auth:** validate Origin on login ([e5a4c00](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/e5a4c006c5229006a7a7f322fe137d0a9b89bce6))
+* **config-sync:** never fall back to another user's API key in the bundle ([06b399b](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/06b399ba7dbea1a54074895390b02a4cecb961e9))
+* **perplexity:** make the shared Perplexity cookie admin-only ([eab3b95](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/eab3b95b476c183ecedb4edc1e58232780362986))
+* **providers:** authorize OAuth delete/toggle on the file's real provider ([df22488](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/df2248807a2e480213f3001170f36c32884d3b64))
+* **providers:** refuse OAuth import over an existing auth file ([c1cfd56](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/c1cfd56baa1e002b9dbbe79f8ed053b481d1c355))
+
 ## [0.1.90](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.89...dashboard-v0.1.90) (2026-10-19)
 
 

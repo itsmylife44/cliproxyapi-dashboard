@@ -104,14 +104,6 @@ async function fetchManagementJson({ path }: ManagementFetchParams) {
   }
 }
 
-function extractApiKeyStrings(data: unknown): string[] {
-  if (typeof data !== "object" || data === null) return [];
-  const record = data as Record<string, unknown>;
-  const keys = record["api-keys"];
-  if (!Array.isArray(keys)) return [];
-  return keys.filter((key): key is string => typeof key === "string");
-}
-
 function extractOAuthAccounts(data: unknown): OAuthAccount[] {
    if (typeof data !== "object" || data === null) return [];
    const record = data as Record<string, unknown>;
@@ -172,12 +164,11 @@ interface ConfigBundle {
 }
 
 export async function generateConfigBundle(userId: string, syncApiKey?: string | null): Promise<ConfigBundle> {
-  // Phase 1: Fetch management config, auth-files, api-keys, and Prisma data in parallel
-  const [managementConfig, authFilesData, apiKeysData, modelPreference, agentOverride, userApiKey, subscription] = await Promise.all([
+  // Phase 1: Fetch management config, auth-files, and Prisma data in parallel
+  const [managementConfig, authFilesData, modelPreference, agentOverride, userApiKey, subscription] = await Promise.all([
     // Management API calls
     fetchManagementJson({ path: "config" }),
     fetchManagementJson({ path: "auth-files" }),
-    fetchManagementJson({ path: "api-keys" }),
     // Prisma queries
     prisma.modelPreference.findUnique({ where: { userId } }),
     prisma.agentModelOverride.findUnique({ where: { userId } }),
@@ -194,7 +185,6 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
 
   // Extract data from management API responses
   const oauthAccounts = extractOAuthAccounts(authFilesData);
-  const apiKeyStrings = extractApiKeyStrings(apiKeysData);
   const customProviders = extractCustomProviders(managementConfig);
 
   // 6. Parse frozen config if subscription exists
@@ -276,8 +266,8 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
 
     let resolvedSyncApiKey: string | null = null;
     if (syncApiKey) {
-      const syncKeyRecord = await prisma.userApiKey.findUnique({
-        where: { id: syncApiKey },
+      const syncKeyRecord = await prisma.userApiKey.findFirst({
+        where: { id: syncApiKey, userId },
         select: { key: true },
       });
       if (!syncKeyRecord) {
@@ -286,8 +276,7 @@ export async function generateConfigBundle(userId: string, syncApiKey?: string |
       resolvedSyncApiKey = syncKeyRecord.key;
     }
 
-   const [firstApiKey] = apiKeyStrings;
-   const apiKey = resolvedSyncApiKey || userApiKey?.key || (firstApiKey !== undefined ? firstApiKey : "no-api-key-create-one-in-dashboard");
+   const apiKey = resolvedSyncApiKey || userApiKey?.key || "no-api-key-create-one-in-dashboard";
 
    const usedApiKeyId = resolvedSyncApiKey ? syncApiKey : userApiKey?.id;
    if (usedApiKeyId) {

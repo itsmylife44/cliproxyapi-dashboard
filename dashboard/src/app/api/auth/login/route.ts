@@ -3,6 +3,7 @@ import { getUserByUsername } from "@/lib/auth/dal";
 import { verifyPassword } from "@/lib/auth/password";
 import { signToken } from "@/lib/auth/jwt";
 import { createSession } from "@/lib/auth/session";
+import { validateOrigin } from "@/lib/auth/origin";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
 import {
   PASSWORD_MAX_LENGTH,
@@ -19,6 +20,11 @@ const LOGIN_ATTEMPTS_LIMIT = 10;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
 export async function POST(request: NextRequest) {
+  const originError = validateOrigin(request);
+  if (originError) {
+    return originError;
+  }
+
   try {
     const forwardedFor = request.headers.get("x-forwarded-for");
     const ipAddress =

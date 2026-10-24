@@ -141,6 +141,15 @@ function isValidCookieJson(raw: string): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
+// The sidecar uses one cookie for the whole instance, so only admins may change it.
+async function isAdmin(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isAdmin: true },
+  });
+  return user?.isAdmin === true;
+}
+
 export async function GET() {
   const session = await verifySession();
   if (!session) return Errors.unauthorized();
@@ -152,7 +161,7 @@ export async function GET() {
 
   try {
     const cookies = await prisma.perplexityCookie.findMany({
-      where: { userId: session.userId },
+      where: (await isAdmin(session.userId)) ? {} : { userId: session.userId },
       select: {
         id: true,
         label: true,
@@ -173,6 +182,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await verifySession();
   if (!session) return Errors.unauthorized();
+  if (!(await isAdmin(session.userId))) return Errors.forbidden();
 
   if (!isPerplexityEnabled()) {
     return NextResponse.json(
@@ -207,8 +217,9 @@ export async function POST(request: NextRequest) {
       return Errors.validation(`Invalid cookie data: ${cookieValidation.error}`);
     }
 
+    // Keep a single active row instance-wide; /current picks it for the sidecar.
     await prisma.perplexityCookie.updateMany({
-      where: { userId: session.userId, isActive: true },
+      where: { isActive: true },
       data: { isActive: false },
     });
 
@@ -250,6 +261,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const session = await verifySession();
   if (!session) return Errors.unauthorized();
+  if (!(await isAdmin(session.userId))) return Errors.forbidden();
 
   if (!isPerplexityEnabled()) {
     return NextResponse.json(
@@ -275,7 +287,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const existing = await prisma.perplexityCookie.findFirst({
-      where: { id, userId: session.userId },
+      where: { id },
     });
 
     if (!existing) {

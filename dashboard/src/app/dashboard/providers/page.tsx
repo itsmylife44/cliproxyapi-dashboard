@@ -209,7 +209,7 @@ export default function ProvidersPage() {
               />
             </div>
 
-            <PerplexityProSection showToast={showToast} />
+            {currentUser?.isAdmin && <PerplexityProSection showToast={showToast} />}
           </section>
 
           {currentUser?.isAdmin && (

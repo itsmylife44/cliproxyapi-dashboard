@@ -44,8 +44,10 @@ export async function importOAuthCredential(
 
     const endpoint = `${MANAGEMENT_BASE_URL}/auth-files`;
 
-    // Snapshot existing auth file names before upload to diff later
+    // Snapshot existing auth file names before upload: used to refuse overwrites
+    // and to diff later. Without it the existence check is impossible, so refuse.
     const preExistingNames = new Set<string>();
+    let snapshotOk = false;
     try {
       const snapshotRes = await fetchWithTimeout(endpoint, {
         method: "GET",
@@ -53,6 +55,7 @@ export async function importOAuthCredential(
       });
       if (snapshotRes.ok) {
         const snapshotData = await snapshotRes.json();
+        snapshotOk = true;
         if (isRecord(snapshotData) && Array.isArray(snapshotData.files)) {
           for (const f of snapshotData.files) {
             if (isRecord(f) && typeof f.name === "string") {
@@ -63,9 +66,20 @@ export async function importOAuthCredential(
       } else {
         await snapshotRes.body?.cancel();
       }
-    } catch {
-      // Non-fatal: we'll fall back to name-based matching if snapshot fails
+    } catch (snapshotError) {
+      logger.warn({ err: snapshotError, provider }, "importOAuthCredential: snapshot failed");
     }
+    if (!snapshotOk) {
+      return { ok: false, error: "Failed to list existing credential files; import refused" };
+    }
+
+    // CLIProxyAPI stores the upload as filepath.Base(name) and silently overwrites
+    // an existing file, so refuse names that already exist (possibly another user's).
+    const targetName = fileName.replace(/\/+$/, "").split("/").pop() ?? fileName;
+    if (preExistingNames.has(targetName)) {
+      return { ok: false, error: "Credential file already exists" };
+    }
+
     let uploadRes: Response;
     try {
       uploadRes = await fetchWithTimeout(endpoint, {

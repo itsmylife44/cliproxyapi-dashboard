@@ -19,7 +19,7 @@ POST           /api/admin/migrate-api-keys → migration script
 ## Providers
 GET|POST       /api/providers/keys       → lib/providers/api-key-ops → Prisma
 DELETE         /api/providers/keys/[keyHash] → cascade delete
-GET|POST       /api/providers/oauth      → lib/providers/oauth-ops → Prisma
+GET            /api/providers/oauth      → lib/providers/oauth-ops → Prisma
 DELETE|PATCH   /api/providers/oauth/[id]  → ownership check → Prisma
 POST           /api/providers/oauth/claim → claim imported OAuth ownership
 POST           /api/providers/oauth/import → bulk import

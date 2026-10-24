@@ -111,12 +111,6 @@ export interface ListOAuthResult {
   error?: string;
 }
 
-export interface ContributeOAuthResult {
-  ok: boolean;
-  id?: string;
-  error?: string;
-}
-
 export interface RemoveOAuthResult {
   ok: boolean;
   error?: string;

@@ -4,7 +4,7 @@
  * Implementation split into:
  * - management-api.ts  — shared helpers (AsyncMutex, fetchWithTimeout, types, guards)
  * - api-key-ops.ts     — API key contribute/remove/list operations
- * - oauth-ops.ts       — OAuth account contribute/import/list/remove/toggle operations
+ * - oauth-ops.ts       — OAuth account import/list/remove/toggle operations
  */
 
 // API key operations
@@ -17,7 +17,6 @@ export {
 
 // OAuth operations
 export {
-  contributeOAuthAccount,
   importOAuthCredential,
   listOAuthWithOwnership,
   removeOAuthAccount,
@@ -31,7 +30,6 @@ export type {
   RemoveKeyResult,
   ListKeysResult,
   KeyWithOwnership,
-  ContributeOAuthResult,
   RemoveOAuthResult,
   ListOAuthResult,
   OAuthAccountWithOwnership,

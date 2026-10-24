@@ -48,17 +48,21 @@ describe("toggleOAuthAccountByIdOrName", () => {
       userId: "user-1",
       accountName: "claude-test@x.com.json",
     });
-    mocks.fetchWithTimeout.mockResolvedValue(
-      new Response(JSON.stringify({ status: "ok" }), { status: 200 }),
-    );
+    mocks.fetchWithTimeout
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          files: [{ name: "claude-test@x.com.json", provider: "claude" }],
+        })),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "ok" }), { status: 200 }));
   });
 
   it("sets the disabled flag via PATCH /auth-files/status instead of uploading over the token file", async () => {
     const result = await toggleOAuthAccountByIdOrName("user-1", "own-1", true, false);
 
     expect(result).toEqual({ ok: true, disabled: true });
-    expect(mocks.fetchWithTimeout).toHaveBeenCalledTimes(1);
-    const [url, init] = mocks.fetchWithTimeout.mock.calls[0] as [string, RequestInit];
+    expect(mocks.fetchWithTimeout).toHaveBeenCalledTimes(2);
+    const [url, init] = mocks.fetchWithTimeout.mock.calls[1] as [string, RequestInit];
     expect(url).toBe("http://management.test/auth-files/status");
     expect(init.method).toBe("PATCH");
     expect(JSON.parse(init.body as string)).toEqual({

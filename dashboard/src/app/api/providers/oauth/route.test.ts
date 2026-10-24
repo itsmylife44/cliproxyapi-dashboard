@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NextRequest } from "next/server";
 
 vi.mock("server-only", () => ({}));
 
@@ -7,7 +6,6 @@ const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   findUnique: vi.fn(),
   listOAuthWithOwnership: vi.fn(),
-  contributeOAuthAccount: vi.fn(),
   listEnabledPluginOAuthProviders: vi.fn(),
 }));
 
@@ -22,13 +20,12 @@ vi.mock("@/lib/logger", () => ({
 }));
 vi.mock("@/lib/providers/dual-write", () => ({
   listOAuthWithOwnership: mocks.listOAuthWithOwnership,
-  contributeOAuthAccount: mocks.contributeOAuthAccount,
 }));
 vi.mock("@/lib/providers/plugins", () => ({
   listEnabledPluginOAuthProviders: mocks.listEnabledPluginOAuthProviders,
 }));
 
-import { GET, POST } from "./route";
+import { GET } from "./route";
 
 const account = {
   id: "acc-1",
@@ -65,17 +62,8 @@ describe("/api/providers/oauth response body", () => {
     });
   });
 
-  it("POST returns the new account id with 201", async () => {
-    mocks.contributeOAuthAccount.mockResolvedValue({ ok: true, id: "acc-2" });
-
-    const res = await POST(
-      new NextRequest("http://localhost/api/providers/oauth", {
-        method: "POST",
-        body: JSON.stringify({ provider: "claude", accountName: "claude-bob.json" }),
-      })
-    );
-
-    expect(res.status).toBe(201);
-    expect(await res.json()).toEqual({ success: true, id: "acc-2" });
+  it("does not expose POST: ownership is only created by /claim and /import", async () => {
+    const route = await import("./route");
+    expect(route).not.toHaveProperty("POST");
   });
 });

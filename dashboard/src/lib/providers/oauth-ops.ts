@@ -11,47 +11,12 @@ import {
   MANAGEMENT_BASE_URL,
   MANAGEMENT_API_KEY,
   FETCH_TIMEOUT_MS,
-  type ContributeOAuthResult,
   type RemoveOAuthResult,
   type ListOAuthResult,
   type ImportOAuthResult,
   type ToggleOAuthResult,
   type OAuthAccountWithOwnership,
 } from "./management-api";
-
-export async function contributeOAuthAccount(
-  userId: string,
-  provider: OAuthProvider,
-  accountName: string,
-  accountEmail?: string
-): Promise<ContributeOAuthResult> {
-  try {
-    const existingOwnership = await prisma.providerOAuthOwnership.findUnique({
-      where: { provider_accountName: { provider, accountName } },
-    });
-
-    if (existingOwnership) {
-      return { ok: false, error: "OAuth account already registered" };
-    }
-
-    const ownership = await prisma.providerOAuthOwnership.create({
-      data: {
-        userId,
-        provider,
-        accountName,
-        accountEmail: accountEmail || null,
-      },
-    });
-
-    return { ok: true, id: ownership.id };
-  } catch (error) {
-    logger.error({ err: error, provider }, "contributeOAuthAccount error");
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Unknown error during OAuth registration",
-    };
-  }
-}
 
 export async function importOAuthCredential(
   userId: string,
@@ -357,50 +322,57 @@ interface ResolveOAuthResult {
   ownership: { id: string; userId: string } | null;
 }
 
+/**
+ * Looks up an auth file by name in the Management API. Returns null when no such
+ * file exists; `provider` is null when the file's provider has no canonical form
+ * (such a file can never have an ownership row).
+ */
+async function findAuthFile(name: string): Promise<{ provider: OAuthProvider | null } | null> {
+  const res = await fetchWithTimeout(`${MANAGEMENT_BASE_URL}/auth-files`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}` },
+  });
+  if (!res.ok) {
+    await res.body?.cancel();
+    throw new Error(`Failed to fetch OAuth accounts: HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  const files = (isRecord(data) && Array.isArray(data.files) ? data.files : []) as Array<{
+    name?: string;
+    provider?: string;
+    type?: string;
+  }>;
+  const file = files.find((f) => f.name === name);
+  if (!file) return null;
+  return { provider: canonicalizeOAuthProvider(file.provider || file.type) };
+}
+
 async function resolveOAuthAccountByIdOrName(
   idOrName: string
 ): Promise<ResolveOAuthResult> {
-  // First try to find by DB ID (CUID)
+  // idOrName is an ownership row id (CUID) or a management file name.
   const byId = await prisma.providerOAuthOwnership.findUnique({
     where: { id: idOrName },
-    select: { id: true, userId: true, accountName: true },
+    select: { accountName: true },
   });
-  if (byId) {
-    return {
-      accountName: byId.accountName,
-      ownership: { id: byId.id, userId: byId.userId },
-    };
+  const accountName = byId?.accountName ?? idOrName;
+
+  const file = await findAuthFile(accountName);
+  if (!file) {
+    return { accountName: null, ownership: null };
   }
 
-  // Try to find by accountName (management API file ID).
-  // After scoping ownership by (provider, accountName), the same accountName can
-  // legitimately exist across providers. We accept the first match and warn if
-  // more than one exists so ambiguous callers are visible in logs.
-  const byNameMatches = await prisma.providerOAuthOwnership.findMany({
-    where: { accountName: idOrName },
-    select: { id: true, userId: true, accountName: true, provider: true },
-    take: 2,
-  });
+  // The Management API acts on the file name alone, so only the row for the
+  // file's real (provider, name) may authorize it. A row registered for the same
+  // name under another provider must not (GHSA-6mf3-mmf8-6jxj).
+  const ownership = file.provider
+    ? await prisma.providerOAuthOwnership.findUnique({
+        where: { provider_accountName: { provider: file.provider, accountName } },
+        select: { id: true, userId: true },
+      })
+    : null;
 
-  const byName = byNameMatches[0];
-  if (byNameMatches.length > 1) {
-    logger.warn(
-      { accountName: idOrName, matchCount: byNameMatches.length },
-      "resolveOAuthAccountByIdOrName: ambiguous accountName spans multiple providers; returning first"
-    );
-  }
-
-  if (byName) {
-    return {
-      accountName: byName.accountName,
-      ownership: { id: byName.id, userId: byName.userId },
-    };
-  }
-  // Fallback: treat as management file name/id directly
-  return {
-    accountName: idOrName,
-    ownership: null,
-  };
+  return { accountName, ownership };
 }
 
 export async function removeOAuthAccount(
@@ -420,6 +392,18 @@ export async function removeOAuthAccount(
 
     if (ownership && !isAdmin && ownership.userId !== userId) {
       return { ok: false, error: "Access denied" };
+    }
+
+    // The DELETE below is by name only: skip it unless the file really belongs
+    // to this provider, and just drop the row.
+    const file = await findAuthFile(accountName);
+    if (file?.provider !== provider) {
+      if (ownership) {
+        await prisma.providerOAuthOwnership.delete({
+          where: { provider_accountName: { provider, accountName } },
+        });
+      }
+      return { ok: true };
     }
 
      const endpoint = `${MANAGEMENT_BASE_URL}/auth-files?name=${encodeURIComponent(accountName)}`;

@@ -82,11 +82,13 @@ describe("buildCostBreakdown", () => {
     expect(row.estimatedCost).toBeCloseTo(4.8 + 2.25 + 0.9, 10);
   });
 
-  it("clamps uncached input at 0 when cached exceeds input for an 'included' model", () => {
+  it("clamps to billed tokens when cached exceeds input for an 'included' model", () => {
     const keys = { a: key({ "test-included": totals({ inputTokens: 100, cachedTokens: 500 }) }) };
     const row = onlyRow(buildCostBreakdown(keys, PRICING));
     expect(row.inputTokens).toBe(0);
-    expect(row.cachedTokens).toBe(500);
+    // Only the cached tokens that fit inside input are billed, so show those.
+    expect(row.cachedTokens).toBe(100);
+    expect(row.estimatedCost).toBeCloseTo(rowCost(row), 10);
   });
 
   it("keeps summed input and shows cached tokens for a 'separate' model", () => {

@@ -765,6 +765,26 @@ export function isPeakRequest(timestamp: Date, price: ModelPrice | null | undefi
   return peak.hoursUtc.some(([start, end]) => hour >= start && hour < end);
 }
 
+/** Input tokens split into the uncached part and the cache reads that are billed. */
+export interface CachedInputSplit {
+  uncachedInput: number;
+  cached: number;
+}
+
+/**
+ * Split input into uncached and cache-read tokens per `ModelPrice.cacheAccounting`.
+ * For `"included"` the cached tokens are a subset of `inputTokens`, so both are
+ * clamped to never go below 0 or above the input total.
+ */
+export function splitCachedInput(inputTokens: number, cachedTokens: number, price: ModelPrice): CachedInputSplit {
+  const cacheReadTokens = Math.max(0, cachedTokens);
+  if (price.cacheAccounting === "included") {
+    const cached = Math.min(cacheReadTokens, Math.max(0, inputTokens));
+    return { uncachedInput: Math.max(0, inputTokens) - cached, cached };
+  }
+  return { uncachedInput: inputTokens, cached: cacheReadTokens };
+}
+
 /**
  * Calculate estimated cost for a set of tokens.
  *
@@ -784,21 +804,10 @@ export function calculateCost(
   cachedTokens = 0
 ): number {
   const cacheReadRate = price.cacheReadPer1M ?? price.inputPer1M;
-  const cacheReadTokens = Math.max(0, cachedTokens);
-
-  if (price.cacheAccounting === "included") {
-    const cached = Math.min(cacheReadTokens, Math.max(0, inputTokens));
-    const uncachedInput = Math.max(0, inputTokens) - cached;
-    return (
-      (uncachedInput / 1_000_000) * price.inputPer1M +
-      (cached / 1_000_000) * cacheReadRate +
-      (outputTokens / 1_000_000) * price.outputPer1M
-    );
-  }
-
+  const { uncachedInput, cached } = splitCachedInput(inputTokens, cachedTokens, price);
   return (
-    (inputTokens / 1_000_000) * price.inputPer1M +
-    (cacheReadTokens / 1_000_000) * cacheReadRate +
+    (uncachedInput / 1_000_000) * price.inputPer1M +
+    (cached / 1_000_000) * cacheReadRate +
     (outputTokens / 1_000_000) * price.outputPer1M
   );
 }

@@ -1,4 +1,4 @@
-import { resolveModelPrice, calculateTieredCost, type ModelPrice } from "@/lib/model-pricing";
+import { resolveModelPrice, calculateTieredCost, splitCachedInput, type ModelPrice } from "@/lib/model-pricing";
 
 /* ── Types ────────────────────────────────────────────────── */
 
@@ -35,7 +35,10 @@ export interface ModelCostEntry {
    * otherwise. Unpriced rows show raw `inputTokens` (accounting is unknown).
    */
   inputTokens: number;
-  /** Cache-read tokens summed across keys. */
+  /**
+   * Cache-read tokens summed across keys; for priced `"included"` models,
+   * clamped to the input total as `calculateCost` does.
+   */
   cachedTokens: number;
   outputTokens: number;
   totalTokens: number;
@@ -73,13 +76,6 @@ function emptyAgg(): ModelAgg {
     totalTokens: 0,
     requests: 0,
   };
-}
-
-/** Input tokens excluding cache reads, mirroring `calculateCost`'s clamp. */
-function uncachedInputTokens(inputTokens: number, cachedTokens: number, price: ModelPrice): number {
-  if (price.cacheAccounting !== "included") return inputTokens;
-  const input = Math.max(0, inputTokens);
-  return input - Math.min(Math.max(0, cachedTokens), input);
 }
 
 export function buildCostBreakdown(keys: Record<string, UsageKey>, customPricing: Record<string, ModelPrice>): ModelCostEntry[] {
@@ -128,12 +124,17 @@ export function buildCostBreakdown(keys: Record<string, UsageKey>, customPricing
             }
           )
         : 0;
+      // Priced rows show exactly what `calculateCost` bills; unpriced rows have
+      // no known accounting mode, so they show raw totals.
+      const shown = price
+        ? splitCachedInput(data.inputTokens, data.cachedTokens, price)
+        : { uncachedInput: data.inputTokens, cached: data.cachedTokens };
       return {
         model,
         displayName: price?.displayName ?? model,
         provider: price?.provider ?? "Unknown",
-        inputTokens: price ? uncachedInputTokens(data.inputTokens, data.cachedTokens, price) : data.inputTokens,
-        cachedTokens: data.cachedTokens,
+        inputTokens: shown.uncachedInput,
+        cachedTokens: shown.cached,
         outputTokens: data.outputTokens,
         totalTokens: data.totalTokens,
         requests: data.requests,

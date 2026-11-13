@@ -917,6 +917,7 @@
     "providerHeader": "Anbieter",
     "requestsHeader": "Anfragen",
     "inputTokensHeader": "Eingabe-Token",
+    "cachedTokensHeader": "Gecacht",
     "outputTokensHeader": "Ausgabe-Token",
     "rateHeader": "Rate ($/1M)",
     "estCostHeader": "Gesch. Kosten",

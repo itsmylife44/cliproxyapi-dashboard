@@ -4,168 +4,21 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { ChartContainer, SERIES_PALETTE, useChartTheme, formatCompact } from "@/components/ui/chart-theme";
+import { loadCustomPricing, formatUSD } from "@/lib/model-pricing";
 import {
-  resolveModelPrice,
-  calculateTieredCost,
-  loadCustomPricing,
-  formatUSD,
-  type ModelPrice,
-} from "@/lib/model-pricing";
+  buildCostBreakdown,
+  aggregateByProvider,
+  formatRate,
+  type UsageKey,
+} from "@/lib/usage-cost-breakdown";
 
 /* ── Types ────────────────────────────────────────────────── */
 
-interface KeyUsage {
-  keyName: string;
-  totalRequests: number;
-  totalTokens: number;
-  inputTokens: number;
-  outputTokens: number;
-  models: Record<string, {
-    totalRequests: number;
-    totalTokens: number;
-    inputTokens: number;
-    outputTokens: number;
-    cachedTokens: number;
-    longContextInputTokens: number;
-    longContextOutputTokens: number;
-    longContextCachedTokens: number;
-    peakInputTokens: number;
-    peakOutputTokens: number;
-    peakCachedTokens: number;
-  }>;
-}
-
 interface CostEstimationProps {
-  keys: Record<string, KeyUsage>;
+  keys: Record<string, UsageKey>;
 }
 
 /* ── Helpers ──────────────────────────────────────────────── */
-
-interface ModelCostEntry {
-  model: string;
-  displayName: string;
-  provider: string;
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-  requests: number;
-  estimatedCost: number;
-  inputPer1M: number;
-  outputPer1M: number;
-  priced: boolean;
-}
-
-interface ProviderCostEntry {
-  provider: string;
-  estimatedCost: number;
-  models: number;
-  requests: number;
-}
-
-function buildCostBreakdown(keys: Record<string, KeyUsage>, customPricing: Record<string, ModelPrice>): ModelCostEntry[] {
-  // Aggregate all models across all keys
-  const modelAgg: Record<string, {
-    inputTokens: number;
-    outputTokens: number;
-    cachedTokens: number;
-    longContextInputTokens: number;
-    longContextOutputTokens: number;
-    longContextCachedTokens: number;
-    peakInputTokens: number;
-    peakOutputTokens: number;
-    peakCachedTokens: number;
-    totalTokens: number;
-    requests: number;
-  }> = {};
-
-  for (const key of Object.values(keys)) {
-    for (const [model, data] of Object.entries(key.models)) {
-      if (!modelAgg[model]) {
-        modelAgg[model] = {
-          inputTokens: 0,
-          outputTokens: 0,
-          cachedTokens: 0,
-          longContextInputTokens: 0,
-          longContextOutputTokens: 0,
-          longContextCachedTokens: 0,
-          peakInputTokens: 0,
-          peakOutputTokens: 0,
-          peakCachedTokens: 0,
-          totalTokens: 0,
-          requests: 0,
-        };
-      }
-      modelAgg[model].inputTokens += data.inputTokens;
-      modelAgg[model].outputTokens += data.outputTokens;
-      modelAgg[model].cachedTokens += data.cachedTokens;
-      modelAgg[model].longContextInputTokens += data.longContextInputTokens;
-      modelAgg[model].longContextOutputTokens += data.longContextOutputTokens;
-      modelAgg[model].longContextCachedTokens += data.longContextCachedTokens;
-      modelAgg[model].peakInputTokens += data.peakInputTokens;
-      modelAgg[model].peakOutputTokens += data.peakOutputTokens;
-      modelAgg[model].peakCachedTokens += data.peakCachedTokens;
-      modelAgg[model].totalTokens += data.totalTokens;
-      modelAgg[model].requests += data.totalRequests;
-    }
-  }
-
-  return Object.entries(modelAgg)
-    .map(([model, data]) => {
-      const price = resolveModelPrice(model, customPricing);
-      // The long-context and peak subsets were bucketed per request
-      // server-side (disjoint); the remainder is the standard tier.
-      const estimatedCost = price
-        ? calculateTieredCost(
-            {
-              inputTokens: data.inputTokens - data.longContextInputTokens - data.peakInputTokens,
-              outputTokens: data.outputTokens - data.longContextOutputTokens - data.peakOutputTokens,
-              cachedTokens: data.cachedTokens - data.longContextCachedTokens - data.peakCachedTokens,
-            },
-            {
-              inputTokens: data.longContextInputTokens,
-              outputTokens: data.longContextOutputTokens,
-              cachedTokens: data.longContextCachedTokens,
-            },
-            price,
-            {
-              inputTokens: data.peakInputTokens,
-              outputTokens: data.peakOutputTokens,
-              cachedTokens: data.peakCachedTokens,
-            }
-          )
-        : 0;
-      return {
-        model,
-        displayName: price?.displayName ?? model,
-        provider: price?.provider ?? "Unknown",
-        inputTokens: data.inputTokens,
-        outputTokens: data.outputTokens,
-        totalTokens: data.totalTokens,
-        requests: data.requests,
-        estimatedCost,
-        inputPer1M: price?.inputPer1M ?? 0,
-        outputPer1M: price?.outputPer1M ?? 0,
-        priced: price !== null,
-      };
-    })
-    .sort((a, b) => b.estimatedCost - a.estimatedCost);
-}
-
-function aggregateByProvider(entries: ModelCostEntry[]): ProviderCostEntry[] {
-  const providerMap: Record<string, ProviderCostEntry> = {};
-  for (const entry of entries) {
-    if (!entry.priced) continue;
-    let provider = providerMap[entry.provider];
-    if (!provider) {
-      provider = { provider: entry.provider, estimatedCost: 0, models: 0, requests: 0 };
-      providerMap[entry.provider] = provider;
-    }
-    provider.estimatedCost += entry.estimatedCost;
-    provider.models += 1;
-    provider.requests += entry.requests;
-  }
-  return Object.values(providerMap).sort((a, b) => b.estimatedCost - a.estimatedCost);
-}
 
 function truncateModelName(name: string, maxLen = 28): string {
   // Strip common prefixes
@@ -296,6 +149,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
                 <th className="px-3 py-2 text-left font-semibold text-[var(--text-muted)]">{t('providerHeader')}</th>
                 <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('requestsHeader')}</th>
                 <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('inputTokensHeader')}</th>
+                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('cachedTokensHeader')}</th>
                 <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('outputTokensHeader')}</th>
                 <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('rateHeader')}</th>
                 <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('estCostHeader')}</th>
@@ -308,9 +162,10 @@ export function CostEstimation({ keys }: CostEstimationProps) {
                   <td className="px-3 py-2 text-[var(--text-muted)]">{entry.provider}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">{entry.requests.toLocaleString()}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">{formatCompact(entry.inputTokens)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">{formatCompact(entry.cachedTokens)}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">{formatCompact(entry.outputTokens)}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-[var(--text-muted)]">
-                    {entry.priced ? `${entry.inputPer1M}/${entry.outputPer1M}` : "—"}
+                    {entry.priced ? formatRate(entry) : "—"}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums font-semibold text-emerald-700">{formatUSD(entry.estimatedCost)}</td>
                 </tr>
@@ -318,7 +173,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
               {unpricedModels.length > 0 && (
                 <>
                   <tr>
-                    <td colSpan={7} className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] bg-[var(--surface-muted)]">
+                    <td colSpan={8} className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] bg-[var(--surface-muted)]">
                       {t('unpricedModels')} ({unpricedModels.length})
                     </td>
                   </tr>
@@ -328,6 +183,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
                       <td className="px-3 py-1.5 text-[var(--text-muted)]">—</td>
                       <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]">{entry.requests.toLocaleString()}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]">{formatCompact(entry.inputTokens)}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]">{formatCompact(entry.cachedTokens)}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]">{formatCompact(entry.outputTokens)}</td>
                       <td className="px-3 py-1.5 text-right text-[var(--text-muted)]">—</td>
                       <td className="px-3 py-1.5 text-right text-[var(--text-muted)]">—</td>
@@ -338,7 +194,7 @@ export function CostEstimation({ keys }: CostEstimationProps) {
             </tbody>
             <tfoot>
               <tr className="border-t border-[var(--surface-border)] bg-[var(--surface-muted)]">
-                <td colSpan={6} className="px-3 py-2 font-semibold text-[var(--text-primary)]">{t('totalEstimatedCost')}</td>
+                <td colSpan={7} className="px-3 py-2 font-semibold text-[var(--text-primary)]">{t('totalEstimatedCost')}</td>
                 <td className="px-3 py-2 text-right font-bold text-emerald-700 text-sm">{formatUSD(totalEstimatedCost)}</td>
               </tr>
             </tfoot>

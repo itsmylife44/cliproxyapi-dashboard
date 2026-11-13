@@ -917,6 +917,7 @@
     "providerHeader": "提供商",
     "requestsHeader": "请求数",
     "inputTokensHeader": "输入 Token",
+    "cachedTokensHeader": "缓存 Token",
     "outputTokensHeader": "输出 Token",
     "rateHeader": "单价（美元/百万 Token）",
     "estCostHeader": "预估费用",

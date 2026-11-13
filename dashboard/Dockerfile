@@ -11,10 +11,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
 COPY next.config.ts tsconfig.json prisma.config.ts postcss.config.mjs ./
+COPY prisma ./prisma
+RUN npx prisma generate
 COPY public ./public
 COPY src ./src
 COPY messages ./messages
-COPY prisma ./prisma
 
 # ARG is not persisted in image layers — safe for build-time placeholders
 ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
@@ -23,9 +24,8 @@ ARG MANAGEMENT_API_KEY="build-time-placeholder-16ch"
 ARG CLIPROXYAPI_MANAGEMENT_URL="http://127.0.0.1:8317/v0/management"
 ENV CLIPROXYAPI_MANAGEMENT_URL=${CLIPROXYAPI_MANAGEMENT_URL}
 
-RUN npx prisma generate
 # The build OOMed at 512 MB on GitHub runners (0.1.87); images are built in CI, not on servers.
-RUN NODE_OPTIONS=--max-old-space-size=1536 npm run build
+RUN --mount=type=cache,target=/app/.next/cache NODE_OPTIONS=--max-old-space-size=1536 ./node_modules/.bin/next build
 
 FROM node:24-alpine AS runner
 WORKDIR /app
@@ -47,6 +47,9 @@ ENV COMPOSE_DIR=/opt/cliproxyapi/infrastructure
 ENV DASHBOARD_VERSION=${DASHBOARD_VERSION}
 ENV NEXT_TELEMETRY_DISABLED=1
 
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/engines ./node_modules/@prisma/engines
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/adapter-pg ./node_modules/@prisma/adapter-pg
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/messages ./messages
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -54,9 +57,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/src/generated ./src/generated
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/engines ./node_modules/@prisma/engines
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/adapter-pg ./node_modules/@prisma/adapter-pg
 COPY --chown=nextjs:nodejs entrypoint.sh ./entrypoint.sh
 # Normalize Windows CRLF to LF to avoid `/bin/sh\r` runtime failures
 RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh

@@ -1,4 +1,4 @@
-export const QUOTA_PROVIDERS = ["all", "antigravity", "claude", "codex", "gemini-cli", "github-copilot", "kimi"] as const;
+export const QUOTA_PROVIDERS = ["all", "antigravity", "claude", "codex", "gemini-cli", "github-copilot", "kimi", "xai"] as const;
 
 export const QUOTA_STATUSES = ["all", "active", "warning", "error", "disabled"] as const;
 
@@ -42,6 +42,8 @@ const QUOTA_PROVIDER_ALIASES: Record<string, QuotaQueryProvider> = {
   openai: "codex",
   antigravity: "antigravity",
   kimi: "kimi",
+  xai: "xai",
+  grok: "xai",
 };
 
 /**

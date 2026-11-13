@@ -17,6 +17,7 @@ import {
   type QuotaResponse,
 } from "@/lib/model-first-monitoring";
 import { parseCodexQuota, type CodexWhamUsageResponse } from "@/lib/quota/codex";
+import { parseXaiQuota, XAI_BILLING_HEADERS, XAI_BILLING_URL, type XaiBillingResponse } from "@/lib/quota/xai";
 import { slugifyLabel } from "@/lib/quota/labels";
 import { capacityQuotaGroups } from "@/lib/quota-window-classification";
 
@@ -776,6 +777,28 @@ async function fetchKimiQuota(
     return {
       error: error instanceof Error ? error.message : "Unknown error",
     };
+  }
+}
+
+async function fetchXaiQuota(authIndex: string): Promise<QuotaGroup[] | { error: string }> {
+  try {
+    const response = await fetch(`${CLIPROXYAPI_MANAGEMENT_URL}/api-call`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${MANAGEMENT_API_KEY}`, "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(30_000),
+      body: JSON.stringify({ auth_index: authIndex, method: "GET", url: XAI_BILLING_URL, header: XAI_BILLING_HEADERS }),
+    });
+    if (!response.ok) {
+      await response.body?.cancel();
+      return { error: `Management API call failed: ${response.status}` };
+    }
+    const result = (await response.json()) as ApiCallResponse;
+    const status = Number(result.status_code ?? result.statusCode ?? 0);
+    if (status === 401) return { error: "Grok token expired - re-authenticate in CLIProxyAPI" };
+    if (status < 200 || status >= 300) return { error: `Grok API error: ${status}` };
+    return parseXaiQuota(parseApiCallBody(result) as XaiBillingResponse) ?? { error: "No Grok usage data available" };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
 
@@ -1593,6 +1616,16 @@ export async function GET(request: NextRequest) {
           email: displayEmail,
           supported: true,
           groups: result,
+        };
+      }
+      if (providerNorm === "xai") {
+        const result = await fetchXaiQuota(authIndex);
+        return {
+          auth_index: authIndex,
+          provider: providerForResponse,
+          email: displayEmail,
+          supported: true,
+          ...("error" in result ? { error: result.error } : { groups: result }),
         };
       }
 

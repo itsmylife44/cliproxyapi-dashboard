@@ -765,7 +765,8 @@
       "codex": "Codex",
       "gemini-cli": "Gemini",
       "github-copilot": "Copilot",
-      "kimi": "Kimi"
+      "kimi": "Kimi",
+      "xai": "Grok"
     },
     "statusOption": {
       "all": "所有状态",
@@ -1452,7 +1453,8 @@
     "providerGemini": "Gemini",
     "providerCodex": "Codex",
     "providerCopilot": "Copilot",
-    "providerKimi": "Kimi"
+    "providerKimi": "Kimi",
+    "providerXai": "Grok"
   },
   "agentConfig": {
     "sectionGeneral": "常规设置",

@@ -27,6 +27,7 @@ const ALERT_PROVIDERS = [
   { key: "codex", label: "Codex" },
   { key: "github-copilot", label: "Copilot" },
   { key: "kimi", label: "Kimi" },
+  { key: "xai", label: "Grok" },
 ] as const;
 
 const ALERT_PROVIDER_LABEL_KEYS: Record<string, string> = {
@@ -37,6 +38,7 @@ const ALERT_PROVIDER_LABEL_KEYS: Record<string, string> = {
   "codex": "providerCodex",
   "github-copilot": "providerCopilot",
   "kimi": "providerKimi",
+  "xai": "providerXai",
 };
 
 interface CheckAlertResult {

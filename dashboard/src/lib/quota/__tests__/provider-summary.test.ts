@@ -95,4 +95,22 @@ describe("calcProviderSummary", () => {
       expect.objectContaining({ label: "Spark 168h Window", capacity: expect.closeTo(0.2, 5) }),
     ]);
   });
+
+  it("caps each account's short-term averageCapacity by its matching long-term window", () => {
+    const acc1 = codexAccount("acc-1", [
+      codexWindow("primary-window", 5 * HOUR, 0.9),
+      codexWindow("secondary-window", 168 * HOUR, 0.0),
+    ]);
+    const acc2 = codexAccount("acc-2", [
+      codexWindow("primary-window", 5 * HOUR, 0.8),
+      codexWindow("secondary-window", 168 * HOUR, 0.6),
+    ]);
+
+    const { windowCapacities } = calcProviderSummary([acc1, acc2]);
+    const shortTerm = windowCapacities.find((w) => w.isShortTerm);
+    const longTerm = windowCapacities.find((w) => !w.isShortTerm);
+    expect(longTerm?.averageCapacity).toBeCloseTo(0.3, 5);
+    // acc1 usable = min(0.9, 0.0) = 0.0; acc2 usable = min(0.8, 0.6) = 0.6 -> avg = 0.3
+    expect(shortTerm?.averageCapacity).toBeCloseTo(0.3, 5);
+  });
 });

@@ -14,6 +14,8 @@ export interface WindowCapacity {
   id: string;
   label: string;
   capacity: number;
+  averageCapacity?: number;
+  accountCount?: number;
   resetTime: string | null;
   isShortTerm: boolean;
   /** Present when the pooled windows belong to a scoped (secondary) limit. */
@@ -59,35 +61,53 @@ export function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
     };
   }
 
-  const pools = new Map<string, { groups: QuotaGroup[]; first: QuotaGroup; firstSiblings: QuotaGroup[] }>();
+  const pools = new Map<string, { entries: Array<{ group: QuotaGroup; siblings: QuotaGroup[] }>; first: QuotaGroup; firstSiblings: QuotaGroup[] }>();
   for (const account of healthy) {
     for (const group of account.groups) {
       if (group.id === "extra-usage") continue;
       const key = poolKey(group);
       const pool = pools.get(key);
-      if (pool) pool.groups.push(group);
-      else pools.set(key, { groups: [group], first: group, firstSiblings: account.groups });
+      if (pool) pool.entries.push({ group, siblings: account.groups });
+      else pools.set(key, { entries: [{ group, siblings: account.groups }], first: group, firstSiblings: account.groups });
     }
   }
 
   const windowCapacities: WindowCapacity[] = [];
 
-  for (const [poolKey, { groups, first, firstSiblings }] of pools) {
-    const scores = groups
-      .map((group) => normalizeFraction(group.remainingFraction))
-      .filter((score): score is number => score !== null);
+  for (const [poolKey, { entries, first, firstSiblings }] of pools) {
+    const isShortTerm = isShortTermQuotaWindow(first, firstSiblings);
+    const scored = entries
+      .map(({ group, siblings }) => {
+        const score = normalizeFraction(group.remainingFraction);
+        if (score === null) return null;
+        if (!isShortTerm) return { score, effective: score, group };
 
-    if (scores.length === 0) {
+        const longSiblings = siblings.filter((s) => s.id !== "extra-usage" && !isShortTermQuotaWindow(s, siblings));
+        const familyLongs = group.scope
+          ? longSiblings.filter((s) => s.scope?.id === group.scope?.id)
+          : group.id.endsWith("-5h")
+            ? longSiblings.filter((s) => s.id === `${group.id.slice(0, -3)}-weekly`)
+            : longSiblings.filter((s) => !s.scope);
+        const capScores = familyLongs
+          .map((s) => normalizeFraction(s.remainingFraction))
+          .filter((v): v is number => v !== null);
+        const effective = capScores.length > 0 ? Math.min(score, ...capScores) : score;
+        return { score, effective, group };
+      })
+      .filter((item): item is { score: number; effective: number; group: QuotaGroup } => item !== null);
+
+    if (scored.length === 0) {
       continue;
     }
-
+    const scores = scored.map((item) => item.score);
+    const effectiveScores = scored.map((item) => item.effective);
     const exhaustedProduct = scores.reduce((product, score) => product * (1 - score), 1);
     const capacity = 1 - exhaustedProduct;
 
     let earliestReset: string | null = null;
     let minResetTime = Infinity;
 
-    for (const group of groups) {
+    for (const { group } of scored) {
       if (group.resetTime) {
         const timestamp = new Date(group.resetTime).getTime();
         if (timestamp < minResetTime) {
@@ -101,8 +121,10 @@ export function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
       id: poolKey,
       label: first.label,
       capacity: Math.max(0, Math.min(1, capacity)),
+      averageCapacity: effectiveScores.reduce((sum, score) => sum + score, 0) / effectiveScores.length,
+      accountCount: scores.length,
       resetTime: earliestReset,
-      isShortTerm: isShortTermQuotaWindow(first, firstSiblings),
+      isShortTerm,
       ...(first.scope ? { scope: first.scope } : {}),
     });
   }

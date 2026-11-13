@@ -1414,7 +1414,11 @@
     "lockedBySubscription": "Locked by subscription"
   },
   "quotaAlerts": {
-    "sectionTitle": "Telegram Alerts",
+    "sectionTitle": "Quota alerts",
+    "disabled": "Disabled",
+    "telegram": "Telegram",
+    "discord": "Discord",
+    "webhookUrl": "Webhook URL",
     "sectionDescription": "Get notified when quota drops below a threshold.",
     "enableAlertsLabel": "Enable alerts",
     "botTokenLabel": "Bot Token",

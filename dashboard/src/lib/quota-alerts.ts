@@ -15,6 +15,52 @@ const SETTING_KEYS = {
   CHECK_INTERVAL: "telegram_check_interval",
   COOLDOWN: "telegram_cooldown",
 } as const;
+const DISCORD_WEBHOOK = "discord_quota_webhook";
+const ALERT_CHANNEL = "quota_alert_channel";
+
+/** Validate that a URL is an HTTPS Discord webhook endpoint without credentials or query params. */
+export function validDiscordWebhook(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      url.hostname === "discord.com" &&
+      !url.port &&
+      !url.username &&
+      !url.password &&
+      /^\/api\/webhooks\/\d+\/[\w-]+$/.test(url.pathname) &&
+      !url.search &&
+      !url.hash
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Send a plain-text quota alert message to a validated Discord webhook URL. */
+export async function sendDiscordAlert(
+  url: string,
+  content: string
+): Promise<{ ok: boolean; error?: string }> {
+  if (!validDiscordWebhook(url)) {
+    return { ok: false, error: "Invalid Discord webhook" };
+  }
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      redirect: "error",
+      signal: AbortSignal.timeout(10000),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content: content.slice(0, 2000),
+        allowed_mentions: { parse: [] },
+      }),
+    });
+    return response.ok ? { ok: true } : { ok: false, error: `Discord HTTP ${response.status}` };
+  } catch {
+    return { ok: false, error: "Discord request failed" };
+  }
+}
 
 const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
 const DEFAULT_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -124,6 +170,8 @@ export async function runAlertCheck(
           SETTING_KEYS.LAST_ALERT_TIME,
           SETTING_KEYS.PROVIDERS,
           SETTING_KEYS.COOLDOWN,
+          DISCORD_WEBHOOK,
+          ALERT_CHANNEL,
         ],
       },
     },
@@ -133,6 +181,8 @@ export async function runAlertCheck(
   const enabled = settingMap.get(SETTING_KEYS.ENABLED) === "true";
   const botToken = settingMap.get(SETTING_KEYS.BOT_TOKEN) ?? "";
   const chatId = settingMap.get(SETTING_KEYS.CHAT_ID) ?? "";
+  const channel = settingMap.get(ALERT_CHANNEL) ?? (enabled ? "telegram" : "disabled");
+  const webhook = settingMap.get(DISCORD_WEBHOOK) ?? "";
   const thresholdRaw = parseInt(
     settingMap.get(SETTING_KEYS.THRESHOLD) ?? "20",
     10
@@ -148,11 +198,11 @@ export async function runAlertCheck(
   const cooldownMs = !Number.isNaN(cooldownRaw) && cooldownRaw >= 1 ? cooldownRaw * 60 * 1000 : DEFAULT_COOLDOWN_MS;
 
   // 2. Check if alerts are enabled and configured
-  if (!enabled) {
+  if (channel === "disabled") {
     return { skipped: true, reason: "alerts disabled" };
   }
 
-  if (!botToken || !chatId) {
+  if (channel === "discord" ? !validDiscordWebhook(webhook) : !botToken || !chatId) {
     return { skipped: true, reason: "bot token or chat ID not configured" };
   }
 
@@ -211,7 +261,7 @@ export async function runAlertCheck(
     dashboardUrl
   );
 
-  const result = await sendTelegramMessage(botToken, chatId, message, "HTML");
+  const result = channel === "discord" ? await sendDiscordAlert(webhook, message.replace(/<[^>]*>/g, "")) : await sendTelegramMessage(botToken, chatId, message, "HTML");
   const messageSent = result.ok ? 1 : 0;
   const breachedCount = result.ok ? breached.length : 0;
 

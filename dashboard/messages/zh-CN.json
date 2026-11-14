@@ -891,6 +891,7 @@
     "requests": "请求数",
     "input": "输入",
     "output": "输出",
+    "cached": "缓存",
     "requestEvents": "请求事件详情",
     "noEventsFound": "所选时间段内暂无请求事件",
     "showingMostRecent": "显示所选时间段内最近的 {count} 条请求。",

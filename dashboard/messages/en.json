@@ -891,6 +891,7 @@
     "requests": "Requests",
     "input": "Input",
     "output": "Output",
+    "cached": "Cached",
     "requestEvents": "Request Event Details",
     "noEventsFound": "No request events found in the selected period",
     "showingMostRecent": "Showing the most recent {count} requests in the selected window.",

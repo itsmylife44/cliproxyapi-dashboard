@@ -685,12 +685,37 @@ function isVersionBoundaryMatch(model: string, key: string): boolean {
   return true;
 }
 
+const ROUTING_SUFFIXES = [
+  "-free",
+  "-thinking",
+  "-extra-low",
+  "-xhigh",
+  "-high",
+  "-medium",
+  "-low",
+  "-minimal",
+] as const;
+
+function normalizeDottedVersion(candidate: string): string {
+  return candidate.replace(/(\d)-(\d+)(?!.*\d-\d)/, "$1.$2");
+}
+
+function stripRoutingSuffix(candidate: string): string | null {
+  for (const suffix of ROUTING_SUFFIXES) {
+    if (candidate.endsWith(suffix)) {
+      return candidate.slice(0, -suffix.length);
+    }
+  }
+  return null;
+}
+
 /**
  * Resolve the price for a given model name.
  *
- * 1. Exact match against user overrides → built-in table
+ * 1. Exact match against user overrides → built-in table (with dotted-version and routing-suffix normalization)
  * 2. Longest-prefix match (e.g. "claude-sonnet-4.5-20260620" → "claude-sonnet-4.5")
- * 3. null if no match found
+ * 3. Retry after stripping provider prefix (e.g. "cliproxyapi/sonar-pro" → "sonar-pro")
+ * 4. null if no match found
  */
 export function resolveModelPrice(model: string, customPricing?: Record<string, ModelPrice>): ModelPrice | null {
   const lowerModel = model.toLowerCase();
@@ -702,33 +727,52 @@ export function resolveModelPrice(model: string, customPricing?: Record<string, 
   }
   const merged = { ...DEFAULT_MODEL_PRICING, ...normalizedCustom };
 
-  // Exact match
-  if (merged[lowerModel]) return merged[lowerModel];
+  const findExact = (candidate: string): ModelPrice | undefined =>
+    merged[candidate] ?? merged[normalizeDottedVersion(candidate)];
 
   // Prefix match: try progressively shorter prefixes
   const keys = Object.keys(merged).sort((a, b) => b.length - a.length);
 
   const findByPrefix = (candidate: string): ModelPrice | null => {
+    const normalized = /-\d{4}-\d{2}-\d{2}(?:-|$)/.test(candidate)
+      ? candidate
+      : normalizeDottedVersion(candidate);
     for (const key of keys) {
       const matchedPrice = merged[key];
       if (!matchedPrice) continue;
       // Aliases and dated snapshots are exact IDs, never prefixes.
       if (matchedPrice.exactMatchOnly) continue;
-      if (candidate.startsWith(key) && isVersionBoundaryMatch(candidate, key)) {
+      if (
+        (candidate.startsWith(key) && isVersionBoundaryMatch(candidate, key)) ||
+        (normalized.startsWith(key) && isVersionBoundaryMatch(normalized, key))
+      ) {
         return matchedPrice;
       }
     }
     return null;
   };
 
-  const prefixMatch = findByPrefix(lowerModel);
-  if (prefixMatch) return prefixMatch;
-
-  // Try matching without provider prefix (e.g. "cliproxyapi/sonar-pro" → "sonar-pro")
   const withoutPrefix = lowerModel.includes("/") ? lowerModel.split("/").pop()! : null;
-  if (withoutPrefix) {
-    if (merged[withoutPrefix]) return merged[withoutPrefix];
-    return findByPrefix(withoutPrefix);
+  const candidates = withoutPrefix ? [lowerModel, withoutPrefix] : [lowerModel];
+
+  for (const candidate of candidates) {
+    const match = findExact(candidate);
+    if (match) return match;
+    const stripped = stripRoutingSuffix(candidate);
+    if (stripped) {
+      const strippedMatch = findExact(stripped);
+      if (strippedMatch) return strippedMatch;
+    }
+  }
+
+  for (const candidate of candidates) {
+    const match = findByPrefix(candidate);
+    if (match) return match;
+    const stripped = stripRoutingSuffix(candidate);
+    if (stripped) {
+      const strippedMatch = findByPrefix(stripped);
+      if (strippedMatch) return strippedMatch;
+    }
   }
 
   return null;

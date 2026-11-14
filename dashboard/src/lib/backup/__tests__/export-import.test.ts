@@ -308,6 +308,8 @@ describe("generateRestorePreview", () => {
           outputTokens: 200,
           reasoningTokens: 0,
           cachedTokens: 0,
+          cacheWriteTokens: 0,
+          cacheWrite1hTokens: 0,
           totalTokens: 300,
           failed: false,
           collectedAt: "2024-01-01T00:05:00.000Z",

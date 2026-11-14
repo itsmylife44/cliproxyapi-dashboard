@@ -218,6 +218,8 @@ export interface BackupUsageRecord {
   outputTokens: number;
   reasoningTokens: number;
   cachedTokens: number;
+  cacheWriteTokens: number;
+  cacheWrite1hTokens: number;
   totalTokens: number;
   failed: boolean;
   collectedAt: string;

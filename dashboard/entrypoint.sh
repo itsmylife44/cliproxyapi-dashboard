@@ -454,6 +454,38 @@ async function migrate() {
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "backup_schedule_pkey" PRIMARY KEY ("id")
     );
+
+    -- Quota snapshots table (stores periodic account/model remaining quota history)
+    CREATE TABLE IF NOT EXISTS "quota_snapshots" (
+      "id" TEXT NOT NULL,
+      "authIndex" TEXT NOT NULL,
+      "provider" TEXT NOT NULL,
+      "groupId" TEXT NOT NULL,
+      "modelId" TEXT NOT NULL DEFAULT '',
+      "remaining" DOUBLE PRECISION NOT NULL,
+      "resetTime" TIMESTAMP(3),
+      "capturedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "quota_snapshots_pkey" PRIMARY KEY ("id")
+    );
+    CREATE INDEX IF NOT EXISTS "quota_snapshots_authIndex_capturedAt_idx" ON "quota_snapshots"("authIndex", "capturedAt");
+    CREATE INDEX IF NOT EXISTS "quota_snapshots_authIndex_groupId_modelId_capturedAt_idx" ON "quota_snapshots"("authIndex", "groupId", "modelId", "capturedAt");
+    -- Cache writes were previously dropped; native Claude rows without cache reads
+    -- stored their writes in "cachedTokens". Backfill once, when the column is added.
+    DO $$ BEGIN
+      ALTER TABLE "usage_records" ADD COLUMN "cacheWriteTokens" INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE "usage_records" ADD COLUMN "cacheWrite1hTokens" INTEGER NOT NULL DEFAULT 0;
+      UPDATE "usage_records" SET
+        "cacheWriteTokens" = CASE
+          WHEN "totalTokens" > "inputTokens" + "outputTokens" + "cachedTokens"
+            THEN "totalTokens" - "inputTokens" - "outputTokens" - "cachedTokens"
+          ELSE "cachedTokens" END,
+        "cachedTokens" = CASE
+          WHEN "totalTokens" > "inputTokens" + "outputTokens" + "cachedTokens" THEN "cachedTokens"
+          ELSE 0 END
+      WHERE "cachedTokens" > 0
+        AND "totalTokens" >= "inputTokens" + "outputTokens" + "cachedTokens"
+        AND "authIndex" IN (SELECT DISTINCT "authIndex" FROM "quota_snapshots" WHERE "provider" = 'claude');
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
     `);
 
     console.log('[dashboard] Tables ready');

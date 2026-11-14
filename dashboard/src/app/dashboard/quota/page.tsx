@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { QuotaToolbar } from "@/components/quota/quota-toolbar";
-import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useQuota } from "@/hooks/use-quota";
 import { headlineQuotaWindows } from "@/lib/quota/headline";
 import { calcProviderSummary, type ProviderSummary } from "@/lib/quota/provider-summary";
 import {
@@ -19,7 +18,6 @@ import {
   normalizeFraction,
   summarizeModelFirstProvider,
   type QuotaAccount,
-  type QuotaResponse,
 } from "@/lib/model-first-monitoring";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { maskEmail } from "@/lib/mask-email";
@@ -34,12 +32,10 @@ import {
   type QuotaQueryStatus,
 } from "@/lib/quota/query-state";
 
-const QuotaChart = dynamic(
-  () => import("@/components/quota/quota-chart").then((mod) => ({ default: mod.QuotaChart })),
-  { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> }
-);
+import { QuotaChart } from "@/components/quota/quota-chart";
 import { QuotaDetails } from "@/components/quota/quota-details";
 import { QuotaAlerts } from "@/components/quota/quota-alerts";
+import { invalidateClientQuotaHistoryCache, prefetchBatchQuotaHistory } from "@/components/quota/account-quota-history";
 
 export const QUOTA_ACCOUNTS_PAGE_SIZE = 25;
 
@@ -158,9 +154,9 @@ export default function QuotaPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [quotaData, setQuotaData] = useState<QuotaResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: quotaData, isLoading: loading, refreshing, refresh } = useQuota();
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const lastGeneratedAtRef = useRef<string | undefined>(undefined);
 
   const query = useMemo(() => parseQuotaQueryState(searchParams), [searchParams]);
 
@@ -169,31 +165,16 @@ export default function QuotaPage() {
     router.replace(`${pathname}${nextSearch}`, { scroll: false });
   };
 
-  const fetchQuota = async (signal?: AbortSignal, bust = false) => {
-    setLoading(true);
-    try {
-      const url = bust ? `${API_ENDPOINTS.QUOTA.BASE}?bust=${Date.now()}` : API_ENDPOINTS.QUOTA.BASE;
-      const response = await fetch(url, { signal });
-      if (response.ok) {
-        const data = (await response.json()) as QuotaResponse;
-        setQuotaData(data);
-      }
-    } catch {
-      if (signal?.aborted) return;
-    } finally {
-      if (!signal?.aborted) setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    const controller = new AbortController();
-    fetchQuota(controller.signal);
-    const interval = setInterval(() => fetchQuota(controller.signal), 120_000);
-    return () => {
-      controller.abort();
-      clearInterval(interval);
-    };
-  }, []);
+    if (!quotaData) return;
+    if (lastGeneratedAtRef.current !== undefined && lastGeneratedAtRef.current !== quotaData.generatedAt) {
+      invalidateClientQuotaHistoryCache();
+    }
+    lastGeneratedAtRef.current = quotaData.generatedAt;
+    void prefetchBatchQuotaHistory(
+      quotaData.accounts.filter((account) => account.supported && !account.error && account.auth_index).map((account) => account.auth_index)
+    );
+  }, [quotaData]);
 
   const allAccounts = useMemo(() => quotaData?.accounts ?? [], [quotaData]);
   const filteredAccounts = useMemo(() => filterQuotaAccounts(allAccounts, query), [allAccounts, query]);
@@ -275,8 +256,8 @@ export default function QuotaPage() {
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <Button onClick={() => fetchQuota(undefined, true)} disabled={loading} className="px-2.5 py-1 text-xs">
-              {loading ? t("loadingText") : t("refreshButton")}
+            <Button onClick={() => void refresh().catch(() => {})} disabled={loading || refreshing} className="px-2.5 py-1 text-xs">
+              {loading || refreshing ? t("loadingText") : t("refreshButton")}
             </Button>
           </div>
         </div>
@@ -390,6 +371,7 @@ export default function QuotaPage() {
             onToggleCard={toggleCard}
             loading={loading}
             modelFirstOnlyView={isModelFirstOnlyView}
+            refreshKey={quotaData?.generatedAt}
           />
         </>
       )}

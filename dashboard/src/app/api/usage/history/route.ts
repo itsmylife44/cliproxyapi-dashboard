@@ -60,6 +60,28 @@ interface RequestEvent {
   inputTokens: number;
   outputTokens: number;
   failed: boolean;
+  failureStatus: number | null;
+  failureCode: string | null;
+  failureBody: string | null;
+  cancelled: boolean;
+}
+
+/**
+ * Identifies failed requests that were cancelled by the client (HTTP 499,
+ * "canceled" error code, or "context canceled" in the upstream body).
+ */
+function isCancelledFailure(
+  failed: boolean,
+  failureStatus: number | null,
+  failureCode: string | null,
+  failureBody: string | null,
+): boolean {
+  if (!failed) return false;
+  return (
+    failureStatus === 499 ||
+    failureCode === "canceled" ||
+    (failureBody?.toLowerCase().includes("context canceled") ?? false)
+  );
 }
 
 interface LatencyPoint {
@@ -198,6 +220,9 @@ export async function GET(request: NextRequest) {
         reasoningTokens: true,
         cachedTokens: true,
         failed: true,
+        failureStatus: true,
+        failureCode: true,
+        failureBody: true,
         timestamp: true,
         user: {
           select: {
@@ -349,6 +374,10 @@ export async function GET(request: NextRequest) {
       modelTotalsMap[modelName].requests += 1;
       modelTotalsMap[modelName].tokens += record.totalTokens;
 
+      const failureStatus = record.failureStatus ?? null;
+      const failureCode = record.failureCode ?? null;
+      const failureBody = record.failureBody ?? null;
+
       const event: RequestEvent = {
         timestamp: record.timestamp.toISOString(),
         keyName: keyUsage.keyName,
@@ -359,6 +388,10 @@ export async function GET(request: NextRequest) {
         inputTokens: record.inputTokens,
         outputTokens: record.outputTokens,
         failed: record.failed,
+        failureStatus,
+        failureCode,
+        failureBody,
+        cancelled: isCancelledFailure(record.failed, failureStatus, failureCode, failureBody),
       };
       if (requestEvents.length < REQUEST_EVENT_LIMIT) {
         requestEvents.push(event);

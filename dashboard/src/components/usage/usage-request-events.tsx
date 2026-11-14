@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
-interface RequestEvent {
+export interface RequestEvent {
   timestamp: string;
   keyName: string;
   username?: string;
@@ -14,6 +14,10 @@ interface RequestEvent {
   inputTokens: number;
   outputTokens: number;
   failed: boolean;
+  failureStatus?: number | null;
+  failureCode?: string | null;
+  failureBody?: string | null;
+  cancelled?: boolean;
 }
 
 interface UsageRequestEventsProps {
@@ -59,9 +63,32 @@ function formatLatency(latencyMs: number): string {
   return `${latencyMs.toLocaleString()} ms`;
 }
 
+function isCancelledEvent(event: RequestEvent): boolean {
+  if (event.cancelled) return true;
+  if (!event.failed) return false;
+  return (
+    event.failureStatus === 499 ||
+    event.failureCode === "canceled" ||
+    (event.failureBody?.toLowerCase().includes("context canceled") ?? false)
+  );
+}
+
+function getStatusBadgeClasses(isCancelled: boolean, failed: boolean): string {
+  if (isCancelled) return "border-amber-500/20 bg-amber-500/10 text-amber-700";
+  if (failed) return "border-rose-500/20 bg-rose-500/10 text-rose-600";
+  return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700";
+}
+
+function getRowClasses(isCancelled: boolean, failed: boolean): string {
+  if (isCancelled) return "bg-amber-500/[0.03] cursor-pointer hover:bg-amber-500/[0.07]";
+  if (failed) return "bg-rose-500/[0.03] cursor-pointer hover:bg-rose-500/[0.07]";
+  return "hover:bg-[var(--surface-muted)]";
+}
+
 export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestEventsProps) {
   const t = useTranslations("usage");
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const safeEvents = useMemo(() => events ?? [], [events]);
   const totalPages = Math.max(1, Math.ceil(safeEvents.length / EVENTS_PER_PAGE));
@@ -73,6 +100,16 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
   }, [activePage, safeEvents]);
 
   const hasMissingLatency = safeEvents.some((event) => event.latencyMs <= 0);
+  const colCount = isAdmin ? 9 : 8;
+
+  const toggleRow = (rowKey: string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowKey)) next.delete(rowKey);
+      else next.add(rowKey);
+      return next;
+    });
+  };
 
   if (safeEvents.length === 0) {
     return (
@@ -116,43 +153,99 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
             </tr>
           </thead>
           <tbody>
-            {pagedEvents.map((event, index) => (
-              <tr
-                key={`${event.timestamp}-${event.model}-${index}`}
-                className={`border-b border-[var(--surface-border)] last:border-b-0 ${event.failed ? "bg-rose-500/100/[0.03]" : "hover:bg-[var(--surface-muted)]"}`}
-              >
-                <td className="px-3 py-2">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-[var(--text-primary)]">{formatRelativeTime(event.timestamp, t)}</span>
-                    <span className="text-[10px] text-[var(--text-muted)]">{formatTimestamp(event.timestamp)}</span>
-                  </div>
-                </td>
-                <td className="px-3 py-2 font-mono text-[11px] text-[var(--text-primary)]">{event.keyName}</td>
-                {isAdmin ? (
-                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">{event.username ?? "\u2014"}</td>
-                ) : null}
-                <td className="px-3 py-2 font-mono text-[11px] text-[var(--text-secondary)]">{event.model}</td>
-                <td className="px-3 py-2">
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${
-                      event.failed
-                        ? "border-rose-500/20 bg-rose-500/10 text-rose-600"
-                        : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
-                    }`}
+            {pagedEvents.map((event, index) => {
+              const rowKey = `${event.timestamp}-${event.model}-${index}`;
+              const isExpandable = event.failed;
+              const isExpanded = isExpandable && expandedRows.has(rowKey);
+              const isCancelled = isCancelledEvent(event);
+              const statusSuffix = event.failureStatus ? ` \u00B7 ${event.failureStatus}` : "";
+              const statusLabel = isCancelled
+                ? `${t("cancelled")}${statusSuffix}`
+                : event.failed
+                  ? `${t("failed")}${statusSuffix}`
+                  : t("success");
+              const hasDetails = Boolean(event.failureStatus || event.failureCode || event.failureBody);
+
+              return (
+                <Fragment key={rowKey}>
+                  <tr
+                    className={`border-b border-[var(--surface-border)] last:border-b-0 ${getRowClasses(isCancelled, event.failed)}`}
+                    tabIndex={isExpandable ? 0 : undefined}
+                    aria-expanded={isExpandable ? isExpanded : undefined}
+                    onClick={() => {
+                      if (isExpandable) toggleRow(rowKey);
+                    }}
+                    onKeyDown={(e) => {
+                      if (isExpandable && (e.key === "Enter" || e.key === " ")) {
+                        e.preventDefault();
+                        toggleRow(rowKey);
+                      }
+                    }}
                   >
-                    {event.failed ? t("failed") : t("success")}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums ${getLatencyClasses(event.latencyMs)}`}>
-                    {formatLatency(event.latencyMs)}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{event.inputTokens.toLocaleString()}</td>
-                <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{event.outputTokens.toLocaleString()}</td>
-                <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-primary)]">{event.totalTokens.toLocaleString()}</td>
-              </tr>
-            ))}
+                    <td className="px-3 py-2">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-[var(--text-primary)]">{formatRelativeTime(event.timestamp, t)}</span>
+                        <span className="text-[10px] text-[var(--text-muted)]">{formatTimestamp(event.timestamp)}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[11px] text-[var(--text-primary)]">{event.keyName}</td>
+                    {isAdmin ? (
+                      <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">{event.username ?? "\u2014"}</td>
+                    ) : null}
+                    <td className="px-3 py-2 font-mono text-[11px] text-[var(--text-secondary)]">{event.model}</td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${getStatusBadgeClasses(isCancelled, event.failed)}`}
+                      >
+                        {isExpandable ? (
+                          <span className="text-[9px]">{isExpanded ? "\u25BC" : "\u25B6"}</span>
+                        ) : null}
+                        {statusLabel}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums ${getLatencyClasses(event.latencyMs)}`}>
+                        {formatLatency(event.latencyMs)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{event.inputTokens.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{event.outputTokens.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-primary)]">{event.totalTokens.toLocaleString()}</td>
+                  </tr>
+                  {isExpanded ? (
+                    <tr className="border-b border-[var(--surface-border)] bg-[var(--surface-muted)]/60">
+                      <td colSpan={colCount} className="px-4 py-2.5 text-xs">
+                        {hasDetails ? (
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-3 text-[11px] text-[var(--text-secondary)]">
+                              {event.failureStatus ? (
+                                <span>
+                                  <strong className="font-semibold text-[var(--text-primary)]">{t("errorStatusLabel")}:</strong>{" "}
+                                  <span className="font-mono">{event.failureStatus}</span>
+                                </span>
+                              ) : null}
+                              {event.failureCode ? (
+                                <span>
+                                  <strong className="font-semibold text-[var(--text-primary)]">{t("errorCodeLabel")}:</strong>{" "}
+                                  <span className="font-mono">{event.failureCode}</span>
+                                </span>
+                              ) : null}
+                            </div>
+                            {event.failureBody ? (
+                              <pre className="max-h-36 overflow-auto whitespace-pre-wrap break-all rounded border border-[var(--surface-border)] bg-[var(--surface-base)] p-2 font-mono text-[11px] text-[var(--text-secondary)]">
+                                {event.failureBody}
+                              </pre>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-[var(--text-muted)]">{t("errorDetailsUnavailable")}</p>
+                        )}
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

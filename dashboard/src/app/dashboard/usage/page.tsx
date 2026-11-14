@@ -95,6 +95,10 @@ interface UsageData {
     inputTokens: number;
     outputTokens: number;
     failed: boolean;
+    failureStatus?: number | null;
+    failureCode?: string | null;
+    failureBody?: string | null;
+    cancelled?: boolean;
   }>;
   truncated?: boolean;
 }

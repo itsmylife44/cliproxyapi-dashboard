@@ -1,0 +1,4 @@
+ALTER TABLE "usage_records"
+  ADD COLUMN IF NOT EXISTS "failureStatus" INTEGER,
+  ADD COLUMN IF NOT EXISTS "failureCode" TEXT,
+  ADD COLUMN IF NOT EXISTS "failureBody" TEXT;

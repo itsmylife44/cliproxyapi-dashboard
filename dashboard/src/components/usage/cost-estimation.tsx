@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { ChartContainer, SERIES_PALETTE, useChartTheme, formatCompact } from "@/components/ui/chart-theme";
-import { loadCustomPricing, formatUSD } from "@/lib/model-pricing";
+import { loadCustomPricing, formatUSD, type ModelPrice } from "@/lib/model-pricing";
 import {
   buildCostBreakdown,
   aggregateByProvider,
@@ -16,6 +16,7 @@ import {
 
 interface CostEstimationProps {
   keys: Record<string, UsageKey>;
+  livePricing?: Record<string, ModelPrice>;
 }
 
 /* ── Helpers ──────────────────────────────────────────────── */
@@ -28,11 +29,11 @@ function truncateModelName(name: string, maxLen = 28): string {
 
 /* ── Component ────────────────────────────────────────────── */
 
-export function CostEstimation({ keys }: CostEstimationProps) {
+export function CostEstimation({ keys, livePricing }: CostEstimationProps) {
    const t = useTranslations('usage');
    const { axisTickStyle, tooltipStyle } = useChartTheme();
-   const customPricing = useMemo(() => loadCustomPricing(), []);
-   const costBreakdown = useMemo(() => buildCostBreakdown(keys, customPricing), [keys, customPricing]);
+   const mergedPricing = useMemo(() => ({ ...(livePricing ?? {}), ...loadCustomPricing() }), [livePricing]);
+   const costBreakdown = useMemo(() => buildCostBreakdown(keys, mergedPricing), [keys, mergedPricing]);
    const providerBreakdown = useMemo(() => aggregateByProvider(costBreakdown), [costBreakdown]);
    const totalEstimatedCost = useMemo(() => costBreakdown.reduce((sum, e) => sum + e.estimatedCost, 0), [costBreakdown]);
    const unpricedModels = useMemo(() => costBreakdown.filter(e => !e.priced), [costBreakdown]);

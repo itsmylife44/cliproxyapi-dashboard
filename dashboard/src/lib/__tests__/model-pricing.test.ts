@@ -756,3 +756,33 @@ describe("peak-hour pricing", () => {
     expect(calculateTieredCost(offPeak, EMPTY_BUCKETS, price, peak)).toBeCloseTo(0.45, 10);
   });
 });
+
+describe("resolveModelPrice - dotted versions, routing suffixes, and live catalog", () => {
+  it("normalizes hyphenated minor versions to dotted versions", () => {
+    const custom: Record<string, ModelPrice> = {
+      "vendor-model-4.6": {
+        displayName: "Vendor Model 4.6",
+        inputPer1M: 1,
+        outputPer1M: 2,
+        provider: "Vendor",
+      },
+    };
+    expect(resolveModelPrice("vendor-model-4-6", custom)?.displayName).toBe("Vendor Model 4.6");
+    expect(resolveModelPrice("vendor-model-4-6-20260101", custom)?.displayName).toBe("Vendor Model 4.6");
+  });
+
+  it("strips routing suffixes such as -free, -thinking, and -high", () => {
+    const custom: Record<string, ModelPrice> = {
+      "acme-reasoner": {
+        displayName: "Acme Reasoner",
+        inputPer1M: 2,
+        outputPer1M: 6,
+        provider: "Acme",
+      },
+    };
+    expect(resolveModelPrice("acme-reasoner-free", custom)?.displayName).toBe("Acme Reasoner");
+    expect(resolveModelPrice("acme-reasoner-thinking", custom)?.displayName).toBe("Acme Reasoner");
+    expect(resolveModelPrice("acme-reasoner-high", custom)?.displayName).toBe("Acme Reasoner");
+    expect(resolveModelPrice("provider/acme-reasoner-xhigh", custom)?.displayName).toBe("Acme Reasoner");
+  });
+});

@@ -891,6 +891,7 @@
     "requests": "Anfragen",
     "input": "Eingabe",
     "output": "Ausgabe",
+    "cached": "Gecacht",
     "requestEvents": "Anfrageereignisse",
     "noEventsFound": "Keine Ereignisse gefunden",
     "showingMostRecent": "Zeigt die {count} neuesten Anfragen im ausgewählten Zeitraum an.",

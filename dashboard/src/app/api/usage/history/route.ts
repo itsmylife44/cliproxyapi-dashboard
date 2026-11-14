@@ -4,7 +4,8 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { usageCache } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
-import { isLongContextPrompt, isPeakRequest, resolveModelPrice } from "@/lib/model-pricing";
+import { isLongContextPrompt, isPeakRequest, resolveModelPrice, type ModelPrice } from "@/lib/model-pricing";
+import { getMergedModelPricing } from "@/lib/model-pricing-catalog";
 
 // Cache for 5 seconds to allow frequent polling without overwhelming the database
 // The frontend polls every 60 seconds, so 5s cache won't cause missed updates
@@ -238,13 +239,14 @@ export async function GET(request: NextRequest) {
     let totalSuccessCount = 0;
     let totalFailureCount = 0;
 
-    // Long-context thresholds and peak hours are per model; resolve each model once. Only the
-    // built-in table is available server-side (user overrides live in the
-    // browser), which is what the bucket split is based on.
-    const modelPrices = new Map<string, ReturnType<typeof resolveModelPrice>>();
+    // Long-context thresholds and peak hours are per model; resolve each model once.
+    // Live catalog + built-in overrides are available server-side (user overrides
+    // live in the browser), which is what the bucket split is based on.
+    const dynamicPricing = await getMergedModelPricing();
+    const modelPrices = new Map<string, ModelPrice | null>();
     const priceForModel = (model: string) => {
       if (!modelPrices.has(model)) {
-        modelPrices.set(model, resolveModelPrice(model));
+        modelPrices.set(model, resolveModelPrice(model, dynamicPricing));
       }
       return modelPrices.get(model) ?? null;
     };

@@ -891,6 +891,7 @@
     "requests": "Solicitudes",
     "input": "Entrada",
     "output": "Salida",
+    "cached": "En Caché",
     "requestEvents": "Detalles de Eventos de Solicitud",
     "noEventsFound": "No se encontraron eventos de solicitud en el periodo seleccionado",
     "showingMostRecent": "Mostrando las {count} solicitudes más recientes en la ventana seleccionada.",

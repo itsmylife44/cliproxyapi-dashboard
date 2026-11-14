@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { verifySession } from "@/lib/auth/session";
 import { getManagementUrl } from "@/lib/management-url";
 import { logger } from "@/lib/logger";
-import { quotaCache, CACHE_TTL } from "@/lib/cache";
+import { quotaCache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
 import {
   ANTIGRAVITY_QUOTA_ENDPOINTS,
@@ -16,6 +16,7 @@ import {
   type QuotaGroup,
   type QuotaResponse,
 } from "@/lib/model-first-monitoring";
+import { getAccountsQuotaHistory, recordQuotaSnapshots } from "@/lib/quota/quota-history";
 import { parseCodexQuota, type CodexWhamUsageResponse } from "@/lib/quota/codex";
 import { slugifyLabel } from "@/lib/quota/labels";
 import { capacityQuotaGroups } from "@/lib/quota-window-classification";
@@ -780,6 +781,7 @@ async function fetchKimiQuota(
 }
 
 
+
 interface CopilotQuotaSnapshot {
   remaining?: number;
   entitlement?: number;
@@ -1385,6 +1387,17 @@ async function fetchClaudeQuota(
   }
 }
 
+let quotaRefresh: Promise<NextResponse> | null = null;
+
+function refreshQuota(bust: boolean): Promise<Response> {
+  if (!quotaRefresh) {
+    quotaRefresh = loadQuota(bust).finally(() => {
+      quotaRefresh = null;
+    });
+  }
+  return quotaRefresh.then((response) => response.clone());
+}
+
 export async function GET(request: NextRequest) {
   // Allow internal scheduler calls via management API key
   const internalKey = request.headers.get("x-internal-key");
@@ -1410,11 +1423,25 @@ export async function GET(request: NextRequest) {
     return Errors.internal("Server configuration error");
   }
 
+  const bust = request.nextUrl?.searchParams?.has("bust") ?? new URL(request.url).searchParams.has("bust");
   const CACHE_KEY = "quota:all";
-  const cached = quotaCache.get(CACHE_KEY);
-  if (cached) {
-    return NextResponse.json(cached);
+  if (!bust) {
+    const cached = quotaCache.get(CACHE_KEY);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+    const previous = quotaCache.get("quota:previous");
+    if (previous) {
+      after(async () => { await refreshQuota(false); });
+      return NextResponse.json(previous);
+    }
   }
+
+  return refreshQuota(bust);
+}
+
+async function loadQuota(bust: boolean): Promise<NextResponse> {
+  const CACHE_KEY = "quota:all";
 
   try {
     const authFilesResponse = await fetch(
@@ -1443,7 +1470,7 @@ export async function GET(request: NextRequest) {
       (file) => !file.disabled && file.status !== "disabled"
     );
 
-    const quotaPromises: Promise<QuotaAccount>[] = activeAccounts.map(async (account): Promise<QuotaAccount> => {
+    const fetchSingleAccountQuota = async (account: AuthFile): Promise<QuotaAccount> => {
       const authIndex = String(account.auth_index);
       const displayEmail =
         isMeaningfulDisplayValue(account.email)
@@ -1462,6 +1489,16 @@ export async function GET(request: NextRequest) {
       const providerNorm = inferredProvider ?? declaredProviderNorm;
       const providerForResponse = inferredProvider ?? account.provider;
 
+      const accountCacheKey = `${CACHE_KEYS.quotaAccount(authIndex)}:${providerNorm}:${displayEmail}`;
+      if (!bust) {
+        const cachedAccount = quotaCache.get(accountCacheKey) as QuotaAccount | null;
+        if (cachedAccount) {
+          return cachedAccount;
+        }
+      }
+
+      let computed: QuotaAccount;
+
       if (providerNorm === "claude") {
         const result = await fetchClaudeQuota(authIndex);
 
@@ -1472,39 +1509,29 @@ export async function GET(request: NextRequest) {
             normalizedError.includes("invalid bearer token") ||
             normalizedError.includes("invalid authorization");
 
-          if (needsReauth) {
-            return {
-              auth_index: authIndex,
-              provider: providerForResponse,
-              email: displayEmail,
-              supported: true,
-              error: "Claude OAuth token needs re-authentication (provider returned 401)",
-            };
-          }
-
-          return {
+          computed = {
             auth_index: authIndex,
             provider: providerForResponse,
             email: displayEmail,
             supported: true,
-            error: result.error,
+            error: needsReauth
+              ? "Claude OAuth token needs re-authentication (provider returned 401)"
+              : result.error,
+          };
+        } else {
+          computed = {
+            auth_index: authIndex,
+            provider: providerForResponse,
+            email: displayEmail,
+            supported: true,
+            groups: result,
           };
         }
-
-        return {
-          auth_index: authIndex,
-          provider: providerForResponse,
-          email: displayEmail,
-          supported: true,
-          groups: result,
-        };
-      }
-
-      if (providerNorm === "antigravity") {
+      } else if (providerNorm === "antigravity") {
         const result = await fetchAntigravityQuota(authIndex);
 
         if ("error" in result) {
-          return {
+          computed = {
             auth_index: authIndex,
             provider: providerForResponse,
             email: displayEmail,
@@ -1512,120 +1539,118 @@ export async function GET(request: NextRequest) {
             monitorMode: "window-based",
             error: result.error,
           };
+        } else {
+          computed = {
+            auth_index: authIndex,
+            provider: providerForResponse,
+            email: displayEmail,
+            supported: true,
+            monitorMode: "window-based",
+            snapshotFetchedAt: result.snapshotFetchedAt,
+            snapshotSource: result.snapshotSource,
+            groups: result.groups,
+          };
         }
-
-        return {
-          auth_index: authIndex,
-          provider: providerForResponse,
-          email: displayEmail,
-          supported: true,
-          monitorMode: "window-based",
-          snapshotFetchedAt: result.snapshotFetchedAt,
-          snapshotSource: result.snapshotSource,
-          groups: result.groups,
-        };
-      }
-
-      if (isModelFirstProvider(providerNorm)) {
+      } else if (isModelFirstProvider(providerNorm)) {
         const projectId = await fetchAntigravityProjectId(authIndex);
         const result = await fetchAntigravityModels(authIndex, projectId);
-        
+
         if ("error" in result) {
-          return {
+          computed = {
             auth_index: authIndex,
             provider: providerForResponse,
             email: displayEmail,
             supported: true,
             error: result.error,
           };
+        } else {
+          computed = {
+            auth_index: authIndex,
+            provider: providerForResponse,
+            email: displayEmail,
+            supported: true,
+            monitorMode: "model-first",
+            snapshotFetchedAt: result.snapshotFetchedAt,
+            snapshotSource: result.snapshotSource,
+            groups: result.groups,
+          };
         }
-
-        return {
-          auth_index: authIndex,
-          provider: providerForResponse,
-          email: displayEmail,
-          supported: true,
-          monitorMode: "model-first",
-          snapshotFetchedAt: result.snapshotFetchedAt,
-          snapshotSource: result.snapshotSource,
-          groups: result.groups,
-        };
-      }
-
-      if (providerNorm === "codex") {
+      } else if (providerNorm === "codex") {
         const result = await fetchCodexQuota(authIndex, codexAccountId(account));
-        
+
         if ("error" in result) {
-          return {
+          computed = {
             auth_index: authIndex,
             provider: providerForResponse,
             email: displayEmail,
             supported: true,
             error: result.error,
           };
+        } else {
+          computed = {
+            auth_index: authIndex,
+            provider: providerForResponse,
+            email: displayEmail,
+            supported: true,
+            groups: result,
+          };
         }
-
-        return {
-          auth_index: authIndex,
-          provider: providerForResponse,
-          email: displayEmail,
-          supported: true,
-          groups: result,
-        };
-      }
-
-      if (providerNorm === "kimi") {
+      } else if (providerNorm === "kimi") {
         const result = await fetchKimiQuota(authIndex);
 
         if ("error" in result) {
-          return {
+          computed = {
             auth_index: authIndex,
             provider: providerForResponse,
             email: displayEmail,
             supported: true,
             error: result.error,
           };
+        } else {
+          computed = {
+            auth_index: authIndex,
+            provider: providerForResponse,
+            email: displayEmail,
+            supported: true,
+            groups: result,
+          };
         }
-
-        return {
-          auth_index: authIndex,
-          provider: providerForResponse,
-          email: displayEmail,
-          supported: true,
-          groups: result,
-        };
-      }
-
-
-      if (providerNorm === "github" || providerNorm === "github-copilot" || providerNorm === "copilot") {
+      } else if (providerNorm === "github" || providerNorm === "github-copilot" || providerNorm === "copilot") {
         const result = await fetchCopilotQuota(authIndex);
 
         if ("error" in result) {
-          return {
+          computed = {
             auth_index: authIndex,
             provider: providerForResponse,
             email: displayEmail,
             supported: true,
             error: result.error,
           };
+        } else {
+          computed = {
+            auth_index: authIndex,
+            provider: providerForResponse,
+            email: displayEmail,
+            supported: true,
+            groups: result,
+          };
         }
-
-        return {
+      } else {
+        computed = {
           auth_index: authIndex,
           provider: providerForResponse,
           email: displayEmail,
-          supported: true,
-          groups: result,
+          supported: false,
         };
       }
 
-      return {
-        auth_index: authIndex,
-        provider: providerForResponse,
-        email: displayEmail,
-        supported: false,
-      };
-    });
+      if (!computed.error) {
+        quotaCache.set(accountCacheKey, computed, CACHE_TTL.QUOTA_ACCOUNT);
+      }
+      return computed;
+    };
+
+    const quotaPromises: Promise<QuotaAccount>[] = activeAccounts.map(fetchSingleAccountQuota);
 
     const results = await Promise.allSettled(quotaPromises);
 
@@ -1651,6 +1676,17 @@ export async function GET(request: NextRequest) {
     };
 
     quotaCache.set(CACHE_KEY, response, CACHE_TTL.QUOTA);
+    quotaCache.set("quota:previous", response, CACHE_TTL.QUOTA_PREVIOUS);
+    const snapshotJob = recordQuotaSnapshots(accounts)
+      .then(() =>
+        getAccountsQuotaHistory(
+          accounts.filter((acc) => acc.supported && !acc.error && acc.auth_index).map((acc) => acc.auth_index)
+        )
+      )
+      .catch(() => {});
+    if (bust) {
+      await snapshotJob;
+    }
 
     return NextResponse.json(response);
   } catch (error) {

@@ -17,6 +17,7 @@ import {
   type QuotaAccount,
   type QuotaGroup,
 } from "@/lib/model-first-monitoring";
+import { AccountQuotaHistory, prefetchAccountQuotaHistory } from "@/components/quota/account-quota-history";
 
 function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: number; label: string; isShortTerm: boolean }> {
   const result: Record<string, { score: number; label: string; isShortTerm: boolean }> = {};
@@ -52,6 +53,7 @@ interface QuotaDetailsProps {
   onToggleCard: (accountId: string) => void;
   loading: boolean;
   modelFirstOnlyView: boolean;
+  refreshKey?: string;
 }
 
 export function QuotaDetails({
@@ -64,6 +66,7 @@ export function QuotaDetails({
   onToggleCard,
   loading,
   modelFirstOnlyView,
+  refreshKey,
 }: QuotaDetailsProps) {
   const t = useTranslations("quota");
 
@@ -188,6 +191,16 @@ export function QuotaDetails({
                     <div key={account.auth_index} className="border-b border-[var(--surface-border)] last:border-b-0">
                       <button
                         type="button"
+                        onMouseEnter={() => {
+                          if (account.supported && !account.error) {
+                            void prefetchAccountQuotaHistory(account.auth_index);
+                          }
+                        }}
+                        onFocus={() => {
+                          if (account.supported && !account.error) {
+                            void prefetchAccountQuotaHistory(account.auth_index);
+                          }
+                        }}
                         onClick={() => onToggleCard(account.auth_index)}
                         className={cn(
                           "w-full items-center px-3 py-2 text-left transition-colors hover:bg-[var(--surface-hover)]",
@@ -276,9 +289,8 @@ export function QuotaDetails({
                             </div>
                           )}
 
-                          {account.groups && account.groups.length > 0 && (
+                          {section.modelFirstView && account.groups && account.groups.length > 0 && (
                             <div className="overflow-x-auto rounded-sm border border-[var(--surface-border)]">
-                              {section.modelFirstView ? (
                                 <div className="min-w-[900px]">
                                   <div className="grid grid-cols-[minmax(0,1fr)_90px_110px_140px_140px_140px_160px] border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                                     <span>{t("groupColumnLabel")}</span>
@@ -314,32 +326,9 @@ export function QuotaDetails({
                                     );
                                   })}
                                 </div>
-                              ) : (
-                                <div className="min-w-[400px]">
-                                  <div className="grid grid-cols-[minmax(0,1fr)_80px_160px] border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                                    <span>{t("quotaGroupColumnLabel")}</span>
-                                    <span>{t("remainingColumnLabel")}</span>
-                                    <span>{t("resetColumnLabel")}</span>
-                                  </div>
-                                  {account.groups.map((group) => {
-                                    const fraction = normalizeFraction(group.remainingFraction);
-                                    const pct = fraction === null ? null : `${Math.round(fraction * 100)}%`;
-                                    const isCritical = group.severity === "critical";
-                                    return (
-                                      <div
-                                        key={group.id}
-                                        className="grid grid-cols-[minmax(0,1fr)_80px_160px] items-center border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 last:border-b-0"
-                                      >
-                                        <span className="truncate text-xs text-[var(--text-primary)]">{group.label}</span>
-                                        <span className={cn("text-xs", isCritical ? "font-semibold text-rose-600" : "text-[var(--text-secondary)]")}>{pct ?? "-"}</span>
-                                        <span className="truncate text-xs text-[var(--text-muted)]" title={group.resetTime ?? undefined}>{formatRelativeTime(group.resetTime, t)}</span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
                             </div>
                           )}
+                          <AccountQuotaHistory authIndex={account.auth_index} groups={section.modelFirstView ? undefined : account.groups} refreshKey={refreshKey} />
                         </div>
                       )}
                     </div>

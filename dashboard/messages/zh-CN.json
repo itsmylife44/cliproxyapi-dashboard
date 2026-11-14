@@ -861,7 +861,14 @@
     "resettingStatus": "重置中…",
     "relativeTimeDaysHours": "{days} 天 {hours} 小时",
     "relativeTimeHoursMinutes": "{hours} 小时 {minutes} 分钟",
-    "relativeTimeMinutes": "{minutes} 分钟"
+    "relativeTimeMinutes": "{minutes} 分钟",
+    "loadingHistory": "正在加载配额历史…",
+    "noHistoryYet": "暂无配额历史记录。",
+    "quotaHistoryTitle": "配额历史",
+    "estFullWindowLabel": "预估整窗价值",
+    "quotaEstimateNote": "假设配额消耗与 API 价格成正比；至少需要观察到 2% 的消耗和有价格的使用记录。",
+    "estRemainingLabel": "预估剩余价值",
+    "modelColumnLabel": "模型"
   },
   "usage": {
     "pageTitle": "用量",

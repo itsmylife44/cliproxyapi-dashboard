@@ -6,10 +6,14 @@ vi.mock("@/lib/auth/session", () => ({
   verifySession: vi.fn(() => ({ userId: "test-user" })),
 }));
 
-vi.mock("@/lib/cache", () => ({
-  quotaCache: { get: vi.fn(() => null), set: vi.fn() },
-  CACHE_TTL: { QUOTA: 30_000 },
-}));
+vi.mock("@/lib/cache", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/cache")>();
+  return {
+    ...actual,
+    quotaCache: { get: vi.fn(() => null), set: vi.fn() },
+    quotaHistoryCache: { get: vi.fn(() => null), set: vi.fn() },
+  };
+});
 
 vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },

@@ -10,6 +10,7 @@ import {
   validateBotToken,
   validateChatId,
 } from "@/lib/telegram";
+import { sendDiscordAlert, validDiscordWebhook } from "@/lib/quota-alerts";
 
 const SETTING_KEYS = {
   BOT_TOKEN: "telegram_bot_token",
@@ -19,6 +20,8 @@ const SETTING_KEYS = {
   PROVIDERS: "telegram_alert_providers",
   CHECK_INTERVAL: "telegram_check_interval",
   COOLDOWN: "telegram_cooldown",
+  CHANNEL: "quota_alert_channel",
+  WEBHOOK: "discord_quota_webhook",
 } as const;
 
 async function requireAdmin(): Promise<
@@ -64,6 +67,8 @@ export async function GET() {
             SETTING_KEYS.PROVIDERS,
             SETTING_KEYS.CHECK_INTERVAL,
             SETTING_KEYS.COOLDOWN,
+            SETTING_KEYS.CHANNEL,
+            SETTING_KEYS.WEBHOOK,
           ],
         },
       },
@@ -90,6 +95,8 @@ export async function GET() {
       chatId,
       threshold: Number.isNaN(threshold) ? 20 : threshold,
       enabled,
+      channel: settingMap.get(SETTING_KEYS.CHANNEL) ?? (enabled ? "telegram" : "disabled"),
+      webhook: settingMap.get(SETTING_KEYS.WEBHOOK) ? "********" : "",
       providers,
       checkInterval: !Number.isNaN(checkIntervalRaw) ? checkIntervalRaw : 5,
       cooldown: !Number.isNaN(cooldownRaw) ? cooldownRaw : 60,
@@ -113,6 +120,9 @@ export async function PUT(request: NextRequest) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const { botToken, chatId, threshold, enabled } = body;
+    const { channel, webhook } = body;
+    if (channel !== undefined && !["disabled", "telegram", "discord"].includes(String(channel))) return Errors.validation("Invalid alert channel");
+    if (webhook !== undefined && (typeof webhook !== "string" || (webhook && !webhook.startsWith("*") && !validDiscordWebhook(webhook)))) return Errors.validation("Invalid Discord webhook URL");
 
     // Validate botToken if provided and not masked
     if (
@@ -173,6 +183,8 @@ export async function PUT(request: NextRequest) {
 
     // Upsert each provided setting
     const updates: Array<{ key: string; value: string }> = [];
+    if (typeof channel === "string") updates.push({ key: SETTING_KEYS.CHANNEL, value: channel });
+    if (typeof webhook === "string" && !webhook.startsWith("*")) updates.push({ key: SETTING_KEYS.WEBHOOK, value: webhook });
 
     if (
       botToken !== undefined &&
@@ -275,7 +287,7 @@ export async function POST(request: NextRequest) {
     const settings = await prisma.systemSetting.findMany({
       where: {
         key: {
-          in: [SETTING_KEYS.BOT_TOKEN, SETTING_KEYS.CHAT_ID],
+          in: [SETTING_KEYS.BOT_TOKEN, SETTING_KEYS.CHAT_ID, SETTING_KEYS.CHANNEL, SETTING_KEYS.WEBHOOK, SETTING_KEYS.ENABLED],
         },
       },
     });
@@ -283,6 +295,11 @@ export async function POST(request: NextRequest) {
     const settingMap = new Map(settings.map((s) => [s.key, s.value]));
     const botToken = settingMap.get(SETTING_KEYS.BOT_TOKEN);
     const chatId = settingMap.get(SETTING_KEYS.CHAT_ID);
+    const channel = settingMap.get(SETTING_KEYS.CHANNEL) ?? (settingMap.get(SETTING_KEYS.ENABLED) === "true" ? "telegram" : "disabled");
+    if (channel === "discord") {
+      const result = await sendDiscordAlert(settingMap.get(SETTING_KEYS.WEBHOOK) ?? "", "CLIProxyAPI Dashboard: Discord alerts are working.");
+      return result.ok ? NextResponse.json({ success: true }) : Errors.validation(result.error ?? "Discord test failed");
+    }
 
     if (!botToken || !chatId) {
       return Errors.validation(

@@ -14,6 +14,8 @@ interface TelegramSettings {
   chatId: string;
   threshold: number;
   enabled: boolean;
+  channel: "disabled" | "telegram" | "discord";
+  webhook: string;
   providers: string[];
   checkInterval: number;
   cooldown: number;
@@ -64,6 +66,8 @@ export function QuotaAlerts() {
     chatId: "",
     threshold: 20,
     enabled: false,
+    channel: "disabled",
+    webhook: "",
     providers: ALERT_PROVIDERS.map((p) => p.key),
     checkInterval: 5,
     cooldown: 60,
@@ -93,6 +97,8 @@ export function QuotaAlerts() {
             chatId: data.chatId ?? "",
             threshold: data.threshold ?? 20,
             enabled: data.enabled ?? false,
+            channel: data.channel ?? "disabled",
+            webhook: data.webhook ?? "",
             providers: Array.isArray(data.providers) ? data.providers : ALERT_PROVIDERS.map((p) => p.key),
             checkInterval: data.checkInterval ?? 5,
             cooldown: data.cooldown ?? 60,
@@ -114,7 +120,9 @@ export function QuotaAlerts() {
       const body: Record<string, unknown> = {
         chatId: settings.chatId,
         threshold: settings.threshold,
-        enabled: settings.enabled,
+        enabled: settings.channel !== "disabled",
+        channel: settings.channel,
+        webhook: settings.webhook,
         providers: settings.providers,
         checkInterval: settings.checkInterval,
         cooldown: settings.cooldown,
@@ -137,6 +145,8 @@ export function QuotaAlerts() {
             chatId: refreshData.chatId ?? "",
             threshold: refreshData.threshold ?? 20,
             enabled: refreshData.enabled ?? false,
+            channel: refreshData.channel ?? "disabled",
+            webhook: refreshData.webhook ?? "",
             providers: Array.isArray(refreshData.providers) ? refreshData.providers : ALERT_PROVIDERS.map((p) => p.key),
             checkInterval: refreshData.checkInterval ?? 5,
             cooldown: refreshData.cooldown ?? 60,
@@ -208,7 +218,7 @@ export function QuotaAlerts() {
     }
   };
 
-  const hasSavedConfig = settings.botToken.length > 0 && settings.chatId.length > 0;
+  const hasSavedConfig = settings.channel === "discord" ? settings.webhook.length > 0 : settings.channel === "telegram" && settings.botToken.length > 0 && settings.chatId.length > 0;
 
   return (
     <section className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
@@ -218,28 +228,11 @@ export function QuotaAlerts() {
       </div>
 
       <div className="space-y-3">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={settings.enabled}
-            onClick={() => setSettings((s) => ({ ...s, enabled: !s.enabled }))}
-            className={cn(
-              "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors",
-              settings.enabled
-                ? "bg-blue-500/100 border-blue-500"
-                : "bg-[var(--surface-muted)] border-[var(--surface-border)]"
-            )}
-          >
-            <span
-              className={cn(
-                "inline-block h-3.5 w-3.5 rounded-full bg-[var(--surface-base)] transition-transform",
-                settings.enabled ? "translate-x-4" : "translate-x-0.5"
-              )}
-            />
-          </button>
-            <span className="text-xs text-[var(--text-secondary)]">{t("enableAlertsLabel")}</span>
-        </label>
+        <div role="tablist" className="flex gap-1 rounded-md bg-[var(--surface-muted)] p-1">
+          {(["disabled", "telegram", "discord"] as const).map((channel) => <button key={channel} type="button" role="tab" aria-selected={settings.channel === channel} onClick={() => setSettings((s) => ({ ...s, channel }))} className={cn("flex-1 rounded px-3 py-1.5 text-xs", settings.channel === channel ? "bg-[var(--surface-base)] font-semibold text-[var(--text-primary)]" : "text-[var(--text-muted)]")}>{t(channel)}</button>)}
+        </div>
+        {settings.channel === "discord" && <div className="space-y-1"><label htmlFor="discord-webhook" className="text-xs font-medium text-[var(--text-muted)]">{t("webhookUrl")}</label><Input type="password" name="discord-webhook" value={settings.webhook} onChange={(v) => setSettings((s) => ({ ...s, webhook: v }))} autoComplete="off" /></div>}
+        {settings.channel === "telegram" && <>
 
         <div className="space-y-1">
           <label htmlFor="tg-bot-token" className="text-xs font-medium text-[var(--text-muted)]">{t("botTokenLabel")}</label>
@@ -273,6 +266,7 @@ export function QuotaAlerts() {
           />
           <p className="text-[10px] text-[var(--text-muted)]">{t("chatIdHint")}</p>
         </div>
+        </>}
 
         <div className="space-y-1">
           <label htmlFor="tg-threshold" className="text-xs font-medium text-[var(--text-muted)]">{t("thresholdLabel")}</label>

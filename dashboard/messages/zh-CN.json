@@ -1414,7 +1414,11 @@
     "lockedBySubscription": "订阅期间不可修改"
   },
   "quotaAlerts": {
-    "sectionTitle": "Telegram 告警",
+    "sectionTitle": "配额告警",
+    "disabled": "关闭",
+    "telegram": "Telegram",
+    "discord": "Discord",
+    "webhookUrl": "Webhook 地址",
     "sectionDescription": "配额低于阈值时接收通知。",
     "enableAlertsLabel": "启用告警",
     "botTokenLabel": "机器人令牌",

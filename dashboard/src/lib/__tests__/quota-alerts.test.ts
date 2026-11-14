@@ -91,4 +91,27 @@ describe("runAlertCheck", () => {
     expect(result).toMatchObject({ checked: true, alertsSent: 1, breachedCount: 1 });
     expect(sendTelegramMessage).toHaveBeenCalledOnce();
   });
+
+  it("sends a breached quota alert to the configured Discord webhook", async () => {
+    const webhook = "https://discord.com/api/webhooks/123456/example-token";
+    findMany.mockResolvedValue([
+      { key: "quota_alert_channel", value: "discord" },
+      { key: "discord_quota_webhook", value: webhook },
+      { key: "telegram_quota_threshold", value: "20" },
+    ]);
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
+    try {
+      const result = await runAlertCheck(async () => ({ accounts: [{ auth_index: "1", provider: "codex", supported: true, groups: [{ id: "primary-window", label: "5h Window", remainingFraction: 0.1, resetTime: null }] }] }));
+      expect(result).toMatchObject({ checked: true, alertsSent: 1, breachedCount: 1 });
+      expect(fetchMock).toHaveBeenCalledWith(webhook, expect.objectContaining({ method: "POST", redirect: "error", body: expect.stringContaining("alert") }));
+      expect(sendTelegramMessage).not.toHaveBeenCalled();
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
+  it("does not send an alert when the channel is disabled", async () => {
+    findMany.mockResolvedValue([{ key: "quota_alert_channel", value: "disabled" }]);
+    expect(await runAlertCheck(async () => { throw new Error("quota fetch should not occur"); })).toMatchObject({ skipped: true, reason: "alerts disabled" });
+  });
 });

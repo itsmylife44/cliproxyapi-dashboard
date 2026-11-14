@@ -1414,7 +1414,11 @@
     "lockedBySubscription": "Durch Abonnement gesperrt"
   },
   "quotaAlerts": {
-    "sectionTitle": "Telegram-Benachrichtigungen",
+    "sectionTitle": "Kontingentbenachrichtigungen",
+    "disabled": "Deaktiviert",
+    "telegram": "Telegram",
+    "discord": "Discord",
+    "webhookUrl": "Webhook-URL",
     "sectionDescription": "Erhalten Sie Benachrichtigungen, wenn das Kontingent unter einen Schwellenwert fällt.",
     "enableAlertsLabel": "Benachrichtigungen aktivieren",
     "botTokenLabel": "Bot-Token",

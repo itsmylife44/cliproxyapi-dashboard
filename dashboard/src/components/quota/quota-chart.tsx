@@ -24,17 +24,20 @@ export function getComparableProviderSummaries(providerSummaries: ProviderSummar
   );
 }
 
-/** Lowest long- and short-term headline capacity of a window-based provider, in whole percent. */
+/** Average remaining capacity across accounts for each headline term. */
 export function getProviderCapacityBars(windowCapacities: WindowCapacity[]): {
   longTerm: number | null;
   shortTerm: number | null;
 } {
   const windows = headlineQuotaWindows(windowCapacities);
-  const lowest = (isShortTerm: boolean) => {
-    const capacities = windows.filter((window) => window.isShortTerm === isShortTerm).map((window) => window.capacity);
-    return capacities.length > 0 ? Math.round(Math.min(...capacities) * 100) : null;
+  const average = (isShortTerm: boolean) => {
+    const matching = windows.filter((window) => window.isShortTerm === isShortTerm);
+    const count = matching.reduce((sum, window) => sum + (window.accountCount ?? 1), 0);
+    return count > 0
+      ? Math.round(matching.reduce((sum, window) => sum + (window.averageCapacity ?? window.capacity) * (window.accountCount ?? 1), 0) / count * 100)
+      : null;
   };
-  return { longTerm: lowest(false), shortTerm: lowest(true) };
+  return { longTerm: average(false), shortTerm: average(true) };
 }
 
 export function QuotaChart({
@@ -175,34 +178,58 @@ export function QuotaChart({
         {providerSummaries.length === 0 || !overallCapacity.provider ? (
           <ChartEmpty message={providerSummaries.length === 0 ? t("noProviderData") : t("noAggregatedQuota")} />
         ) : (() => {
-          const pct = Math.round(overallCapacity.value * 100);
-          const gaugeColor =
-            overallCapacity.value > 0.6
-              ? CHART_COLORS.success
-              : overallCapacity.value > 0.2
-                ? CHART_COLORS.warning
-                : CHART_COLORS.danger;
-          const gaugeData = [{ value: pct, fill: gaugeColor }];
+          const comparable = getComparableProviderSummaries(providerSummaries).map((s) =>
+            getProviderCapacityBars(s.windowCapacities)
+          );
+          const longValues = comparable.map((b) => b.longTerm).filter((v): v is number => v !== null && Number.isFinite(v));
+          const shortValues = comparable.map((b) => b.shortTerm).filter((v): v is number => v !== null && Number.isFinite(v));
+          const longAvg = longValues.length > 0 ? longValues.reduce((a, b) => a + b, 0) / longValues.length / 100 : null;
+          const shortAvg = shortValues.length > 0 ? shortValues.reduce((a, b) => a + b, 0) / shortValues.length / 100 : null;
+          const dials = [
+            { label: t("shortTermLabel"), value: shortAvg },
+            { label: t("longTermLabel"), value: longAvg },
+          ];
           return (
-            <div className="relative flex h-48 items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
-                <RadialBarChart
-                  cx="50%"
-                  cy="60%"
-                  innerRadius="55%"
-                  outerRadius="80%"
-                  startAngle={210}
-                  endAngle={-30}
-                  data={[{ value: 100, fill: "rgba(148,163,184,0.1)" }, ...gaugeData]}
-                  barSize={14}
-                >
-                  <RadialBar dataKey="value" background={false} cornerRadius={4} />
-                </RadialBarChart>
-              </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold" style={{ color: gaugeColor }}>{pct}%</span>
-                <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: tokens.text.dimmed }}>{t("capacityLabel")}</span>
-              </div>
+            <div className="grid h-48 grid-cols-2 gap-2">
+              {dials.map(({ label, value }) => {
+                if (value === null) {
+                  return (
+                    <div key={label} className="flex flex-col items-center justify-center">
+                      <span className="text-2xl font-bold text-[var(--text-muted)]">—</span>
+                      <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: tokens.text.dimmed }}>{label}</span>
+                    </div>
+                  );
+                }
+                const pct = Math.round(value * 100);
+                const gaugeColor =
+                  value > 0.6
+                    ? CHART_COLORS.success
+                    : value > 0.2
+                      ? CHART_COLORS.warning
+                      : CHART_COLORS.danger;
+                return (
+                  <div key={label} className="relative flex h-full items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 160, height: 192 }}>
+                      <RadialBarChart
+                        cx="50%"
+                        cy="58%"
+                        innerRadius="55%"
+                        outerRadius="82%"
+                        startAngle={210}
+                        endAngle={-30}
+                        data={[{ value: 100, fill: "rgba(148,163,184,0.1)" }, { value: pct, fill: gaugeColor }]}
+                        barSize={12}
+                      >
+                        <RadialBar dataKey="value" background={false} cornerRadius={4} />
+                      </RadialBarChart>
+                    </ResponsiveContainer>
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-2xl font-bold" style={{ color: gaugeColor }}>{pct}%</span>
+                      <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: tokens.text.dimmed }}>{label}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           );
         })()}
@@ -219,12 +246,13 @@ export function QuotaChart({
 
           const barData = chartSummaries.map((summary) => {
             if (summary.monitorMode === "model-first" && summary.modelFirstSummary) {
+              const fraction = summary.modelFirstSummary.avgRemainingFraction ?? summary.modelFirstSummary.minRemainingFraction;
               return {
                 provider: summary.provider,
                 longTerm:
-                  summary.modelFirstSummary.minRemainingFraction === null
+                  fraction === null || fraction === undefined
                     ? null
-                    : Math.round(summary.modelFirstSummary.minRemainingFraction * 100),
+                    : Math.round(fraction * 100),
                 shortTerm: null,
                 healthy: summary.healthyAccounts,
                 total: summary.totalAccounts,
@@ -272,7 +300,7 @@ export function QuotaChart({
                       if (value === null) return ["-", name];
 
                       if (props.payload.monitorMode === "model-first") {
-                        return [`${value}% (${props.payload.healthy}/${props.payload.total} ${t("healthyLabel")})`, t("groupedSnapshotMinLabel")];
+                        return [`${value}% (${props.payload.healthy}/${props.payload.total} ${t("healthyLabel")})`, t("longTermLabel")];
                       }
 
                       const label = name === "longTerm" ? t("longTermLabel") : t("shortTermLabel");

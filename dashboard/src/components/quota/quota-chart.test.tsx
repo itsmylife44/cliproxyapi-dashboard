@@ -52,15 +52,15 @@ describe("getComparableProviderSummaries", () => {
 describe("getProviderCapacityBars", () => {
   const spark = { id: "codex-bengalfox", label: "GPT-5.3-Codex-Spark" };
 
-  it("takes the lowest main window per term and ignores exhausted scoped limits (issue #309)", () => {
+  it("averages main windows per term across accounts and ignores exhausted scoped limits (issue #309)", () => {
     const bars = getProviderCapacityBars([
-      { id: "604800s", label: "168h Window", capacity: 0.634, resetTime: null, isShortTerm: false },
-      { id: "18000s", label: "5h Window", capacity: 0.81, resetTime: null, isShortTerm: true },
-      { id: "codex-bengalfox:604800s", label: "GPT-5.3-Codex-Spark 168h Window", capacity: 0, resetTime: null, isShortTerm: false, scope: spark },
-      { id: "codex-bengalfox:18000s", label: "GPT-5.3-Codex-Spark 5h Window", capacity: 0, resetTime: null, isShortTerm: true, scope: spark },
+      { id: "604800s", label: "168h Window", capacity: 0.634, averageCapacity: 0.5, accountCount: 2, resetTime: null, isShortTerm: false },
+      { id: "18000s", label: "5h Window", capacity: 0.81, averageCapacity: 0.81, accountCount: 1, resetTime: null, isShortTerm: true },
+      { id: "codex-bengalfox:604800s", label: "GPT-5.3-Codex-Spark 168h Window", capacity: 0, averageCapacity: 0, accountCount: 1, resetTime: null, isShortTerm: false, scope: spark },
+      { id: "codex-bengalfox:18000s", label: "GPT-5.3-Codex-Spark 5h Window", capacity: 0, averageCapacity: 0, accountCount: 1, resetTime: null, isShortTerm: true, scope: spark },
     ]);
 
-    expect(bars).toEqual({ longTerm: 63, shortTerm: 81 });
+    expect(bars).toEqual({ longTerm: 50, shortTerm: 81 });
   });
 
   it("uses scoped limits when a provider reports nothing else", () => {

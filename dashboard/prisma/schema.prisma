@@ -269,6 +269,9 @@ model UsageRecord {
   cachedTokens    Int      @default(0)
   totalTokens     Int      @default(0)
   failed          Boolean  @default(false)
+  failureStatus   Int?
+  failureCode     String?
+  failureBody     String?
   collectedAt     DateTime @default(now())
 
   user   User?       @relation(fields: [userId], references: [id], onDelete: SetNull)

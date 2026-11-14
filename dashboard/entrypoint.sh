@@ -383,6 +383,16 @@ async function migrate() {
     DO $$ BEGIN
       ALTER TABLE "usage_records" ADD COLUMN "latencyMs" INTEGER NOT NULL DEFAULT 0;
     EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    -- Add failure detail columns if missing (existing installs)
+    DO $$ BEGIN
+      ALTER TABLE "usage_records" ADD COLUMN "failureStatus" INTEGER;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE "usage_records" ADD COLUMN "failureCode" TEXT;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE "usage_records" ADD COLUMN "failureBody" TEXT;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
     -- Perplexity cookies table (stores session cookies for Perplexity Pro sidecar)
     CREATE TABLE IF NOT EXISTS "perplexity_cookies" (

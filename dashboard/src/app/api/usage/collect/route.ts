@@ -135,6 +135,12 @@ interface TokenDetails {
   total_tokens?: number;
 }
 
+interface UsageFailurePayload {
+  status_code?: number;
+  body?: string;
+  code?: string;
+}
+
 interface UsageQueueEntry {
   timestamp: string;
   latency_ms?: number;
@@ -142,6 +148,7 @@ interface UsageQueueEntry {
   auth_index: string;
   tokens?: TokenDetails;
   failed?: boolean;
+  fail?: UsageFailurePayload;
   provider?: string;
   model: string;
   alias?: string;
@@ -175,6 +182,40 @@ interface UsageRecordCandidate {
   cachedTokens: number;
   totalTokens: number;
   failed: boolean;
+  failureStatus: number | null;
+  failureCode: string | null;
+  failureBody: string | null;
+}
+
+const MAX_FAILURE_CODE_LENGTH = 128;
+const MAX_FAILURE_BODY_LENGTH = 2000;
+
+function sanitizeFailureText(value: unknown, maxLength: number): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, maxLength) : null;
+}
+
+/**
+ * Extracts bounded failure status, code, and body from a failed usage queue entry.
+ */
+function extractFailureDetails(entry: UsageQueueEntry): Pick<
+  UsageRecordCandidate,
+  "failureStatus" | "failureCode" | "failureBody"
+> {
+  if (!entry.failed) {
+    return { failureStatus: null, failureCode: null, failureBody: null };
+  }
+  const statusCode = entry.fail?.status_code;
+  const failureStatus =
+    typeof statusCode === "number" && Number.isFinite(statusCode) && statusCode > 0
+      ? Math.trunc(statusCode)
+      : null;
+  return {
+    failureStatus,
+    failureCode: sanitizeFailureText(entry.fail?.code, MAX_FAILURE_CODE_LENGTH),
+    failureBody: sanitizeFailureText(entry.fail?.body, MAX_FAILURE_BODY_LENGTH),
+  };
 }
 
 function usageDedupKey(candidate: Pick<UsageRecordCandidate, "authIndex" | "model" | "timestamp" | "source" | "totalTokens">): string {
@@ -498,6 +539,7 @@ export async function POST(request: NextRequest) {
         cachedTokens: tokens.cached_tokens || 0,
         totalTokens: tokens.total_tokens || 0,
         failed: entry.failed || false,
+        ...extractFailureDetails(entry),
       });
     }
 

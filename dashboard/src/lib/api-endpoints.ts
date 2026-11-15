@@ -31,6 +31,7 @@ export const API_ENDPOINTS = {
   QUOTA: {
     BASE: "/api/quota",
     CHECK_ALERTS: "/api/quota/check-alerts",
+    HISTORY: "/api/quota/history",
   },
   USAGE: {
     COLLECT: "/api/usage/collect",

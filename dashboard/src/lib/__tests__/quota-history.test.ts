@@ -29,7 +29,11 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/logger", () => ({
-  logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() },
+  logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("@/lib/model-pricing-catalog", () => ({
+  getLiveModelPricing: async () => ({}),
 }));
 
 const TEST_PRICING = {

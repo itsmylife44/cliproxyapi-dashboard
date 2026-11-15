@@ -7,6 +7,7 @@ import {
   resolveModelPrice,
   type ModelPrice,
 } from "@/lib/model-pricing";
+import { getLiveModelPricing } from "@/lib/model-pricing-catalog";
 import { canonicalizeOAuthProvider } from "@/lib/providers/constants";
 import { detectModelProvider } from "@/lib/providers/model-grouping";
 import { slugifyLabel } from "@/lib/quota/labels";
@@ -464,7 +465,8 @@ function computeQuotaHistoryForAccount(
   authIndex: string,
   snapshots: SnapshotRow[],
   usageRecords: UsageRow[],
-  customPricing?: Record<string, ModelPrice>
+  customPricing?: Record<string, ModelPrice>,
+  livePricing?: Record<string, ModelPrice>
 ): AccountQuotaHistoryResponse {
   if (snapshots.length === 0) {
     return { authIndex, models: [], windows: {}, hasAnySnapshots: false };
@@ -495,11 +497,12 @@ function computeQuotaHistoryForAccount(
     }
   }
 
-  let modelPrices = customPricing ? catalogModelPrices.get(customPricing) : undefined;
+  const cacheKeyObj = customPricing ?? livePricing;
+  let modelPrices = cacheKeyObj ? catalogModelPrices.get(cacheKeyObj) : undefined;
   if (!modelPrices) {
     modelPrices = new Map<string, ModelPrice | null>();
-    if (customPricing) {
-      catalogModelPrices.set(customPricing, modelPrices);
+    if (cacheKeyObj && (!customPricing || !livePricing)) {
+      catalogModelPrices.set(cacheKeyObj, modelPrices);
     }
   }
   // Antigravity reports cached tokens inside input even for Claude models.
@@ -508,7 +511,7 @@ function computeQuotaHistoryForAccount(
   const cacheAccounting = provider === "antigravity" ? "included" : undefined;
   const resolveCachedPrice = (model: string): ModelPrice | null => {
     if (!modelPrices.has(model)) {
-      modelPrices.set(model, resolveModelPrice(model, customPricing));
+      modelPrices.set(model, resolveModelPrice(model, customPricing, livePricing));
     }
     const price = modelPrices.get(model) ?? null;
     return price && cacheAccounting && price.cacheAccounting !== cacheAccounting ? { ...price, cacheAccounting } : price;
@@ -677,7 +680,7 @@ export async function getAccountsQuotaHistory(
   }
 
   const since = new Date(Date.now() - CALIBRATION_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
-  const [snapshots, usageRecords] = await Promise.all([
+  const [snapshots, usageRecords, livePricing] = await Promise.all([
     prisma.quotaSnapshot.findMany({
       where: { authIndex: { in: missing }, capturedAt: { gte: since } },
       orderBy: { capturedAt: "asc" },
@@ -712,6 +715,7 @@ export async function getAccountsQuotaHistory(
         timestamp: true,
       },
     }),
+    getLiveModelPricing(),
   ]);
 
   const snapsByAccount = new Map<string, SnapshotRow[]>();
@@ -733,7 +737,8 @@ export async function getAccountsQuotaHistory(
       id,
       snapsByAccount.get(id) ?? [],
       usageByAccount.get(id) ?? [],
-      customPricing
+      customPricing,
+      livePricing
     );
     quotaHistoryCache.set(CACHE_KEYS.quotaHistory(id), computed, CACHE_TTL.QUOTA_HISTORY);
     result[id] = computed;

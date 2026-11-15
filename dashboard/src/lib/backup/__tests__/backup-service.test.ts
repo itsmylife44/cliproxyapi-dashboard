@@ -39,6 +39,7 @@ vi.mock("@/lib/db", () => ({
     usageRecord: { findMany: vi.fn().mockResolvedValue([]) },
     perplexityCookie: { findMany: vi.fn().mockResolvedValue([]) },
     collectorState: { findMany: vi.fn().mockResolvedValue([]) },
+    quotaSnapshot: { findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
 
@@ -102,6 +103,7 @@ describe("backup-service", () => {
           usageRecords: [],
           perplexityCookies: [],
           collectorState: [],
+          quotaSnapshots: [],
         },
         metadata: {
           totalRecords: 0,

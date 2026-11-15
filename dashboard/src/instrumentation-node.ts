@@ -5,8 +5,10 @@
  */
 
 import { runAlertCheck, getCheckIntervalMs } from "@/lib/quota-alerts";
+import { recordQuotaSnapshots, pruneQuotaSnapshotsIfDue } from "@/lib/quota/quota-snapshots";
 import { resyncCustomProviders } from "@/lib/providers/resync";
 import { logger } from "@/lib/logger";
+import type { QuotaResponse } from "@/lib/model-first-monitoring";
 
 // Idempotency guard for HMR in dev — prevents duplicate intervals
 const globalForScheduler = globalThis as typeof globalThis & {
@@ -54,20 +56,31 @@ function startQuotaAlertScheduler() {
       const port = process.env.PORT ?? "3000";
       const baseUrl = process.env.NEXTAUTH_URL ?? process.env.DASHBOARD_URL ?? `http://localhost:${port}`;
 
-      const quotaFetcher = async () => {
-        try {
-          const res = await fetch(`${baseUrl}/api/quota`, {
-            headers: { "X-Internal-Key": managementKey },
-            signal: AbortSignal.timeout(60_000),
-          });
-          if (!res.ok) return null;
-          return res.json();
-        } catch {
-          return null;
+      let quotaData: QuotaResponse | null = null;
+      try {
+        const res = await fetch(`${baseUrl}/api/quota`, {
+          headers: { "X-Internal-Key": managementKey },
+          signal: AbortSignal.timeout(60_000),
+        });
+        if (!res.ok) {
+          logger.warn({ status: res.status }, "Quota scheduler: failed to fetch /api/quota");
+        } else {
+          quotaData = (await res.json()) as QuotaResponse;
         }
-      };
+      } catch (err) {
+        logger.warn({ err }, "Quota scheduler: error fetching /api/quota");
+      }
 
-      const result = await runAlertCheck(quotaFetcher, baseUrl);
+      if (quotaData?.accounts?.length) {
+        try {
+          await recordQuotaSnapshots(quotaData.accounts);
+        } catch (err) {
+          logger.error({ err }, "Quota scheduler: failed to record quota snapshots");
+        }
+        await pruneQuotaSnapshotsIfDue();
+      }
+
+      const result = await runAlertCheck(async () => quotaData, baseUrl);
 
       if (result.alertsSent && result.alertsSent > 0) {
         logger.info(

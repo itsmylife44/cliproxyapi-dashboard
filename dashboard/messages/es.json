@@ -1413,7 +1413,11 @@
     "lockedBySubscription": "Bloqueado por suscripción"
   },
   "quotaAlerts": {
-    "sectionTitle": "Alertas de Telegram",
+    "sectionTitle": "Alertas de cuota",
+    "disabled": "Desactivado",
+    "telegram": "Telegram",
+    "discord": "Discord",
+    "webhookUrl": "URL del webhook",
     "sectionDescription": "Recibe notificaciones cuando la cuota caiga por debajo de un umbral.",
     "enableAlertsLabel": "Activar alertas",
     "botTokenLabel": "Token del Bot",
@@ -1432,6 +1436,7 @@
     "buttonSave": "Guardar",
     "buttonSending": "Enviando...",
     "buttonSendTest": "Enviar Prueba",
+    "unsavedTestHint": "Guarda los cambios antes de enviar una prueba.",
     "buttonChecking": "Comprobando...",
     "buttonCheckNow": "Comprobar Ahora",
     "buttonShow": "Mostrar",

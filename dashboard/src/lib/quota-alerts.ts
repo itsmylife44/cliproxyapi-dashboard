@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 import type { QuotaGroupScope } from "@/lib/model-first-monitoring";
 import { sendTelegramMessage, formatQuotaAlertBatch } from "@/lib/telegram";
 
-const SETTING_KEYS = {
+export const QUOTA_ALERT_SETTING_KEYS = {
   BOT_TOKEN: "telegram_bot_token",
   CHAT_ID: "telegram_chat_id",
   THRESHOLD: "telegram_quota_threshold",
@@ -14,7 +14,117 @@ const SETTING_KEYS = {
   PROVIDERS: "telegram_alert_providers",
   CHECK_INTERVAL: "telegram_check_interval",
   COOLDOWN: "telegram_cooldown",
+  CHANNEL: "quota_alert_channel",
+  WEBHOOK: "discord_quota_webhook",
 } as const;
+const SETTING_KEYS = QUOTA_ALERT_SETTING_KEYS;
+
+const DISCORD_WEBHOOK_HOSTS = new Set([
+  "discord.com",
+  "discordapp.com",
+  "ptb.discord.com",
+  "canary.discord.com",
+]);
+
+const DISCORD_MAX_LENGTH = 2000;
+
+/** Validate that a URL is an HTTPS Discord webhook endpoint without credentials or unexpected query params. */
+export function validDiscordWebhook(value: string): boolean {
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== "https:" ||
+      !DISCORD_WEBHOOK_HOSTS.has(url.hostname) ||
+      url.port ||
+      url.username ||
+      url.password ||
+      url.hash
+    ) {
+      return false;
+    }
+    if (!/^\/api\/(?:v10\/)?webhooks\/\d+\/[\w-]+$/.test(url.pathname)) {
+      return false;
+    }
+    if (url.search) {
+      const keys = Array.from(url.searchParams.keys());
+      if (keys.length !== 1 || keys[0] !== "thread_id") {
+        return false;
+      }
+      const threadId = url.searchParams.get("thread_id") ?? "";
+      if (!/^\d+$/.test(threadId)) {
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+/** Convert Telegram HTML quota alert content into clean Discord plain text within 2000 chars. */
+export function formatDiscordAlertContent(htmlMessage: string): string {
+  const withLinks = htmlMessage.replace(
+    /<a\s+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi,
+    "$2 ($1)"
+  );
+  const plain = decodeHtmlEntities(withLinks.replace(/<[^>]*>/g, ""));
+  const escaped = plain.replace(/[^\s@:/]+@[^\s@:/]+/g, (email) =>
+    email.replace(/([_*])/g, "\\$1")
+  );
+
+  if (escaped.length <= DISCORD_MAX_LENGTH) {
+    return escaped;
+  }
+
+  const lines = escaped.split("\n");
+  for (let keep = lines.length - 1; keep >= 1; keep--) {
+    const omitted = lines.length - keep;
+    const candidate = `${lines.slice(0, keep).join("\n")}\n… ${omitted} more`;
+    if (candidate.length <= DISCORD_MAX_LENGTH) {
+      return candidate;
+    }
+  }
+
+  const suffix = lines.length > 1 ? `\n… ${lines.length - 1} more` : "…";
+  return `${(lines[0] ?? "").slice(0, Math.max(0, DISCORD_MAX_LENGTH - suffix.length))}${suffix}`.slice(
+    0,
+    DISCORD_MAX_LENGTH
+  );
+}
+
+/** Send a plain-text quota alert message to a validated Discord webhook URL. */
+export async function sendDiscordAlert(
+  url: string,
+  content: string
+): Promise<{ ok: boolean; error?: string }> {
+  if (!validDiscordWebhook(url)) {
+    return { ok: false, error: "Invalid Discord webhook" };
+  }
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      redirect: "error",
+      signal: AbortSignal.timeout(10000),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content: content.slice(0, 2000),
+        allowed_mentions: { parse: [] },
+      }),
+    });
+    return response.ok ? { ok: true } : { ok: false, error: `Discord HTTP ${response.status}` };
+  } catch {
+    return { ok: false, error: "Discord request failed" };
+  }
+}
 
 const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
 const DEFAULT_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -124,6 +234,8 @@ export async function runAlertCheck(
           SETTING_KEYS.LAST_ALERT_TIME,
           SETTING_KEYS.PROVIDERS,
           SETTING_KEYS.COOLDOWN,
+          SETTING_KEYS.WEBHOOK,
+          SETTING_KEYS.CHANNEL,
         ],
       },
     },
@@ -133,6 +245,8 @@ export async function runAlertCheck(
   const enabled = settingMap.get(SETTING_KEYS.ENABLED) === "true";
   const botToken = settingMap.get(SETTING_KEYS.BOT_TOKEN) ?? "";
   const chatId = settingMap.get(SETTING_KEYS.CHAT_ID) ?? "";
+  const channel = settingMap.get(SETTING_KEYS.CHANNEL) ?? (enabled ? "telegram" : "disabled");
+  const webhook = settingMap.get(SETTING_KEYS.WEBHOOK) ?? "";
   const thresholdRaw = parseInt(
     settingMap.get(SETTING_KEYS.THRESHOLD) ?? "20",
     10
@@ -148,11 +262,15 @@ export async function runAlertCheck(
   const cooldownMs = !Number.isNaN(cooldownRaw) && cooldownRaw >= 1 ? cooldownRaw * 60 * 1000 : DEFAULT_COOLDOWN_MS;
 
   // 2. Check if alerts are enabled and configured
-  if (!enabled) {
+  if (channel === "disabled") {
     return { skipped: true, reason: "alerts disabled" };
   }
 
-  if (!botToken || !chatId) {
+  if (channel === "discord") {
+    if (!validDiscordWebhook(webhook)) {
+      return { skipped: true, reason: "Discord webhook not configured" };
+    }
+  } else if (!botToken || !chatId) {
     return { skipped: true, reason: "bot token or chat ID not configured" };
   }
 
@@ -211,14 +329,17 @@ export async function runAlertCheck(
     dashboardUrl
   );
 
-  const result = await sendTelegramMessage(botToken, chatId, message, "HTML");
+  const result =
+    channel === "discord"
+      ? await sendDiscordAlert(webhook, formatDiscordAlertContent(message))
+      : await sendTelegramMessage(botToken, chatId, message, "HTML");
   const messageSent = result.ok ? 1 : 0;
   const breachedCount = result.ok ? breached.length : 0;
 
   if (!result.ok) {
     logger.warn(
-      { error: result.error, breachedCount: breached.length },
-      "Failed to send Telegram quota alert batch"
+      { channel, error: result.error, breachedCount: breached.length },
+      "Failed to send quota alert batch"
     );
   }
 

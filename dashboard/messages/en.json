@@ -1413,7 +1413,11 @@
     "lockedBySubscription": "Locked by subscription"
   },
   "quotaAlerts": {
-    "sectionTitle": "Telegram Alerts",
+    "sectionTitle": "Quota alerts",
+    "disabled": "Disabled",
+    "telegram": "Telegram",
+    "discord": "Discord",
+    "webhookUrl": "Webhook URL",
     "sectionDescription": "Get notified when quota drops below a threshold.",
     "enableAlertsLabel": "Enable alerts",
     "botTokenLabel": "Bot Token",
@@ -1432,6 +1436,7 @@
     "buttonSave": "Save",
     "buttonSending": "Sending...",
     "buttonSendTest": "Send Test",
+    "unsavedTestHint": "Save changes before sending a test.",
     "buttonChecking": "Checking...",
     "buttonCheckNow": "Check Now",
     "buttonShow": "Show",

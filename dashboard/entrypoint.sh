@@ -454,6 +454,9 @@ async function migrate() {
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "backup_schedule_pkey" PRIMARY KEY ("id")
     );
+
+    ALTER TABLE "usage_records" ADD COLUMN IF NOT EXISTS "cacheWriteTokens" INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE "usage_records" ADD COLUMN IF NOT EXISTS "cacheWrite1hTokens" INTEGER NOT NULL DEFAULT 0;
     `);
 
     console.log('[dashboard] Tables ready');

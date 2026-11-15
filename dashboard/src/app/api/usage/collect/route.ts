@@ -119,19 +119,16 @@ function markCollectorError(runId: string, errorMessage: string): Promise<void> 
     });
 }
 
-/**
- * Token fields persisted from the CLIProxyAPI usage queue.
- *
- * Known gap: CLIProxyAPI also reports cache *write* tokens
- * (`cache_creation_tokens`, and `cache_read_tokens` alongside
- * `cached_tokens`), but there is no `UsageRecord` column for them, so they are
- * dropped here and cache-write pricing cannot be estimated.
- */
+/** Token fields persisted from the CLIProxyAPI usage queue. */
 interface TokenDetails {
   input_tokens?: number;
   output_tokens?: number;
   reasoning_tokens?: number;
   cached_tokens?: number;
+  cache_read_tokens?: number;
+  cache_read_tokens_present?: boolean;
+  cache_creation_tokens?: number;
+  cache_creation_1h_tokens?: number;
   total_tokens?: number;
 }
 
@@ -173,6 +170,8 @@ interface UsageRecordCandidate {
   outputTokens: number;
   reasoningTokens: number;
   cachedTokens: number;
+  cacheWriteTokens: number;
+  cacheWrite1hTokens: number;
   totalTokens: number;
   failed: boolean;
 }
@@ -495,7 +494,13 @@ export async function POST(request: NextRequest) {
         inputTokens: tokens.input_tokens || 0,
         outputTokens: tokens.output_tokens || 0,
         reasoningTokens: tokens.reasoning_tokens || 0,
-        cachedTokens: tokens.cached_tokens || 0,
+        // Claude usage copies cache writes into cached_tokens when nothing was read.
+        cachedTokens:
+          tokens.cache_read_tokens_present && !tokens.cache_read_tokens && tokens.cached_tokens === tokens.cache_creation_tokens
+            ? 0
+            : tokens.cached_tokens || 0,
+        cacheWriteTokens: tokens.cache_creation_tokens || 0,
+        cacheWrite1hTokens: tokens.cache_creation_1h_tokens || 0,
         totalTokens: tokens.total_tokens || 0,
         failed: entry.failed || false,
       });

@@ -8,6 +8,7 @@ import { logger } from "@/lib/logger";
 import { randomUUID, timingSafeEqual } from "crypto";
 import { Errors } from "@/lib/errors";
 import { mergeConfigYaml } from "@/lib/config-yaml";
+import { extractFailureDetails } from "@/lib/usage-failures";
 
 const CLIPROXYAPI_MANAGEMENT_URL = getManagementUrl();
 const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
@@ -135,6 +136,12 @@ interface TokenDetails {
   total_tokens?: number;
 }
 
+interface UsageFailurePayload {
+  status_code?: number;
+  body?: string;
+  code?: string;
+}
+
 interface UsageQueueEntry {
   timestamp: string;
   latency_ms?: number;
@@ -142,6 +149,7 @@ interface UsageQueueEntry {
   auth_index: string;
   tokens?: TokenDetails;
   failed?: boolean;
+  fail?: UsageFailurePayload;
   provider?: string;
   model: string;
   alias?: string;
@@ -175,6 +183,9 @@ interface UsageRecordCandidate {
   cachedTokens: number;
   totalTokens: number;
   failed: boolean;
+  failureStatus: number | null;
+  failureCode: string | null;
+  failureBody: string | null;
 }
 
 function usageDedupKey(candidate: Pick<UsageRecordCandidate, "authIndex" | "model" | "timestamp" | "source" | "totalTokens">): string {
@@ -498,6 +509,7 @@ export async function POST(request: NextRequest) {
         cachedTokens: tokens.cached_tokens || 0,
         totalTokens: tokens.total_tokens || 0,
         failed: entry.failed || false,
+        ...extractFailureDetails(entry),
       });
     }
 

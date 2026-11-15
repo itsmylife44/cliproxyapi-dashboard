@@ -13,7 +13,7 @@ const CostEstimation = dynamic(
   () => import("@/components/usage/cost-estimation").then(mod => ({ default: mod.CostEstimation })),
   { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> }
 );
-import { UsageRequestEvents } from "@/components/usage/usage-request-events";
+import { UsageRequestEvents, type RequestEvent } from "@/components/usage/usage-request-events";
 import { UsageTable } from "@/components/usage/usage-table";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
@@ -85,17 +85,7 @@ interface UsageData {
     p95Ms: number;
     maxMs: number;
   };
-  requestEvents?: Array<{
-    timestamp: string;
-    keyName: string;
-    username?: string;
-    model: string;
-    latencyMs: number;
-    totalTokens: number;
-    inputTokens: number;
-    outputTokens: number;
-    failed: boolean;
-  }>;
+  requestEvents?: RequestEvent[];
   truncated?: boolean;
 }
 

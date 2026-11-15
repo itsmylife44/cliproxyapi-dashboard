@@ -682,53 +682,178 @@ function isVersionBoundaryMatch(model: string, key: string): boolean {
     return false;
   }
 
+  // A "-free" variant must never inherit a paid sibling's price via prefix matching.
+  if (model.endsWith("-free")) {
+    return false;
+  }
+
   return true;
 }
 
-/**
- * Resolve the price for a given model name.
- *
- * 1. Exact match against user overrides → built-in table
- * 2. Longest-prefix match (e.g. "claude-sonnet-4.5-20260620" → "claude-sonnet-4.5")
- * 3. null if no match found
- */
-export function resolveModelPrice(model: string, customPricing?: Record<string, ModelPrice>): ModelPrice | null {
-  const lowerModel = model.toLowerCase();
-  const normalizedCustom: Record<string, ModelPrice> = {};
-  if (customPricing) {
-    for (const [k, v] of Object.entries(customPricing)) {
-      normalizedCustom[k.toLowerCase()] = v;
+const ROUTING_SUFFIXES = [
+  "-thinking",
+  "-extra-low",
+  "-xhigh",
+  "-high",
+  "-medium",
+  "-low",
+  "-minimal",
+] as const;
+
+function normalizeDottedVersion(candidate: string): string {
+  return candidate.replace(/(\d)-(\d+)(?=$|-\d{8}(?:-|$))/, "$1.$2");
+}
+
+function stripRoutingSuffix(candidate: string): string | null {
+  for (const suffix of ROUTING_SUFFIXES) {
+    if (candidate.endsWith(suffix)) {
+      return candidate.slice(0, -suffix.length);
     }
   }
-  const merged = { ...DEFAULT_MODEL_PRICING, ...normalizedCustom };
+  return null;
+}
 
-  // Exact match
-  if (merged[lowerModel]) return merged[lowerModel];
+interface NormalizedLayer {
+  map: Record<string, ModelPrice>;
+  sortedKeys: string[];
+}
 
-  // Prefix match: try progressively shorter prefixes
-  const keys = Object.keys(merged).sort((a, b) => b.length - a.length);
+function buildNormalizedLayer(pricing: Record<string, ModelPrice>): NormalizedLayer {
+  const map: Record<string, ModelPrice> = {};
+  for (const [key, value] of Object.entries(pricing)) {
+    map[key.toLowerCase()] = value;
+  }
+  const sortedKeys = Object.keys(map).sort((a, b) => b.length - a.length);
+  return { map, sortedKeys };
+}
 
-  const findByPrefix = (candidate: string): ModelPrice | null => {
-    for (const key of keys) {
-      const matchedPrice = merged[key];
-      if (!matchedPrice) continue;
-      // Aliases and dated snapshots are exact IDs, never prefixes.
-      if (matchedPrice.exactMatchOnly) continue;
-      if (candidate.startsWith(key) && isVersionBoundaryMatch(candidate, key)) {
-        return matchedPrice;
+const DEFAULT_PRICING_LAYER = buildNormalizedLayer(DEFAULT_MODEL_PRICING);
+const layerCache = new WeakMap<Record<string, ModelPrice>, NormalizedLayer>();
+
+function getNormalizedLayer(pricing?: Record<string, ModelPrice>): NormalizedLayer | null {
+  if (!pricing) return null;
+  let cached = layerCache.get(pricing);
+  if (!cached) {
+    if (Object.keys(pricing).length === 0) return null;
+    cached = buildNormalizedLayer(pricing);
+    layerCache.set(pricing, cached);
+  }
+  return cached;
+}
+
+function isLayerBoundaryMatch(model: string, key: string, allowArbitraryPrefix: boolean): boolean {
+  if (!isVersionBoundaryMatch(model, key)) return false;
+  if (allowArbitraryPrefix) return true;
+  const remainder = model.slice(key.length);
+  return remainder.length === 0 || /^-\d{8}$/.test(remainder) || /^-\d{4}$/.test(remainder);
+}
+
+function findExactInLayer(candidate: string, layer: NormalizedLayer): ModelPrice | null {
+  const direct = layer.map[candidate];
+  if (direct) return direct;
+
+  const dotted = normalizeDottedVersion(candidate);
+  if (dotted !== candidate && layer.map[dotted]) {
+    return layer.map[dotted];
+  }
+
+  const stripped = stripRoutingSuffix(candidate);
+  if (stripped) {
+    const strippedDirect = layer.map[stripped];
+    if (strippedDirect && !strippedDirect.exactMatchOnly) return strippedDirect;
+
+    const dottedStripped = normalizeDottedVersion(stripped);
+    if (dottedStripped !== stripped) {
+      const dottedStrippedMatch = layer.map[dottedStripped];
+      if (dottedStrippedMatch && !dottedStrippedMatch.exactMatchOnly) {
+        return dottedStrippedMatch;
       }
     }
-    return null;
-  };
+  }
 
-  const prefixMatch = findByPrefix(lowerModel);
-  if (prefixMatch) return prefixMatch;
+  return null;
+}
 
-  // Try matching without provider prefix (e.g. "cliproxyapi/sonar-pro" → "sonar-pro")
+function findByPrefixInLayer(
+  candidate: string,
+  layer: NormalizedLayer,
+  allowArbitraryPrefix: boolean
+): ModelPrice | null {
+  const normalized = /-\d{4}-\d{2}-\d{2}(?:-|$)/.test(candidate)
+    ? candidate
+    : normalizeDottedVersion(candidate);
+
+  for (const key of layer.sortedKeys) {
+    const matchedPrice = layer.map[key];
+    if (!matchedPrice || matchedPrice.exactMatchOnly) continue;
+    if (
+      (candidate.startsWith(key) && isLayerBoundaryMatch(candidate, key, allowArbitraryPrefix)) ||
+      (normalized !== candidate &&
+        normalized.startsWith(key) &&
+        isLayerBoundaryMatch(normalized, key, allowArbitraryPrefix))
+    ) {
+      return matchedPrice;
+    }
+  }
+  return null;
+}
+
+function resolveInLayer(
+  candidates: string[],
+  layer: NormalizedLayer,
+  allowArbitraryPrefix: boolean
+): ModelPrice | null {
+  for (const candidate of candidates) {
+    const match = findExactInLayer(candidate, layer);
+    if (match) return match;
+  }
+
+  for (const candidate of candidates) {
+    const match = findByPrefixInLayer(candidate, layer, allowArbitraryPrefix);
+    if (match) return match;
+
+    const stripped = stripRoutingSuffix(candidate);
+    if (stripped) {
+      const strippedMatch = findByPrefixInLayer(stripped, layer, allowArbitraryPrefix);
+      if (strippedMatch) return strippedMatch;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolve the price for a given model name across 3 strict layers:
+ *   1. `customPricing` (user overrides)
+ *   2. `DEFAULT_MODEL_PRICING` (curated built-in table with long-context / peak tiers)
+ *   3. `livePricing` (fetched upstream catalog)
+ *
+ * Each layer runs its own exact pass then prefix pass, so curated built-in
+ * entries always win over live entries even for dated IDs (e.g.
+ * `claude-haiku-4-5-20251001` or `claude-sonnet-4-20250514`).
+ */
+export function resolveModelPrice(
+  model: string,
+  customPricing?: Record<string, ModelPrice>,
+  livePricing?: Record<string, ModelPrice>
+): ModelPrice | null {
+  const lowerModel = model.toLowerCase();
   const withoutPrefix = lowerModel.includes("/") ? lowerModel.split("/").pop()! : null;
-  if (withoutPrefix) {
-    if (merged[withoutPrefix]) return merged[withoutPrefix];
-    return findByPrefix(withoutPrefix);
+  const candidates = withoutPrefix ? [lowerModel, withoutPrefix] : [lowerModel];
+
+  const customLayer = getNormalizedLayer(customPricing);
+  if (customLayer) {
+    const customMatch = resolveInLayer(candidates, customLayer, true);
+    if (customMatch) return customMatch;
+  }
+
+  const defaultMatch = resolveInLayer(candidates, DEFAULT_PRICING_LAYER, true);
+  if (defaultMatch) return defaultMatch;
+
+  const liveLayer = getNormalizedLayer(livePricing);
+  if (liveLayer) {
+    const liveMatch = resolveInLayer(candidates, liveLayer, false);
+    if (liveMatch) return liveMatch;
   }
 
   return null;

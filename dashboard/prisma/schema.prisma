@@ -314,6 +314,22 @@ model CollectorState {
   @@map("collector_state")
 }
 
+model QuotaSnapshot {
+  id         String    @id @default(cuid())
+  authIndex  String
+  provider   String
+  groupId    String
+  modelId    String    @default("")
+  remaining  Float
+  resetTime  DateTime?
+  capturedAt DateTime  @default(now())
+
+  @@index([capturedAt])
+  @@index([authIndex, capturedAt])
+  @@index([authIndex, groupId, modelId, capturedAt])
+  @@map("quota_snapshots")
+}
+
 // ============================================================================
 // Backup & Restore System
 // ============================================================================

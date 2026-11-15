@@ -10,7 +10,7 @@ import { HelpTooltip } from "@/components/ui/tooltip";
 import { QuotaToolbar } from "@/components/quota/quota-toolbar";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { headlineQuotaWindows } from "@/lib/quota/headline";
-import { calcProviderSummary, type ProviderSummary } from "@/lib/quota/provider-summary";
+import { calcOverallTermCapacities, calcProviderSummary, type ProviderSummary } from "@/lib/quota/provider-summary";
 import {
   enrichModelFirstGroup,
   isModelFirstAccount,
@@ -111,43 +111,13 @@ function calcOverallCapacity(
   noDataLabel: string,
   weightedLabel: string
 ): { value: number; label: string; provider: string } {
-  if (summaries.length === 0) return { value: 0, label: noDataLabel, provider: "" };
-
-  let weightedCapacity = 0;
-  let weightedAccounts = 0;
-
-  for (const summary of summaries) {
-    if (summary.healthyAccounts === 0) continue;
-
-    if (summary.monitorMode === "model-first" && summary.modelFirstSummary) {
-      if (isModelFirstProviderQuotaUnverified(summary.modelFirstSummary)) continue;
-      const providerCapacity =
-        summary.modelFirstSummary.totalAccounts > 0
-          ? summary.modelFirstSummary.readyAccounts / summary.modelFirstSummary.totalAccounts
-          : 0;
-      weightedCapacity += providerCapacity * summary.healthyAccounts;
-      weightedAccounts += summary.healthyAccounts;
-      continue;
-    }
-
-    const headlineWindows = headlineQuotaWindows(summary.windowCapacities);
-    const longTerm = headlineWindows.filter((window) => !window.isShortTerm);
-    const shortTerm = headlineWindows.filter((window) => window.isShortTerm);
-    const relevantWindows = longTerm.length > 0 ? longTerm : shortTerm;
-
-    if (relevantWindows.length === 0) continue;
-
-    const providerCapacity = Math.min(...relevantWindows.map((window) => window.capacity));
-    weightedCapacity += providerCapacity * summary.healthyAccounts;
-    weightedAccounts += summary.healthyAccounts;
-  }
-
-  if (weightedAccounts === 0) {
+  const { overall } = calcOverallTermCapacities(summaries);
+  if (overall === null) {
     return { value: 0, label: noDataLabel, provider: "" };
   }
 
   return {
-    value: weightedCapacity / weightedAccounts,
+    value: overall,
     label: weightedLabel,
     provider: "all",
   };
@@ -249,9 +219,17 @@ export default function QuotaPage() {
 
   const lowCapacityCount = providerSummaries.filter((summary) => {
     if (summary.monitorMode === "model-first") {
-      return (summary.modelFirstSummary?.minRemainingFraction ?? 1) < 0.2 && summary.totalAccounts > 0;
+      const fraction =
+        summary.modelFirstSummary?.avgRemainingFraction ??
+        summary.modelFirstSummary?.minRemainingFraction ??
+        1;
+      return fraction < 0.2 && summary.totalAccounts > 0;
     }
-    return headlineQuotaWindows(summary.windowCapacities).some((window) => window.capacity < 0.2) && summary.totalAccounts > 0;
+    return (
+      headlineQuotaWindows(summary.windowCapacities).some(
+        (window) => (window.averageCapacity ?? window.capacity) < 0.2
+      ) && summary.totalAccounts > 0
+    );
   }).length;
 
   const toggleCard = (accountId: string) => {

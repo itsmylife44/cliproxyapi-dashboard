@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -40,6 +40,7 @@ const QuotaChart = dynamic(
 );
 import { QuotaDetails } from "@/components/quota/quota-details";
 import { QuotaAlerts } from "@/components/quota/quota-alerts";
+import { invalidateClientQuotaHistoryCache, prefetchBatchQuotaHistory } from "@/components/quota/account-quota-history";
 
 export const QUOTA_ACCOUNTS_PAGE_SIZE = 25;
 
@@ -161,6 +162,7 @@ export default function QuotaPage() {
   const [quotaData, setQuotaData] = useState<QuotaResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const lastGeneratedAtRef = useRef<string | undefined>(undefined);
 
   const query = useMemo(() => parseQuotaQueryState(searchParams), [searchParams]);
 
@@ -194,6 +196,19 @@ export default function QuotaPage() {
       clearInterval(interval);
     };
   }, []);
+
+  useEffect(() => {
+    if (!quotaData) return;
+    if (lastGeneratedAtRef.current !== undefined && lastGeneratedAtRef.current !== quotaData.generatedAt) {
+      invalidateClientQuotaHistoryCache();
+    }
+    lastGeneratedAtRef.current = quotaData.generatedAt;
+    void prefetchBatchQuotaHistory(
+      quotaData.accounts
+        .filter((account) => account.supported && !account.error && account.auth_index)
+        .map((account) => account.auth_index)
+    );
+  }, [quotaData]);
 
   const allAccounts = useMemo(() => quotaData?.accounts ?? [], [quotaData]);
   const filteredAccounts = useMemo(() => filterQuotaAccounts(allAccounts, query), [allAccounts, query]);
@@ -390,6 +405,7 @@ export default function QuotaPage() {
             onToggleCard={toggleCard}
             loading={loading}
             modelFirstOnlyView={isModelFirstOnlyView}
+            refreshKey={quotaData?.generatedAt}
           />
         </>
       )}

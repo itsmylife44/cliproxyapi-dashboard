@@ -45,30 +45,21 @@ export async function recordQuotaSnapshots(
 
     for (const group of account.groups) {
       if (group.id === "extra-usage") continue;
+      const entries =
+        group.models.length > 0
+          ? group.models
+          : [{ id: "", remainingFraction: group.remainingFraction, resetTime: group.resetTime }];
 
-      if (group.models.length > 0) {
-        for (const model of group.models) {
-          const remaining = normalizeFraction(model.remainingFraction);
-          if (remaining === null) continue;
-          candidates.push({
-            authIndex: account.auth_index,
-            provider: account.provider,
-            groupId: group.id,
-            modelId: model.id,
-            remaining,
-            resetTime: parseResetDate(model.resetTime),
-          });
-        }
-      } else {
-        const remaining = normalizeFraction(group.remainingFraction);
+      for (const entry of entries) {
+        const remaining = normalizeFraction(entry.remainingFraction);
         if (remaining === null) continue;
         candidates.push({
           authIndex: account.auth_index,
           provider: account.provider,
           groupId: group.id,
-          modelId: "",
+          modelId: entry.id,
           remaining,
-          resetTime: parseResetDate(group.resetTime),
+          resetTime: parseResetDate(entry.resetTime),
         });
       }
     }

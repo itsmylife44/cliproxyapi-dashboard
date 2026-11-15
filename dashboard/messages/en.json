@@ -861,7 +861,14 @@
     "resettingStatus": "Resetting...",
     "relativeTimeDaysHours": "{days}d {hours}h",
     "relativeTimeHoursMinutes": "{hours}h {minutes}m",
-    "relativeTimeMinutes": "{minutes}m"
+    "relativeTimeMinutes": "{minutes}m",
+    "loadingHistory": "Loading quota history...",
+    "noHistoryYet": "No quota history recorded yet.",
+    "quotaHistoryTitle": "Quota History",
+    "estFullWindowLabel": "Est. Full Window",
+    "quotaEstimateNote": "Estimate assumes quota use is proportional to API cost across models; at least 2% observed depletion and priced usage are required.",
+    "estRemainingLabel": "Est. Remaining",
+    "modelColumnLabel": "Model"
   },
   "usage": {
     "pageTitle": "Usage",

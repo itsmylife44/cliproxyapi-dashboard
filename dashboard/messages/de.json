@@ -861,7 +861,14 @@
     "resettingStatus": "Wird zurückgesetzt...",
     "relativeTimeDaysHours": "{days}T {hours}Std",
     "relativeTimeHoursMinutes": "{hours}Std {minutes}Min",
-    "relativeTimeMinutes": "{minutes}Min"
+    "relativeTimeMinutes": "{minutes}Min",
+    "loadingHistory": "Kontingentverlauf wird geladen...",
+    "noHistoryYet": "Noch kein Kontingentverlauf erfasst.",
+    "quotaHistoryTitle": "Kontingentverlauf",
+    "estFullWindowLabel": "Gesch. Gesamt",
+    "quotaEstimateNote": "Schätzung unter der Annahme, dass der Verbrauch proportional zu den API-Kosten ist; mindestens 2 % beobachteter Verbrauch und bepreiste Nutzung erforderlich.",
+    "estRemainingLabel": "Gesch. Verbleibend",
+    "modelColumnLabel": "Modell"
   },
   "usage": {
     "pageTitle": "Nutzung",

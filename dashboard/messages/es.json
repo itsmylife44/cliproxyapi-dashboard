@@ -861,7 +861,14 @@
     "resettingStatus": "Reiniciando...",
     "relativeTimeDaysHours": "{days}d {hours}h",
     "relativeTimeHoursMinutes": "{hours}h {minutes}m",
-    "relativeTimeMinutes": "{minutes}m"
+    "relativeTimeMinutes": "{minutes}m",
+    "loadingHistory": "Cargando historial de cuota...",
+    "noHistoryYet": "Aún no hay historial de cuota registrado.",
+    "quotaHistoryTitle": "Historial de Cuota",
+    "estFullWindowLabel": "Ventana Completa Est.",
+    "quotaEstimateNote": "Estimación suponiendo consumo proporcional al coste de API; requiere al menos un 2 % de consumo observado y uso con precio.",
+    "estRemainingLabel": "Restante Est.",
+    "modelColumnLabel": "Modelo"
   },
   "usage": {
     "pageTitle": "Uso",

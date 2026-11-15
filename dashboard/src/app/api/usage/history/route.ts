@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { usageCache } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
 import { isLongContextPrompt, isPeakRequest, resolveModelPrice } from "@/lib/model-pricing";
+import { isCancelledFailure } from "@/lib/usage-failures";
 
 // Cache for 5 seconds to allow frequent polling without overwhelming the database
 // The frontend polls every 60 seconds, so 5s cache won't cause missed updates
@@ -51,6 +52,7 @@ interface KeyUsage {
 }
 
 interface RequestEvent {
+  id?: string;
   timestamp: string;
   keyName: string;
   username?: string;
@@ -60,6 +62,10 @@ interface RequestEvent {
   inputTokens: number;
   outputTokens: number;
   failed: boolean;
+  failureStatus: number | null;
+  failureCode: string | null;
+  failureBody: string | null;
+  cancelled: boolean;
 }
 
 interface LatencyPoint {
@@ -187,6 +193,7 @@ export async function GET(request: NextRequest) {
     const usageRecords = await prisma.usageRecord.findMany({
       where: whereClause,
       select: {
+        id: true,
         apiKeyId: true,
         userId: true,
         authIndex: true,
@@ -198,6 +205,8 @@ export async function GET(request: NextRequest) {
         reasoningTokens: true,
         cachedTokens: true,
         failed: true,
+        failureStatus: true,
+        failureCode: true,
         timestamp: true,
         user: {
           select: {
@@ -229,6 +238,7 @@ export async function GET(request: NextRequest) {
     const dailyMap: Record<string, { requests: number; tokens: number; inputTokens: number; outputTokens: number; success: number; failure: number }> = {};
     const modelTotalsMap: Record<string, { requests: number; tokens: number }> = {};
     const requestEvents: RequestEvent[] = [];
+    const requestEventRecords: Array<{ id?: string; userId: string | null }> = [];
     const latencySeriesSeed: LatencyPoint[] = [];
     const latencyValues: number[] = [];
     let totalRequests = 0;
@@ -349,7 +359,11 @@ export async function GET(request: NextRequest) {
       modelTotalsMap[modelName].requests += 1;
       modelTotalsMap[modelName].tokens += record.totalTokens;
 
+      const failureStatus = record.failureStatus ?? null;
+      const failureCode = record.failureCode ?? null;
+
       const event: RequestEvent = {
+        ...(record.id ? { id: record.id } : {}),
         timestamp: record.timestamp.toISOString(),
         keyName: keyUsage.keyName,
         ...(isAdmin && username ? { username } : {}),
@@ -359,9 +373,14 @@ export async function GET(request: NextRequest) {
         inputTokens: record.inputTokens,
         outputTokens: record.outputTokens,
         failed: record.failed,
+        failureStatus,
+        failureCode,
+        failureBody: null,
+        cancelled: isCancelledFailure(record.failed, failureStatus, failureCode, null),
       };
       if (requestEvents.length < REQUEST_EVENT_LIMIT) {
         requestEvents.push(event);
+        requestEventRecords.push({ id: record.id, userId: record.userId });
       }
       if (event.latencyMs > 0) {
         latencyValues.push(event.latencyMs);
@@ -385,6 +404,26 @@ export async function GET(request: NextRequest) {
         totalFailureCount += 1;
       } else {
         totalSuccessCount += 1;
+      }
+    }
+
+    const failedEventIds = requestEventRecords
+      .filter((meta, index) => Boolean(requestEvents[index]?.failed && meta.id))
+      .map((meta) => meta.id as string);
+
+    if (failedEventIds.length > 0) {
+      const failureBodies = await prisma.usageRecord.findMany({
+        where: { id: { in: failedEventIds } },
+        select: { id: true, failureBody: true },
+      });
+      const failureBodyById = new Map(failureBodies.map((row) => [row.id, row.failureBody ?? null]));
+      for (let i = 0; i < requestEvents.length; i++) {
+        const event = requestEvents[i];
+        const meta = requestEventRecords[i];
+        if (!event || !event.failed || !meta?.id) continue;
+        const body = failureBodyById.get(meta.id) ?? null;
+        event.cancelled = isCancelledFailure(event.failed, event.failureStatus, event.failureCode, body);
+        event.failureBody = isAdmin || meta.userId === session.userId ? body : null;
       }
     }
 

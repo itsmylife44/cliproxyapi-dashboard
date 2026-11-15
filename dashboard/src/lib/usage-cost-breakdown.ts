@@ -78,7 +78,11 @@ function emptyAgg(): ModelAgg {
   };
 }
 
-export function buildCostBreakdown(keys: Record<string, UsageKey>, customPricing: Record<string, ModelPrice>): ModelCostEntry[] {
+export function buildCostBreakdown(
+  keys: Record<string, UsageKey>,
+  customPricing: Record<string, ModelPrice>,
+  livePricing?: Record<string, ModelPrice>
+): ModelCostEntry[] {
   // Aggregate all models across all keys
   const modelAgg: Record<string, ModelAgg> = {};
 
@@ -101,7 +105,7 @@ export function buildCostBreakdown(keys: Record<string, UsageKey>, customPricing
 
   return Object.entries(modelAgg)
     .map(([model, data]): ModelCostEntry => {
-      const price = resolveModelPrice(model, customPricing);
+      const price = resolveModelPrice(model, customPricing, livePricing);
       // The long-context and peak subsets were bucketed per request
       // server-side (disjoint); the remainder is the standard tier.
       const estimatedCost = price

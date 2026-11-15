@@ -16,6 +16,7 @@ const CostEstimation = dynamic(
 import { UsageRequestEvents } from "@/components/usage/usage-request-events";
 import { UsageTable } from "@/components/usage/usage-table";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import type { ModelPrice } from "@/lib/model-pricing";
 
 import { useTranslations } from "next-intl";
 interface KeyUsage {
@@ -164,6 +165,20 @@ export default function UsagePage() {
   const { showToast } = useToast();
   const isFirstLoadRef = useRef(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [livePricing, setLivePricing] = useState<Record<string, ModelPrice>>({});
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(API_ENDPOINTS.USAGE.PRICING, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((result: { pricing?: Record<string, ModelPrice> } | null) => {
+        if (result?.pricing && !controller.signal.aborted) {
+          setLivePricing(result.pricing);
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -449,6 +464,7 @@ export default function UsagePage() {
 
           <CostEstimation
             keys={usageData.keys}
+            livePricing={livePricing}
           />
 
           <UsageCharts

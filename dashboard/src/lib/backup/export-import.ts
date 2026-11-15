@@ -23,6 +23,7 @@ import type {
   BackupUsageRecord,
   BackupPerplexityCookie,
   BackupCollectorState,
+  BackupQuotaSnapshot,
   RestorePreview,
 } from "./types";
 import { BACKUP_VERSION, BACKUP_DIR } from "./types";
@@ -316,6 +317,38 @@ export async function exportDatabase(exportedBy: string): Promise<BackupData> {
   }));
   modelCounts.collectorState = backupCollectorStates.length;
 
+  // Export quota snapshots (chunked with cursor)
+  const backupQuotaSnapshots: BackupQuotaSnapshot[] = [];
+  let quotaSnapshotCursor: string | undefined;
+
+  while (true) {
+    const chunk = await prisma.quotaSnapshot.findMany({
+      take: EXPORT_CHUNK_SIZE,
+      skip: quotaSnapshotCursor ? 1 : 0,
+      cursor: quotaSnapshotCursor ? { id: quotaSnapshotCursor } : undefined,
+      orderBy: { id: "asc" },
+    });
+
+    if (chunk.length === 0) break;
+
+    for (const qs of chunk) {
+      backupQuotaSnapshots.push({
+        id: qs.id,
+        authIndex: qs.authIndex,
+        provider: qs.provider,
+        groupId: qs.groupId,
+        modelId: qs.modelId,
+        remaining: qs.remaining,
+        resetTime: qs.resetTime?.toISOString() ?? null,
+        capturedAt: qs.capturedAt.toISOString(),
+      });
+    }
+
+    if (chunk.length < EXPORT_CHUNK_SIZE) break;
+    quotaSnapshotCursor = chunk[chunk.length - 1]?.id;
+  }
+  modelCounts.quotaSnapshots = backupQuotaSnapshots.length;
+
   const totalRecords = Object.values(modelCounts).reduce((a, b) => a + b, 0);
 
   const metadata: BackupMetadata = {
@@ -350,6 +383,7 @@ export async function exportDatabase(exportedBy: string): Promise<BackupData> {
       usageRecords: backupUsageRecords,
       perplexityCookies: backupPerplexityCookies,
       collectorState: backupCollectorStates,
+      quotaSnapshots: backupQuotaSnapshots,
     },
     metadata,
   };
@@ -391,6 +425,7 @@ export function parseBackupData(jsonString: string): BackupData {
     "usageRecords",
     "perplexityCookies",
     "collectorState",
+    "quotaSnapshots",
   ];
 
   for (const field of requiredDataFields) {
@@ -443,6 +478,7 @@ export async function importDatabase(backup: BackupData): Promise<void> {
   // Use a transaction to ensure atomicity
   await prisma.$transaction(async (tx) => {
     // Delete all existing data in reverse dependency order
+    await tx.quotaSnapshot.deleteMany();
     await tx.usageRecord.deleteMany();
     await tx.auditLog.deleteMany();
     await tx.customProviderExcludedModel.deleteMany();
@@ -735,6 +771,23 @@ export async function importDatabase(backup: BackupData): Promise<void> {
           totalTokens: ur.totalTokens,
           failed: ur.failed,
           collectedAt: new Date(ur.collectedAt),
+        })),
+      });
+    }
+
+    // 19. Quota snapshots (potentially large, batch in chunks)
+    const snapshotChunks = chunkArray(backup.data.quotaSnapshots, EXPORT_CHUNK_SIZE);
+    for (const chunk of snapshotChunks) {
+      await tx.quotaSnapshot.createMany({
+        data: chunk.map((qs) => ({
+          id: qs.id,
+          authIndex: qs.authIndex,
+          provider: qs.provider,
+          groupId: qs.groupId,
+          modelId: qs.modelId,
+          remaining: qs.remaining,
+          resetTime: qs.resetTime ? new Date(qs.resetTime) : null,
+          capturedAt: new Date(qs.capturedAt),
         })),
       });
     }

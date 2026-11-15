@@ -50,6 +50,7 @@ export interface BackupData {
     usageRecords: BackupUsageRecord[];
     perplexityCookies: BackupPerplexityCookie[];
     collectorState: BackupCollectorState[];
+    quotaSnapshots: BackupQuotaSnapshot[];
   };
   metadata: BackupMetadata;
 }
@@ -243,6 +244,17 @@ export interface BackupCollectorState {
   recordsStored: number;
   errorMessage: string | null;
   updatedAt: string;
+}
+
+export interface BackupQuotaSnapshot {
+  id: string;
+  authIndex: string;
+  provider: string;
+  groupId: string;
+  modelId: string;
+  remaining: number;
+  resetTime: string | null;
+  capturedAt: string;
 }
 
 /**

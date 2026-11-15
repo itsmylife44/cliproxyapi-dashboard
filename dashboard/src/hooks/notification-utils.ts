@@ -17,13 +17,13 @@ export interface Notification {
 export interface QuotaAccount {
   auth_index: string;
   provider: string;
-  email: string;
+  email?: string | null;
   supported: boolean;
   error?: string;
   groups?: Array<{
     id: string;
     label: string;
-    remainingFraction: number;
+    remainingFraction?: number | null;
   }>;
 }
 
@@ -81,8 +81,9 @@ export function buildNotifications(
   for (const account of accounts) {
     if (!account.supported || !account.groups) continue;
     for (const group of account.groups) {
+      if (group.remainingFraction == null) continue;
       const percent = Math.round(group.remainingFraction * 100);
-      const message = t("quotaMessage", { email: account.email, label: group.label, percent });
+      const message = t("quotaMessage", { email: account.email ?? account.auth_index, label: group.label, percent });
       if (group.remainingFraction <= QUOTA_CRITICAL_THRESHOLD) {
         items.push({
           id: `quota-critical-${account.provider}-${account.auth_index}-${group.id}`,

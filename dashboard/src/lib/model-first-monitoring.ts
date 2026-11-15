@@ -95,6 +95,7 @@ export interface ModelFirstGroupSummary {
   staleAccounts: number;
   minRemainingFraction: number | null;
   p50RemainingFraction: number | null;
+  avgRemainingFraction?: number | null;
   nextWindowResetAt: string | null;
   fullWindowResetAt: string | null;
   nextRecoveryAt: string | null;
@@ -108,6 +109,7 @@ export interface ModelFirstAccountSummary {
   staleSnapshot: boolean;
   minRemainingFraction: number | null;
   p50RemainingFraction: number | null;
+  avgRemainingFraction?: number | null;
   nextWindowResetAt: string | null;
   fullWindowResetAt: string | null;
   nextRecoveryAt: string | null;
@@ -119,6 +121,7 @@ export interface ModelFirstProviderSummary {
   staleAccounts: number;
   minRemainingFraction: number | null;
   p50RemainingFraction: number | null;
+  avgRemainingFraction?: number | null;
   nextWindowResetAt: string | null;
   fullWindowResetAt: string | null;
   nextRecoveryAt: string | null;
@@ -260,6 +263,9 @@ export function summarizeModelFirstAccount(account: QuotaAccount): ModelFirstAcc
   const p50Fractions = groups
     .map((group) => normalizeFraction(group.p50RemainingFraction ?? group.remainingFraction))
     .filter((value): value is number => value !== null);
+  const avgFractions = groups
+    .map((group) => normalizeFraction(group.minRemainingFraction ?? group.remainingFraction))
+    .filter((value): value is number => value !== null);
   const nextWindowResetTimes = groups
     .map((group) => parseReset(group.nextWindowResetAt ?? group.resetTime))
     .filter((value): value is number => value !== null);
@@ -276,6 +282,7 @@ export function summarizeModelFirstAccount(account: QuotaAccount): ModelFirstAcc
     staleSnapshot: isStaleSnapshot(account.snapshotFetchedAt, Date.now()),
     minRemainingFraction: minFractions.length > 0 ? Math.min(...minFractions) : null,
     p50RemainingFraction: median(p50Fractions),
+    avgRemainingFraction: avgFractions.length > 0 ? avgFractions.reduce((sum, v) => sum + v, 0) / avgFractions.length : null,
     nextWindowResetAt: pickIso(nextWindowResetTimes, "min"),
     fullWindowResetAt: pickIso(fullWindowResetTimes, "max"),
     nextRecoveryAt: pickIso(nextRecoveryTimes, "min"),
@@ -336,6 +343,7 @@ export function summarizeModelFirstProvider(accounts: QuotaAccount[]): ModelFirs
       staleAccounts: entries.filter(({ account }) => isStaleSnapshot(account.snapshotFetchedAt, Date.now())).length,
       minRemainingFraction: fractions.length > 0 ? Math.min(...fractions) : null,
       p50RemainingFraction: median(fractions),
+      avgRemainingFraction: fractions.length > 0 ? fractions.reduce((sum, v) => sum + v, 0) / fractions.length : null,
       nextWindowResetAt: pickIso(resets, "min"),
       fullWindowResetAt: pickIso(resets, "max"),
       nextRecoveryAt: pickIso(depletedResets, "min"),
@@ -359,6 +367,9 @@ export function summarizeModelFirstProvider(accounts: QuotaAccount[]): ModelFirs
   const minFractions = groupSummaries
     .map((summary) => summary.minRemainingFraction)
     .filter((value): value is number => value !== null);
+  const avgFractions = accountSummaries
+    .map((summary) => summary.avgRemainingFraction)
+    .filter((value): value is number => value !== null && value !== undefined);
 
   return {
     totalAccounts: modelFirstAccounts.length,
@@ -370,6 +381,7 @@ export function summarizeModelFirstProvider(accounts: QuotaAccount[]): ModelFirs
         .map((summary) => summary.p50RemainingFraction)
         .filter((value): value is number => value !== null)
     ),
+    avgRemainingFraction: avgFractions.length > 0 ? avgFractions.reduce((sum, v) => sum + v, 0) / avgFractions.length : null,
     nextWindowResetAt: pickIso(nextWindowResetTimes, "min"),
     fullWindowResetAt: pickIso(fullWindowResetTimes, "max"),
     nextRecoveryAt: pickIso(nextRecoveryTimes, "min"),

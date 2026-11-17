@@ -10,6 +10,7 @@ import {
   isPeakRequest,
   loadCustomPricing,
   resolveModelPrice,
+  splitCachedInput,
   type ModelPrice,
 } from "@/lib/model-pricing";
 
@@ -24,6 +25,8 @@ export interface RequestEvent {
   inputTokens: number;
   outputTokens: number;
   cachedTokens?: number;
+  cacheWriteTokens?: number;
+  cacheWrite1hTokens?: number;
   failed: boolean;
   failureStatus?: number | null;
   failureCode?: string | null;
@@ -35,6 +38,7 @@ interface UsageRequestEventsProps {
   events?: RequestEvent[];
   isAdmin: boolean;
   truncated?: boolean;
+  livePricing?: Record<string, ModelPrice>;
 }
 
 const EVENTS_PER_PAGE = 25;
@@ -88,14 +92,15 @@ function getRowClasses(isCancelled: boolean, failed: boolean): string {
 
 function estimateEventCost(
   event: RequestEvent,
-  customPricing: Record<string, ModelPrice>,
+  price: ModelPrice | null,
 ): number | null {
-  const price = resolveModelPrice(event.model, customPricing);
   if (!price) return null;
   const bucket = {
     inputTokens: event.inputTokens,
     outputTokens: event.outputTokens,
     cachedTokens: event.cachedTokens ?? 0,
+    cacheWriteTokens: event.cacheWriteTokens ?? 0,
+    cacheWrite1hTokens: event.cacheWrite1hTokens ?? 0,
   };
   const empty = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
   if (isLongContextPrompt(event.inputTokens, price)) {
@@ -107,7 +112,7 @@ function estimateEventCost(
   return calculateTieredCost(bucket, empty, price);
 }
 
-export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestEventsProps) {
+export function UsageRequestEvents({ events, isAdmin, truncated, livePricing }: UsageRequestEventsProps) {
   const t = useTranslations("usage");
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -123,7 +128,8 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
   }, [activePage, safeEvents]);
 
   const hasMissingLatency = safeEvents.some((event) => event.latencyMs <= 0);
-  const colCount = isAdmin ? 10 : 9;
+  const hasCacheWrites = safeEvents.some((event) => (event.cacheWriteTokens ?? 0) > 0);
+  const colCount = (isAdmin ? 10 : 9) + (hasCacheWrites ? 1 : 0);
 
   const toggleRow = (rowKey: string) => {
     setExpandedRows((prev) => {
@@ -172,6 +178,9 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
               <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("latency")}</th>
               <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("input")}</th>
               <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("cached")}</th>
+              {hasCacheWrites ? (
+                <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("cacheWrite")}</th>
+              ) : null}
               <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("output")}</th>
               <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("estCostHeader")}</th>
             </tr>
@@ -189,7 +198,11 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
                   ? `${t("failed")}${statusSuffix}`
                   : t("success");
               const hasDetails = Boolean(event.failureStatus || event.failureCode || event.failureBody);
-              const estCost = estimateEventCost(event, customPricing);
+              const price = resolveModelPrice(event.model, customPricing, livePricing);
+              const shown = price
+                ? splitCachedInput(event.inputTokens, event.cachedTokens ?? 0, price)
+                : { uncachedInput: event.inputTokens, cached: event.cachedTokens ?? 0 };
+              const estCost = estimateEventCost(event, price);
 
               return (
                 <Fragment key={rowKey}>
@@ -231,8 +244,11 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
                         {formatLatency(event.latencyMs)}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{event.inputTokens.toLocaleString()}</td>
-                    <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{(event.cachedTokens ?? 0).toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{shown.uncachedInput.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{shown.cached.toLocaleString()}</td>
+                    {hasCacheWrites ? (
+                      <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{(event.cacheWriteTokens ?? 0).toLocaleString()}</td>
+                    ) : null}
                     <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{event.outputTokens.toLocaleString()}</td>
                     <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-secondary)]">
                       {estCost !== null ? formatUSD(estCost) : "\u2014"}

@@ -4,7 +4,9 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { usageCache } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
-import { isLongContextPrompt, isPeakRequest, resolveModelPrice, splitCachedInput } from "@/lib/model-pricing";
+import { isLongContextPrompt, isPeakRequest, resolveModelPrice, splitCachedInput, type ModelPrice } from "@/lib/model-pricing";
+import { getLiveModelPricing } from "@/lib/model-pricing-catalog";
+import { isCancelledFailure } from "@/lib/usage-failures";
 
 // Cache for 5 seconds to allow frequent polling without overwhelming the database
 // The frontend polls every 60 seconds, so 5s cache won't cause missed updates
@@ -67,6 +69,8 @@ interface RequestEvent {
   inputTokens: number;
   outputTokens: number;
   cachedTokens: number;
+  cacheWriteTokens: number;
+  cacheWrite1hTokens: number;
   failed: boolean;
   failureStatus: number | null;
   failureCode: string | null;
@@ -426,6 +430,8 @@ export async function GET(request: NextRequest) {
         inputTokens: record.inputTokens,
         outputTokens: record.outputTokens,
         cachedTokens: record.cachedTokens,
+        cacheWriteTokens,
+        cacheWrite1hTokens,
         failed: record.failed,
         failureStatus,
         failureCode,

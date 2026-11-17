@@ -3,7 +3,7 @@
 import { useId, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { SERIES_PALETTE, formatCompact } from "@/components/ui/chart-theme";
-import { loadCustomPricing, formatUSD } from "@/lib/model-pricing";
+import { loadCustomPricing, formatUSD, type ModelPrice } from "@/lib/model-pricing";
 import {
   buildCostBreakdown,
   aggregateByProvider,
@@ -22,7 +22,7 @@ type BreakdownTab = "models" | "providers";
 
 /* ── Component ────────────────────────────────────────────── */
 
-export function CostEstimation({ keys }: CostEstimationProps) {
+export function CostEstimation({ keys, livePricing }: CostEstimationProps) {
   const t = useTranslations("usage");
   const panelId = useId();
   const [expanded, setExpanded] = useState(false);
@@ -31,8 +31,8 @@ export function CostEstimation({ keys }: CostEstimationProps) {
 
   const customPricing = useMemo(() => loadCustomPricing(), []);
   const costBreakdown = useMemo(
-    () => buildCostBreakdown(keys, customPricing),
-    [keys, customPricing]
+    () => buildCostBreakdown(keys, customPricing, livePricing),
+    [keys, customPricing, livePricing]
   );
   const providerBreakdown = useMemo(() => aggregateByProvider(costBreakdown), [costBreakdown]);
   const totalEstimatedCost = useMemo(

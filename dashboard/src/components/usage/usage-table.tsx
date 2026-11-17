@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { loadCustomPricing, resolveModelPrice, splitCachedInput } from "@/lib/model-pricing";
+import { loadCustomPricing, resolveModelPrice, splitCachedInput, type ModelPrice } from "@/lib/model-pricing";
 
 interface KeyUsage {
   keyName: string;
@@ -29,9 +29,10 @@ interface KeyUsage {
 interface UsageTableProps {
   keys: Record<string, KeyUsage>;
   isAdmin: boolean;
+  livePricing?: Record<string, ModelPrice>;
 }
 
-export function UsageTable({ keys, isAdmin }: UsageTableProps) {
+export function UsageTable({ keys, isAdmin, livePricing }: UsageTableProps) {
   const t = useTranslations("usage");
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const customPricing = useMemo(() => loadCustomPricing(), []);
@@ -137,7 +138,7 @@ export function UsageTable({ keys, isAdmin }: UsageTableProps) {
                             </thead>
                             <tbody>
                               {Object.entries(keyUsage.models).map(([modelName, modelData]) => {
-                                const price = resolveModelPrice(modelName, customPricing);
+                                const price = resolveModelPrice(modelName, customPricing, livePricing);
                                 const shown = price
                                   ? splitCachedInput(modelData.inputTokens, modelData.cachedTokens ?? 0, price)
                                   : { uncachedInput: modelData.inputTokens, cached: modelData.cachedTokens ?? 0 };

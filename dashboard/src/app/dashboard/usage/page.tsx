@@ -11,7 +11,7 @@ const UsageCharts = dynamic(
   () => import("@/components/usage/usage-charts").then(mod => ({ default: mod.UsageCharts })),
   { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> }
 );
-import { UsageRequestEvents } from "@/components/usage/usage-request-events";
+import { UsageRequestEvents, type RequestEvent } from "@/components/usage/usage-request-events";
 import { UsageTable } from "@/components/usage/usage-table";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import type { ModelPrice } from "@/lib/model-pricing";
@@ -525,8 +525,8 @@ export default function UsagePage() {
             totals={usageData.totals}
           />
 
-          <UsageTable keys={usageData.keys} isAdmin={isAdmin} />
-          <UsageRequestEvents events={usageData.requestEvents} isAdmin={isAdmin} truncated={usageData.truncated} />
+          <UsageTable keys={usageData.keys} isAdmin={isAdmin} livePricing={livePricing} />
+          <UsageRequestEvents events={usageData.requestEvents} isAdmin={isAdmin} truncated={usageData.truncated} livePricing={livePricing} />
         </>
       )}
     </div>

@@ -81,16 +81,17 @@ function estimateUsageRecordUsd(
     inputTokens: record.inputTokens,
     outputTokens: record.outputTokens + separateReasoning,
     cachedTokens: record.cachedTokens,
+    cacheWriteTokens: record.cacheWriteTokens,
+    cacheWrite1hTokens: record.cacheWrite1hTokens,
   };
   const empty = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
-  const baseCost = isLongContextPrompt(record.inputTokens, price)
-    ? calculateTieredCost(empty, bucket, price)
-    : isPeakRequest(record.timestamp, price)
-      ? calculateTieredCost(empty, empty, price, bucket)
-      : calculateTieredCost(bucket, empty, price);
-  // Anthropic bills 5-minute cache writes at 1.25x input and 1-hour writes at 2x.
-  const cacheWrite5m = Math.max(0, record.cacheWriteTokens - record.cacheWrite1hTokens);
-  return baseCost + ((cacheWrite5m * 1.25 + record.cacheWrite1hTokens * 2) * price.inputPer1M) / 1_000_000;
+  if (isLongContextPrompt(record.inputTokens, price)) {
+    return calculateTieredCost(empty, bucket, price);
+  }
+  if (isPeakRequest(record.timestamp, price)) {
+    return calculateTieredCost(empty, empty, price, bucket);
+  }
+  return calculateTieredCost(bucket, empty, price);
 }
 
 type SnapshotRow = {

@@ -3,17 +3,15 @@
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+import { CHART_COLORS, formatCompact } from "@/components/ui/chart-theme";
 import { useToast } from "@/components/ui/toast";
 import { TimeFilter } from "@/components/usage/time-filter";
+import { CostEstimation } from "@/components/usage/cost-estimation";
 const UsageCharts = dynamic(
   () => import("@/components/usage/usage-charts").then(mod => ({ default: mod.UsageCharts })),
   { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> }
 );
-const CostEstimation = dynamic(
-  () => import("@/components/usage/cost-estimation").then(mod => ({ default: mod.CostEstimation })),
-  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> }
-);
-import { UsageRequestEvents, type RequestEvent } from "@/components/usage/usage-request-events";
+import { UsageRequestEvents } from "@/components/usage/usage-request-events";
 import { UsageTable } from "@/components/usage/usage-table";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import type { ModelPrice } from "@/lib/model-pricing";
@@ -37,12 +35,18 @@ interface KeyUsage {
     inputTokens: number;
     outputTokens: number;
     cachedTokens: number;
+    cacheWriteTokens?: number;
+    cacheWrite1hTokens?: number;
     longContextInputTokens: number;
     longContextOutputTokens: number;
     longContextCachedTokens: number;
+    longContextCacheWriteTokens?: number;
+    longContextCacheWrite1hTokens?: number;
     peakInputTokens: number;
     peakOutputTokens: number;
     peakCachedTokens: number;
+    peakCacheWriteTokens?: number;
+    peakCacheWrite1hTokens?: number;
   }>;
 }
 
@@ -52,6 +56,9 @@ interface UsageData {
     totalRequests: number;
     totalTokens: number;
     inputTokens: number;
+    uncachedInputTokens?: number;
+    cachedTokens?: number;
+    cacheWriteTokens?: number;
     outputTokens: number;
     successCount: number;
     failureCount: number;
@@ -63,6 +70,9 @@ interface UsageData {
     requests: number;
     tokens: number;
     inputTokens: number;
+    uncachedInputTokens?: number;
+    cachedTokens?: number;
+    cacheWriteTokens?: number;
     outputTokens: number;
     success: number;
     failure: number;
@@ -345,7 +355,12 @@ export default function UsagePage() {
     return t("collectedDaysAgo", { count: Math.floor(hours / 24) });
   }
 
-  const hasInputOutputBreakdown = usageData && (usageData.totals.inputTokens > 0 || usageData.totals.outputTokens > 0);
+  const hasInputOutputBreakdown = usageData && (
+    usageData.totals.inputTokens > 0 ||
+    usageData.totals.outputTokens > 0 ||
+    (usageData.totals.cachedTokens ?? 0) > 0 ||
+    (usageData.totals.cacheWriteTokens ?? 0) > 0
+  );
   const hasLatencyBreakdown = (usageData?.latencySummary?.sampleCount ?? 0) > 0;
 
   return (
@@ -403,54 +418,99 @@ export default function UsagePage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalRequests')}</p>
-              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.totalRequests.toLocaleString()}</p>
+          {/* ── Unified Overview Strip (Requests · Tokens · Latency) ─── */}
+          <div className={`grid grid-cols-1 gap-3 ${hasLatencyBreakdown ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+            <div className="flex flex-col justify-between rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-4 py-3.5">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalRequests')}</p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)]">
+                  {usageData.totals.totalRequests.toLocaleString()}
+                </p>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums">
+                <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  {usageData.totals.successCount.toLocaleString()} {t('successful')}
+                  {usageData.totals.totalRequests > 0
+                    ? ` (${((usageData.totals.successCount / usageData.totals.totalRequests) * 100).toFixed(1)}%)`
+                    : ""}
+                </span>
+                <span className="inline-flex items-center gap-1.5 font-medium text-rose-600 dark:text-rose-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                  {usageData.totals.failureCount.toLocaleString()} {t('failedLabel')}
+                </span>
+              </div>
             </div>
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('successful')}</p>
-              <p className="mt-0.5 text-xs font-semibold text-emerald-700">{usageData.totals.successCount.toLocaleString()}</p>
+
+            <div className="flex flex-col justify-between rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-4 py-3.5">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalTokens')}</p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)]">
+                  {usageData.totals.totalTokens.toLocaleString()}
+                </p>
+              </div>
+              {hasInputOutputBreakdown && (() => {
+                const inputVal = usageData.totals.uncachedInputTokens ?? usageData.totals.inputTokens;
+                const cachedVal = usageData.totals.cachedTokens ?? 0;
+                const cacheWriteVal = usageData.totals.cacheWriteTokens ?? 0;
+                const outputVal = usageData.totals.outputTokens;
+                const segmentSum = inputVal + cachedVal + cacheWriteVal + outputVal;
+                const segments = [
+                  { key: "input", label: t("input"), value: inputVal, color: CHART_COLORS.primary },
+                  { key: "cached", label: t("cached"), value: cachedVal, color: CHART_COLORS.violet },
+                  ...(cacheWriteVal > 0
+                    ? [{ key: "cacheWrite", label: t("cacheWrite"), value: cacheWriteVal, color: CHART_COLORS.warning }]
+                    : []),
+                  { key: "output", label: t("output"), value: outputVal, color: CHART_COLORS.success },
+                ];
+                return (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                      {segmentSum > 0 && segments.map((seg) => (
+                        <div
+                          key={seg.key}
+                          className="h-full"
+                          style={{
+                            width: `${(seg.value / segmentSum) * 100}%`,
+                            backgroundColor: seg.color,
+                          }}
+                          title={`${seg.label}: ${seg.value.toLocaleString()}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] tabular-nums text-[var(--text-secondary)]">
+                      {segments.map((seg) => (
+                        <span key={seg.key} className="inline-flex items-center gap-1" title={seg.value.toLocaleString()}>
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: seg.color }} />
+                          <span className="text-[var(--text-muted)]">{seg.label}</span>
+                          <span className="font-medium text-[var(--text-primary)]">{formatCompact(seg.value)}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('failedLabel')}</p>
-              <p className="mt-0.5 text-xs font-semibold text-rose-600">{usageData.totals.failureCount.toLocaleString()}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalTokens')}</p>
-              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.totalTokens.toLocaleString()}</p>
-            </div>
+
+            {hasLatencyBreakdown && usageData?.latencySummary ? (
+              <div className="flex flex-col justify-between rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-4 py-3.5">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('avgLatency')}</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)]">
+                    {formatLatencyValue(usageData.latencySummary.averageMs)}
+                  </p>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums">
+                  <span className="font-medium text-amber-700 dark:text-amber-400">
+                    P95 {formatLatencyValue(usageData.latencySummary.p95Ms)}
+                  </span>
+                  <span className="font-medium text-rose-600 dark:text-rose-400">
+                    {t('slowestRequest')} {formatLatencyValue(usageData.latencySummary.maxMs)}
+                  </span>
+                </div>
+              </div>
+            ) : null}
           </div>
-
-          {hasInputOutputBreakdown && (
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-              <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('inputTokens')}</p>
-                <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.inputTokens.toLocaleString()}</p>
-              </div>
-              <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('outputTokens')}</p>
-                <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{usageData.totals.outputTokens.toLocaleString()}</p>
-              </div>
-            </div>
-          )}
-
-          {hasLatencyBreakdown && usageData?.latencySummary ? (
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-              <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)] px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('avgLatency')}</p>
-                <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{formatLatencyValue(usageData.latencySummary.averageMs)}</p>
-              </div>
-              <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-700/70">P95 Latency</p>
-                <p className="mt-0.5 text-xs font-semibold text-amber-800">{formatLatencyValue(usageData.latencySummary.p95Ms)}</p>
-              </div>
-              <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-600">{t('slowestRequest')}</p>
-                <p className="mt-0.5 text-xs font-semibold text-rose-800">{formatLatencyValue(usageData.latencySummary.maxMs)}</p>
-              </div>
-            </div>
-          ) : null}
 
           <CostEstimation
             keys={usageData.keys}

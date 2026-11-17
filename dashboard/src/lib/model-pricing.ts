@@ -911,6 +911,21 @@ export function splitCachedInput(inputTokens: number, cachedTokens: number, pric
 }
 
 /**
+ * Calculate cache-write cost using Anthropic's 5-minute (1.25x input) and
+ * 1-hour (2x input) multipliers.
+ */
+export function calculateCacheWriteCost(
+  cacheWriteTokens: number,
+  cacheWrite1hTokens: number,
+  price: ModelPrice
+): number {
+  if (cacheWriteTokens <= 0 && cacheWrite1hTokens <= 0) return 0;
+  const write1h = Math.max(0, cacheWrite1hTokens);
+  const write5m = Math.max(0, cacheWriteTokens - write1h);
+  return ((write5m * 1.25 + write1h * 2) * price.inputPer1M) / 1_000_000;
+}
+
+/**
  * Calculate estimated cost for a set of tokens.
  *
  * The cache-read rate falls back to `inputPer1M` when the provider publishes no
@@ -926,13 +941,16 @@ export function calculateCost(
   inputTokens: number,
   outputTokens: number,
   price: ModelPrice,
-  cachedTokens = 0
+  cachedTokens = 0,
+  cacheWriteTokens = 0,
+  cacheWrite1hTokens = 0
 ): number {
   const cacheReadRate = price.cacheReadPer1M ?? price.inputPer1M;
   const { uncachedInput, cached } = splitCachedInput(inputTokens, cachedTokens, price);
   return (
     (uncachedInput / 1_000_000) * price.inputPer1M +
     (cached / 1_000_000) * cacheReadRate +
+    calculateCacheWriteCost(cacheWriteTokens, cacheWrite1hTokens, price) +
     (outputTokens / 1_000_000) * price.outputPer1M
   );
 }
@@ -942,6 +960,8 @@ export interface TokenBuckets {
   inputTokens: number;
   outputTokens: number;
   cachedTokens: number;
+  cacheWriteTokens?: number;
+  cacheWrite1hTokens?: number;
 }
 
 const EMPTY_BUCKETS: TokenBuckets = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
@@ -973,7 +993,14 @@ export function calculateTieredCost(
   peak: TokenBuckets = EMPTY_BUCKETS
 ): number {
   const bucketCost = (buckets: TokenBuckets, rates: ModelPrice) =>
-    calculateCost(buckets.inputTokens, buckets.outputTokens, rates, buckets.cachedTokens);
+    calculateCost(
+      buckets.inputTokens,
+      buckets.outputTokens,
+      rates,
+      buckets.cachedTokens,
+      buckets.cacheWriteTokens ?? 0,
+      buckets.cacheWrite1hTokens ?? 0
+    );
   return (
     bucketCost(standard, price) +
     bucketCost(longContext, withTierRates(price, price.longContext)) +

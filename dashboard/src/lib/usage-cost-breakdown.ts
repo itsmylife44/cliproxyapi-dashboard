@@ -8,12 +8,18 @@ export interface UsageModelTotals {
   inputTokens: number;
   outputTokens: number;
   cachedTokens: number;
+  cacheWriteTokens?: number;
+  cacheWrite1hTokens?: number;
   longContextInputTokens: number;
   longContextOutputTokens: number;
   longContextCachedTokens: number;
+  longContextCacheWriteTokens?: number;
+  longContextCacheWrite1hTokens?: number;
   peakInputTokens: number;
   peakOutputTokens: number;
   peakCachedTokens: number;
+  peakCacheWriteTokens?: number;
+  peakCacheWrite1hTokens?: number;
 }
 
 export interface UsageKey {
@@ -40,6 +46,7 @@ export interface ModelCostEntry {
    * clamped to the input total as `calculateCost` does.
    */
   cachedTokens: number;
+  cacheWriteTokens: number;
   outputTokens: number;
   totalTokens: number;
   requests: number;
@@ -60,19 +67,25 @@ export interface ProviderCostEntry {
 
 /* ── Builders ─────────────────────────────────────────────── */
 
-type ModelAgg = Omit<UsageModelTotals, "totalRequests"> & { requests: number };
+type ModelAgg = Required<Omit<UsageModelTotals, "totalRequests">> & { requests: number };
 
 function emptyAgg(): ModelAgg {
   return {
     inputTokens: 0,
     outputTokens: 0,
     cachedTokens: 0,
+    cacheWriteTokens: 0,
+    cacheWrite1hTokens: 0,
     longContextInputTokens: 0,
     longContextOutputTokens: 0,
     longContextCachedTokens: 0,
+    longContextCacheWriteTokens: 0,
+    longContextCacheWrite1hTokens: 0,
     peakInputTokens: 0,
     peakOutputTokens: 0,
     peakCachedTokens: 0,
+    peakCacheWriteTokens: 0,
+    peakCacheWrite1hTokens: 0,
     totalTokens: 0,
     requests: 0,
   };
@@ -92,12 +105,18 @@ export function buildCostBreakdown(
       agg.inputTokens += data.inputTokens;
       agg.outputTokens += data.outputTokens;
       agg.cachedTokens += data.cachedTokens;
+      agg.cacheWriteTokens += data.cacheWriteTokens ?? 0;
+      agg.cacheWrite1hTokens += data.cacheWrite1hTokens ?? 0;
       agg.longContextInputTokens += data.longContextInputTokens;
       agg.longContextOutputTokens += data.longContextOutputTokens;
       agg.longContextCachedTokens += data.longContextCachedTokens;
+      agg.longContextCacheWriteTokens += data.longContextCacheWriteTokens ?? 0;
+      agg.longContextCacheWrite1hTokens += data.longContextCacheWrite1hTokens ?? 0;
       agg.peakInputTokens += data.peakInputTokens;
       agg.peakOutputTokens += data.peakOutputTokens;
       agg.peakCachedTokens += data.peakCachedTokens;
+      agg.peakCacheWriteTokens += data.peakCacheWriteTokens ?? 0;
+      agg.peakCacheWrite1hTokens += data.peakCacheWrite1hTokens ?? 0;
       agg.totalTokens += data.totalTokens;
       agg.requests += data.totalRequests;
     }
@@ -114,17 +133,23 @@ export function buildCostBreakdown(
               inputTokens: data.inputTokens - data.longContextInputTokens - data.peakInputTokens,
               outputTokens: data.outputTokens - data.longContextOutputTokens - data.peakOutputTokens,
               cachedTokens: data.cachedTokens - data.longContextCachedTokens - data.peakCachedTokens,
+              cacheWriteTokens: data.cacheWriteTokens - data.longContextCacheWriteTokens - data.peakCacheWriteTokens,
+              cacheWrite1hTokens: data.cacheWrite1hTokens - data.longContextCacheWrite1hTokens - data.peakCacheWrite1hTokens,
             },
             {
               inputTokens: data.longContextInputTokens,
               outputTokens: data.longContextOutputTokens,
               cachedTokens: data.longContextCachedTokens,
+              cacheWriteTokens: data.longContextCacheWriteTokens,
+              cacheWrite1hTokens: data.longContextCacheWrite1hTokens,
             },
             price,
             {
               inputTokens: data.peakInputTokens,
               outputTokens: data.peakOutputTokens,
               cachedTokens: data.peakCachedTokens,
+              cacheWriteTokens: data.peakCacheWriteTokens,
+              cacheWrite1hTokens: data.peakCacheWrite1hTokens,
             }
           )
         : 0;
@@ -139,6 +164,7 @@ export function buildCostBreakdown(
         provider: price?.provider ?? "Unknown",
         inputTokens: shown.uncachedInput,
         cachedTokens: shown.cached,
+        cacheWriteTokens: data.cacheWriteTokens,
         outputTokens: data.outputTokens,
         totalTokens: data.totalTokens,
         requests: data.requests,

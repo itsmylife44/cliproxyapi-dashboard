@@ -890,6 +890,7 @@
     "model": "Model",
     "requests": "Requests",
     "input": "Input",
+    "cached": "Cached",
     "output": "Output",
     "requestEvents": "Request Event Details",
     "noEventsFound": "No request events found in the selected period",

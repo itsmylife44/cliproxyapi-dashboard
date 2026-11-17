@@ -94,6 +94,7 @@ interface UsageData {
     totalTokens: number;
     inputTokens: number;
     outputTokens: number;
+    cachedTokens?: number;
     failed: boolean;
   }>;
   truncated?: boolean;

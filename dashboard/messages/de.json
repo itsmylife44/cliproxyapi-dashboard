@@ -890,6 +890,7 @@
     "model": "Modell",
     "requests": "Anfragen",
     "input": "Eingabe",
+    "cached": "Gecacht",
     "output": "Ausgabe",
     "requestEvents": "Anfrageereignisse",
     "noEventsFound": "Keine Ereignisse gefunden",

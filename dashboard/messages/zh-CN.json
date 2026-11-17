@@ -890,6 +890,7 @@
     "model": "模型",
     "requests": "请求数",
     "input": "输入",
+    "cached": "缓存",
     "output": "输出",
     "requestEvents": "请求事件详情",
     "noEventsFound": "所选时间段内暂无请求事件",

@@ -890,6 +890,7 @@
     "model": "Modelo",
     "requests": "Solicitudes",
     "input": "Entrada",
+    "cached": "En caché",
     "output": "Salida",
     "requestEvents": "Detalles de Eventos de Solicitud",
     "noEventsFound": "No se encontraron eventos de solicitud en el periodo seleccionado",

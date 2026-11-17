@@ -3,6 +3,15 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import {
+  calculateTieredCost,
+  formatUSD,
+  isLongContextPrompt,
+  isPeakRequest,
+  loadCustomPricing,
+  resolveModelPrice,
+  type ModelPrice,
+} from "@/lib/model-pricing";
 
 interface RequestEvent {
   timestamp: string;
@@ -13,6 +22,7 @@ interface RequestEvent {
   totalTokens: number;
   inputTokens: number;
   outputTokens: number;
+  cachedTokens?: number;
   failed: boolean;
 }
 
@@ -59,9 +69,31 @@ function formatLatency(latencyMs: number): string {
   return `${latencyMs.toLocaleString()} ms`;
 }
 
+function estimateEventCost(
+  event: RequestEvent,
+  customPricing: Record<string, ModelPrice>,
+): number | null {
+  const price = resolveModelPrice(event.model, customPricing);
+  if (!price) return null;
+  const bucket = {
+    inputTokens: event.inputTokens,
+    outputTokens: event.outputTokens,
+    cachedTokens: event.cachedTokens ?? 0,
+  };
+  const empty = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
+  if (isLongContextPrompt(event.inputTokens, price)) {
+    return calculateTieredCost(empty, bucket, price);
+  }
+  if (isPeakRequest(new Date(event.timestamp), price)) {
+    return calculateTieredCost(empty, empty, price, bucket);
+  }
+  return calculateTieredCost(bucket, empty, price);
+}
+
 export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestEventsProps) {
   const t = useTranslations("usage");
   const [currentPage, setCurrentPage] = useState(1);
+  const customPricing = useMemo(() => loadCustomPricing(), []);
 
   const safeEvents = useMemo(() => events ?? [], [events]);
   const totalPages = Math.max(1, Math.ceil(safeEvents.length / EVENTS_PER_PAGE));
@@ -111,48 +143,55 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
               <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("status")}</th>
               <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("latency")}</th>
               <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("input")}</th>
+              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("cached")}</th>
               <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("output")}</th>
-              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("tokens")}</th>
+              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("estCostHeader")}</th>
             </tr>
           </thead>
           <tbody>
-            {pagedEvents.map((event, index) => (
-              <tr
-                key={`${event.timestamp}-${event.model}-${index}`}
-                className={`border-b border-[var(--surface-border)] last:border-b-0 ${event.failed ? "bg-rose-500/100/[0.03]" : "hover:bg-[var(--surface-muted)]"}`}
-              >
-                <td className="px-3 py-2">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-[var(--text-primary)]">{formatRelativeTime(event.timestamp, t)}</span>
-                    <span className="text-[10px] text-[var(--text-muted)]">{formatTimestamp(event.timestamp)}</span>
-                  </div>
-                </td>
-                <td className="px-3 py-2 font-mono text-[11px] text-[var(--text-primary)]">{event.keyName}</td>
-                {isAdmin ? (
-                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">{event.username ?? "\u2014"}</td>
-                ) : null}
-                <td className="px-3 py-2 font-mono text-[11px] text-[var(--text-secondary)]">{event.model}</td>
-                <td className="px-3 py-2">
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${
-                      event.failed
-                        ? "border-rose-500/20 bg-rose-500/10 text-rose-600"
-                        : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
-                    }`}
-                  >
-                    {event.failed ? t("failed") : t("success")}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums ${getLatencyClasses(event.latencyMs)}`}>
-                    {formatLatency(event.latencyMs)}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{event.inputTokens.toLocaleString()}</td>
-                <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{event.outputTokens.toLocaleString()}</td>
-                <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-primary)]">{event.totalTokens.toLocaleString()}</td>
-              </tr>
-            ))}
+            {pagedEvents.map((event, index) => {
+              const estCost = estimateEventCost(event, customPricing);
+              return (
+                <tr
+                  key={`${event.timestamp}-${event.model}-${index}`}
+                  className={`border-b border-[var(--surface-border)] last:border-b-0 ${event.failed ? "bg-rose-500/100/[0.03]" : "hover:bg-[var(--surface-muted)]"}`}
+                >
+                  <td className="px-3 py-2">
+                    <div className="flex flex-col">
+                      <span className="text-xs text-[var(--text-primary)]">{formatRelativeTime(event.timestamp, t)}</span>
+                      <span className="text-[10px] text-[var(--text-muted)]">{formatTimestamp(event.timestamp)}</span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[11px] text-[var(--text-primary)]">{event.keyName}</td>
+                  {isAdmin ? (
+                    <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">{event.username ?? "\u2014"}</td>
+                  ) : null}
+                  <td className="px-3 py-2 font-mono text-[11px] text-[var(--text-secondary)]">{event.model}</td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${
+                        event.failed
+                          ? "border-rose-500/20 bg-rose-500/10 text-rose-600"
+                          : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
+                      }`}
+                    >
+                      {event.failed ? t("failed") : t("success")}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums ${getLatencyClasses(event.latencyMs)}`}>
+                      {formatLatency(event.latencyMs)}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{event.inputTokens.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{(event.cachedTokens ?? 0).toLocaleString()}</td>
+                  <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{event.outputTokens.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-secondary)]">
+                    {estCost !== null ? formatUSD(estCost) : "\u2014"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

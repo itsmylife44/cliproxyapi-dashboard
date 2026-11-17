@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
 import { ChartContainer, CHART_COLORS, SERIES_PALETTE, useChartTheme, formatCompact, formatDateShort } from "@/components/ui/chart-theme";
@@ -10,6 +10,9 @@ interface DailyBreakdown {
   requests: number;
   tokens: number;
   inputTokens: number;
+  uncachedInputTokens?: number;
+  cachedTokens?: number;
+  cacheWriteTokens?: number;
   outputTokens: number;
   success: number;
   failure: number;
@@ -80,8 +83,21 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
    const uid = useId();
    const { axisTickStyle, tooltipStyle, tokens } = useChartTheme();
    const gradInputId = `${uid}-gradInput`;
+   const gradCachedId = `${uid}-gradCached`;
+   const gradCacheWriteId = `${uid}-gradCacheWrite`;
    const gradOutputId = `${uid}-gradOutput`;
    const gradLatencyId = `${uid}-gradLatency`;
+   const tokenSeries = useMemo(
+     () =>
+       (dailyBreakdown ?? []).map((day) => ({
+         ...day,
+         uncachedInputTokens: day.uncachedInputTokens ?? day.inputTokens,
+         cachedTokens: day.cachedTokens ?? 0,
+         cacheWriteTokens: day.cacheWriteTokens ?? 0,
+       })),
+     [dailyBreakdown]
+   );
+   const hasCacheWrites = tokenSeries.some((day) => day.cacheWriteTokens > 0);
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       {dailyBreakdown && dailyBreakdown.length > 0 ? (
@@ -102,14 +118,22 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
         </ChartContainer>
       ) : null}
 
-      {dailyBreakdown && dailyBreakdown.length > 0 ? (
+      {tokenSeries.length > 0 ? (
         <ChartContainer title={t('tokenUsage')}>
           <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
-            <AreaChart data={dailyBreakdown} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+            <AreaChart data={tokenSeries} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
               <defs>
                 <linearGradient id={gradInputId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={CHART_COLORS.primary} stopOpacity={0.3} />
                   <stop offset="100%" stopColor={CHART_COLORS.primary} stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id={gradCachedId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={CHART_COLORS.violet} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={CHART_COLORS.violet} stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id={gradCacheWriteId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={CHART_COLORS.warning} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={CHART_COLORS.warning} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id={gradOutputId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={CHART_COLORS.success} stopOpacity={0.3} />
@@ -125,7 +149,11 @@ export function UsageCharts({ dailyBreakdown, modelBreakdown, latencySeries, lat
                  formatter={(value) => [formatCompact(Number(value)), ""]}
                />
               <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
-              <Area type="monotone" dataKey="inputTokens" name={t('input')} stackId="1" stroke={CHART_COLORS.primary} fill={`url(#${gradInputId})`} strokeWidth={1.5} />
+              <Area type="monotone" dataKey="uncachedInputTokens" name={t('input')} stackId="1" stroke={CHART_COLORS.primary} fill={`url(#${gradInputId})`} strokeWidth={1.5} />
+              <Area type="monotone" dataKey="cachedTokens" name={t('cached')} stackId="1" stroke={CHART_COLORS.violet} fill={`url(#${gradCachedId})`} strokeWidth={1.5} />
+              {hasCacheWrites ? (
+                <Area type="monotone" dataKey="cacheWriteTokens" name={t('cacheWrite')} stackId="1" stroke={CHART_COLORS.warning} fill={`url(#${gradCacheWriteId})`} strokeWidth={1.5} />
+              ) : null}
               <Area type="monotone" dataKey="outputTokens" name={t('output')} stackId="1" stroke={CHART_COLORS.success} fill={`url(#${gradOutputId})`} strokeWidth={1.5} />
             </AreaChart>
           </ResponsiveContainer>

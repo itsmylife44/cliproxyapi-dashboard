@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { loadCustomPricing, resolveModelPrice, splitCachedInput } from "@/lib/model-pricing";
 
 interface KeyUsage {
   keyName: string;
@@ -20,6 +21,8 @@ interface KeyUsage {
     totalTokens: number;
     inputTokens: number;
     outputTokens: number;
+    cachedTokens?: number;
+    cacheWriteTokens?: number;
   }>;
 }
 
@@ -31,6 +34,7 @@ interface UsageTableProps {
 export function UsageTable({ keys, isAdmin }: UsageTableProps) {
   const t = useTranslations("usage");
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const customPricing = useMemo(() => loadCustomPricing(), []);
 
   if (Object.keys(keys).length === 0) {
     return (
@@ -125,20 +129,30 @@ export function UsageTable({ keys, isAdmin }: UsageTableProps) {
                                 <th className="p-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("model")}</th>
                                 <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("requests")}</th>
                                 <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("input")}</th>
+                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("cached")}</th>
+                                <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("cacheWrite")}</th>
                                 <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("output")}</th>
                                 <th className="p-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("total")}</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {Object.entries(keyUsage.models).map(([modelName, modelData]) => (
-                                <tr key={modelName} className="border-b border-[var(--surface-border)]/40 last:border-0">
-                                  <td className="p-2 text-left font-mono text-[11px] text-[var(--text-secondary)]">{modelName}</td>
-                                  <td className="p-2 text-right text-[var(--text-muted)]">{modelData.totalRequests.toLocaleString()}</td>
-                                  <td className="p-2 text-right text-[var(--text-muted)]">{modelData.inputTokens.toLocaleString()}</td>
-                                  <td className="p-2 text-right text-[var(--text-muted)]">{modelData.outputTokens.toLocaleString()}</td>
-                                  <td className="p-2 text-right text-[var(--text-muted)]">{modelData.totalTokens.toLocaleString()}</td>
-                                </tr>
-                              ))}
+                              {Object.entries(keyUsage.models).map(([modelName, modelData]) => {
+                                const price = resolveModelPrice(modelName, customPricing);
+                                const shown = price
+                                  ? splitCachedInput(modelData.inputTokens, modelData.cachedTokens ?? 0, price)
+                                  : { uncachedInput: modelData.inputTokens, cached: modelData.cachedTokens ?? 0 };
+                                return (
+                                  <tr key={modelName} className="border-b border-[var(--surface-border)]/40 last:border-0">
+                                    <td className="p-2 text-left font-mono text-[11px] text-[var(--text-secondary)]">{modelName}</td>
+                                    <td className="p-2 text-right text-[var(--text-muted)]">{modelData.totalRequests.toLocaleString()}</td>
+                                    <td className="p-2 text-right text-[var(--text-muted)]">{shown.uncachedInput.toLocaleString()}</td>
+                                    <td className="p-2 text-right text-[var(--text-muted)]">{shown.cached.toLocaleString()}</td>
+                                    <td className="p-2 text-right text-[var(--text-muted)]">{(modelData.cacheWriteTokens ?? 0).toLocaleString()}</td>
+                                    <td className="p-2 text-right text-[var(--text-muted)]">{modelData.outputTokens.toLocaleString()}</td>
+                                    <td className="p-2 text-right text-[var(--text-muted)]">{modelData.totalTokens.toLocaleString()}</td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>

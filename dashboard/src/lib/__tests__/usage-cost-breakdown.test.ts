@@ -113,6 +113,24 @@ describe("buildCostBreakdown", () => {
     expect(row.cachedTokens).toBe(0);
   });
 
+  it("bills 5m (1.25x) and 1h (2x) cache write tokens separately", () => {
+    const keys = {
+      a: key({
+        "test-separate": totals({
+          inputTokens: 1_000_000,
+          cachedTokens: 0,
+          cacheWriteTokens: 1_500_000,
+          cacheWrite1hTokens: 500_000,
+          outputTokens: 0,
+        }),
+      }),
+    };
+    const row = onlyRow(buildCostBreakdown(keys, PRICING));
+    expect(row.cacheWriteTokens).toBe(1_500_000);
+    // 1M*3 (input) + 1M*(3*1.25) (5m write) + 0.5M*(3*2) (1h write) = 3 + 3.75 + 3 = 9.75
+    expect(row.estimatedCost).toBeCloseTo(9.75, 10);
+  });
+
   it("shows raw input and cached totals for unpriced models", () => {
     const keys = { a: key({ "totally-unknown-model-xyz": totals({ inputTokens: 1_000, cachedTokens: 400, outputTokens: 10 }) }) };
     const row = onlyRow(buildCostBreakdown(keys, PRICING));

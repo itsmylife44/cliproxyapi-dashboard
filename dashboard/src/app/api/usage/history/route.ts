@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { usageCache } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
-import { isLongContextPrompt, isPeakRequest, resolveModelPrice } from "@/lib/model-pricing";
+import { isLongContextPrompt, isPeakRequest, resolveModelPrice, splitCachedInput } from "@/lib/model-pricing";
 
 // Cache for 5 seconds to allow frequent polling without overwhelming the database
 // The frontend polls every 60 seconds, so 5s cache won't cause missed updates
@@ -31,6 +31,8 @@ interface KeyUsage {
     inputTokens: number;
     outputTokens: number;
     cachedTokens: number;
+    cacheWriteTokens: number;
+    cacheWrite1hTokens: number;
     /**
      * Subset of the totals above from requests whose prompt reached the
      * long-context threshold. Tiering must happen per request: providers with
@@ -39,6 +41,8 @@ interface KeyUsage {
     longContextInputTokens: number;
     longContextOutputTokens: number;
     longContextCachedTokens: number;
+    longContextCacheWriteTokens: number;
+    longContextCacheWrite1hTokens: number;
     /**
      * Subset from requests started in the model's UTC peak hours. Disjoint
      * from the long-context subset: a long-context request is never counted
@@ -47,6 +51,8 @@ interface KeyUsage {
     peakInputTokens: number;
     peakOutputTokens: number;
     peakCachedTokens: number;
+    peakCacheWriteTokens: number;
+    peakCacheWrite1hTokens: number;
   }>;
 }
 
@@ -197,6 +203,8 @@ export async function GET(request: NextRequest) {
         outputTokens: true,
         reasoningTokens: true,
         cachedTokens: true,
+        cacheWriteTokens: true,
+        cacheWrite1hTokens: true,
         failed: true,
         timestamp: true,
         user: {
@@ -226,7 +234,17 @@ export async function GET(request: NextRequest) {
   });
 
     const keyUsageMap: Record<string, KeyUsage> = {};
-    const dailyMap: Record<string, { requests: number; tokens: number; inputTokens: number; outputTokens: number; success: number; failure: number }> = {};
+    const dailyMap: Record<string, {
+      requests: number;
+      tokens: number;
+      inputTokens: number;
+      uncachedInputTokens: number;
+      cachedTokens: number;
+      cacheWriteTokens: number;
+      outputTokens: number;
+      success: number;
+      failure: number;
+    }> = {};
     const modelTotalsMap: Record<string, { requests: number; tokens: number }> = {};
     const requestEvents: RequestEvent[] = [];
     const latencySeriesSeed: LatencyPoint[] = [];
@@ -234,6 +252,9 @@ export async function GET(request: NextRequest) {
     let totalRequests = 0;
     let totalTokens = 0;
     let totalInputTokens = 0;
+    let totalUncachedInputTokens = 0;
+    let totalCachedTokens = 0;
+    let totalCacheWriteTokens = 0;
     let totalOutputTokens = 0;
     let totalSuccessCount = 0;
     let totalFailureCount = 0;
@@ -272,6 +293,14 @@ export async function GET(request: NextRequest) {
         };
       }
 
+      const modelName = record.model;
+      const price = priceForModel(modelName);
+      const split = price
+        ? splitCachedInput(record.inputTokens, record.cachedTokens, price)
+        : { uncachedInput: record.inputTokens, cached: record.cachedTokens };
+      const cacheWriteTokens = record.cacheWriteTokens ?? 0;
+      const cacheWrite1hTokens = record.cacheWrite1hTokens ?? 0;
+
       const keyUsage = keyUsageMap[groupKey];
       const username = record.user?.username;
       keyUsage.totalRequests += 1;
@@ -287,7 +316,6 @@ export async function GET(request: NextRequest) {
         keyUsage.successCount += 1;
       }
 
-      const modelName = record.model;
       if (!keyUsage.models[modelName]) {
         keyUsage.models[modelName] = {
           totalRequests: 0,
@@ -295,12 +323,18 @@ export async function GET(request: NextRequest) {
           inputTokens: 0,
           outputTokens: 0,
           cachedTokens: 0,
+          cacheWriteTokens: 0,
+          cacheWrite1hTokens: 0,
           longContextInputTokens: 0,
           longContextOutputTokens: 0,
           longContextCachedTokens: 0,
+          longContextCacheWriteTokens: 0,
+          longContextCacheWrite1hTokens: 0,
           peakInputTokens: 0,
           peakOutputTokens: 0,
           peakCachedTokens: 0,
+          peakCacheWriteTokens: 0,
+          peakCacheWrite1hTokens: 0,
         };
       }
       const modelUsage = keyUsage.models[modelName];
@@ -309,19 +343,24 @@ export async function GET(request: NextRequest) {
       modelUsage.inputTokens += record.inputTokens;
       modelUsage.outputTokens += record.outputTokens;
       modelUsage.cachedTokens += record.cachedTokens;
+      modelUsage.cacheWriteTokens += cacheWriteTokens;
+      modelUsage.cacheWrite1hTokens += cacheWrite1hTokens;
 
       // Tier selection happens on the individual request, not on the model sum,
       // and uses that model's own threshold (xAI 200k, OpenAI >272k).
       // Peak hours are likewise decided per request, from its UTC start time.
-      const price = priceForModel(modelName);
       if (isLongContextPrompt(record.inputTokens, price)) {
         modelUsage.longContextInputTokens += record.inputTokens;
         modelUsage.longContextOutputTokens += record.outputTokens;
         modelUsage.longContextCachedTokens += record.cachedTokens;
+        modelUsage.longContextCacheWriteTokens += cacheWriteTokens;
+        modelUsage.longContextCacheWrite1hTokens += cacheWrite1hTokens;
       } else if (isPeakRequest(record.timestamp, price)) {
         modelUsage.peakInputTokens += record.inputTokens;
         modelUsage.peakOutputTokens += record.outputTokens;
         modelUsage.peakCachedTokens += record.cachedTokens;
+        modelUsage.peakCacheWriteTokens += cacheWriteTokens;
+        modelUsage.peakCacheWrite1hTokens += cacheWrite1hTokens;
       }
 
       // Daily aggregation for charts (use server local timezone, not UTC)
@@ -330,11 +369,24 @@ export async function GET(request: NextRequest) {
       const dy = String(record.timestamp.getDate()).padStart(2, "0");
       const dayKey = `${yr}-${mo}-${dy}`;
       if (!dailyMap[dayKey]) {
-        dailyMap[dayKey] = { requests: 0, tokens: 0, inputTokens: 0, outputTokens: 0, success: 0, failure: 0 };
+        dailyMap[dayKey] = {
+          requests: 0,
+          tokens: 0,
+          inputTokens: 0,
+          uncachedInputTokens: 0,
+          cachedTokens: 0,
+          cacheWriteTokens: 0,
+          outputTokens: 0,
+          success: 0,
+          failure: 0,
+        };
       }
       dailyMap[dayKey].requests += 1;
       dailyMap[dayKey].tokens += record.totalTokens;
       dailyMap[dayKey].inputTokens += record.inputTokens;
+      dailyMap[dayKey].uncachedInputTokens += split.uncachedInput;
+      dailyMap[dayKey].cachedTokens += split.cached;
+      dailyMap[dayKey].cacheWriteTokens += cacheWriteTokens;
       dailyMap[dayKey].outputTokens += record.outputTokens;
       if (record.failed) {
         dailyMap[dayKey].failure += 1;
@@ -380,6 +432,9 @@ export async function GET(request: NextRequest) {
       totalRequests += 1;
       totalTokens += record.totalTokens;
       totalInputTokens += record.inputTokens;
+      totalUncachedInputTokens += split.uncachedInput;
+      totalCachedTokens += split.cached;
+      totalCacheWriteTokens += cacheWriteTokens;
       totalOutputTokens += record.outputTokens;
       if (record.failed) {
         totalFailureCount += 1;
@@ -407,6 +462,9 @@ export async function GET(request: NextRequest) {
           totalRequests,
           totalTokens,
           inputTokens: totalInputTokens,
+          uncachedInputTokens: totalUncachedInputTokens,
+          cachedTokens: totalCachedTokens,
+          cacheWriteTokens: totalCacheWriteTokens,
           outputTokens: totalOutputTokens,
           successCount: totalSuccessCount,
           failureCount: totalFailureCount,

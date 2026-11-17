@@ -896,6 +896,7 @@
     "model": "Model",
     "requests": "Requests",
     "input": "Input",
+    "cached": "Cached",
     "output": "Output",
     "cancelled": "Cancelled",
     "errorStatusLabel": "Status",

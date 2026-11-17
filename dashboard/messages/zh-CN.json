@@ -896,6 +896,7 @@
     "model": "模型",
     "requests": "请求数",
     "input": "输入",
+    "cached": "缓存",
     "output": "输出",
     "cancelled": "已取消",
     "errorStatusLabel": "状态",

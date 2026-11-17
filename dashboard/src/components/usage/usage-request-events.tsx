@@ -3,6 +3,15 @@
 import { Fragment, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import {
+  calculateTieredCost,
+  formatUSD,
+  isLongContextPrompt,
+  isPeakRequest,
+  loadCustomPricing,
+  resolveModelPrice,
+  type ModelPrice,
+} from "@/lib/model-pricing";
 
 export interface RequestEvent {
   id?: string;
@@ -14,6 +23,7 @@ export interface RequestEvent {
   totalTokens: number;
   inputTokens: number;
   outputTokens: number;
+  cachedTokens?: number;
   failed: boolean;
   failureStatus?: number | null;
   failureCode?: string | null;
@@ -76,10 +86,32 @@ function getRowClasses(isCancelled: boolean, failed: boolean): string {
   return "hover:bg-[var(--surface-muted)]";
 }
 
+function estimateEventCost(
+  event: RequestEvent,
+  customPricing: Record<string, ModelPrice>,
+): number | null {
+  const price = resolveModelPrice(event.model, customPricing);
+  if (!price) return null;
+  const bucket = {
+    inputTokens: event.inputTokens,
+    outputTokens: event.outputTokens,
+    cachedTokens: event.cachedTokens ?? 0,
+  };
+  const empty = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
+  if (isLongContextPrompt(event.inputTokens, price)) {
+    return calculateTieredCost(empty, bucket, price);
+  }
+  if (isPeakRequest(new Date(event.timestamp), price)) {
+    return calculateTieredCost(empty, empty, price, bucket);
+  }
+  return calculateTieredCost(bucket, empty, price);
+}
+
 export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestEventsProps) {
   const t = useTranslations("usage");
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const customPricing = useMemo(() => loadCustomPricing(), []);
 
   const safeEvents = useMemo(() => events ?? [], [events]);
   const totalPages = Math.max(1, Math.ceil(safeEvents.length / EVENTS_PER_PAGE));
@@ -91,7 +123,7 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
   }, [activePage, safeEvents]);
 
   const hasMissingLatency = safeEvents.some((event) => event.latencyMs <= 0);
-  const colCount = isAdmin ? 9 : 8;
+  const colCount = isAdmin ? 10 : 9;
 
   const toggleRow = (rowKey: string) => {
     setExpandedRows((prev) => {
@@ -139,8 +171,9 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
               <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("status")}</th>
               <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("latency")}</th>
               <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("input")}</th>
+              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("cached")}</th>
               <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("output")}</th>
-              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("tokens")}</th>
+              <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("estCostHeader")}</th>
             </tr>
           </thead>
           <tbody>
@@ -156,6 +189,7 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
                   ? `${t("failed")}${statusSuffix}`
                   : t("success");
               const hasDetails = Boolean(event.failureStatus || event.failureCode || event.failureBody);
+              const estCost = estimateEventCost(event, customPricing);
 
               return (
                 <Fragment key={rowKey}>
@@ -198,8 +232,11 @@ export function UsageRequestEvents({ events, isAdmin, truncated }: UsageRequestE
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{event.inputTokens.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{(event.cachedTokens ?? 0).toLocaleString()}</td>
                     <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-muted)]">{event.outputTokens.toLocaleString()}</td>
-                    <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-primary)]">{event.totalTokens.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--text-secondary)]">
+                      {estCost !== null ? formatUSD(estCost) : "\u2014"}
+                    </td>
                   </tr>
                   {isExpanded ? (
                     <tr className="border-b border-[var(--surface-border)] bg-[var(--surface-muted)]/60">

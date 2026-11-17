@@ -896,6 +896,7 @@
     "model": "Modelo",
     "requests": "Solicitudes",
     "input": "Entrada",
+    "cached": "En caché",
     "output": "Salida",
     "cancelled": "Cancelado",
     "errorStatusLabel": "Estado",

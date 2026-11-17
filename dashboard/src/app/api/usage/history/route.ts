@@ -62,6 +62,7 @@ interface RequestEvent {
   totalTokens: number;
   inputTokens: number;
   outputTokens: number;
+  cachedTokens: number;
   failed: boolean;
   failureStatus: number | null;
   failureCode: string | null;
@@ -374,6 +375,7 @@ export async function GET(request: NextRequest) {
         totalTokens: record.totalTokens,
         inputTokens: record.inputTokens,
         outputTokens: record.outputTokens,
+        cachedTokens: record.cachedTokens,
         failed: record.failed,
         failureStatus,
         failureCode,

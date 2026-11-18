@@ -530,6 +530,28 @@ export async function POST(request: NextRequest) {
       totalStored += result.count;
     }
 
+    const latestKeyUsage = new Map<string, Date>();
+    for (const candidate of candidates) {
+      if (!candidate.apiKeyId) continue;
+      const existing = latestKeyUsage.get(candidate.apiKeyId);
+      if (!existing || candidate.timestamp > existing) {
+        latestKeyUsage.set(candidate.apiKeyId, candidate.timestamp);
+      }
+    }
+    if (latestKeyUsage.size > 0) {
+      await Promise.all(
+        Array.from(latestKeyUsage.entries()).map(([apiKeyId, maxTimestamp]) =>
+          prisma.userApiKey.updateMany({
+            where: {
+              id: apiKeyId,
+              OR: [{ lastUsedAt: null }, { lastUsedAt: { lt: maxTimestamp } }],
+            },
+            data: { lastUsedAt: maxTimestamp },
+          })
+        )
+      );
+    }
+
     let latencyBackfilled = 0;
     const latencyBackfillCandidates = buildLatencyBackfillCandidates(candidates);
     for (let i = 0; i < latencyBackfillCandidates.length; i += LATENCY_BACKFILL_BATCH_SIZE) {

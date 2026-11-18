@@ -490,6 +490,7 @@
     "oauthPollingNoCallbackMsg": "Waiting for CLIProxyAPI to finish OAuth authorization...",
     "oauthSuccessMsg": "OAuth account connected successfully.",
     "oauthCloseButton": "Close",
+    "oauthContinueButton": "Continue",
     "oauthSubmittingButton": "Submitting...",
     "oauthWaitingButton": "Waiting...",
     "oauthSubmitUrlButton": "Submit URL",

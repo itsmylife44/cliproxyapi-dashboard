@@ -305,7 +305,7 @@ export default function QuotaPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3 text-xs text-[var(--text-muted)]">
+      <div className="space-y-3 text-xs text-[var(--text-muted)]">
         <div>
           <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t("pageTitle")}</h1>
           <p className="mt-0.5 text-xs text-[var(--text-muted)]">
@@ -321,7 +321,7 @@ export default function QuotaPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full items-center gap-2">
           <QuotaToolbar
             query={query}
             total={filteredAccounts.length}
@@ -330,17 +330,13 @@ export default function QuotaPage() {
             onStatusChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { status: value }))}
             onClear={() => replaceQuery(clearQuotaToolbarQuery())}
           />
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            {t("autoRefreshBadge")}
-          </span>
           <button
             type="button"
             onClick={() => void refresh().catch(() => {})}
             disabled={loading || refreshing}
             aria-label={t("refreshButton")}
             title={t("refreshButton")}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-50"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-50"
           >
             <svg
               className={`h-3.5 w-3.5 ${loading || refreshing ? "animate-spin" : ""}`}

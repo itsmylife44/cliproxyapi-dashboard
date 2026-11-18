@@ -2,7 +2,6 @@
 
 import { ToastProvider } from "@/components/ui/toast";
 import { MobileSidebarProvider } from "@/components/mobile-sidebar-context";
-import { MobileTopBar } from "@/components/mobile-top-bar";
 import { LazyUpdateNotification } from "@/components/lazy-update-notification";
 import { ProxyUpdateNotification } from "@/components/proxy-update-notification";
 import { DashboardShell } from "@/components/dashboard-shell";
@@ -16,10 +15,9 @@ export function DashboardClientLayout({ children }: DashboardClientLayoutProps) 
   return (
     <ToastProvider>
       <MobileSidebarProvider>
-        <MobileTopBar />
         <div className="grid min-h-screen grid-cols-1 overflow-x-clip bg-[var(--surface-base)] lg:grid-cols-[auto_1fr]">
           <DashboardNav />
-          <main id="main-content" className="min-w-0 flex-1 overflow-x-clip px-4 pb-10 pt-16 lg:px-8 lg:pb-12 lg:pt-4">
+          <main id="main-content" className="min-w-0 flex-1 overflow-x-clip px-4 pb-10 pt-0 lg:px-8 lg:pb-12 lg:pt-4">
             <div className="mx-auto w-full max-w-[1320px]">
               <DashboardShell>{children}</DashboardShell>
             </div>

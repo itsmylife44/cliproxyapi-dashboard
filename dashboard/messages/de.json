@@ -490,6 +490,7 @@
     "oauthPollingNoCallbackMsg": "Warte auf den Abschluss der OAuth-Autorisierung durch CLIProxyAPI...",
     "oauthSuccessMsg": "OAuth-Konto erfolgreich verbunden.",
     "oauthCloseButton": "Schließen",
+    "oauthContinueButton": "Weiter",
     "oauthSubmittingButton": "Wird übermittelt...",
     "oauthWaitingButton": "Warten...",
     "oauthSubmitUrlButton": "URL senden",

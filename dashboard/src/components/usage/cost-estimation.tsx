@@ -148,152 +148,233 @@ export function CostEstimation({ keys, livePricing }: CostEstimationProps) {
         </div>
 
             {/* Tab 1: Unified Model Cost Ledger */}
-            {activeTab === "models" && (
-              <div className="max-h-[420px] overflow-auto">
-                <table className="w-full min-w-[780px] text-xs">
-                  <thead className="sticky top-0 z-10 border-b border-[var(--surface-border)] bg-[var(--surface-base)]">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        {t("modelHeader")}
-                      </th>
-                      <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        {t("providerHeader")}
-                      </th>
-                      <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        {t("requestsHeader")}
-                      </th>
-                      <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        {t("input")}
-                      </th>
-                      <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        {t("cached")}
-                      </th>
-                      <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        {t("cacheWrite")}
-                      </th>
-                      <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        {t("output")}
-                      </th>
-                      <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        {t("rateHeader")}
-                      </th>
-                      <th className="px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        {t("estCostHeader")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--surface-border)]/60">
-                    {pricedModels.map((entry, idx) => {
-                      const relativeWidth =
-                        maxModelCost > 0 ? Math.max((entry.estimatedCost / maxModelCost) * 100, entry.estimatedCost > 0 ? 2 : 0) : 0;
-                      const sharePct =
-                        totalEstimatedCost > 0 ? (entry.estimatedCost / totalEstimatedCost) * 100 : 0;
-                      return (
-                        <tr key={entry.model} className="transition-colors hover:bg-[var(--surface-muted)]/50">
-                          <td className="px-4 py-2">
-                            <div className="max-w-[220px] truncate font-mono text-[11px] font-medium text-[var(--text-primary)]" title={entry.model}>
+            {activeTab === "models" && (() => {
+              const getTokenCells = (entry: (typeof costBreakdown)[number]) => [
+                { key: "input", label: t("input"), value: entry.inputTokens },
+                { key: "cached", label: t("cached"), value: entry.cachedTokens },
+                { key: "cacheWrite", label: t("cacheWrite"), value: entry.cacheWriteTokens },
+                { key: "output", label: t("output"), value: entry.outputTokens },
+              ];
+
+              const pricedRows = pricedModels.map((entry, idx) => ({
+                entry,
+                color: SERIES_PALETTE[idx % SERIES_PALETTE.length],
+                relativeWidth:
+                  maxModelCost > 0 ? Math.max((entry.estimatedCost / maxModelCost) * 100, entry.estimatedCost > 0 ? 2 : 0) : 0,
+                sharePct: totalEstimatedCost > 0 ? (entry.estimatedCost / totalEstimatedCost) * 100 : 0,
+              }));
+
+              return (
+                <>
+                  {/* Compact Vertical Ledger (Mobile / Tablet, no horizontal scroll) */}
+                  <div className="max-h-[420px] divide-y divide-[var(--surface-border)]/60 overflow-y-auto lg:hidden">
+                    {pricedRows.map(({ entry, color, relativeWidth, sharePct }) => (
+                      <div key={entry.model} className="space-y-2 py-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-mono text-xs font-medium text-[var(--text-primary)]" title={entry.model}>
                               {entry.model}
+                            </p>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-[var(--text-muted)]">
+                              <span className="inline-block rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
+                                {entry.provider}
+                              </span>
+                              <span className="tabular-nums">{entry.requests.toLocaleString()} {t("requestsHeader").toLowerCase()}</span>
+                              <span aria-hidden="true">·</span>
+                              <span className="font-mono text-[10px] tabular-nums">
+                                {entry.priced ? formatRate(entry) : "\u2014"}
+                              </span>
                             </div>
-                            <div className="mt-1 h-1 w-full max-w-[180px] overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${Math.min(100, relativeWidth)}%`,
-                                  backgroundColor: SERIES_PALETTE[idx % SERIES_PALETTE.length],
-                                }}
-                              />
-                            </div>
-                          </td>
-                          <td className="px-3 py-2">
-                            <span className="inline-block rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]">
-                              {entry.provider}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">
-                            {entry.requests.toLocaleString()}
-                          </td>
-                          <td
-                            className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]"
-                            title={entry.inputTokens.toLocaleString()}
-                          >
-                            {formatCompact(entry.inputTokens)}
-                          </td>
-                          <td
-                            className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]"
-                            title={entry.cachedTokens.toLocaleString()}
-                          >
-                            {formatCompact(entry.cachedTokens)}
-                          </td>
-                          <td
-                            className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]"
-                            title={entry.cacheWriteTokens.toLocaleString()}
-                          >
-                            {formatCompact(entry.cacheWriteTokens)}
-                          </td>
-                          <td
-                            className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]"
-                            title={entry.outputTokens.toLocaleString()}
-                          >
-                            {formatCompact(entry.outputTokens)}
-                          </td>
-                          <td className="px-3 py-2 text-right font-mono text-[11px] tabular-nums text-[var(--text-muted)]">
-                            {entry.priced ? formatRate(entry) : "\u2014"}
-                          </td>
-                          <td className="px-4 py-2 text-right tabular-nums">
-                            <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                          </div>
+                          <div className="shrink-0 text-right tabular-nums">
+                            <span className="block text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                               {formatUSD(entry.estimatedCost)}
                             </span>
                             {totalEstimatedCost > 0 && (
-                              <span className="ml-1.5 text-[10px] text-[var(--text-muted)]">
+                              <span className="block text-[10px] text-[var(--text-muted)]">
                                 {sharePct.toFixed(1)}%
                               </span>
                             )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                          </div>
+                        </div>
+
+                        <div className="h-1 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${Math.min(100, relativeWidth)}%`, backgroundColor: color }}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2 text-[11px] tabular-nums">
+                          {getTokenCells(entry).map((cell) => (
+                            <div key={cell.key} className="min-w-0" title={cell.value.toLocaleString()}>
+                              <span className="block truncate text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                                {cell.label}
+                              </span>
+                              <span className="block truncate font-medium text-[var(--text-secondary)]">
+                                {formatCompact(cell.value)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
 
                     {displayUnpriced && unpricedModels.length > 0 && (
-                      <>
+                      <div>
+                        <div className="bg-[var(--surface-muted)] px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                          {t("unpricedModels")} ({unpricedModels.length})
+                        </div>
+                        <div className="divide-y divide-[var(--surface-border)]/40">
+                          {unpricedModels.map((entry) => (
+                            <div key={entry.model} className="space-y-1.5 py-2 opacity-60">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="truncate font-mono text-[11px] text-[var(--text-muted)]" title={entry.model}>
+                                  {entry.model}
+                                </span>
+                                <span className="shrink-0 text-[11px] tabular-nums text-[var(--text-muted)]">
+                                  {entry.requests.toLocaleString()} {t("requestsHeader").toLowerCase()}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-4 gap-2 text-[11px] tabular-nums">
+                                {getTokenCells(entry).map((cell) => (
+                                  <div key={cell.key} className="min-w-0" title={cell.value.toLocaleString()}>
+                                    <span className="block truncate text-[10px] uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                                      {cell.label}
+                                    </span>
+                                    <span className="block truncate text-[var(--text-muted)]">
+                                      {formatCompact(cell.value)}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Desktop Ledger Table */}
+                  <div className="hidden max-h-[420px] overflow-auto lg:block">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 z-10 border-b border-[var(--surface-border)] bg-[var(--surface-base)]">
                         <tr>
-                          <td
-                            colSpan={9}
-                            className="bg-[var(--surface-muted)] px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]"
-                          >
-                            {t("unpricedModels")} ({unpricedModels.length})
-                          </td>
+                          <th className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                            {t("modelHeader")}
+                          </th>
+                          <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                            {t("providerHeader")}
+                          </th>
+                          <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                            {t("requestsHeader")}
+                          </th>
+                          <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                            {t("input")}
+                          </th>
+                          <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                            {t("cached")}
+                          </th>
+                          <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                            {t("cacheWrite")}
+                          </th>
+                          <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                            {t("output")}
+                          </th>
+                          <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                            {t("rateHeader")}
+                          </th>
+                          <th className="px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                            {t("estCostHeader")}
+                          </th>
                         </tr>
-                        {unpricedModels.map((entry) => (
-                          <tr key={entry.model} className="opacity-60">
-                            <td className="max-w-[220px] truncate px-4 py-1.5 font-mono text-[11px] text-[var(--text-muted)]" title={entry.model}>
-                              {entry.model}
+                      </thead>
+                      <tbody className="divide-y divide-[var(--surface-border)]/60">
+                        {pricedRows.map(({ entry, color, relativeWidth, sharePct }) => (
+                          <tr key={entry.model} className="transition-colors hover:bg-[var(--surface-muted)]/50">
+                            <td className="px-4 py-2">
+                              <div className="max-w-[220px] truncate font-mono text-[11px] font-medium text-[var(--text-primary)]" title={entry.model}>
+                                {entry.model}
+                              </div>
+                              <div className="mt-1 h-1 w-full max-w-[180px] overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{
+                                    width: `${Math.min(100, relativeWidth)}%`,
+                                    backgroundColor: color,
+                                  }}
+                                />
+                              </div>
                             </td>
-                            <td className="px-3 py-1.5 text-[var(--text-muted)]">{"\u2014"}</td>
-                            <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]">
+                            <td className="px-3 py-2">
+                              <span className="inline-block rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]">
+                                {entry.provider}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">
                               {entry.requests.toLocaleString()}
                             </td>
-                            <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]" title={entry.inputTokens.toLocaleString()}>
-                              {formatCompact(entry.inputTokens)}
+                            {getTokenCells(entry).map((cell) => (
+                              <td
+                                key={cell.key}
+                                className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]"
+                                title={cell.value.toLocaleString()}
+                              >
+                                {formatCompact(cell.value)}
+                              </td>
+                            ))}
+                            <td className="px-3 py-2 text-right font-mono text-[11px] tabular-nums text-[var(--text-muted)]">
+                              {entry.priced ? formatRate(entry) : "\u2014"}
                             </td>
-                            <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]" title={entry.cachedTokens.toLocaleString()}>
-                              {formatCompact(entry.cachedTokens)}
+                            <td className="px-4 py-2 text-right tabular-nums">
+                              <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                                {formatUSD(entry.estimatedCost)}
+                              </span>
+                              {totalEstimatedCost > 0 && (
+                                <span className="ml-1.5 text-[10px] text-[var(--text-muted)]">
+                                  {sharePct.toFixed(1)}%
+                                </span>
+                              )}
                             </td>
-                            <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]" title={entry.cacheWriteTokens.toLocaleString()}>
-                              {formatCompact(entry.cacheWriteTokens)}
-                            </td>
-                            <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]" title={entry.outputTokens.toLocaleString()}>
-                              {formatCompact(entry.outputTokens)}
-                            </td>
-                            <td className="px-3 py-1.5 text-right text-[var(--text-muted)]">{"\u2014"}</td>
-                            <td className="px-4 py-1.5 text-right text-[var(--text-muted)]">{"\u2014"}</td>
                           </tr>
                         ))}
-                      </>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
+
+                        {displayUnpriced && unpricedModels.length > 0 && (
+                          <>
+                            <tr>
+                              <td
+                                colSpan={9}
+                                className="bg-[var(--surface-muted)] px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]"
+                              >
+                                {t("unpricedModels")} ({unpricedModels.length})
+                              </td>
+                            </tr>
+                            {unpricedModels.map((entry) => (
+                              <tr key={entry.model} className="opacity-60">
+                                <td className="max-w-[220px] truncate px-4 py-1.5 font-mono text-[11px] text-[var(--text-muted)]" title={entry.model}>
+                                  {entry.model}
+                                </td>
+                                <td className="px-3 py-1.5 text-[var(--text-muted)]">{"\u2014"}</td>
+                                <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]">
+                                  {entry.requests.toLocaleString()}
+                                </td>
+                                {getTokenCells(entry).map((cell) => (
+                                  <td key={cell.key} className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]" title={cell.value.toLocaleString()}>
+                                    {formatCompact(cell.value)}
+                                  </td>
+                                ))}
+                                <td className="px-3 py-1.5 text-right text-[var(--text-muted)]">{"\u2014"}</td>
+                                <td className="px-4 py-1.5 text-right text-[var(--text-muted)]">{"\u2014"}</td>
+                              </tr>
+                            ))}
+                          </>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Tab 2: Bounded Scrollable Provider Breakdown (never overflows box) */}
             {activeTab === "providers" && (

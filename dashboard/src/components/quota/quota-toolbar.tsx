@@ -54,10 +54,10 @@ export function QuotaToolbar({
   }, [open]);
 
   return (
-    <div ref={containerRef} className="relative flex items-center gap-1.5">
-      <div className="relative">
+    <div ref={containerRef} className="relative min-w-0 flex-1">
+      <div className="relative flex w-full items-center">
         <svg
-          className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--text-muted)]"
+          className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]"
           fill="none"
           stroke="currentColor"
           strokeWidth={2}
@@ -74,29 +74,28 @@ export function QuotaToolbar({
           value={query.q}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={t("searchLabel")}
-          className="glass-input h-7 w-28 rounded-md pl-6 pr-2 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] transition-[width] duration-200 focus:w-44 focus:outline-none sm:w-32"
+          className="glass-input h-8 w-full rounded-md pl-8 pr-9 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none"
         />
+        <button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-label={t("providerFilterLabel")}
+          aria-expanded={open}
+          title={t("providerFilterLabel")}
+          className={`absolute right-1 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded transition-colors ${
+            hasFacetFilter || open
+              ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
+              : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+          </svg>
+          {hasFacetFilter && (
+            <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-blue-500" />
+          )}
+        </button>
       </div>
-
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-label={t("providerFilterLabel")}
-        aria-expanded={open}
-        title={t("providerFilterLabel")}
-        className={`relative inline-flex h-7 w-7 items-center justify-center rounded-md border transition-colors ${
-          hasFacetFilter || open
-            ? "border-[var(--accent)] bg-[var(--surface-hover)] text-[var(--text-primary)]"
-            : "border-[var(--surface-border)] bg-[var(--surface-base)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
-        }`}
-      >
-        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-        </svg>
-        {hasFacetFilter && (
-          <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-blue-500" />
-        )}
-      </button>
 
       {open && (
         <div className="glass-card absolute right-0 top-9 z-30 w-60 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 shadow-lg">

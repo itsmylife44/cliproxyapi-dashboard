@@ -164,14 +164,13 @@ export function QuotaDetails({
             {section.title && sections.length > 1 && (
               <h3 className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{section.title}</h3>
             )}
-            <div className="overflow-x-auto rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
-              <div className="min-w-[650px]">
+            <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
                 <div
                   className={cn(
-                    "border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]",
+                    "hidden border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] md:grid",
                     section.modelFirstView
-                      ? "grid grid-cols-[24px_minmax(0,1fr)_110px_110px_120px_120px]"
-                      : "grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px]"
+                      ? "md:grid-cols-[24px_minmax(0,1fr)_104px_96px_110px_110px]"
+                      : "md:grid-cols-[24px_minmax(0,1fr)_104px_96px_136px_136px]"
                   )}
                 >
                   <span></span>
@@ -207,6 +206,21 @@ export function QuotaDetails({
                           ? t("snapshotStatus")
                           : t("readyStatus");
 
+                  const statusColorClass = section.modelFirstView
+                    ? account.error
+                      ? "text-rose-600"
+                      : accountSummary?.staleSnapshot || accountQuotaUnverified
+                        ? "text-amber-700"
+                        : account.supported
+                          ? "text-emerald-700"
+                          : "text-amber-700"
+                    : account.error
+                      ? "text-rose-600"
+                      : account.supported
+                        ? "text-emerald-700"
+                        : "text-amber-700";
+                  const displayStatus = section.modelFirstView ? modelFirstStatus : statusLabel;
+
                   const resetSupported = !section.modelFirstView && isResettableProvider(account.provider);
                   const rule = autoResetRules?.[account.auth_index] ?? {
                     enabled: false,
@@ -233,76 +247,84 @@ export function QuotaDetails({
                         }}
                         onClick={() => onToggleCard(account.auth_index)}
                         className={cn(
-                          "w-full items-center px-3 py-2 text-left transition-colors hover:bg-[var(--surface-hover)]",
+                          "grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2.5 px-3 py-2.5 text-left transition-colors hover:bg-[var(--surface-hover)] md:gap-0 md:py-2",
                           section.modelFirstView
-                            ? "grid grid-cols-[24px_minmax(0,1fr)_110px_110px_120px_120px]"
-                            : "grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px]"
+                            ? "md:grid-cols-[24px_minmax(0,1fr)_104px_96px_110px_110px]"
+                            : "md:grid-cols-[24px_minmax(0,1fr)_104px_96px_136px_136px]"
                         )}
                       >
-                        <span className={cn("text-xs text-[var(--text-muted)] transition-transform", isRowExpanded && "rotate-180")}>⌄</span>
-                        <span className="truncate text-xs text-[var(--text-primary)]">{accountLabels.get(account.auth_index)}</span>
-                        <span className="truncate text-xs capitalize text-[var(--text-secondary)]">{account.provider}</span>
-                        <span
-                          className={cn(
-                            "text-xs",
-                            section.modelFirstView
-                              ? account.error
-                                ? "text-rose-600"
-                                : accountSummary?.staleSnapshot || accountQuotaUnverified
-                                  ? "text-amber-700"
-                                  : account.supported
-                                    ? "text-emerald-700"
-                                    : "text-amber-700"
-                              : account.error
-                                ? "text-rose-600"
-                                : account.supported
-                                  ? "text-emerald-700"
-                                  : "text-amber-700"
-                          )}
-                        >
-                          {section.modelFirstView ? modelFirstStatus : statusLabel}
+                        <span className={cn("col-start-2 row-start-1 justify-self-end text-xs text-[var(--text-muted)] transition-transform md:col-start-1 md:row-start-1 md:justify-self-start", isRowExpanded && "rotate-180")}>⌄</span>
+                        <span className="col-start-1 row-start-1 min-w-0 md:col-start-2 md:row-start-1 md:pr-2">
+                          <span className="block truncate text-xs font-medium text-[var(--text-primary)] md:font-normal">{accountLabels.get(account.auth_index)}</span>
+                          <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] md:hidden">
+                            <span className="capitalize text-[var(--text-secondary)]">{account.provider}</span>
+                            <span aria-hidden="true" className="text-[var(--text-muted)]">·</span>
+                            <span className={statusColorClass}>{displayStatus}</span>
+                          </span>
                         </span>
-                        {section.modelFirstView ? (
-                          <>
-                            <span className="text-xs text-[var(--text-secondary)]">
-                              {accountSummary
-                                ? accountQuotaUnverified
-                                  ? t("snapshotFullLabel")
-                                  : `${accountSummary.readyGroups}/${accountSummary.totalGroups}`
-                                : "-"}
-                            </span>
-                            <span className="text-xs text-[var(--text-muted)]">
-                              {accountSummary ? formatRelativeTime(accountSummary.nextRecoveryAt ?? accountSummary.nextWindowResetAt, t) : "-"}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="block pr-3">
-                              {longMin !== null ? (
-                                <>
-                                  <span className="text-xs tabular-nums text-[var(--text-secondary)]">{Math.round(longMin * 100)}%</span>
-                                  <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                                    <span className={cn("block h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="text-xs text-[var(--text-muted)]">-</span>
-                              )}
-                            </span>
-                            <span className="block pr-3">
-                              {shortMin !== null ? (
-                                <>
-                                  <span className="text-xs tabular-nums text-[var(--text-secondary)]">{Math.round(shortMin * 100)}%</span>
-                                  <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                                    <span className={cn("block h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="text-xs text-[var(--text-muted)]">-</span>
-                              )}
-                            </span>
-                          </>
-                        )}
+                        <span className="hidden truncate text-xs capitalize text-[var(--text-secondary)] md:col-start-3 md:row-start-1 md:block">{account.provider}</span>
+                        <span className={cn("hidden text-xs md:col-start-4 md:row-start-1 md:block", statusColorClass)}>
+                          {displayStatus}
+                        </span>
+                        <span className="col-span-2 row-start-2 grid grid-cols-2 gap-3 border-t border-[var(--surface-border)]/50 pt-2 md:contents">
+                          {section.modelFirstView ? (
+                            <>
+                              <span className="min-w-0 md:col-start-5 md:row-start-1">
+                                <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)] md:hidden">
+                                  {t("readyColumnLabel")}
+                                </span>
+                                <span className="text-xs text-[var(--text-secondary)]">
+                                  {accountSummary
+                                    ? accountQuotaUnverified
+                                      ? t("snapshotFullLabel")
+                                      : `${accountSummary.readyGroups}/${accountSummary.totalGroups}`
+                                    : "-"}
+                                </span>
+                              </span>
+                              <span className="min-w-0 md:col-start-6 md:row-start-1">
+                                <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)] md:hidden">
+                                  {t("recoveryColumnLabel")}
+                                </span>
+                                <span className="text-xs text-[var(--text-muted)]">
+                                  {accountSummary ? formatRelativeTime(accountSummary.nextRecoveryAt ?? accountSummary.nextWindowResetAt, t) : "-"}
+                                </span>
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="block min-w-0 md:col-start-5 md:row-start-1 md:pr-3">
+                                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)] md:hidden">
+                                  {t("longTermLabel")}
+                                </span>
+                                {longMin !== null ? (
+                                  <>
+                                    <span className="text-xs tabular-nums text-[var(--text-secondary)]">{Math.round(longMin * 100)}%</span>
+                                    <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                                      <span className={cn("block h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-xs text-[var(--text-muted)]">-</span>
+                                )}
+                              </span>
+                              <span className="block min-w-0 md:col-start-6 md:row-start-1 md:pr-3">
+                                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)] md:hidden">
+                                  {t("shortTermLabel")}
+                                </span>
+                                {shortMin !== null ? (
+                                  <>
+                                    <span className="text-xs tabular-nums text-[var(--text-secondary)]">{Math.round(shortMin * 100)}%</span>
+                                    <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                                      <span className={cn("block h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-xs text-[var(--text-muted)]">-</span>
+                                )}
+                              </span>
+                            </>
+                          )}
+                        </span>
                       </button>
 
                       {isRowExpanded && (
@@ -489,7 +511,6 @@ export function QuotaDetails({
                     </div>
                   );
                 })}
-              </div>
             </div>
           </div>
         ))}

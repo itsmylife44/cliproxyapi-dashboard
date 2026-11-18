@@ -173,14 +173,19 @@ export default function ApiKeysPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
+      <div>
+        <div className="flex items-center justify-between gap-3">
           <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
-          <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t('pageDescription')} <HelpTooltip content={t('pageTooltip')} /></p>
+          <Button
+            onClick={() => { setKeyNameInput(""); setIsCreateModalOpen(true); }}
+            disabled={creating}
+            className="shrink-0 whitespace-nowrap px-3 py-1.5 text-xs"
+            data-testid="api-key-create-trigger"
+          >
+            {t('createKeyButton')}
+          </Button>
         </div>
-        <Button onClick={() => { setKeyNameInput(""); setIsCreateModalOpen(true); }} disabled={creating} className="px-2.5 py-1 text-xs" data-testid="api-key-create-trigger">
-          {t('createKeyButton')}
-        </Button>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">{t('pageDescription')} <HelpTooltip content={t('pageTooltip')} /></p>
       </div>
 
       {loading ? (
@@ -206,31 +211,45 @@ export default function ApiKeysPage() {
           </div>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <section className="min-w-[600px] border-t border-b border-[var(--surface-border)]">
-            <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1fr)_180px_160px_110px] border-b border-[var(--surface-border)] bg-[var(--surface-base)]/95 px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              <span>{t('tableHeaderName')}</span>
-              <span>{t('tableHeaderCreated')}</span>
-              <span>{t('tableHeaderLastUsed')}</span>
-              <span>{t('tableHeaderActions')}</span>
-            </div>
+        <section className="border-t border-b border-[var(--surface-border)]">
+          <div className="sticky top-0 z-10 hidden grid-cols-[minmax(0,1fr)_160px_160px_100px] border-b border-[var(--surface-border)] bg-[var(--surface-base)]/95 px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] md:grid">
+            <span>{t('tableHeaderName')}</span>
+            <span>{t('tableHeaderCreated')}</span>
+            <span>{t('tableHeaderLastUsed')}</span>
+            <span className="text-right">{t('tableHeaderActions')}</span>
+          </div>
           {apiKeys.map((apiKey) => (
-            <div key={apiKey.id} className="grid grid-cols-[minmax(0,1fr)_180px_160px_110px] items-center border-b border-[var(--surface-border)] px-2 py-2.5 last:border-b-0">
+            <div
+              key={apiKey.id}
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b border-[var(--surface-border)] px-2 py-2.5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_160px_160px_100px] md:gap-0"
+            >
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium text-[var(--text-primary)]">{apiKey.name}</p>
                 <p className="mt-0.5 truncate font-mono text-xs text-[var(--text-muted)]">{apiKey.keyPreview}</p>
+                <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-[var(--text-muted)] md:hidden">
+                  <span>{t('tableHeaderCreated')}: {new Date(apiKey.createdAt).toLocaleDateString()}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    {t('tableHeaderLastUsed')}:{" "}
+                    {apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleDateString() : t('neverUsed')}
+                  </span>
+                </p>
               </div>
-              <span className="text-xs text-[var(--text-muted)]">{new Date(apiKey.createdAt).toLocaleDateString()}</span>
-              <span className="text-xs text-[var(--text-muted)]">{apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleDateString() : t('neverUsed')}</span>
+              <span className="hidden text-xs text-[var(--text-muted)] md:block">{new Date(apiKey.createdAt).toLocaleDateString()}</span>
+              <span
+                className="hidden text-xs text-[var(--text-muted)] md:block"
+                title={apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleString() : undefined}
+              >
+                {apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleDateString() : t('neverUsed')}
+              </span>
               <div className="flex justify-end">
-                <Button variant="danger" onClick={() => confirmDelete(apiKey.id)} className="px-2.5 py-1 text-xs" data-testid={`api-key-delete-trigger-${apiKey.id}`}>
+                <Button variant="danger" onClick={() => confirmDelete(apiKey.id)} className="shrink-0 whitespace-nowrap px-2.5 py-1 text-xs" data-testid={`api-key-delete-trigger-${apiKey.id}`}>
                   {t('deleteButton')}
                 </Button>
               </div>
             </div>
           ))}
-          </section>
-        </div>
+        </section>
       )}
 
       {/* ── Create Key Modal ── */}

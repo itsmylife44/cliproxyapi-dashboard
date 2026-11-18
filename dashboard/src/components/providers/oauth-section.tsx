@@ -220,6 +220,7 @@ export function OAuthSection({
   const [callbackMessage, setCallbackMessage] = useState("");
   const [oauthErrorMessage, setOauthErrorMessage] = useState<string | null>(null);
   const [authLaunchUrl, setAuthLaunchUrl] = useState<string | null>(null);
+  const [callbackStep, setCallbackStep] = useState<"instructions" | "callback">("instructions");
   const pollingIntervalRef = useRef<number | null>(null);
   const pollingAttemptsRef = useRef(0);
   const noCallbackClaimTimeoutRef = useRef<number | null>(null);
@@ -417,6 +418,7 @@ export function OAuthSection({
     setCallbackMessage(t("callbackMsgEmpty"));
     setOauthErrorMessage(null);
     setAuthLaunchUrl(null);
+    setCallbackStep("instructions");
     setDeviceCodeInfo(null);
     deviceCodePopupOpenedRef.current = false;
   };
@@ -492,6 +494,7 @@ export function OAuthSection({
     setCallbackValidation(CALLBACK_VALIDATION.EMPTY);
     setCallbackMessage(t("callbackMsgEmpty"));
     setAuthLaunchUrl(null);
+    setCallbackStep("instructions");
 
     const fail = (message: string) => {
       setOauthModalStatus(MODAL_STATUS.ERROR);
@@ -529,38 +532,52 @@ export function OAuthSection({
         return fail(t("errorOAuthMissingUrl"));
       }
       setAuthLaunchUrl(data.url);
+      authStateRef.current = data.state;
+
+      if (provider.requiresCallback) {
+        // Show instructions before opening the auth tab so the popup does not steal focus first.
+        setOauthModalStatus(MODAL_STATUS.WAITING);
+        setCallbackStep("instructions");
+        setCallbackValidation(CALLBACK_VALIDATION.EMPTY);
+        setCallbackMessage(t("callbackMsgEmpty"));
+        return { ok: true };
+      }
 
       const popupOpened = openAuthPopup(data.url);
       if (!popupOpened) {
         return fail(t("errorOAuthPopupBlocked"));
       }
-      authStateRef.current = data.state;
-      if (provider.requiresCallback) {
-        setOauthModalStatus(MODAL_STATUS.WAITING);
-        setCallbackValidation(CALLBACK_VALIDATION.EMPTY);
-        setCallbackMessage(t("callbackMsgEmpty"));
-        showToast(t("toastOAuthFollowStepsPopup"), "info");
-      } else {
-        setOauthModalStatus(MODAL_STATUS.POLLING);
-        setCallbackValidation(CALLBACK_VALIDATION.VALID);
-        setCallbackMessage(t("callbackMsgNoCallbackPopup"));
-        showToast(t("toastOAuthNoCallbackPopup"), "info");
-        if (data.user_code && data.url) {
-          setDeviceCodeInfo({
-            verificationUrl: data.url,
-            userCode: data.user_code,
-          });
-          deviceCodePopupOpenedRef.current = true;
-        }
-        stopNoCallbackClaimPolling();
-        void claimOAuthWithoutCallback(providerId, data.state);
+      setOauthModalStatus(MODAL_STATUS.POLLING);
+      setCallbackValidation(CALLBACK_VALIDATION.VALID);
+      setCallbackMessage(t("callbackMsgNoCallbackPopup"));
+      showToast(t("toastOAuthNoCallbackPopup"), "info");
+      if (data.user_code && data.url) {
+        setDeviceCodeInfo({
+          verificationUrl: data.url,
+          userCode: data.user_code,
+        });
+        deviceCodePopupOpenedRef.current = true;
       }
+      stopNoCallbackClaimPolling();
+      void claimOAuthWithoutCallback(providerId, data.state);
 
       pollAuthStatus(data.state);
       return { ok: true };
     } catch {
       return fail(t("errorOAuthStartNetwork"));
     }
+  };
+
+  const handleProceedToAuthUrl = () => {
+    if (!authLaunchUrl || !authStateRef.current) return;
+    setCallbackStep("callback");
+    const popupOpened = openAuthPopup(authLaunchUrl);
+    if (!popupOpened) {
+      showToast(t("errorOAuthPopupBlocked"), "error");
+    } else {
+      showToast(t("toastOAuthFollowStepsPopup"), "info");
+    }
+    pollAuthStatus(authStateRef.current);
   };
 
   const handleCallbackChange = (value: string) => {
@@ -895,7 +912,11 @@ export function OAuthSection({
             </div>
           )}
 
-          {authLaunchUrl && (oauthModalStatus === MODAL_STATUS.WAITING || oauthModalStatus === MODAL_STATUS.POLLING || oauthModalStatus === MODAL_STATUS.ERROR) && (
+          {authLaunchUrl &&
+            (!selectedOAuthProviderRequiresCallback || callbackStep === "callback") &&
+            (oauthModalStatus === MODAL_STATUS.WAITING ||
+              oauthModalStatus === MODAL_STATUS.POLLING ||
+              oauthModalStatus === MODAL_STATUS.ERROR) && (
             <div className="rounded-xl border-l-4 border-[var(--surface-border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
               <div className="font-medium text-[var(--text-primary)]">
                 Authorization URL
@@ -939,57 +960,60 @@ export function OAuthSection({
             </div>
           )}
 
+          {oauthModalStatus === MODAL_STATUS.WAITING &&
+            selectedOAuthProviderRequiresCallback &&
+            callbackStep === "instructions" && (
+            <div className="rounded-xl border-l-4 border-[var(--surface-border)] bg-[var(--surface-hover)] p-4 text-sm">
+              <div className="font-medium text-[var(--text-primary)]">
+                Step-by-step
+              </div>
+              <ol className="mt-3 list-decimal space-y-2 pl-4 text-[var(--text-primary)]">
+                <li>Log in and authorize in the popup window.</li>
+                <li>
+                  After authorizing, the page will fail to load (this is
+                  expected).
+                </li>
+                <li>
+                  Our server runs remotely, so the OAuth redirect can&apos;t reach
+                  it directly. Copy the FULL URL from the address bar.
+                </li>
+                <li>{t("oauthStep4")}</li>
+              </ol>
+            </div>
+          )}
+
           {(oauthModalStatus === MODAL_STATUS.WAITING ||
             oauthModalStatus === MODAL_STATUS.SUBMITTING ||
             oauthModalStatus === MODAL_STATUS.POLLING ||
             oauthModalStatus === MODAL_STATUS.ERROR) &&
-            selectedOAuthProviderRequiresCallback && (
-            <div className="space-y-4">
-              <div className="rounded-xl border-l-4 border-[var(--surface-border)] bg-[var(--surface-hover)] p-4 text-sm">
-                <div className="font-medium text-[var(--text-primary)]">
-                  Step-by-step
-                </div>
-                <ol className="mt-3 list-decimal space-y-2 pl-4 text-[var(--text-primary)]">
-                  <li>Log in and authorize in the popup window.</li>
-                  <li>
-                    After authorizing, the page will fail to load (this is
-                    expected).
-                  </li>
-                  <li>
-                    Our server runs remotely, so the OAuth redirect can&apos;t reach
-                    it directly. Copy the FULL URL from the address bar.
-                  </li>
-                  <li>{t("oauthStep4")}</li>
-                </ol>
+            selectedOAuthProviderRequiresCallback &&
+            callbackStep === "callback" && (
+            <div className="mt-4">
+              <div className="mb-2 text-xs font-medium text-[var(--text-primary)]">
+                Paste callback URL
               </div>
-
-              <div>
-                <div className="mb-2 text-xs font-medium text-[var(--text-primary)]">
-                  Paste callback URL
-                </div>
-                <Input
-                  type="text"
-                  name="callbackUrl"
-                  value={callbackUrl}
-                  onChange={handleCallbackChange}
-                  placeholder="https://localhost/callback?code=...&state=..."
-                  disabled={
-                    oauthModalStatus === MODAL_STATUS.SUBMITTING ||
-                    oauthModalStatus === MODAL_STATUS.POLLING
-                  }
-                  className="font-mono"
-                />
-                <div
-                  className={`mt-2 rounded-xl border-l-4 p-2 text-xs ${
-                    callbackValidation === CALLBACK_VALIDATION.VALID
-                      ? "border-green-300 bg-green-500/10 text-green-700"
-                      : callbackValidation === CALLBACK_VALIDATION.INVALID
-                        ? "border-red-300 bg-red-500/10 text-red-700"
-                        : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
-                  }`}
-                >
-                  {callbackMessage}
-                </div>
+              <Input
+                type="text"
+                name="callbackUrl"
+                value={callbackUrl}
+                onChange={handleCallbackChange}
+                placeholder="https://localhost/callback?code=...&state=..."
+                disabled={
+                  oauthModalStatus === MODAL_STATUS.SUBMITTING ||
+                  oauthModalStatus === MODAL_STATUS.POLLING
+                }
+                className="font-mono"
+              />
+              <div
+                className={`mt-2 rounded-xl border-l-4 p-2 text-xs ${
+                  callbackValidation === CALLBACK_VALIDATION.VALID
+                    ? "border-green-300 bg-green-500/10 text-green-700"
+                    : callbackValidation === CALLBACK_VALIDATION.INVALID
+                      ? "border-red-300 bg-red-500/10 text-red-700"
+                      : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
+                }`}
+              >
+                {callbackMessage}
               </div>
             </div>
           )}
@@ -1048,19 +1072,45 @@ export function OAuthSection({
           <Button variant="ghost" onClick={handleOAuthModalClose}>
             {t("oauthCloseButton")}
           </Button>
-          {oauthModalStatus !== MODAL_STATUS.SUCCESS && selectedOAuthProviderRequiresCallback && (
-            <Button
-              variant="secondary"
-              onClick={handleSubmitCallback}
-              disabled={isOAuthSubmitDisabled}
-            >
-              {oauthModalStatus === MODAL_STATUS.SUBMITTING
-                ? t("oauthSubmittingButton")
-                : oauthModalStatus === MODAL_STATUS.POLLING
-                  ? t("oauthWaitingButton")
-                  : t("oauthSubmitUrlButton")}
-            </Button>
-          )}
+          {oauthModalStatus === MODAL_STATUS.WAITING &&
+            selectedOAuthProviderRequiresCallback &&
+            callbackStep === "instructions" && (
+              <Button
+                variant="secondary"
+                onClick={handleProceedToAuthUrl}
+                disabled={!authLaunchUrl}
+                className="inline-flex items-center gap-1.5"
+              >
+                <span>{t("oauthContinueButton")}</span>
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </Button>
+            )}
+          {oauthModalStatus !== MODAL_STATUS.SUCCESS &&
+            selectedOAuthProviderRequiresCallback &&
+            callbackStep === "callback" && (
+              <Button
+                variant="secondary"
+                onClick={handleSubmitCallback}
+                disabled={isOAuthSubmitDisabled}
+              >
+                {oauthModalStatus === MODAL_STATUS.SUBMITTING
+                  ? t("oauthSubmittingButton")
+                  : oauthModalStatus === MODAL_STATUS.POLLING
+                    ? t("oauthWaitingButton")
+                    : t("oauthSubmitUrlButton")}
+              </Button>
+            )}
           {oauthModalStatus === MODAL_STATUS.SUCCESS && (
             <Button variant="secondary" onClick={handleOAuthModalClose}>
               {t("oauthDoneButton")}

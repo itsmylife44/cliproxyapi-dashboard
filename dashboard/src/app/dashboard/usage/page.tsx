@@ -137,7 +137,7 @@ export default function UsagePage() {
   const [activeFilter, setActiveFilter] = useState<DateFilter>("7d");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
-  const [activeTab, setActiveTab] = useState<UsageSectionTab>("breakdown");
+  const [activeTab, setActiveTab] = useState<UsageSectionTab>("cost");
   const { showToast } = useToast();
   const isFirstLoadRef = useRef(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -482,8 +482,8 @@ export default function UsagePage() {
             <div className="flex flex-wrap items-center gap-1 border-b border-[var(--surface-border)]">
               {(
                 [
-                  { id: "breakdown", label: t("usageTabBreakdown") },
                   { id: "cost", label: t("usageTabCost") },
+                  { id: "breakdown", label: t("usageTabBreakdown") },
                   { id: "events", label: t("usageTabEvents") },
                 ] as const
               ).map((tab) => {

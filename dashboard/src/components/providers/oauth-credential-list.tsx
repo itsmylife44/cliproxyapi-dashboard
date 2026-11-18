@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
 import { OwnerBadge, type CurrentUserLike } from "@/components/providers/api-key-section";
 
 interface OAuthAccountWithOwnership {
@@ -103,6 +102,26 @@ export function OAuthCredentialList({
 }: OAuthCredentialListProps) {
   const t = useTranslations("providers");
   const [providerFilter, setProviderFilter] = useState<string>("all");
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (!menuRootRef.current?.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenMenuId(null);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openMenuId]);
 
   const providerCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -166,65 +185,100 @@ export function OAuthCredentialList({
           {t("noAccountsConnected")}
         </div>
       ) : (
-        <div className="divide-y divide-[var(--surface-border)] border-t border-b border-[var(--surface-border)]">
-          {filteredAccounts.map((account) => (
-            <div
-              key={account.id}
-              className="flex flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1">
-                <span className="inline-flex shrink-0 rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-primary)]">
-                  {account.provider}
-                </span>
-                <span className="truncate font-mono text-xs text-[var(--text-primary)]" title={account.accountEmail || account.accountName}>
-                  {account.accountEmail || account.accountName}
-                </span>
-                {account.accountEmail && account.accountName !== account.accountEmail && (
-                  <span className="hidden truncate font-mono text-[11px] text-[var(--text-muted)] md:inline" title={account.accountName}>
-                    ({account.accountName})
-                  </span>
-                )}
-                {currentUser && (
-                  <OwnerBadge ownerUsername={account.ownerUsername} isOwn={account.isOwn} />
-                )}
-                <OAuthStatusBadge
-                  status={account.status}
-                  statusMessage={account.statusMessage}
-                  unavailable={account.unavailable}
-                />
-              </div>
+        <div ref={menuRootRef} className="divide-y divide-[var(--surface-border)] border-t border-b border-[var(--surface-border)]">
+          {filteredAccounts.map((account) => {
+            const canManage = Boolean(currentUser && (account.isOwn || currentUser.isAdmin));
+            const canClaim = Boolean(currentUser?.isAdmin && !account.ownerUsername);
+            const isMenuOpen = openMenuId === account.id;
 
-              {currentUser && (account.isOwn || currentUser.isAdmin) && (
-                <div className="flex shrink-0 items-center gap-2">
-                  {currentUser.isAdmin && !account.ownerUsername && (
-                    <Button
-                      variant="secondary"
-                      className="px-2.5 py-1 text-xs"
-                      disabled={claimingAccountName === account.accountName}
-                      onClick={() => onClaim(account.accountName)}
-                    >
-                      {claimingAccountName === account.accountName ? "..." : t("claimButton")}
-                    </Button>
+            return (
+              <div
+                key={account.id}
+                className="flex items-center justify-between gap-2 py-2.5"
+              >
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1">
+                  <span className="inline-flex shrink-0 rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-primary)]">
+                    {account.provider}
+                  </span>
+                  <span className="truncate font-mono text-xs text-[var(--text-primary)]" title={account.accountEmail || account.accountName}>
+                    {account.accountEmail || account.accountName}
+                  </span>
+                  {account.accountEmail && account.accountName !== account.accountEmail && (
+                    <span className="hidden truncate font-mono text-[11px] text-[var(--text-muted)] md:inline" title={account.accountName}>
+                      ({account.accountName})
+                    </span>
                   )}
-                  <Button
-                    variant="secondary"
-                    className="px-2.5 py-1 text-xs"
-                    disabled={togglingAccountId === account.id}
-                    onClick={() => onToggle(account.id, account.status === "disabled")}
-                  >
-                    {togglingAccountId === account.id ? "..." : account.status === "disabled" ? t("enableButton") : t("disableButton")}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    className="px-2.5 py-1 text-xs"
-                    onClick={() => onDelete(account.id)}
-                  >
-                    {t("disconnectButton")}
-                  </Button>
+                  {currentUser && (
+                    <OwnerBadge ownerUsername={account.ownerUsername} isOwn={account.isOwn} />
+                  )}
+                  <OAuthStatusBadge
+                    status={account.status}
+                    statusMessage={account.statusMessage}
+                    unavailable={account.unavailable}
+                  />
                 </div>
-              )}
-            </div>
-          ))}
+
+                {canManage && (
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setOpenMenuId((prev) => (prev === account.id ? null : account.id))}
+                      aria-label={t("actionsAriaLabel")}
+                      aria-expanded={isMenuOpen}
+                      className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                    >
+                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                        <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                      </svg>
+                    </button>
+
+                    {isMenuOpen && (
+                      <div className="glass-card absolute right-0 top-8 z-30 min-w-[140px] overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] py-1 shadow-lg">
+                        {canClaim && (
+                          <button
+                            type="button"
+                            disabled={claimingAccountName === account.accountName}
+                            onClick={() => {
+                              setOpenMenuId(null);
+                              onClaim(account.accountName);
+                            }}
+                            className="flex w-full cursor-pointer items-center px-3 py-1.5 text-left text-xs text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] disabled:opacity-50"
+                          >
+                            {claimingAccountName === account.accountName ? "..." : t("claimButton")}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={togglingAccountId === account.id}
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            onToggle(account.id, account.status === "disabled");
+                          }}
+                          className="flex w-full cursor-pointer items-center px-3 py-1.5 text-left text-xs text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] disabled:opacity-50"
+                        >
+                          {togglingAccountId === account.id
+                            ? "..."
+                            : account.status === "disabled"
+                              ? t("enableButton")
+                              : t("disableButton")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            onDelete(account.id);
+                          }}
+                          className="flex w-full cursor-pointer items-center px-3 py-1.5 text-left text-xs text-rose-600 transition-colors hover:bg-rose-500/10 dark:text-rose-400"
+                        >
+                          {t("disconnectButton")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

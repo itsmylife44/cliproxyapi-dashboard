@@ -96,7 +96,7 @@ describe("calcProviderSummary", () => {
     ]);
   });
 
-  it("caps each account's short-term averageCapacity by its matching long-term window", () => {
+  it("averages short-term capacity strictly from short-term windows without clamping by long-term", () => {
     const acc1 = codexAccount("acc-1", [
       codexWindow("primary-window", 5 * HOUR, 0.9),
       codexWindow("secondary-window", 168 * HOUR, 0.0),
@@ -110,11 +110,10 @@ describe("calcProviderSummary", () => {
     const shortTerm = windowCapacities.find((w) => w.isShortTerm);
     const longTerm = windowCapacities.find((w) => !w.isShortTerm);
     expect(longTerm?.averageCapacity).toBeCloseTo(0.3, 5);
-    // acc1 usable = min(0.9, 0.0) = 0.0; acc2 usable = min(0.8, 0.6) = 0.6 -> avg = 0.3
-    expect(shortTerm?.averageCapacity).toBeCloseTo(0.3, 5);
+    expect(shortTerm?.averageCapacity).toBeCloseTo(0.85, 5);
   });
 
-  it("caps -5h short-term windows by their matching -weekly family window", () => {
+  it("keeps -5h short-term window average independent of matching -weekly family window", () => {
     const acc: QuotaAccount = {
       auth_index: "claude-family-1",
       provider: "claude",
@@ -148,10 +147,10 @@ describe("calcProviderSummary", () => {
     const shortTerm = windowCapacities.find((w) => w.id === "sonnet-5h");
     const longTerm = windowCapacities.find((w) => w.id === "sonnet-weekly");
     expect(longTerm?.averageCapacity).toBeCloseTo(0.25, 5);
-    expect(shortTerm?.averageCapacity).toBeCloseTo(0.25, 5);
+    expect(shortTerm?.averageCapacity).toBeCloseTo(0.9, 5);
   });
 
-  it("caps scoped short-term windows only by their own scope and ignores scoped limits for unscoped windows", () => {
+  it("keeps scoped and unscoped short-term averages independent from long-term limits", () => {
     const spark = { id: "codex-bengalfox", label: "GPT-5.3-Codex-Spark" };
     const codeReview = { id: "code-review", label: "Code Review" };
     const acc = codexAccount("plus", [
@@ -177,11 +176,11 @@ describe("calcProviderSummary", () => {
     const { windowCapacities } = calcProviderSummary([acc]);
     const unscoped5h = windowCapacities.find((w) => w.isShortTerm && !w.scope);
     const spark5h = windowCapacities.find((w) => w.isShortTerm && w.scope?.id === "codex-bengalfox");
-    expect(unscoped5h?.averageCapacity).toBeCloseTo(0.8, 5);
-    expect(spark5h?.averageCapacity).toBeCloseTo(0.2, 5);
+    expect(unscoped5h?.averageCapacity).toBeCloseTo(0.9, 5);
+    expect(spark5h?.averageCapacity).toBeCloseTo(0.7, 5);
   });
 
-  it("caps unscoped non-5h short-term windows by unscoped long-term siblings, ignoring extra-usage", () => {
+  it("uses strict short-term score for unscoped non-5h short-term windows, ignoring extra-usage", () => {
     const claudeAccount: QuotaAccount = {
       auth_index: "claude-1",
       provider: "claude",
@@ -213,7 +212,7 @@ describe("calcProviderSummary", () => {
 
     const { windowCapacities } = calcProviderSummary([claudeAccount]);
     const shortTerm = windowCapacities.find((w) => w.id === "five-hour");
-    expect(shortTerm?.averageCapacity).toBeCloseTo(0.4, 5);
+    expect(shortTerm?.averageCapacity).toBeCloseTo(0.95, 5);
   });
 });
 

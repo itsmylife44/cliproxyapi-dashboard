@@ -135,7 +135,7 @@ export default function QuotaPage() {
   const handleUpdateAutoReset = useCallback(
     async (
       authIndex: string,
-      patch: { enabled: boolean; fiveHourThresholdPct: number; weeklyThresholdPct: number }
+      patch: { enabled: boolean; fiveHourThresholdPct: number; weeklyThresholdPct: number; minWeeklyDaysLeft: number }
     ) => {
       setAutoResetRules((prev) => ({
         ...prev,
@@ -197,7 +197,7 @@ export default function QuotaPage() {
           setAutoResetRules((prev) => ({
             ...prev,
             [authIndex]: {
-              ...(prev[authIndex] ?? { enabled: true, fiveHourThresholdPct: 0, weeklyThresholdPct: 0 }),
+              ...(prev[authIndex] ?? { enabled: true, fiveHourThresholdPct: 0, weeklyThresholdPct: 0, minWeeklyDaysLeft: 0 }),
               lastResetAt: new Date().toISOString(),
               lastStatus: data.status ?? "reset",
             },
@@ -304,29 +304,32 @@ export default function QuotaPage() {
   const hasAnyAccounts = allAccounts.length > 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
-        <div className="flex flex-wrap items-center gap-3 tabular-nums">
-          <span>
-            <strong className="font-semibold text-[var(--text-primary)]">{activeAccounts}</strong>{" "}
-            {t("activeAccountsLabel").toLowerCase()}
-          </span>
-          <span>·</span>
-          <span>
-            <strong className="font-semibold text-[var(--text-primary)]">{providerSummaries.length}</strong>{" "}
-            {t("providersLabel").toLowerCase()}
-          </span>
-          {lowCapacityCount > 0 && (
-            <>
-              <span>·</span>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3 text-xs text-[var(--text-muted)]">
+        <div>
+          <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t("pageTitle")}</h1>
+          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+            {t("pageDescription")} ·{" "}
+            <span className="tabular-nums text-[var(--text-secondary)]">
+              {activeAccounts} {t("activeAccountsLabel").toLowerCase()} · {providerSummaries.length} {t("providersLabel").toLowerCase()}
+            </span>
+            {lowCapacityCount > 0 && (
               <span className="font-medium text-amber-600 dark:text-amber-400">
-                {lowCapacityCount} {t("lowCapacityLabel").toLowerCase()}
+                {" "}· {lowCapacityCount} {t("lowCapacityLabel").toLowerCase()}
               </span>
-            </>
-          )}
+            )}
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <QuotaToolbar
+            query={query}
+            total={filteredAccounts.length}
+            onSearchChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { q: value }))}
+            onProviderChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { provider: value }))}
+            onStatusChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { status: value }))}
+            onClear={() => replaceQuery(clearQuotaToolbarQuery())}
+          />
           <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             {t("autoRefreshBadge")}
@@ -373,40 +376,32 @@ export default function QuotaPage() {
             </section>
           )}
 
-          <QuotaDetails
-            filteredAccounts={paginatedAccounts}
-            hasAnyAccounts={hasAnyAccounts}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={(page) => replaceQuery({ ...query, page })}
-            expandedCards={expandedCards}
-            onToggleCard={toggleCard}
-            loading={loading}
-            modelFirstOnlyView={isModelFirstOnlyView}
-            refreshKey={quotaData?.generatedAt}
-            headerRight={
-              <QuotaToolbar
-                query={query}
-                total={filteredAccounts.length}
-                onSearchChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { q: value }))}
-                onProviderChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { provider: value }))}
-                onStatusChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { status: value }))}
-                onClear={() => replaceQuery(clearQuotaToolbarQuery())}
-              />
-            }
-            autoResetRules={autoResetRules}
-            autoResetCredits={autoResetCredits}
-            autoResetBusy={autoResetBusy}
-            onUpdateAutoReset={handleUpdateAutoReset}
-            onCheckResetCredits={handleCheckResetCredits}
-            onManualReset={handleManualReset}
-          />
-
-          <div className="border-t border-[var(--surface-border)] pt-5">
+          <div className="border-t border-[var(--surface-border)] pt-4">
             <QuotaChart
               providerSummaries={providerSummaries}
               modelFirstSummary={modelFirstSummary}
               modelFirstOnlyView={isModelFirstOnlyView}
+            />
+          </div>
+
+          <div className="border-t border-[var(--surface-border)] pt-4">
+            <QuotaDetails
+              filteredAccounts={paginatedAccounts}
+              hasAnyAccounts={hasAnyAccounts}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(page) => replaceQuery({ ...query, page })}
+              expandedCards={expandedCards}
+              onToggleCard={toggleCard}
+              loading={loading}
+              modelFirstOnlyView={isModelFirstOnlyView}
+              refreshKey={quotaData?.generatedAt}
+              autoResetRules={autoResetRules}
+              autoResetCredits={autoResetCredits}
+              autoResetBusy={autoResetBusy}
+              onUpdateAutoReset={handleUpdateAutoReset}
+              onCheckResetCredits={handleCheckResetCredits}
+              onManualReset={handleManualReset}
             />
           </div>
         </div>

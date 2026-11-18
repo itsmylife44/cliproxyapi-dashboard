@@ -17,6 +17,7 @@ const UpdateRuleSchema = z.object({
   enabled: z.boolean(),
   fiveHourThresholdPct: z.number().min(0).max(100).default(0),
   weeklyThresholdPct: z.number().min(0).max(100).default(0),
+  minWeeklyDaysLeft: z.number().min(0).max(7).default(0),
 });
 
 const ActionSchema = z.object({
@@ -47,11 +48,12 @@ export async function PUT(request: NextRequest) {
       return apiError(ERROR_CODE.VALIDATION_ERROR, "Invalid auto-reset rule payload", 400);
     }
 
-    const { authIndex, enabled, fiveHourThresholdPct, weeklyThresholdPct } = parsed.data;
+    const { authIndex, enabled, fiveHourThresholdPct, weeklyThresholdPct, minWeeklyDaysLeft } = parsed.data;
     const result = await upsertAutoResetRule(authIndex, {
       enabled,
       fiveHourThresholdPct,
       weeklyThresholdPct,
+      minWeeklyDaysLeft,
     });
 
     return NextResponse.json(result);

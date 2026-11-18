@@ -447,9 +447,7 @@
     "statsApiKeysValue": "{count} konfiguriert",
     "statsApiKeysOwn": "- {own} eigene",
     "statsActiveProvidersLabel": "Aktive Anbieter",
-    "statsOAuthAccountsLabel": "OAuth-Konten",
     "statsOAuthValue": "{count} verbunden",
-    "statsCustomProvidersLabel": "Benutzerdefinierte Anbieter",
     "statsCustomValue": "{count} konfiguriert",
     "loadingText": "Anbieter werden geladen...",
     "adminSettingsTitle": "Admin-Einstellungen",
@@ -726,7 +724,8 @@
     "shareDescription": "Diesen Provider für alle Dashboard-Benutzer sichtbar und nutzbar machen. Nur Administratoren können diese Einstellung ändern.",
     "sharedBadge": "Geteilt",
     "sharedOwnerLabel": "Eigentümer: {username}",
-    "sharedReadOnlyTooltip": "Geteilte Provider können nur vom Eigentümer oder einem Administrator bearbeitet werden."
+    "sharedReadOnlyTooltip": "Geteilte Provider können nur vom Eigentümer oder einem Administrator bearbeitet werden.",
+    "actionsAriaLabel": "Kontoaktionen"
   },
   "quota": {
     "pageTitle": "Kontingent-Verwaltung",
@@ -737,7 +736,6 @@
     "providersLabel": "Anbieter",
     "refreshButton": "Aktualisieren",
     "searchLabel": "Suche",
-    "searchPlaceholder": "Konten, Anbieter oder IDs suchen",
     "providerFilterLabel": "Anbieter",
     "statusFilterLabel": "Status",
     "clearFiltersButton": "Filter zurücksetzen",
@@ -761,8 +759,6 @@
     "noProviderData": "Keine Anbieterdaten",
     "noComparableProviderQuota": "Keine vergleichbaren Quotenfenster von Anbietern gemeldet",
     "providerCapacityTitle": "Anbieterkapazität",
-    "providerCapacitySubtitle": "Durchschnittliche verbleibende Lang- und Kurzzeitkapazität pro Anbieter; Antigravity nur mit Gemini-Fenstern",
-    "accountsTitle": "Konten",
     "accountColumn": "Konto",
     "providerColumn": "Anbieter",
     "statusColumn": "Status",
@@ -779,7 +775,6 @@
     "freshSnapshotsCount": "{fresh}/{total} aktuelle Snapshots",
     "nextResetShort": "Nächster Reset",
     "groupedSnapshotTitle": "Gruppierter Snapshot",
-    "groupedSnapshotSubtitle": "Gruppierte Familien-Kontingentansicht mit Minimum- und Median-Restprozenten",
     "noGroupedModelData": "Keine gruppierten Modelldaten",
     "resetLabel": "Reset",
     "healthyLabel": "gesund",
@@ -822,7 +817,6 @@
     "estRemainingLabel": "Gesch. Verbleibend",
     "modelColumnLabel": "Modell",
     "autoRefreshBadge": "Auto · 60s",
-    "autoResetColumn": "Auto-Reset",
     "autoResetToggle": "Auto-Reset",
     "autoResetWhenLabel": "Auslösen bei",
     "autoReset5hLabel": "5h <=",
@@ -834,7 +828,8 @@
     "autoResetSaveFailed": "Auto-Reset-Einstellung konnte nicht gespeichert werden",
     "autoResetCheckFailed": "Reset-Credits konnten nicht geprüft werden",
     "autoResetApplied": "Nutzungslimit zurückgesetzt",
-    "autoResetFailed": "Reset nicht verfügbar oder fehlgeschlagen"
+    "autoResetFailed": "Reset nicht verfügbar oder fehlgeschlagen",
+    "autoResetDaysLeftLabel": "Reset >="
   },
   "usage": {
     "pageTitle": "Nutzung",
@@ -883,8 +878,6 @@
     "pageOf": "Seite {page} von {total}",
     "estimatedCost": "Geschätzte Kosten",
     "costBreakdownTitle": "Kostenaufschlüsselung",
-    "showBreakdown": "Details anzeigen",
-    "hideBreakdown": "Details ausblenden",
     "byModelTab": "Nach Modell",
     "byProviderTab": "Nach Anbieter",
     "showUnpriced": "{count} ohne Preis anzeigen",
@@ -929,10 +922,7 @@
     "collectedHoursAgo": "Vor {count}h gesammelt",
     "collectedDaysAgo": "Vor {count}d gesammelt",
     "collectionFailed": "Sammlung fehlgeschlagen",
-    "triggerCollection": "Jetzt sammeln",
     "triggering": "Sammelt...",
-    "collectionTriggered": "Sammlung erfolgreich ausgelöst",
-    "collectionFailedToast": "Sammlung konnte nicht ausgelöst werden",
     "usageTabBreakdown": "Verlauf & Latenz",
     "usageTabCost": "Kostenübersicht",
     "usageTabEvents": "Anfrage-Ereignisse"

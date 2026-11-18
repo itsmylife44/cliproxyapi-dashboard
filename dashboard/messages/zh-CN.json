@@ -447,9 +447,7 @@
     "statsApiKeysValue": "已配置 {count} 个",
     "statsApiKeysOwn": "其中 {own} 个属于您",
     "statsActiveProvidersLabel": "可用提供商",
-    "statsOAuthAccountsLabel": "OAuth 账号",
     "statsOAuthValue": "已连接 {count} 个",
-    "statsCustomProvidersLabel": "自定义提供商",
     "statsCustomValue": "已配置 {count} 个",
     "loadingText": "正在加载提供商…",
     "adminSettingsTitle": "管理员设置",
@@ -726,7 +724,8 @@
     "shareDescription": "允许所有仪表盘用户查看和使用此提供商。仅管理员可更改此设置。",
     "sharedBadge": "已共享",
     "sharedOwnerLabel": "所有者：{username}",
-    "sharedReadOnlyTooltip": "共享提供商仅限所有者或管理员编辑。"
+    "sharedReadOnlyTooltip": "共享提供商仅限所有者或管理员编辑。",
+    "actionsAriaLabel": "账号操作"
   },
   "quota": {
     "pageTitle": "配额管理",
@@ -737,7 +736,6 @@
     "providersLabel": "提供商",
     "refreshButton": "刷新",
     "searchLabel": "搜索",
-    "searchPlaceholder": "搜索账号、提供商或 ID",
     "providerFilterLabel": "提供商",
     "statusFilterLabel": "状态",
     "clearFiltersButton": "清除筛选",
@@ -761,8 +759,6 @@
     "noProviderData": "暂无提供商数据",
     "noComparableProviderQuota": "没有提供商报告可比较的配额窗口",
     "providerCapacityTitle": "提供商剩余配额",
-    "providerCapacitySubtitle": "各提供商长期与短期窗口的平均剩余配额；Antigravity 仅使用 Gemini 窗口",
-    "accountsTitle": "账号",
     "accountColumn": "账号",
     "providerColumn": "提供商",
     "statusColumn": "状态",
@@ -779,7 +775,6 @@
     "freshSnapshotsCount": "{fresh}/{total} 个快照在有效期内",
     "nextResetShort": "下次重置",
     "groupedSnapshotTitle": "分组快照",
-    "groupedSnapshotSubtitle": "按模型系列分组，显示剩余配额百分比的最小值和中位数",
     "noGroupedModelData": "暂无模型分组数据",
     "resetLabel": "重置",
     "healthyLabel": "正常",
@@ -822,7 +817,6 @@
     "estRemainingLabel": "预估剩余价值",
     "modelColumnLabel": "模型",
     "autoRefreshBadge": "自动 · 60秒",
-    "autoResetColumn": "自动重置",
     "autoResetToggle": "自动重置",
     "autoResetWhenLabel": "触发条件",
     "autoReset5hLabel": "5小时 <=",
@@ -834,7 +828,8 @@
     "autoResetSaveFailed": "保存自动重置设置失败",
     "autoResetCheckFailed": "检查重置次数失败",
     "autoResetApplied": "已执行额度重置",
-    "autoResetFailed": "重置不可用或执行失败"
+    "autoResetFailed": "重置不可用或执行失败",
+    "autoResetDaysLeftLabel": "距重置 >="
   },
   "usage": {
     "pageTitle": "用量",
@@ -883,8 +878,6 @@
     "pageOf": "第 {page} 页，共 {total} 页",
     "estimatedCost": "预估费用",
     "costBreakdownTitle": "费用明细",
-    "showBreakdown": "展开明细",
-    "hideBreakdown": "收起明细",
     "byModelTab": "按模型",
     "byProviderTab": "按提供商",
     "showUnpriced": "显示 {count} 个未定价模型",
@@ -929,10 +922,7 @@
     "collectedHoursAgo": "{count} 小时前采集",
     "collectedDaysAgo": "{count} 天前采集",
     "collectionFailed": "采集失败",
-    "triggerCollection": "立即采集",
     "triggering": "采集中…",
-    "collectionTriggered": "已触发采集",
-    "collectionFailedToast": "触发采集失败",
     "usageTabBreakdown": "用量与延迟",
     "usageTabCost": "费用明细",
     "usageTabEvents": "请求记录"

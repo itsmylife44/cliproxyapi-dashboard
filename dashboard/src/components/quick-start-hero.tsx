@@ -45,8 +45,17 @@ export function QuickStartHero({
   return (
     <section
       aria-label={t("heroConnectLabel")}
-      className="flex flex-col gap-4 border-b border-[var(--surface-border)] pb-6 sm:flex-row sm:items-center sm:justify-between"
+      className="flex flex-col gap-3 border-b border-[var(--surface-border)] pb-5"
     >
+      <div>
+        <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
+          {t("pageTitle")}
+        </h1>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+          {t("pageDescription")}
+        </p>
+      </div>
+
       <div className="flex flex-col gap-3">
         <OAuthSection
           ctaOnly

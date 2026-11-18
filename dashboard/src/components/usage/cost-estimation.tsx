@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { SERIES_PALETTE, formatCompact } from "@/components/ui/chart-theme";
 import { loadCustomPricing, formatUSD, type ModelPrice } from "@/lib/model-pricing";
@@ -16,17 +16,14 @@ import {
 interface CostEstimationProps {
   keys: Record<string, UsageKey>;
   livePricing?: Record<string, ModelPrice>;
-  defaultExpanded?: boolean;
 }
 
 type BreakdownTab = "models" | "providers";
 
 /* ── Component ────────────────────────────────────────────── */
 
-export function CostEstimation({ keys, livePricing, defaultExpanded = false }: CostEstimationProps) {
+export function CostEstimation({ keys, livePricing }: CostEstimationProps) {
   const t = useTranslations("usage");
-  const panelId = useId();
-  const [expanded, setExpanded] = useState(defaultExpanded);
   const [activeTab, setActiveTab] = useState<BreakdownTab>("models");
   const [showUnpriced, setShowUnpriced] = useState(false);
 
@@ -51,154 +48,104 @@ export function CostEstimation({ keys, livePricing, defaultExpanded = false }: C
   const extraProviderCount = Math.max(0, providerBreakdown.length - topProviders.length);
 
   return (
-    <section className="overflow-hidden border-t border-[var(--surface-border)] pt-5">
-      {/* ── Collapsible Header Strip ───────────────────────── */}
-      <button
-        type="button"
-        aria-expanded={expanded}
-        aria-controls={panelId}
-        onClick={() => setExpanded((prev) => !prev)}
-        className="flex w-full cursor-pointer flex-col gap-3 rounded-md py-2 text-left transition-colors hover:bg-[var(--surface-muted)]/40 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div className="min-w-0 shrink-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              {t("estimatedCost")}
-            </span>
-            <span className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] font-medium tabular-nums text-[var(--text-secondary)]">
-              {pricedModels.length}/{costBreakdown.length} {t("pricedModels")} · {providerBreakdown.length} {t("providersLabel")}
-            </span>
+    <section className="space-y-4">
+      {/* Inline Provider Composition Preview */}
+      {totalEstimatedCost > 0 && providerBreakdown.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="flex h-2 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+            {providerBreakdown.map((prov, index) => {
+              const pct = (prov.estimatedCost / totalEstimatedCost) * 100;
+              if (pct <= 0) return null;
+              return (
+                <div
+                  key={prov.provider}
+                  className="h-full transition-[width] duration-300"
+                  style={{
+                    width: `${pct}%`,
+                    backgroundColor: SERIES_PALETTE[index % SERIES_PALETTE.length],
+                  }}
+                  title={`${prov.provider}: ${formatUSD(prov.estimatedCost)} (${pct.toFixed(1)}%)`}
+                />
+              );
+            })}
           </div>
-          <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums text-emerald-700 dark:text-emerald-400">
-            {formatUSD(totalEstimatedCost)}
-          </p>
-        </div>
-
-        {/* Inline Provider Composition Preview (visible even when collapsed) */}
-        {totalEstimatedCost > 0 && providerBreakdown.length > 0 && (
-          <div className="min-w-0 flex-1 sm:max-w-md sm:px-4">
-            <div className="flex h-2 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-              {providerBreakdown.map((prov, index) => {
-                const pct = (prov.estimatedCost / totalEstimatedCost) * 100;
-                if (pct <= 0) return null;
-                return (
-                  <div
-                    key={prov.provider}
-                    className="h-full transition-[width] duration-300"
-                    style={{
-                      width: `${pct}%`,
-                      backgroundColor: SERIES_PALETTE[index % SERIES_PALETTE.length],
-                    }}
-                    title={`${prov.provider}: ${formatUSD(prov.estimatedCost)} (${pct.toFixed(1)}%)`}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--text-secondary)]">
+            {topProviders.map((prov, index) => {
+              const pct = (prov.estimatedCost / totalEstimatedCost) * 100;
+              return (
+                <span key={prov.provider} className="inline-flex min-w-0 items-center gap-1.5">
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: SERIES_PALETTE[index % SERIES_PALETTE.length] }}
                   />
-                );
-              })}
-            </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--text-secondary)]">
-              {topProviders.map((prov, index) => {
-                const pct = (prov.estimatedCost / totalEstimatedCost) * 100;
-                return (
-                  <span key={prov.provider} className="inline-flex min-w-0 items-center gap-1.5">
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: SERIES_PALETTE[index % SERIES_PALETTE.length] }}
-                    />
-                    <span className="max-w-[110px] truncate font-medium">{prov.provider}</span>
-                    <span className="tabular-nums text-[var(--text-muted)]">{pct.toFixed(1)}%</span>
-                  </span>
-                );
-              })}
-              {extraProviderCount > 0 && (
-                <span className="text-[10px] tabular-nums text-[var(--text-muted)]">
-                  +{extraProviderCount}
+                  <span className="max-w-[110px] truncate font-medium">{prov.provider}</span>
+                  <span className="tabular-nums text-[var(--text-muted)]">{pct.toFixed(1)}%</span>
                 </span>
-              )}
-            </div>
+              );
+            })}
+            {extraProviderCount > 0 && (
+              <span className="text-[10px] tabular-nums text-[var(--text-muted)]">
+                +{extraProviderCount}
+              </span>
+            )}
           </div>
-        )}
+        </div>
+      )}
 
-        <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)] sm:self-center">
-          <span>{expanded ? t("hideBreakdown") : t("showBreakdown")}</span>
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.75}
-            className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+      <div>
+        {/* Toolbar: Single View Switch */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--surface-border)] pb-2.5">
+          <div
+            role="tablist"
+            aria-label={t("costBreakdownTitle")}
+            className="inline-flex rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 p-0.5"
           >
-            <path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </span>
-      </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "models"}
+              onClick={() => setActiveTab("models")}
+              className={`cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                activeTab === "models"
+                  ? "bg-[var(--accent)] text-[var(--surface-base)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              {t("byModelTab")}{" "}
+              <span className="ml-1 text-[10px] tabular-nums opacity-75">
+                {pricedModels.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "providers"}
+              onClick={() => setActiveTab("providers")}
+              className={`cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                activeTab === "providers"
+                  ? "bg-[var(--accent)] text-[var(--surface-base)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              {t("byProviderTab")}{" "}
+              <span className="ml-1 text-[10px] tabular-nums opacity-75">
+                {providerBreakdown.length}
+              </span>
+            </button>
+          </div>
 
-      {/* ── Smooth Collapsible Ledger Drawer ───────────────── */}
-      <div
-        id={panelId}
-        className={`grid transition-[grid-template-rows] duration-200 ease-out ${
-          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
-      >
-        <div className="min-h-0 overflow-hidden">
-          <div className="mt-2 overflow-hidden rounded-lg border border-[var(--surface-border)]">
-            {/* Toolbar: Single View Switch */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--surface-border)] bg-[var(--surface-muted)]/60 px-4 py-2">
-              <div
-                role="tablist"
-                aria-label={t("costBreakdownTitle")}
-                className="inline-flex rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-0.5"
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeTab === "models"}
-                  onClick={() => setActiveTab("models")}
-                  className={`cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                    activeTab === "models"
-                      ? "bg-[var(--accent)] text-[var(--surface-base)]"
-                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                  }`}
-                >
-                  {t("byModelTab")}{" "}
-                  <span className="ml-1 text-[10px] tabular-nums opacity-75">
-                    {pricedModels.length}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeTab === "providers"}
-                  onClick={() => setActiveTab("providers")}
-                  className={`cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                    activeTab === "providers"
-                      ? "bg-[var(--accent)] text-[var(--surface-base)]"
-                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                  }`}
-                >
-                  {t("byProviderTab")}{" "}
-                  <span className="ml-1 text-[10px] tabular-nums opacity-75">
-                    {providerBreakdown.length}
-                  </span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3">
-                {activeTab === "models" && unpricedModels.length > 0 && pricedModels.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowUnpriced((prev) => !prev)}
-                    className="cursor-pointer rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
-                  >
-                    {showUnpriced
-                      ? t("hideUnpriced")
-                      : t("showUnpriced", { count: unpricedModels.length })}
-                  </button>
-                )}
-                <span className="text-xs font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
-                  {t("totalEstimatedCost")}: {formatUSD(totalEstimatedCost)}
-                </span>
-              </div>
-            </div>
+          {activeTab === "models" && unpricedModels.length > 0 && pricedModels.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowUnpriced((prev) => !prev)}
+              className="cursor-pointer rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+            >
+              {showUnpriced
+                ? t("hideUnpriced")
+                : t("showUnpriced", { count: unpricedModels.length })}
+            </button>
+          )}
+        </div>
 
             {/* Tab 1: Unified Model Cost Ledger */}
             {activeTab === "models" && (
@@ -397,14 +344,12 @@ export function CostEstimation({ keys, livePricing, defaultExpanded = false }: C
             )}
 
             {/* Concise Disclaimer Footer */}
-            <div className="border-t border-[var(--surface-border)] bg-[var(--surface-muted)]/40 px-4 py-2 text-[10px] text-[var(--text-muted)]">
+            <div className="border-t border-[var(--surface-border)] pt-2 text-[10px] text-[var(--text-muted)]">
               {t("costDisclaimerPart1")}{" "}
               {t("costDisclaimerPart2")}{" "}
               <code className="rounded bg-[var(--surface-muted)] px-1 text-[9px]">cliproxy-custom-pricing</code>.{" "}
               {t("costDisclaimerPart3")}
             </div>
-          </div>
-        </div>
       </div>
     </section>
   );

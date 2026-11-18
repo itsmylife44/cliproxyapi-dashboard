@@ -175,8 +175,8 @@ export default function ApiKeysPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">{t('pageDescription')} <HelpTooltip content={t('pageTooltip')} /></p>
+          <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
+          <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t('pageDescription')} <HelpTooltip content={t('pageTooltip')} /></p>
         </div>
         <Button onClick={() => { setKeyNameInput(""); setIsCreateModalOpen(true); }} disabled={creating} className="px-2.5 py-1 text-xs" data-testid="api-key-create-trigger">
           {t('createKeyButton')}

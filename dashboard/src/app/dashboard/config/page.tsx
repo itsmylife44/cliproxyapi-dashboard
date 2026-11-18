@@ -434,10 +434,8 @@ export default function ConfigPage() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4">
-          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
-        </section>
-        <div className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6">
+        <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
+        <div className="border-t border-[var(--surface-border)] py-10">
           <div className="flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
               <div className="size-8 animate-spin rounded-full border-4 border-[#ddd] border-t-blue-500"></div>
@@ -472,10 +470,8 @@ export default function ConfigPage() {
 
     return (
       <div className="space-y-4">
-        <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4">
-          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
-        </section>
-        <div className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6 text-center space-y-4">
+        <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
+        <div className="space-y-4 border-t border-[var(--surface-border)] py-8 text-center">
           <p className="text-[var(--text-secondary)]">{t('errorTitle')}</p>
           <p className="text-xs text-[var(--text-muted)]">
             {t('failedToLoadDescription')}
@@ -502,8 +498,8 @@ export default function ConfigPage() {
     <div className="space-y-6">
       <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
+          <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
+          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
             {t('settingsDescription')}
           </p>
         </div>

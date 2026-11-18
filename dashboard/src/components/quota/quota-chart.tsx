@@ -38,9 +38,9 @@ export function getProviderCapacityBars(windowCapacities: WindowCapacity[]): {
 }
 
 function getBarTone(pct: number, kind: "long" | "short"): string {
-  if (pct <= 15) return "bg-rose-500";
-  if (pct <= 30) return "bg-amber-500";
-  return kind === "long" ? "bg-blue-500" : "bg-cyan-500";
+  if (pct <= 20) return "bg-rose-500/80";
+  if (pct <= 60) return "bg-amber-500";
+  return kind === "long" ? "bg-emerald-500/80" : "bg-cyan-500";
 }
 
 export function QuotaChart({
@@ -64,7 +64,6 @@ export function QuotaChart({
             <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
               {t("groupedSnapshotTitle")}
             </h2>
-            <p className="text-xs text-[var(--text-muted)]">{t("groupedSnapshotSubtitle")}</p>
           </div>
           <div className="flex items-center gap-3 text-xs tabular-nums text-[var(--text-secondary)]">
             <span>
@@ -120,15 +119,12 @@ export function QuotaChart({
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            {t("providerCapacityTitle")}
-          </h2>
-          <p className="text-xs text-[var(--text-muted)]">{t("providerCapacitySubtitle")}</p>
-        </div>
+        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          {t("providerCapacityTitle")}
+        </h2>
         <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)]">
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-blue-500" />
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
             {t("longTermLabel")}
           </span>
           <span className="inline-flex items-center gap-1.5">
@@ -158,11 +154,9 @@ export function QuotaChart({
 
             const hasLong = bars.longTerm !== null;
             const hasShort = bars.shortTerm !== null;
-            const longOnly = hasLong && !hasShort;
-            const shortOnly = hasShort && !hasLong;
 
             return (
-              <div key={summary.provider} className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[150px_minmax(0,1fr)_110px] sm:gap-4">
+              <div key={summary.provider} className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[150px_minmax(0,1fr)] sm:gap-4">
                 <div className="flex items-center justify-between gap-2 sm:block">
                   <span className="text-xs font-medium capitalize text-[var(--text-primary)]">{summary.provider}</span>
                   <span className="block text-[11px] tabular-nums text-[var(--text-muted)]">
@@ -174,46 +168,32 @@ export function QuotaChart({
                 <div className="space-y-1.5">
                   {hasLong && (
                     <div className="flex items-center gap-2">
-                      <div className={`${longOnly ? "h-4" : "h-2"} w-full overflow-hidden rounded-full bg-[var(--surface-muted)]`}>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${getBarTone(bars.longTerm!, "long")}`}
                           style={{ width: `${Math.max(bars.longTerm!, bars.longTerm! > 0 ? 2 : 0)}%` }}
                           title={`${t("longTermLabel")}: ${bars.longTerm}%`}
                         />
                       </div>
-                      {!longOnly && (
-                        <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-[var(--text-secondary)]">
-                          {bars.longTerm}%
-                        </span>
-                      )}
+                      <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-[var(--text-secondary)]">
+                        {bars.longTerm}%
+                      </span>
                     </div>
                   )}
 
                   {hasShort && (
                     <div className="flex items-center gap-2">
-                      <div className={`${shortOnly ? "h-4" : "h-2"} w-full overflow-hidden rounded-full bg-[var(--surface-muted)]`}>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${getBarTone(bars.shortTerm!, "short")}`}
                           style={{ width: `${Math.max(bars.shortTerm!, bars.shortTerm! > 0 ? 2 : 0)}%` }}
                           title={`${t("shortTermLabel")}: ${bars.shortTerm}%`}
                         />
                       </div>
-                      {!shortOnly && (
-                        <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-[var(--text-secondary)]">
-                          {bars.shortTerm}%
-                        </span>
-                      )}
+                      <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-[var(--text-secondary)]">
+                        {bars.shortTerm}%
+                      </span>
                     </div>
-                  )}
-                </div>
-
-                <div className="hidden text-right text-xs font-semibold tabular-nums text-[var(--text-primary)] sm:block">
-                  {longOnly && `${bars.longTerm}%`}
-                  {shortOnly && `${bars.shortTerm}%`}
-                  {hasLong && hasShort && (
-                    <span className="text-[11px] font-medium text-[var(--text-secondary)]">
-                      {t("shortTermLabel")}: {bars.shortTerm}%
-                    </span>
                   )}
                 </div>
               </div>

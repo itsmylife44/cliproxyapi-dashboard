@@ -129,48 +129,25 @@ export default function ProvidersPage() {
     };
   }, [authUser, loadMaxKeysPerUser]);
 
-  const providerStats = API_KEY_PROVIDERS.map((provider) => ({
-    id: provider.id,
-    count: configs[provider.id]?.keys.length ?? 0,
-  }));
-  const totalApiKeys = providerStats.reduce((sum, item) => sum + item.count, 0);
-  const activeApiProviders = providerStats.filter((item) => item.count > 0).length;
-  const ownApiKeyCount = currentUser
-    ? Object.values(configs).reduce(
-        (sum, providerConfig) => sum + providerConfig.keys.filter((key) => key.isOwn).length,
-        0
-      )
-    : 0;
+  const totalApiKeys = API_KEY_PROVIDERS.reduce(
+    (sum, provider) => sum + (configs[provider.id]?.keys.length ?? 0),
+    0
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-            {t("pageTitle")}
-          </h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
-            {t("pageDescription")}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs tabular-nums text-[var(--text-muted)]">
-          <span>
-            <strong className="font-semibold text-[var(--text-primary)]">{oauthAccountCount}</strong> {t("statsOAuthAccountsLabel")}
-          </span>
-          <span>
-            <strong className="font-semibold text-[var(--text-primary)]">{totalApiKeys}</strong> {t("statsApiKeysLabel")}
-            {currentUser ? ` (${ownApiKeyCount} / ${activeApiProviders})` : ""}
-          </span>
-          <span>
-            <strong className="font-semibold text-[var(--text-primary)]">{customProviderCount}</strong> {t("statsCustomProvidersLabel")}
-          </span>
-        </div>
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
+          {t("pageTitle")}
+        </h1>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+          {t("pageDescription")}
+        </p>
       </div>
 
       {/* ── Segmented Provider Tabs ─────────────────────────── */}
       <div className="border-b border-[var(--surface-border)]">
-        <div role="tablist" aria-label={t("pageTitle")} className="-mb-px flex flex-wrap gap-6">
+        <div role="tablist" aria-label={t("pageTitle")} className="-mb-px flex flex-wrap gap-x-4 gap-y-1 sm:gap-x-6">
           {(
             [
               { id: "oauth", label: t("oauthSectionTitle"), count: oauthAccountCount },
@@ -189,7 +166,7 @@ export default function ProvidersPage() {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex cursor-pointer items-center gap-2 border-b-2 pb-2.5 text-sm font-medium transition-colors ${
+                className={`inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap border-b-2 pb-2 text-xs font-medium transition-colors sm:gap-2 sm:pb-2.5 sm:text-sm ${
                   active
                     ? "border-[var(--text-primary)] text-[var(--text-primary)]"
                     : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"

@@ -99,6 +99,7 @@ export async function upsertAutoResetRule(
     enabled: patch.enabled ?? prev?.enabled ?? false,
     fiveHourThresholdPct: patch.fiveHourThresholdPct ?? prev?.fiveHourThresholdPct ?? 0,
     weeklyThresholdPct: patch.weeklyThresholdPct ?? prev?.weeklyThresholdPct ?? 0,
+    minWeeklyDaysLeft: patch.minWeeklyDaysLeft ?? prev?.minWeeklyDaysLeft ?? 0,
     lastResetAt: patch.lastResetAt !== undefined ? patch.lastResetAt : prev?.lastResetAt ?? null,
     lastStatus: patch.lastStatus !== undefined ? patch.lastStatus : prev?.lastStatus ?? null,
   });

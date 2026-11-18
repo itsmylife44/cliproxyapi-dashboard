@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Button } from "@/components/ui/button";
 import { CHART_COLORS, formatCompact } from "@/components/ui/chart-theme";
 import { useToast } from "@/components/ui/toast";
 import { TimeFilter } from "@/components/usage/time-filter";
@@ -134,7 +133,7 @@ export default function UsagePage() {
   const [collectionStatus, setCollectionStatus] = useState<CollectionStatus | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [triggeringCollection, setTriggeringCollection] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<DateFilter>("7d");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
@@ -250,39 +249,8 @@ export default function UsagePage() {
     }
   };
 
-  const handleTriggerCollection = async () => {
-    if (!isAdmin || triggeringCollection) return;
-    
-    setTriggeringCollection(true);
-    try {
-      const res = await fetch(API_ENDPOINTS.USAGE.COLLECT, { method: "POST" });
-      if (res.ok) {
-        showToast(t("collectionTriggered"), "success");
-        // Refresh collection status after a short delay
-        setTimeout(async () => {
-          try {
-            const statusRes = await fetch(API_ENDPOINTS.USAGE.COLLECTION_STATUS);
-            if (statusRes.ok) {
-              const status: CollectionStatus = await statusRes.json();
-              setCollectionStatus(status);
-            }
-          } catch {
-            // Silently ignore
-          }
-        }, 2000);
-      } else {
-        showToast(t("collectionFailedToast"), "error");
-      }
-    } catch {
-      showToast(t("collectionFailedToast"), "error");
-    } finally {
-      setTriggeringCollection(false);
-    }
-  };
-
   const handleRefresh = async () => {
-    isFirstLoadRef.current = true;
-    setLoading(true);
+    setRefreshing(true);
 
     try {
       if (isAdmin) {
@@ -297,17 +265,16 @@ export default function UsagePage() {
 
       if (!res.ok) {
         showToast(t("toastLoadFailed"), "error");
-        setLoading(false);
         return;
       }
 
       const json: UsageResponse = await res.json();
       setUsageData(json.data);
       setIsAdmin(json.isAdmin);
-      setLoading(false);
     } catch {
       showToast(t("toastNetworkError"), "error");
-      setLoading(false);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -351,50 +318,53 @@ export default function UsagePage() {
   );
 
   return (
-    <div className="space-y-6">
-      {/* ── Page Header & Controls ─────────────────────────── */}
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
-            <div className="mt-1 flex items-center gap-2">
-              <div className={`h-2 w-2 rounded-full ${getCollectionStatusColor(collectionStatus)}`}></div>
-              <p className="text-xs text-[var(--text-muted)]">
-                {t('collectionStatus')}: {getCollectionStatusText(collectionStatus)}
-              </p>
-              {collectionStatus?.errorMessage && (
-                <span className="text-xs text-rose-600 dark:text-rose-400" title={collectionStatus.errorMessage}>
-                  ⚠️
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {isAdmin && (
-              <Button 
-                variant="secondary"
-                onClick={handleTriggerCollection} 
-                disabled={triggeringCollection || loading}
-              >
-                {triggeringCollection ? t("triggering") : t("triggerCollection")}
-              </Button>
-            )}
-            <Button onClick={handleRefresh} disabled={loading}>
-              {t('refreshButton')}
-            </Button>
-          </div>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
+          <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t('pageDescription')}</p>
         </div>
 
-        <TimeFilter
-          activeFilter={activeFilter}
-          customFrom={customFrom}
-          customTo={customTo}
-          onFilterChange={handleFilterChange}
-          onCustomFromChange={setCustomFrom}
-          onCustomToChange={setCustomTo}
-          onCustomDateApply={handleCustomDateChange}
-        />
+        <div className="flex shrink-0 items-center gap-2 text-xs text-[var(--text-muted)]">
+          <span
+            className="inline-flex items-center gap-1.5 text-[11px]"
+            title={collectionStatus?.errorMessage || undefined}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${getCollectionStatusColor(collectionStatus)}`} />
+            <span>{getCollectionStatusText(collectionStatus)}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => void handleRefresh()}
+            disabled={loading || refreshing}
+            aria-label={t("refreshButton")}
+            title={t("refreshButton")}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-50"
+          >
+            <svg
+              className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+              <polyline points="21 3 21 9 15 9" />
+            </svg>
+          </button>
+        </div>
       </div>
+
+      <TimeFilter
+        activeFilter={activeFilter}
+        customFrom={customFrom}
+        customTo={customTo}
+        onFilterChange={handleFilterChange}
+        onCustomFromChange={setCustomFrom}
+        onCustomToChange={setCustomTo}
+        onCustomDateApply={handleCustomDateChange}
+      />
 
       {loading ? (
         <div className="border-t border-[var(--surface-border)] py-10 text-center text-sm text-[var(--text-muted)]">
@@ -549,7 +519,6 @@ export default function UsagePage() {
               <CostEstimation
                 keys={usageData.keys}
                 livePricing={livePricing}
-                defaultExpanded
               />
             )}
 

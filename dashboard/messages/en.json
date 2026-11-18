@@ -447,9 +447,7 @@
     "statsApiKeysValue": "{count} configured",
     "statsApiKeysOwn": "- {own} yours",
     "statsActiveProvidersLabel": "Active Providers",
-    "statsOAuthAccountsLabel": "OAuth Accounts",
     "statsOAuthValue": "{count} connected",
-    "statsCustomProvidersLabel": "Custom Providers",
     "statsCustomValue": "{count} configured",
     "loadingText": "Loading providers...",
     "adminSettingsTitle": "Admin Settings",
@@ -726,7 +724,8 @@
     "shareDescription": "Make this provider visible and usable for every dashboard user. Only administrators can change this.",
     "sharedBadge": "Shared",
     "sharedOwnerLabel": "Owner: {username}",
-    "sharedReadOnlyTooltip": "Shared providers can only be edited by their owner or an administrator."
+    "sharedReadOnlyTooltip": "Shared providers can only be edited by their owner or an administrator.",
+    "actionsAriaLabel": "Account actions"
   },
   "quota": {
     "pageTitle": "Quota Management",
@@ -737,7 +736,6 @@
     "providersLabel": "Providers",
     "refreshButton": "Refresh",
     "searchLabel": "Search",
-    "searchPlaceholder": "Search accounts, providers, or IDs",
     "providerFilterLabel": "Provider",
     "statusFilterLabel": "Status",
     "clearFiltersButton": "Clear filters",
@@ -761,8 +759,6 @@
     "noProviderData": "No provider data",
     "noComparableProviderQuota": "No provider reports comparable quota windows",
     "providerCapacityTitle": "Provider Capacity",
-    "providerCapacitySubtitle": "Average remaining long- and short-term capacity per provider; Antigravity uses Gemini windows only",
-    "accountsTitle": "Accounts",
     "accountColumn": "Account",
     "providerColumn": "Provider",
     "statusColumn": "Status",
@@ -779,7 +775,6 @@
     "freshSnapshotsCount": "{fresh}/{total} fresh snapshots",
     "nextResetShort": "Next reset",
     "groupedSnapshotTitle": "Grouped Snapshot",
-    "groupedSnapshotSubtitle": "Grouped family quota view with minimum and median remaining percentages",
     "noGroupedModelData": "No grouped model data",
     "resetLabel": "reset",
     "healthyLabel": "healthy",
@@ -822,7 +817,6 @@
     "estRemainingLabel": "Est. Remaining",
     "modelColumnLabel": "Model",
     "autoRefreshBadge": "Auto · 60s",
-    "autoResetColumn": "Auto-reset",
     "autoResetToggle": "Auto-reset",
     "autoResetWhenLabel": "Trigger when",
     "autoReset5hLabel": "5h <=",
@@ -834,7 +828,8 @@
     "autoResetSaveFailed": "Failed to save auto-reset setting",
     "autoResetCheckFailed": "Failed to check reset credits",
     "autoResetApplied": "Usage reset applied",
-    "autoResetFailed": "Usage reset unavailable or failed"
+    "autoResetFailed": "Usage reset unavailable or failed",
+    "autoResetDaysLeftLabel": "Reset >="
   },
   "usage": {
     "pageTitle": "Usage",
@@ -883,8 +878,6 @@
     "pageOf": "Page {page} of {total}",
     "estimatedCost": "Estimated Cost",
     "costBreakdownTitle": "Cost Breakdown",
-    "showBreakdown": "Show breakdown",
-    "hideBreakdown": "Hide breakdown",
     "byModelTab": "By Model",
     "byProviderTab": "By Provider",
     "showUnpriced": "Show {count} unpriced",
@@ -929,10 +922,7 @@
     "collectedHoursAgo": "Collected {count}h ago",
     "collectedDaysAgo": "Collected {count}d ago",
     "collectionFailed": "Collection failed",
-    "triggerCollection": "Collect Now",
     "triggering": "Collecting...",
-    "collectionTriggered": "Collection triggered successfully",
-    "collectionFailedToast": "Failed to trigger collection",
     "usageTabBreakdown": "Breakdown & Latency",
     "usageTabCost": "Cost Ledger",
     "usageTabEvents": "Request Events"

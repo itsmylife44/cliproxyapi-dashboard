@@ -3,11 +3,13 @@ import { capacityQuotaGroups, isShortTermQuotaWindow } from "@/lib/quota-window-
 import { headlineQuotaWindows } from "@/lib/quota/headline";
 
 export const AUTO_RESET_COOLDOWN_MS = 10 * 60_000;
+const DAY_MS = 86_400_000;
 
 export interface AutoResetRule {
   enabled: boolean;
   fiveHourThresholdPct: number;
   weeklyThresholdPct: number;
+  minWeeklyDaysLeft: number;
   lastResetAt?: string | null;
   lastStatus?: string | null;
 }
@@ -38,17 +40,18 @@ export interface ExecuteResetResult {
   remainingCredits?: number | null;
 }
 
-function clampPct(value: unknown, fallback = 0): number {
+function clampInt(value: unknown, min: number, max: number, fallback: number): number {
   const num = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(num)) return fallback;
-  return Math.max(0, Math.min(100, Math.round(num)));
+  return Math.max(min, Math.min(max, Math.round(num)));
 }
 
 export function normalizeAutoResetRule(input: Partial<AutoResetRule> | null | undefined): AutoResetRule {
   return {
     enabled: input?.enabled === true,
-    fiveHourThresholdPct: clampPct(input?.fiveHourThresholdPct, 0),
-    weeklyThresholdPct: clampPct(input?.weeklyThresholdPct, 0),
+    fiveHourThresholdPct: clampInt(input?.fiveHourThresholdPct, 0, 100, 0),
+    weeklyThresholdPct: clampInt(input?.weeklyThresholdPct, 0, 100, 0),
+    minWeeklyDaysLeft: clampInt(input?.minWeeklyDaysLeft, 0, 7, 0),
     lastResetAt: typeof input?.lastResetAt === "string" ? input.lastResetAt : null,
     lastStatus: typeof input?.lastStatus === "string" ? input.lastStatus : null,
   };
@@ -65,14 +68,21 @@ export function isAutoResetSupportedProvider(provider: string | undefined | null
   return normalizeAutoResetProvider(provider) !== "unsupported";
 }
 
-export function extractAccountWindowPercentages(account: QuotaAccount): {
+export function extractAccountWindowPercentages(
+  account: QuotaAccount,
+  nowMs = Date.now()
+): {
   fiveHourPct: number | null;
   weeklyPct: number | null;
+  weeklyDaysLeft: number | null;
 } {
-  if (!account.groups?.length) return { fiveHourPct: null, weeklyPct: null };
+  if (!account.groups?.length) {
+    return { fiveHourPct: null, weeklyPct: null, weeklyDaysLeft: null };
+  }
   const groups = headlineQuotaWindows(capacityQuotaGroups(account.provider, account.groups));
   let fiveHour: number | null = null;
   let weekly: number | null = null;
+  let weeklyDaysLeft: number | null = null;
 
   for (const group of groups) {
     if (group.id === "extra-usage") continue;
@@ -83,15 +93,22 @@ export function extractAccountWindowPercentages(account: QuotaAccount): {
       fiveHour = fiveHour === null ? pct : Math.min(fiveHour, pct);
     } else {
       weekly = weekly === null ? pct : Math.min(weekly, pct);
+      if (group.resetTime) {
+        const resetMs = Date.parse(group.resetTime);
+        if (Number.isFinite(resetMs)) {
+          const days = Math.max(0, (resetMs - nowMs) / DAY_MS);
+          weeklyDaysLeft = weeklyDaysLeft === null ? days : Math.max(weeklyDaysLeft, days);
+        }
+      }
     }
   }
 
-  return { fiveHourPct: fiveHour, weeklyPct: weekly };
+  return { fiveHourPct: fiveHour, weeklyPct: weekly, weeklyDaysLeft };
 }
 
 export function shouldTriggerAutoReset(
   rule: AutoResetRule,
-  windows: { fiveHourPct: number | null; weeklyPct: number | null },
+  windows: { fiveHourPct: number | null; weeklyPct: number | null; weeklyDaysLeft?: number | null },
   nowMs = Date.now()
 ): boolean {
   if (!rule.enabled) return false;
@@ -101,9 +118,14 @@ export function shouldTriggerAutoReset(
       return false;
     }
   }
-  const { fiveHourPct, weeklyPct } = windows;
+  const { fiveHourPct, weeklyPct, weeklyDaysLeft } = windows;
   if (fiveHourPct === null && weeklyPct === null) return false;
   if (fiveHourPct !== null && fiveHourPct > rule.fiveHourThresholdPct) return false;
   if (weeklyPct !== null && weeklyPct > rule.weeklyThresholdPct) return false;
+  if (rule.minWeeklyDaysLeft > 0) {
+    if (weeklyDaysLeft == null || weeklyDaysLeft < rule.minWeeklyDaysLeft) {
+      return false;
+    }
+  }
   return true;
 }

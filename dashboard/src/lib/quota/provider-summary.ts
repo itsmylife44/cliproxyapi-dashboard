@@ -79,30 +79,16 @@ export function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
   for (const [poolKey, { entries, first, firstSiblings }] of pools) {
     const isShortTerm = isShortTermQuotaWindow(first, firstSiblings);
     const scored = entries
-      .map(({ group, siblings }) => {
+      .map(({ group }) => {
         const score = normalizeFraction(group.remainingFraction);
-        if (score === null) return null;
-        if (!isShortTerm) return { score, effective: score, group };
-
-        const longSiblings = siblings.filter((s) => s.id !== "extra-usage" && !isShortTermQuotaWindow(s, siblings));
-        const familyLongs = group.scope
-          ? longSiblings.filter((s) => s.scope?.id === group.scope?.id)
-          : group.id.endsWith("-5h")
-            ? longSiblings.filter((s) => s.id === `${group.id.slice(0, -3)}-weekly`)
-            : longSiblings.filter((s) => !s.scope);
-        const capScores = familyLongs
-          .map((s) => normalizeFraction(s.remainingFraction))
-          .filter((v): v is number => v !== null);
-        const effective = capScores.length > 0 ? Math.min(score, ...capScores) : score;
-        return { score, effective, group };
+        return score === null ? null : { score, group };
       })
-      .filter((item): item is { score: number; effective: number; group: QuotaGroup } => item !== null);
+      .filter((item): item is { score: number; group: QuotaGroup } => item !== null);
 
     if (scored.length === 0) {
       continue;
     }
     const scores = scored.map((item) => item.score);
-    const effectiveScores = scored.map((item) => item.effective);
     const exhaustedProduct = scores.reduce((product, score) => product * (1 - score), 1);
     const capacity = 1 - exhaustedProduct;
 
@@ -123,7 +109,7 @@ export function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
       id: poolKey,
       label: first.label,
       capacity: Math.max(0, Math.min(1, capacity)),
-      averageCapacity: effectiveScores.reduce((sum, score) => sum + score, 0) / effectiveScores.length,
+      averageCapacity: scores.reduce((sum, score) => sum + score, 0) / scores.length,
       accountCount: scores.length,
       resetTime: earliestReset,
       isShortTerm,

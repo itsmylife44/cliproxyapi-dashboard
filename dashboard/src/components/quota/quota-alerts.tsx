@@ -294,112 +294,122 @@ export function QuotaAlerts() {
         </div>
         </>}
 
-        <div className="space-y-1">
-          <label htmlFor="tg-threshold" className="text-xs font-medium text-[var(--text-muted)]">{t("thresholdLabel")}</label>
-          <Input
-            type="number"
-            name="tg-threshold"
-            value={String(settings.threshold)}
-            onChange={(v) => {
-              const num = parseInt(v, 10);
-              if (!Number.isNaN(num) && num >= 1 && num <= 100) {
-                setSettings((s) => ({ ...s, threshold: num }));
-              } else if (v === "") {
-                setSettings((s) => ({ ...s, threshold: 1 }));
-              }
-            }}
-            placeholder="20"
-          />
-          <p className="text-[10px] text-[var(--text-muted)]">{t("thresholdHint")}</p>
-        </div>
+        {settings.channel !== "disabled" && (
+          <>
+            <div className="space-y-1">
+              <label htmlFor="tg-threshold" className="text-xs font-medium text-[var(--text-muted)]">{t("thresholdLabel")}</label>
+              <Input
+                type="number"
+                name="tg-threshold"
+                value={String(settings.threshold)}
+                onChange={(v) => {
+                  const num = parseInt(v, 10);
+                  if (!Number.isNaN(num) && num >= 1 && num <= 100) {
+                    setSettings((s) => ({ ...s, threshold: num }));
+                  } else if (v === "") {
+                    setSettings((s) => ({ ...s, threshold: 1 }));
+                  }
+                }}
+                placeholder="20"
+              />
+              <p className="text-[10px] text-[var(--text-muted)]">{t("thresholdHint")}</p>
+            </div>
 
-        <div className="space-y-1">
-          <label htmlFor="tg-check-interval" className="text-xs font-medium text-[var(--text-muted)]">{t("checkIntervalLabel")}</label>
-          <Input
-            type="number"
-            name="tg-check-interval"
-            value={String(settings.checkInterval)}
-            onChange={(v) => {
-              const num = parseInt(v, 10);
-              if (!Number.isNaN(num) && num >= 1 && num <= 1440) {
-                setSettings((s) => ({ ...s, checkInterval: num }));
-              } else if (v === "") {
-                setSettings((s) => ({ ...s, checkInterval: 1 }));
-              }
-            }}
-            placeholder="5"
-          />
-          <p className="text-[10px] text-[var(--text-muted)]">{t("checkIntervalHint")}</p>
-        </div>
+            <div className="space-y-1">
+              <label htmlFor="tg-check-interval" className="text-xs font-medium text-[var(--text-muted)]">{t("checkIntervalLabel")}</label>
+              <Input
+                type="number"
+                name="tg-check-interval"
+                value={String(settings.checkInterval)}
+                onChange={(v) => {
+                  const num = parseInt(v, 10);
+                  if (!Number.isNaN(num) && num >= 1 && num <= 1440) {
+                    setSettings((s) => ({ ...s, checkInterval: num }));
+                  } else if (v === "") {
+                    setSettings((s) => ({ ...s, checkInterval: 1 }));
+                  }
+                }}
+                placeholder="5"
+              />
+              <p className="text-[10px] text-[var(--text-muted)]">{t("checkIntervalHint")}</p>
+            </div>
 
-        <div className="space-y-1">
-          <label htmlFor="tg-cooldown" className="text-xs font-medium text-[var(--text-muted)]">{t("cooldownLabel")}</label>
-          <Input
-            type="number"
-            name="tg-cooldown"
-            value={String(settings.cooldown)}
-            onChange={(v) => {
-              const num = parseInt(v, 10);
-              if (!Number.isNaN(num) && num >= 1 && num <= 1440) {
-                setSettings((s) => ({ ...s, cooldown: num }));
-              } else if (v === "") {
-                setSettings((s) => ({ ...s, cooldown: 1 }));
-              }
-            }}
-            placeholder="60"
-          />
-          <p className="text-[10px] text-[var(--text-muted)]">{t("cooldownHint")}</p>
-        </div>
+            <div className="space-y-1">
+              <label htmlFor="tg-cooldown" className="text-xs font-medium text-[var(--text-muted)]">{t("cooldownLabel")}</label>
+              <Input
+                type="number"
+                name="tg-cooldown"
+                value={String(settings.cooldown)}
+                onChange={(v) => {
+                  const num = parseInt(v, 10);
+                  if (!Number.isNaN(num) && num >= 1 && num <= 1440) {
+                    setSettings((s) => ({ ...s, cooldown: num }));
+                  } else if (v === "") {
+                    setSettings((s) => ({ ...s, cooldown: 1 }));
+                  }
+                }}
+                placeholder="60"
+              />
+              <p className="text-[10px] text-[var(--text-muted)]">{t("cooldownHint")}</p>
+            </div>
 
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-[var(--text-muted)]">{t("monitoredProviders")}</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-            {ALERT_PROVIDERS.map((provider) => {
-              const isChecked = settings.providers.includes(provider.key);
-              return (
-                <label key={provider.key} className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => {
-                      setSettings((s) => ({
-                        ...s,
-                        providers: isChecked
-                          ? s.providers.filter((p) => p !== provider.key)
-                          : [...s.providers, provider.key],
-                      }));
-                    }}
-                    className="size-3.5 rounded border-[var(--surface-border)] bg-[var(--surface-muted)] text-blue-500 focus:ring-blue-500/30 focus:ring-offset-0"
-                  />
-                  <span className="text-xs text-[var(--text-secondary)]">{t(ALERT_PROVIDER_LABEL_KEYS[provider.key] as Parameters<typeof t>[0])}</span>
-                </label>
-              );
-            })}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-[var(--text-muted)]">{t("monitoredProviders")}</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                {ALERT_PROVIDERS.map((provider) => {
+                  const isChecked = settings.providers.includes(provider.key);
+                  return (
+                    <label key={provider.key} className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          setSettings((s) => ({
+                            ...s,
+                            providers: isChecked
+                              ? s.providers.filter((p) => p !== provider.key)
+                              : [...s.providers, provider.key],
+                          }));
+                        }}
+                        className="size-3.5 rounded border-[var(--surface-border)] bg-[var(--surface-muted)] text-blue-500 focus:ring-blue-500/30 focus:ring-offset-0"
+                      />
+                      <span className="text-xs text-[var(--text-secondary)]">{t(ALERT_PROVIDER_LABEL_KEYS[provider.key] as Parameters<typeof t>[0])}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-[var(--text-muted)]">{t("monitoredProvidersHint")}</p>
+            </div>
+          </>
+        )}
+
+        {(settings.channel !== "disabled" || hasUnsavedConnectionChanges) && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button onClick={handleSave} disabled={saving} className="text-xs">
+              {saving ? t("buttonSaving") : t("buttonSave")}
+            </Button>
+            {settings.channel !== "disabled" && (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={handleTest}
+                  disabled={testing || !hasSavedConfig || hasUnsavedConnectionChanges}
+                  className="text-xs"
+                >
+                  {testing ? t("buttonSending") : t("buttonSendTest")}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleCheckNow}
+                  disabled={checking || !hasSavedConfig}
+                  className="text-xs"
+                >
+                  {checking ? t("buttonChecking") : t("buttonCheckNow")}
+                </Button>
+              </>
+            )}
           </div>
-          <p className="text-[10px] text-[var(--text-muted)]">{t("monitoredProvidersHint")}</p>
-        </div>
-
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button onClick={handleSave} disabled={saving} className="text-xs">
-            {saving ? t("buttonSaving") : t("buttonSave")}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={handleTest}
-            disabled={testing || !hasSavedConfig || hasUnsavedConnectionChanges}
-            className="text-xs"
-          >
-            {testing ? t("buttonSending") : t("buttonSendTest")}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={handleCheckNow}
-            disabled={checking || !hasSavedConfig}
-            className="text-xs"
-          >
-            {checking ? t("buttonChecking") : t("buttonCheckNow")}
-          </Button>
-        </div>
+        )}
         {hasUnsavedConnectionChanges && hasSavedConfig && (
           <p className="text-[10px] text-[var(--text-muted)]">{t("unsavedTestHint")}</p>
         )}

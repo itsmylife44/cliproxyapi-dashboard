@@ -1,8 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import type { OAuthProviderId } from "@/components/providers/oauth-section";
 
 interface OAuthProviderEntry {
@@ -12,14 +10,14 @@ interface OAuthProviderEntry {
 
 interface OAuthActionsProps {
   providers: readonly OAuthProviderEntry[];
-  mode?: "connect" | "import" | "both";
+  mode?: "connect" | "import";
   onConnect: (providerId: OAuthProviderId) => void;
   onImport: (providerId: OAuthProviderId) => void;
 }
 
 export function OAuthActions({
   providers,
-  mode = "both",
+  mode = "connect",
   onConnect,
   onImport,
 }: OAuthActionsProps) {
@@ -27,39 +25,28 @@ export function OAuthActions({
 
   return (
     <div className="divide-y divide-[var(--surface-border)] border-t border-b border-[var(--surface-border)]">
-      {providers.map((provider, index) => (
-        <div
+      {providers.map((provider) => (
+        <button
           key={provider.id}
-          className={cn(
-            "flex items-center justify-between gap-3 py-2.5",
-            index === 0 && "pt-2.5"
-          )}
+          type="button"
+          onClick={() => (mode === "import" ? onImport(provider.id) : onConnect(provider.id))}
+          className="group flex w-full cursor-pointer items-center justify-between gap-3 px-2 py-2.5 text-left transition-colors hover:bg-[var(--surface-hover)]"
         >
           <div className="min-w-0 space-y-0.5">
             <div className="text-sm font-medium text-[var(--text-primary)]">{provider.name}</div>
             <p className="text-xs text-[var(--text-muted)]">{t(`oauthProviderDescriptions.${provider.id}`)}</p>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {(mode === "connect" || mode === "both") && (
-              <Button
-                variant={mode === "connect" ? "primary" : "secondary"}
-                onClick={() => onConnect(provider.id)}
-                className="shrink-0 px-2.5 py-1 text-xs"
-              >
-                {t("connectButton")}
-              </Button>
-            )}
-            {(mode === "import" || mode === "both") && (
-              <Button
-                variant={mode === "import" ? "primary" : "secondary"}
-                onClick={() => onImport(provider.id)}
-                className="shrink-0 px-2.5 py-1 text-xs"
-              >
-                {t("importJsonButton")}
-              </Button>
-            )}
-          </div>
-        </div>
+          <svg
+            className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--text-primary)]"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
       ))}
     </div>
   );

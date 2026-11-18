@@ -16,16 +16,17 @@ import {
 interface CostEstimationProps {
   keys: Record<string, UsageKey>;
   livePricing?: Record<string, ModelPrice>;
+  defaultExpanded?: boolean;
 }
 
 type BreakdownTab = "models" | "providers";
 
 /* ── Component ────────────────────────────────────────────── */
 
-export function CostEstimation({ keys, livePricing }: CostEstimationProps) {
+export function CostEstimation({ keys, livePricing, defaultExpanded = false }: CostEstimationProps) {
   const t = useTranslations("usage");
   const panelId = useId();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const [activeTab, setActiveTab] = useState<BreakdownTab>("models");
   const [showUnpriced, setShowUnpriced] = useState(false);
 
@@ -50,14 +51,14 @@ export function CostEstimation({ keys, livePricing }: CostEstimationProps) {
   const extraProviderCount = Math.max(0, providerBreakdown.length - topProviders.length);
 
   return (
-    <section className="overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
+    <section className="overflow-hidden border-t border-[var(--surface-border)] pt-5">
       {/* ── Collapsible Header Strip ───────────────────────── */}
       <button
         type="button"
         aria-expanded={expanded}
         aria-controls={panelId}
         onClick={() => setExpanded((prev) => !prev)}
-        className="flex w-full cursor-pointer flex-col gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[var(--surface-muted)]/50 sm:flex-row sm:items-center sm:justify-between"
+        className="flex w-full cursor-pointer flex-col gap-3 rounded-md py-2 text-left transition-colors hover:bg-[var(--surface-muted)]/40 sm:flex-row sm:items-center sm:justify-between"
       >
         <div className="min-w-0 shrink-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -139,7 +140,7 @@ export function CostEstimation({ keys, livePricing }: CostEstimationProps) {
         }`}
       >
         <div className="min-h-0 overflow-hidden">
-          <div className="border-t border-[var(--surface-border)]">
+          <div className="mt-2 overflow-hidden rounded-lg border border-[var(--surface-border)]">
             {/* Toolbar: Single View Switch */}
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--surface-border)] bg-[var(--surface-muted)]/60 px-4 py-2">
               <div

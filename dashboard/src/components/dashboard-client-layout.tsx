@@ -17,9 +17,9 @@ export function DashboardClientLayout({ children }: DashboardClientLayoutProps) 
     <ToastProvider>
       <MobileSidebarProvider>
         <MobileTopBar />
-        <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[auto_1fr]">
+        <div className="grid min-h-screen grid-cols-1 overflow-x-clip bg-[var(--surface-base)] lg:grid-cols-[auto_1fr]">
           <DashboardNav />
-          <main id="main-content" className="min-w-0 flex-1 px-3 pb-4 pt-16 lg:px-6 lg:pb-6 lg:pt-6">
+          <main id="main-content" className="min-w-0 flex-1 overflow-x-clip px-4 pb-10 pt-16 lg:px-8 lg:pb-12 lg:pt-4">
             <div className="mx-auto w-full max-w-[1320px]">
               <DashboardShell>{children}</DashboardShell>
             </div>

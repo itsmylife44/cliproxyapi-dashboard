@@ -8,17 +8,17 @@ export function MobileTopBar() {
   const t = useTranslations('mobile');
 
   return (
-    <div className="fixed left-0 right-0 top-0 z-30 border-b border-[var(--surface-border)] glass-nav lg:hidden">
-      <div className="flex items-center justify-between px-3 py-2.5">
+    <div className="fixed inset-x-0 top-0 z-30 overflow-hidden border-b border-[var(--surface-border)] glass-nav lg:hidden">
+      <div className="flex items-center justify-start gap-2.5 px-3 py-2">
         <button
           type="button"
           onClick={toggle}
-          className="rounded-md p-2 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--surface-hover)]"
+          className="rounded-md p-1.5 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--surface-hover)]"
           aria-label={t('toggleMenuAriaLabel')}
           aria-expanded={isOpen}
         >
           <svg
-            className="w-6 h-6"
+            className="h-5 w-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -32,18 +32,18 @@ export function MobileTopBar() {
             />
           </svg>
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/icon.png"
             alt={t('logoAlt')}
-            width={22}
-            height={24}
-            className="rounded-sm"
+            width={20}
+            height={22}
+            className="shrink-0 rounded-sm"
           />
-          <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
+          <span className="truncate text-sm font-semibold tracking-tight text-[var(--text-primary)]">
             {t('appName')}
-          </h1>
+          </span>
         </div>
       </div>
     </div>

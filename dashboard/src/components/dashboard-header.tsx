@@ -62,44 +62,30 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
   const initial = username ? username.charAt(0).toUpperCase() : "?";
 
   return (
-    <header className="w-full bg-[var(--surface-base)] border-b border-[var(--surface-border)] py-2.5 px-4 lg:px-6 rounded-2xl mb-4 shadow-[rgba(0,0,0,0.06)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_1px_2px] flex items-center justify-between">
-      {/* Left Side: Status + Latency */}
-      <div className="flex items-center gap-3 text-sm">
-        <div className="flex items-center gap-2">
-          {isLoading ? (
-            <>
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-500/100 animate-pulse" />
-              <span className="text-[var(--text-muted)]">{t('checking')}</span>
-            </>
-          ) : status?.running ? (
-            <>
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/100 animate-pulse-dot" />
-              <span className="text-emerald-600 font-medium">{t('allSystemsOperational')}</span>
-            </>
-          ) : (
-            <>
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500/100" />
-              <span className="text-red-600 font-medium">{t('systemOffline')}</span>
-            </>
-          )}
-        </div>
-
-        {status?.running && status.uptime != null && (
-          <>
-            <div className="w-px h-4 bg-[var(--surface-border)]" />
-            <span className="text-[var(--text-muted)] text-xs">
-              {t('uptimeLabel')}{formatUptime(status.uptime)}
-            </span>
-          </>
-        )}
-
-        {status?.running && (
-          <>
-            <div className="hidden sm:block w-px h-4 bg-[var(--surface-border)]" />
-            <div className="hidden sm:block">
-              <LatencyIndicator />
-            </div>
-          </>
+    <header className="mb-5 flex w-full items-center justify-between border-b border-[var(--surface-border)] py-2.5">
+      {/* Left Side: Live Ping */}
+      <div
+        className="flex items-center gap-2.5 text-sm"
+        title={
+          status?.running && status.uptime != null
+            ? `${t('uptimeLabel')}${formatUptime(status.uptime)}`
+            : undefined
+        }
+      >
+        {isLoading ? (
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="text-xs text-[var(--text-muted)]">{t('checking')}</span>
+          </div>
+        ) : status?.running ? (
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--surface-border)] bg-[var(--surface-muted)]/40 px-2.5 py-1">
+            <LatencyIndicator />
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/25 bg-rose-500/10 px-2.5 py-1">
+            <div className="h-2 w-2 rounded-full bg-rose-500" />
+            <span className="text-xs font-medium text-rose-600">{t('systemOffline')}</span>
+          </div>
         )}
       </div>
 

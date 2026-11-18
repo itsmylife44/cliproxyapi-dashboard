@@ -247,6 +247,17 @@ export async function GET(request: NextRequest) {
   });
 
     const keyUsageMap: Record<string, KeyUsage> = {};
+    const bucketSpanMs = toDate.getTime() - fromDate.getTime();
+    const useHourlyBuckets = bucketSpanMs <= 48 * 60 * 60 * 1000;
+    const formatBucketKey = (dt: Date) => {
+      const yr = dt.getFullYear();
+      const mo = String(dt.getMonth() + 1).padStart(2, "0");
+      const dy = String(dt.getDate()).padStart(2, "0");
+      if (!useHourlyBuckets) return `${yr}-${mo}-${dy}`;
+      const hr = String(dt.getHours()).padStart(2, "0");
+      return `${yr}-${mo}-${dy}T${hr}:00`;
+    };
+
     const dailyMap: Record<string, {
       requests: number;
       tokens: number;
@@ -378,11 +389,8 @@ export async function GET(request: NextRequest) {
         modelUsage.peakCacheWrite1hTokens += cacheWrite1hTokens;
       }
 
-      // Daily aggregation for charts (use server local timezone, not UTC)
-      const yr = record.timestamp.getFullYear();
-      const mo = String(record.timestamp.getMonth() + 1).padStart(2, "0");
-      const dy = String(record.timestamp.getDate()).padStart(2, "0");
-      const dayKey = `${yr}-${mo}-${dy}`;
+      // Time-series aggregation for charts (hourly for <=48h windows, daily otherwise)
+      const dayKey = formatBucketKey(record.timestamp);
       if (!dailyMap[dayKey]) {
         dailyMap[dayKey] = {
           requests: 0,
@@ -490,7 +498,30 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Build sorted daily breakdown array
+    if (useHourlyBuckets && Object.keys(dailyMap).length > 0) {
+      const endMs = Math.min(toDate.getTime(), Date.now());
+      const cursor = new Date(fromDate);
+      cursor.setMinutes(0, 0, 0);
+      while (cursor.getTime() <= endMs) {
+        const key = formatBucketKey(cursor);
+        if (!dailyMap[key]) {
+          dailyMap[key] = {
+            requests: 0,
+            tokens: 0,
+            inputTokens: 0,
+            uncachedInputTokens: 0,
+            cachedTokens: 0,
+            cacheWriteTokens: 0,
+            outputTokens: 0,
+            success: 0,
+            failure: 0,
+          };
+        }
+        cursor.setHours(cursor.getHours() + 1);
+      }
+    }
+
+    // Build sorted time-series breakdown array
     const dailyBreakdown = Object.entries(dailyMap)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, data]) => ({ date, ...data }));
@@ -516,6 +547,7 @@ export async function GET(request: NextRequest) {
           successCount: totalSuccessCount,
           failureCount: totalFailureCount,
         },
+        bucketGranularity: useHourlyBuckets ? "hour" : "day",
         dailyBreakdown,
         modelBreakdown,
         requestEvents,

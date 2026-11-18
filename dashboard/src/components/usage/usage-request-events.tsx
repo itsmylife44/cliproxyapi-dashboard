@@ -142,7 +142,7 @@ export function UsageRequestEvents({ events, isAdmin, truncated, livePricing }: 
 
   if (safeEvents.length === 0) {
     return (
-      <section className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center">
+      <section className="py-6 text-center">
         <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("requestEvents")}</h2>
         <p className="mt-3 text-sm text-[var(--text-muted)]">{t("noEventsFound")}</p>
       </section>
@@ -150,8 +150,8 @@ export function UsageRequestEvents({ events, isAdmin, truncated, livePricing }: 
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
-      <div className="flex flex-col gap-2 border-b border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-3 sm:flex-row sm:items-end sm:justify-between">
+    <section className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("requestEvents")}</h2>
           <p className="mt-1 text-xs text-[var(--text-muted)]">
@@ -164,7 +164,7 @@ export function UsageRequestEvents({ events, isAdmin, truncated, livePricing }: 
         ) : null}
       </div>
 
-      <div className="max-h-[clamp(320px,62vh,760px)] overflow-auto">
+      <div className="max-h-[clamp(320px,62vh,760px)] overflow-auto border-t border-b border-[var(--surface-border)]">
         <table className="w-full min-w-[880px] text-sm">
           <thead>
             <tr className="sticky top-0 z-10 border-b border-[var(--surface-border)] bg-[var(--surface-base)]">

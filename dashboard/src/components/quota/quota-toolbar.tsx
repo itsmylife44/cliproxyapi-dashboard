@@ -34,7 +34,7 @@ export function QuotaToolbar({
     query.q !== "" || query.provider !== "all" || query.status !== "all" || query.page !== 1;
 
   return (
-    <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
+    <section className="border-t border-[var(--surface-border)] pt-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="grid gap-3 md:grid-cols-[minmax(0,1.5fr)_180px_180px] lg:flex-1">
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)]">

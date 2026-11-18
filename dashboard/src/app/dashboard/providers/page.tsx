@@ -77,6 +77,7 @@ export default function ProvidersPage() {
   const [maxKeysPerUser, setMaxKeysPerUser] = useState<number>(10);
   const [oauthAccountCount, setOauthAccountCount] = useState(0);
   const [customProviderCount, setCustomProviderCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<"oauth" | "api-keys" | "custom" | "admin">("oauth");
   const { showToast } = useToast();
   const t = useTranslations("providers");
 
@@ -143,48 +144,88 @@ export default function ProvidersPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-          {t("pageTitle")}
-        </h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          {t("pageDescription")}
-        </p>
-      </section>
-
-      <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t("statsApiKeysLabel")}</p>
-          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
-            {t("statsApiKeysValue", { count: totalApiKeys })}{currentUser ? ` ${t("statsApiKeysOwn", { own: ownApiKeyCount })}` : ""}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
+            {t("pageTitle")}
+          </h1>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            {t("pageDescription")}
           </p>
         </div>
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t("statsActiveProvidersLabel")}</p>
-          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{activeApiProviders}/{API_KEY_PROVIDERS.length}</p>
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs tabular-nums text-[var(--text-muted)]">
+          <span>
+            <strong className="font-semibold text-[var(--text-primary)]">{oauthAccountCount}</strong> {t("statsOAuthAccountsLabel")}
+          </span>
+          <span>
+            <strong className="font-semibold text-[var(--text-primary)]">{totalApiKeys}</strong> {t("statsApiKeysLabel")}
+            {currentUser ? ` (${ownApiKeyCount} / ${activeApiProviders})` : ""}
+          </span>
+          <span>
+            <strong className="font-semibold text-[var(--text-primary)]">{customProviderCount}</strong> {t("statsCustomProvidersLabel")}
+          </span>
         </div>
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t("statsOAuthAccountsLabel")}</p>
-          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{t("statsOAuthValue", { count: oauthAccountCount })}</p>
+      </div>
+
+      {/* ── Segmented Provider Tabs ─────────────────────────── */}
+      <div className="border-b border-[var(--surface-border)]">
+        <div role="tablist" aria-label={t("pageTitle")} className="-mb-px flex flex-wrap gap-6">
+          {(
+            [
+              { id: "oauth", label: t("oauthSectionTitle"), count: oauthAccountCount },
+              { id: "api-keys", label: t("statsApiKeysLabel"), count: totalApiKeys },
+              { id: "custom", label: t("customSectionTitle"), count: customProviderCount },
+              ...(currentUser?.isAdmin
+                ? [{ id: "admin" as const, label: t("adminSettingsTitle"), count: null }]
+                : []),
+            ] as const
+          ).map((tab) => {
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex cursor-pointer items-center gap-2 border-b-2 pb-2.5 text-sm font-medium transition-colors ${
+                  active
+                    ? "border-[var(--text-primary)] text-[var(--text-primary)]"
+                    : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                <span>{tab.label}</span>
+                {tab.count !== null && (
+                  <span className="rounded-full bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--text-secondary)]">
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t("statsCustomProvidersLabel")}</p>
-          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{t("statsCustomValue", { count: customProviderCount })}</p>
-        </div>
-      </section>
+      </div>
 
       {loading ? (
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6">
-          <div className="flex items-center justify-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="size-8 animate-spin rounded-full border-4 border-[#ddd] border-t-blue-500"></div>
-              <p className="text-[var(--text-secondary)]">{t("loadingText")}</p>
-            </div>
+        <div className="py-12 text-center">
+          <div className="inline-flex flex-col items-center gap-3">
+            <div className="size-7 animate-spin rounded-full border-2 border-[var(--surface-border)] border-t-blue-500"></div>
+            <p className="text-sm text-[var(--text-muted)]">{t("loadingText")}</p>
           </div>
         </div>
       ) : (
-        <>
-          <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 space-y-6">
+        <div className="space-y-8">
+          <div className={activeTab === "oauth" ? "block" : "hidden"}>
+            <OAuthSection
+              showToast={showToast}
+              currentUser={currentUser}
+              refreshProviders={refreshProviders}
+              onAccountCountChange={setOauthAccountCount}
+            />
+          </div>
+
+          <div className={activeTab === "api-keys" ? "block" : "hidden"}>
             <ApiKeySection
               showToast={showToast}
               currentUser={currentUser}
@@ -192,41 +233,25 @@ export default function ProvidersPage() {
               maxKeysPerUser={maxKeysPerUser}
               refreshProviders={refreshProviders}
             />
+          </div>
 
-            <div className="border-t border-[var(--surface-border)] pt-6">
-              <OAuthSection
-                showToast={showToast}
-                currentUser={currentUser}
-                refreshProviders={refreshProviders}
-                onAccountCountChange={setOauthAccountCount}
-              />
-            </div>
-
-            <div className="border-t border-[var(--surface-border)] pt-6">
-              <CustomProviderSection
-                showToast={showToast}
-                onProviderCountChange={setCustomProviderCount}
-              />
-            </div>
-
-            {currentUser?.isAdmin && <PerplexityProSection showToast={showToast} />}
-          </section>
+          <div className={activeTab === "custom" ? "block" : "hidden"}>
+            <CustomProviderSection
+              showToast={showToast}
+              onProviderCountChange={setCustomProviderCount}
+            />
+          </div>
 
           {currentUser?.isAdmin && (
-            <section id="provider-admin" className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-              <div>
-                <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t("adminSettingsTitle")}</h2>
-                <p className="text-xs text-[var(--text-muted)]">{t("adminSettingsDescription")}</p>
-              </div>
-
-              <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t("keyLimitsTitle")}</h3>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  {t("keyLimitsDescription")}
-                </p>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <label htmlFor="max-keys" className="mb-2 block text-sm font-semibold text-[var(--text-secondary)]">
+            <div className={activeTab === "admin" ? "space-y-8" : "hidden"}>
+              <section id="provider-admin" className="space-y-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t("keyLimitsTitle")}</h2>
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">{t("keyLimitsDescription")}</p>
+                </div>
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="min-w-[220px] flex-1 max-w-sm">
+                    <label htmlFor="max-keys" className="mb-1.5 block text-xs font-medium text-[var(--text-secondary)]">
                       {t("maxKeysLabel")}
                     </label>
                     <Input
@@ -240,13 +265,12 @@ export default function ProvidersPage() {
                         }
                       }}
                     />
-                    <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
                       {t("maxKeysHint", { current: maxKeysPerUser })}
                     </p>
                   </div>
                   <Button
                     variant="secondary"
-                    className="mt-6"
                     onClick={async () => {
                       try {
                         const res = await fetch(API_ENDPOINTS.ADMIN.SETTINGS, {
@@ -271,10 +295,14 @@ export default function ProvidersPage() {
                     {t("saveButton")}
                   </Button>
                 </div>
+              </section>
+
+              <div className="border-t border-[var(--surface-border)] pt-6">
+                <PerplexityProSection showToast={showToast} />
               </div>
-            </section>
+            </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

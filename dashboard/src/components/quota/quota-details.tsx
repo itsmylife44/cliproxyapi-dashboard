@@ -1,5 +1,6 @@
 "use client";
 
+import { type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
@@ -9,6 +10,7 @@ import { capacityQuotaGroups, isShortTermQuotaWindow } from "@/lib/quota-window-
 import { headlineQuotaWindows } from "@/lib/quota/headline";
 import { canonicalizeQuotaProvider } from "@/lib/quota/query-state";
 import { maskEmail } from "@/lib/mask-email";
+import type { AutoResetCreditSummary, AutoResetRule } from "@/lib/quota/auto-reset-rules";
 import {
   enrichModelFirstGroup,
   isModelFirstAccount,
@@ -43,6 +45,11 @@ function getCapacityBarClass(value: number): string {
 }
 
 
+function isResettableProvider(provider: string): boolean {
+  const canonical = canonicalizeQuotaProvider(provider);
+  return canonical === "codex" || canonical === "claude";
+}
+
 interface QuotaDetailsProps {
   filteredAccounts: QuotaAccount[];
   hasAnyAccounts: boolean;
@@ -54,6 +61,13 @@ interface QuotaDetailsProps {
   loading: boolean;
   modelFirstOnlyView: boolean;
   refreshKey?: string;
+  headerRight?: ReactNode;
+  autoResetRules?: Record<string, AutoResetRule>;
+  autoResetCredits?: Record<string, AutoResetCreditSummary>;
+  autoResetBusy?: Record<string, boolean>;
+  onUpdateAutoReset?: (authIndex: string, patch: { enabled: boolean; fiveHourThresholdPct: number; weeklyThresholdPct: number }) => void;
+  onCheckResetCredits?: (authIndex: string, provider: string) => void;
+  onManualReset?: (authIndex: string, provider: string) => void;
 }
 
 export function QuotaDetails({
@@ -67,6 +81,13 @@ export function QuotaDetails({
   loading,
   modelFirstOnlyView,
   refreshKey,
+  headerRight,
+  autoResetRules,
+  autoResetCredits,
+  autoResetBusy,
+  onUpdateAutoReset,
+  onCheckResetCredits,
+  onManualReset,
 }: QuotaDetailsProps) {
   const t = useTranslations("quota");
 
@@ -136,8 +157,11 @@ export function QuotaDetails({
   })();
 
   return (
-    <section id="quota-accounts" className="scroll-mt-24 space-y-2">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("accountsTitle")}</h2>
+    <section id="quota-accounts" className="scroll-mt-24 space-y-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("accountsTitle")}</h2>
+        {headerRight}
+      </div>
       <div className="space-y-3">
         {sections.map((section) => (
           <div key={section.key} className="space-y-1">
@@ -151,7 +175,7 @@ export function QuotaDetails({
                     "border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]",
                     section.modelFirstView
                       ? "grid grid-cols-[24px_minmax(0,1fr)_110px_110px_120px_120px]"
-                      : "grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px]"
+                      : "grid grid-cols-[24px_minmax(0,1fr)_100px_90px_120px_120px_104px]"
                   )}
                 >
                   <span></span>
@@ -160,6 +184,7 @@ export function QuotaDetails({
                   <span>{t("statusColumn")}</span>
                   <span>{section.modelFirstView ? t("readyColumnLabel") : t("longTermLabel")}</span>
                   <span>{section.modelFirstView ? t("recoveryColumnLabel") : t("shortTermLabel")}</span>
+                  {!section.modelFirstView && <span className="text-right">{t("autoResetColumn")}</span>}
                 </div>
 
                 {section.accounts.map((account) => {
@@ -187,93 +212,209 @@ export function QuotaDetails({
                           ? t("snapshotStatus")
                           : t("readyStatus");
 
+                  const resetSupported = !section.modelFirstView && isResettableProvider(account.provider);
+                  const rule = autoResetRules?.[account.auth_index] ?? {
+                    enabled: false,
+                    fiveHourThresholdPct: 0,
+                    weeklyThresholdPct: 0,
+                  };
+                  const creditSummary = autoResetCredits?.[account.auth_index];
+                  const isBusy = autoResetBusy?.[account.auth_index] === true;
+
                   return (
                     <div key={account.auth_index} className="border-b border-[var(--surface-border)] last:border-b-0">
-                      <button
-                        type="button"
-                        onMouseEnter={() => {
-                          if (account.supported && !account.error) {
-                            void prefetchAccountQuotaHistory(account.auth_index);
-                          }
-                        }}
-                        onFocus={() => {
-                          if (account.supported && !account.error) {
-                            void prefetchAccountQuotaHistory(account.auth_index);
-                          }
-                        }}
-                        onClick={() => onToggleCard(account.auth_index)}
-                        className={cn(
-                          "w-full items-center px-3 py-2 text-left transition-colors hover:bg-[var(--surface-hover)]",
-                          section.modelFirstView
-                            ? "grid grid-cols-[24px_minmax(0,1fr)_110px_110px_120px_120px]"
-                            : "grid grid-cols-[24px_minmax(0,1fr)_120px_120px_140px_140px]"
-                        )}
-                      >
-                        <span className={cn("text-xs text-[var(--text-muted)] transition-transform", isRowExpanded && "rotate-180")}>⌄</span>
-                        <span className="truncate text-xs text-[var(--text-primary)]">{accountLabels.get(account.auth_index)}</span>
-                        <span className="truncate text-xs capitalize text-[var(--text-secondary)]">{account.provider}</span>
-                        <span
+                      <div className="flex items-center">
+                        <button
+                          type="button"
+                          onMouseEnter={() => {
+                            if (account.supported && !account.error) {
+                              void prefetchAccountQuotaHistory(account.auth_index);
+                            }
+                          }}
+                          onFocus={() => {
+                            if (account.supported && !account.error) {
+                              void prefetchAccountQuotaHistory(account.auth_index);
+                            }
+                          }}
+                          onClick={() => onToggleCard(account.auth_index)}
                           className={cn(
-                            "text-xs",
+                            "flex-1 items-center px-3 py-2 text-left transition-colors hover:bg-[var(--surface-hover)]",
                             section.modelFirstView
-                              ? account.error
-                                ? "text-rose-600"
-                                : accountSummary?.staleSnapshot || accountQuotaUnverified
-                                  ? "text-amber-700"
+                              ? "grid grid-cols-[24px_minmax(0,1fr)_110px_110px_120px_120px]"
+                              : "grid grid-cols-[24px_minmax(0,1fr)_100px_90px_120px_120px]"
+                          )}
+                        >
+                          <span className={cn("text-xs text-[var(--text-muted)] transition-transform", isRowExpanded && "rotate-180")}>⌄</span>
+                          <span className="truncate text-xs text-[var(--text-primary)]">{accountLabels.get(account.auth_index)}</span>
+                          <span className="truncate text-xs capitalize text-[var(--text-secondary)]">{account.provider}</span>
+                          <span
+                            className={cn(
+                              "text-xs",
+                              section.modelFirstView
+                                ? account.error
+                                  ? "text-rose-600"
+                                  : accountSummary?.staleSnapshot || accountQuotaUnverified
+                                    ? "text-amber-700"
+                                    : account.supported
+                                      ? "text-emerald-700"
+                                      : "text-amber-700"
+                                : account.error
+                                  ? "text-rose-600"
                                   : account.supported
                                     ? "text-emerald-700"
                                     : "text-amber-700"
-                              : account.error
-                                ? "text-rose-600"
-                                : account.supported
-                                  ? "text-emerald-700"
-                                  : "text-amber-700"
+                            )}
+                          >
+                            {section.modelFirstView ? modelFirstStatus : statusLabel}
+                          </span>
+                          {section.modelFirstView ? (
+                            <>
+                              <span className="text-xs text-[var(--text-secondary)]">
+                                {accountSummary
+                                  ? accountQuotaUnverified
+                                    ? t("snapshotFullLabel")
+                                    : `${accountSummary.readyGroups}/${accountSummary.totalGroups}`
+                                  : "-"}
+                              </span>
+                              <span className="text-xs text-[var(--text-muted)]">
+                                {accountSummary ? formatRelativeTime(accountSummary.nextRecoveryAt ?? accountSummary.nextWindowResetAt, t) : "-"}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="block pr-3">
+                                {longMin !== null ? (
+                                  <>
+                                    <span className="text-xs tabular-nums text-[var(--text-secondary)]">{Math.round(longMin * 100)}%</span>
+                                    <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                                      <span className={cn("block h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-xs text-[var(--text-muted)]">-</span>
+                                )}
+                              </span>
+                              <span className="block pr-3">
+                                {shortMin !== null ? (
+                                  <>
+                                    <span className="text-xs tabular-nums text-[var(--text-secondary)]">{Math.round(shortMin * 100)}%</span>
+                                    <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                                      <span className={cn("block h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-xs text-[var(--text-muted)]">-</span>
+                                )}
+                              </span>
+                            </>
                           )}
-                        >
-                          {section.modelFirstView ? modelFirstStatus : statusLabel}
-                        </span>
-                        {section.modelFirstView ? (
-                          <>
-                            <span className="text-xs text-[var(--text-secondary)]">
-                              {accountSummary
-                                ? accountQuotaUnverified
-                                  ? t("snapshotFullLabel")
-                                  : `${accountSummary.readyGroups}/${accountSummary.totalGroups}`
-                                : "-"}
-                            </span>
-                            <span className="text-xs text-[var(--text-muted)]">
-                              {accountSummary ? formatRelativeTime(accountSummary.nextRecoveryAt ?? accountSummary.nextWindowResetAt, t) : "-"}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="block pr-3">
-                              {longMin !== null ? (
-                                <>
-                                  <span className="text-xs text-[var(--text-secondary)]">{Math.round(longMin * 100)}%</span>
-                                  <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                                    <span className={cn("block h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="text-xs text-[var(--text-muted)]">-</span>
-                              )}
-                            </span>
-                            <span className="block pr-3">
-                              {shortMin !== null ? (
-                                <>
-                                  <span className="text-xs text-[var(--text-secondary)]">{Math.round(shortMin * 100)}%</span>
-                                  <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                                    <span className={cn("block h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="text-xs text-[var(--text-muted)]">-</span>
-                              )}
-                            </span>
-                          </>
+                        </button>
+
+                        {!section.modelFirstView && (
+                          <div className="flex w-[104px] shrink-0 items-center justify-end px-3 py-2">
+                            {resetSupported && onUpdateAutoReset ? (
+                              <label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+                                <input
+                                  type="checkbox"
+                                  checked={rule.enabled}
+                                  disabled={isBusy}
+                                  onChange={(e) =>
+                                    onUpdateAutoReset(account.auth_index, {
+                                      enabled: e.target.checked,
+                                      fiveHourThresholdPct: rule.fiveHourThresholdPct,
+                                      weeklyThresholdPct: rule.weeklyThresholdPct,
+                                    })
+                                  }
+                                  className="h-3.5 w-3.5 rounded border-[var(--surface-border)] accent-[var(--accent)]"
+                                />
+                                <span>{t("autoResetToggle")}</span>
+                              </label>
+                            ) : (
+                              <span className="text-xs text-[var(--text-muted)]">-</span>
+                            )}
+                          </div>
                         )}
-                      </button>
+                      </div>
+
+                      {resetSupported && rule.enabled && onUpdateAutoReset && (
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-[var(--surface-border)] bg-[var(--surface-muted)]/30 px-4 py-2 text-xs">
+                          <div className="flex flex-wrap items-center gap-2 text-[var(--text-secondary)]">
+                            <span className="font-medium text-[var(--text-primary)]">{t("autoResetWhenLabel")}</span>
+                            <label className="inline-flex items-center gap-1">
+                              <span>{t("autoReset5hLabel")}</span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={rule.fiveHourThresholdPct}
+                                onChange={(e) =>
+                                  onUpdateAutoReset(account.auth_index, {
+                                    enabled: true,
+                                    fiveHourThresholdPct: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+                                    weeklyThresholdPct: rule.weeklyThresholdPct,
+                                  })
+                                }
+                                className="glass-input w-14 rounded px-1.5 py-0.5 text-center text-xs tabular-nums"
+                              />
+                              <span>%</span>
+                            </label>
+                            <span className="text-[var(--text-muted)]">&amp;</span>
+                            <label className="inline-flex items-center gap-1">
+                              <span>{t("autoResetWeeklyLabel")}</span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={rule.weeklyThresholdPct}
+                                onChange={(e) =>
+                                  onUpdateAutoReset(account.auth_index, {
+                                    enabled: true,
+                                    fiveHourThresholdPct: rule.fiveHourThresholdPct,
+                                    weeklyThresholdPct: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+                                  })
+                                }
+                                className="glass-input w-14 rounded px-1.5 py-0.5 text-center text-xs tabular-nums"
+                              />
+                              <span>%</span>
+                            </label>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            {creditSummary && (
+                              <span className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[11px] tabular-nums text-[var(--text-secondary)]">
+                                {creditSummary.error
+                                  ? creditSummary.error
+                                  : t("autoResetCreditsCount", { count: creditSummary.availableCount ?? 0 })}
+                              </span>
+                            )}
+                            {rule.lastStatus && (
+                              <span className="text-[11px] text-[var(--text-muted)]">
+                                {t("autoResetLastStatus", { status: rule.lastStatus })}
+                              </span>
+                            )}
+                            {onCheckResetCredits && (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => onCheckResetCredits(account.auth_index, account.provider)}
+                                className="rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-50"
+                              >
+                                {t("autoResetCheckButton")}
+                              </button>
+                            )}
+                            {onManualReset && (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => onManualReset(account.auth_index, account.provider)}
+                                className="rounded border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-600 transition-colors hover:bg-blue-500/20 disabled:opacity-50 dark:text-blue-400"
+                              >
+                                {isBusy ? t("resettingStatus") : t("autoResetNowButton")}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {isRowExpanded && (
                         <div className="border-t border-[var(--surface-border)] bg-[var(--surface-base)] px-4 py-3">

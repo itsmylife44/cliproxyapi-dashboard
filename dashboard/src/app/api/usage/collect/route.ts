@@ -247,16 +247,18 @@ async function tryAcquireCollectorLease(now: Date): Promise<boolean> {
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
-  const isCronAuth = (() => {
-    if (!COLLECTOR_API_KEY || !authHeader) return false;
-    const expected = `Bearer ${COLLECTOR_API_KEY}`;
-    if (authHeader.length !== expected.length) return false;
+  const internalKeyHeader = request.headers.get("x-internal-key");
+  const matchesSecret = (header: string | null, expected: string | undefined) => {
+    if (!header || !expected || header.length !== expected.length) return false;
     try {
-      return timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));
+      return timingSafeEqual(Buffer.from(header), Buffer.from(expected));
     } catch {
       return false;
     }
-  })();
+  };
+  const isCronAuth =
+    matchesSecret(authHeader, COLLECTOR_API_KEY ? `Bearer ${COLLECTOR_API_KEY}` : undefined) ||
+    matchesSecret(internalKeyHeader, MANAGEMENT_API_KEY);
 
   if (!isCronAuth) {
     const session = await verifySession();

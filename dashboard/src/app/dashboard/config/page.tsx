@@ -499,33 +499,31 @@ export default function ConfigPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4">
-        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              {t('settingsDescription')}
-            </p>
-          </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-          {hasUnsavedChanges && (
-            <>
-              <span className="flex items-center gap-2 rounded-sm border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700">
-                <span className="size-1.5 rounded-full bg-amber-400"></span>
-                {t('unsavedChanges')}
-              </span>
-              <Button variant="ghost" onClick={handleDiscard} disabled={saving} className="px-2.5 py-1 text-xs">
-                {t('discardChanges')}
-              </Button>
-            </>
-          )}
-          <Button onClick={handleSave} disabled={saving || !hasUnsavedChanges} className="px-2.5 py-1 text-xs">
-            {saving ? t('saving') : t('saveChanges')}
-          </Button>
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            {t('settingsDescription')}
+          </p>
         </div>
-      </section>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+        {hasUnsavedChanges && (
+          <>
+            <span className="flex items-center gap-2 rounded-sm border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+              <span className="size-1.5 rounded-full bg-amber-400"></span>
+              {t('unsavedChanges')}
+            </span>
+            <Button variant="ghost" onClick={handleDiscard} disabled={saving} className="px-2.5 py-1 text-xs">
+              {t('discardChanges')}
+            </Button>
+          </>
+        )}
+        <Button onClick={handleSave} disabled={saving || !hasUnsavedChanges} className="px-2.5 py-1 text-xs">
+          {saving ? t('saving') : t('saveChanges')}
+        </Button>
+        </div>
+      </div>
 
       <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-700">
         <strong>{t('warning')}</strong>{" "}

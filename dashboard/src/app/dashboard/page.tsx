@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CopyBlock } from "@/components/copy-block";
+import { QuickStartHero } from "@/components/quick-start-hero";
 import { QuickStartConfigSection } from "@/components/quick-start-config-section";
 import { ConfigPublisher } from "@/components/config-publisher";
 import { ConfigSubscriber } from "@/components/config-subscriber";
@@ -48,14 +47,6 @@ async function getServiceHealth() {
     return false;
   }
 }
-
-function getClaudeCodeEnv(): string {
-  return `export ANTHROPIC_BASE_URL=${getProxyUrl()}
-export ANTHROPIC_AUTH_TOKEN=your-api-key
-export ANTHROPIC_DEFAULT_SONNET_MODEL=gemini-2.5-flash`;
-}
-
-
 
 interface OAuthAccountEntry {
   id: string;
@@ -277,88 +268,17 @@ export default async function QuickStartPage() {
   if (shouldShowSetupChecklist && process.env.SKIP_SETUP_WIZARD !== "true") {
     redirect("/dashboard/setup");
   }
-  const statusCards = [
-    {
-      label: t('statusServiceLabel'),
-      value: isHealthy ? t('statusOnline') : t('statusOffline'),
-      tone: isHealthy ? "text-emerald-600" : "text-rose-600",
-      icon: "●",
-      iconTone: isHealthy ? "text-emerald-700" : "text-rose-600",
-    },
-    {
-      label: t('statusProvidersLabel'),
-      value: t('statusProvidersValue', { count: providerCount }),
-      tone: "text-[var(--text-primary)]",
-      icon: "◆",
-      iconTone: "text-blue-600",
-    },
-    {
-      label: t('statusApiKeysLabel'),
-      value: t('statusApiKeysValue', { count: apiKeys.length }),
-      tone: "text-[var(--text-primary)]",
-      icon: "♟",
-      iconTone: "text-amber-700",
-    },
-    {
-      label: t('statusProxyUrlLabel'),
-      value: getProxyUrl(),
-      tone: "text-[var(--text-primary)]",
-      icon: "◈",
-      iconTone: "text-[var(--text-secondary)]",
-      truncate: true,
-    },
-  ] as const;
-
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('quickStartTitle')}</h1>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Configure providers, generate client config, and validate access from one place.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/dashboard/providers"
-              className="rounded-md border border-[var(--surface-border)]/80 bg-[var(--surface-muted)]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]/80"
-            >
-              {t('navProviders')}
-            </Link>
-            <Link
-              href="/dashboard/api-keys"
-              className="rounded-md border border-[var(--surface-border)]/80 bg-[var(--surface-muted)]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]/80"
-            >
-              {t('navApiKeys')}
-            </Link>
-            <Link
-              href="/dashboard/settings"
-              className="rounded-md border border-[var(--surface-border)]/80 bg-[var(--surface-muted)]/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]/80"
-            >
-              {t('navSettings')}
-            </Link>
-          </div>
-        </div>
-      </section>
+    <div className="space-y-6">
+      <QuickStartHero
+        isHealthy={isHealthy}
+        providerCount={providerCount}
+        apiKeyCount={apiKeys.length}
+        modelCount={availableModelIds.length}
+        proxyUrl={getProxyUrl()}
+      />
 
       {showOmoNotice && <OmoSettingsNotice userId={session.userId} />}
-
-      <section id="overview" className="scroll-mt-24">
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-          {statusCards.map((card) => (
-            <div key={card.label} className="glass-card rounded-md border border-[var(--surface-border)] px-2.5 py-2 transition-colors hover:border-[var(--surface-border)]">
-              <div className="flex items-center justify-between">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{card.label}</div>
-                <span className={`text-xs ${card.iconTone}`} aria-hidden="true">{card.icon}</span>
-              </div>
-              <div className={`mt-0.5 text-xs font-semibold ${card.tone} ${"truncate" in card && card.truncate ? "truncate" : ""}`} title={String(card.value)}>
-                {card.value}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       <LazyDashboardMiniCharts />
 
@@ -373,55 +293,22 @@ export default async function QuickStartPage() {
         initialExcludedModels={initialExcludedModels}
         agentOverrides={agentOverrides}
         slimOverrides={slimOverrides}
-        hasSyncActive={hasSyncActive}
         isSubscribed={isSubscriber}
         proxyUrl={getProxyUrl()}
       />
 
-      <section id="sharing" className="scroll-mt-24">
-        <details className="group/details rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+      <section id="sharing" className="scroll-mt-24 border-t border-[var(--surface-border)] pt-5">
+        <details className="group/details">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-1">
             <div>
               <p className="text-sm font-semibold text-[var(--text-primary)]">{t('publisherSubscriberTitle')}</p>
               <p className="text-xs text-[var(--text-muted)]">{t('publisherSubscriberDescription')}</p>
             </div>
             <svg className="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 group-open/details:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
           </summary>
-          <div className="grid gap-3 border-t border-[var(--surface-border)] px-4 py-3 2xl:grid-cols-2">
+          <div className="mt-4 grid gap-6 border-t border-[var(--surface-border)] pt-4 2xl:grid-cols-2">
             {!isSubscriber && <ConfigPublisher />}
             {!isPublisher && <ConfigSubscriber hasApiKey={hasApiKey} />}
-          </div>
-        </details>
-      </section>
-
-      <section id="integrations" className="scroll-mt-24">
-        <details className="group/details rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">{t('integrationsTitle')}</p>
-              <p className="text-xs text-[var(--text-muted)]">{t('integrationsDescription')}</p>
-            </div>
-            <svg className="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 group-open/details:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
-          </summary>
-          <div className="border-t border-[var(--surface-border)] px-4 py-3">
-            <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-              <h3 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-                <span className="flex items-center gap-3">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-blue-500/20 bg-blue-500/10 text-sm text-blue-600" aria-hidden="true">&#9654;</span>
-                  Using with Claude Code
-                </span>
-              </h3>
-              <p className="mb-4 text-sm text-[var(--text-secondary)]">
-                As an alternative, you can use CLIProxyAPI with Claude Code by setting environment variables before launching it.
-                Replace <code className="break-all rounded bg-[var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-blue-600">your-api-key</code> with
-                your key from the{" "}
-                <Link href="/dashboard/api-keys" className="font-medium text-blue-600 underline decoration-blue-400/30 underline-offset-2 hover:text-blue-800">
-                  {t('claudeCodeApiKeysLink')}
-                </Link>{" "}
-                {t('claudeCodePageSuffix')}
-              </p>
-              <CopyBlock code={getClaudeCodeEnv()} />
-            </div>
           </div>
         </details>
       </section>

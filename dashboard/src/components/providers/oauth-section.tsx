@@ -21,6 +21,8 @@ interface OAuthSectionProps {
   currentUser: CurrentUserLike | null;
   refreshProviders: () => Promise<void>;
   onAccountCountChange: (count: number) => void;
+  ctaOnly?: boolean;
+  ctaLabel?: string;
 }
 
 // requiresPlugin: served by a CLIProxyAPI plugin whose oauth_provider equals
@@ -198,6 +200,8 @@ export function OAuthSection({
   currentUser,
   refreshProviders,
   onAccountCountChange,
+  ctaOnly = false,
+  ctaLabel,
 }: OAuthSectionProps) {
   const t = useTranslations("providers");
   const getCallbackMessage = (result: ReturnType<typeof validateCallbackUrl>): string => {
@@ -237,6 +241,7 @@ export function OAuthSection({
   const [importStatus, setImportStatus] = useState<"idle" | "validating" | "uploading" | "success" | "error">("idle");
   const [importErrorMessage, setImportErrorMessage] = useState<string | null>(null);
   const [pluginOAuthProviders, setPluginOAuthProviders] = useState<string[]>([]);
+  const [pickerMode, setPickerMode] = useState<"connect" | "import" | null>(null);
 
   const selectedOAuthProvider = getOAuthProviderById(selectedOAuthProviderId);
   const selectedOAuthProviderRequiresCallback = selectedOAuthProvider?.requiresCallback ?? true;
@@ -785,18 +790,50 @@ export function OAuthSection({
     ? getOAuthProviderById(importProviderId)?.name || importProviderId
     : "";
 
+  const availableOAuthProviders = visibleOAuthProviders(pluginOAuthProviders);
+
   return (
     <>
-      <div id="provider-oauth" className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('oauthAccountsTitle')}</h2>
-            <p className="text-xs text-[var(--text-muted)]">{t('oauthSectionDescription')}</p>
-          </div>
-          <span className="text-xs font-medium text-[var(--text-muted)]">{accounts.length} connected</span>
+      {ctaOnly ? (
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            onClick={() => setPickerMode("connect")}
+            className="h-11 rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--surface-base)] shadow-sm transition-all hover:opacity-90 focus-visible:ring-2"
+          >
+            + {ctaLabel ?? t("connectNewAccount")}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setPickerMode("import")}
+            className="h-11 rounded-lg border border-[var(--surface-border)] px-3.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+          >
+            {t("importJsonButton")}
+          </Button>
         </div>
+      ) : (
+        <div id="provider-oauth" className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t("oauthSectionTitle")}</h2>
+              <p className="text-xs text-[var(--text-muted)]">{t("oauthSectionDescription")}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setPickerMode("import")}
+                className="px-2.5 py-1.5 text-xs"
+              >
+                {t("importJsonButton")}
+              </Button>
+              <Button
+                onClick={() => setPickerMode("connect")}
+                className="px-3 py-1.5 text-xs"
+              >
+                + {t("connectNewAccount")}
+              </Button>
+            </div>
+          </div>
 
-        <div className="space-y-3">
           <OAuthCredentialList
             accounts={accounts}
             loading={oauthAccountsLoading}
@@ -807,19 +844,43 @@ export function OAuthSection({
             onDelete={confirmDeleteOAuth}
             onClaim={claimOAuthAccount}
           />
-
-          <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 text-xs text-[var(--text-muted)]">
-            <strong className="text-[var(--text-primary)]">{t("noteLabel")}</strong>{" "}
-            {t("oauthPopupNote")}
-          </div>
-
-          <OAuthActions
-            providers={visibleOAuthProviders(pluginOAuthProviders)}
-            onConnect={handleOAuthConnect}
-            onImport={openImportModal}
-          />
         </div>
-      </div>
+      )}
+
+      <Modal isOpen={pickerMode !== null} onClose={() => setPickerMode(null)}>
+        <ModalHeader>
+          <ModalTitle>
+            {pickerMode === "import" ? t("importJsonButton") : t("connectNewAccount")}
+          </ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3">
+            {pickerMode === "connect" && (
+              <p className="text-xs text-[var(--text-muted)]">
+                <strong className="text-[var(--text-primary)]">{t("noteLabel")}</strong>{" "}
+                {t("oauthPopupNote")}
+              </p>
+            )}
+            <OAuthActions
+              providers={availableOAuthProviders}
+              mode={pickerMode ?? "connect"}
+              onConnect={(providerId) => {
+                setPickerMode(null);
+                void handleOAuthConnect(providerId);
+              }}
+              onImport={(providerId) => {
+                setPickerMode(null);
+                openImportModal(providerId);
+              }}
+            />
+          </div>
+        </ModalContent>
+        <ModalFooter>
+          <Button variant="ghost" onClick={() => setPickerMode(null)}>
+            {t("oauthCloseButton")}
+          </Button>
+        </ModalFooter>
+      </Modal>
 
       <Modal isOpen={isOAuthModalOpen} onClose={handleOAuthModalClose}>
         <ModalHeader>

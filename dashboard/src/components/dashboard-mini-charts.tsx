@@ -76,7 +76,7 @@ export function DashboardMiniCharts() {
   if (!data || data.daily.length < 2) return null;
 
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 border-t border-[var(--surface-border)] pt-5 sm:grid-cols-3">
       <MiniSparkCard
         label={`${t("requests")} (7d)`}
         value={formatCompact(data.totalRequests)}
@@ -122,7 +122,7 @@ function MiniSparkCard({
 }) {
   const { tooltipStyle } = useChartTheme();
   return (
-    <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2">
+    <div className="py-1">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">

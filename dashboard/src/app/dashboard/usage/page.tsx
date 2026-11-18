@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { CHART_COLORS, formatCompact } from "@/components/ui/chart-theme";
@@ -14,40 +14,18 @@ const UsageCharts = dynamic(
 import { UsageRequestEvents, type RequestEvent } from "@/components/usage/usage-request-events";
 import { UsageTable } from "@/components/usage/usage-table";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
-import type { ModelPrice } from "@/lib/model-pricing";
+import { formatUSD, loadCustomPricing, type ModelPrice } from "@/lib/model-pricing";
+import { buildCostBreakdown, type UsageKey } from "@/lib/usage-cost-breakdown";
+import { cn } from "@/lib/utils";
 
 import { useTranslations } from "next-intl";
-interface KeyUsage {
-  keyName: string;
+interface KeyUsage extends UsageKey {
   username?: string;
   userId?: string;
-  totalRequests: number;
-  totalTokens: number;
-  inputTokens: number;
-  outputTokens: number;
   reasoningTokens: number;
   cachedTokens: number;
   successCount: number;
   failureCount: number;
-  models: Record<string, {
-    totalRequests: number;
-    totalTokens: number;
-    inputTokens: number;
-    outputTokens: number;
-    cachedTokens: number;
-    cacheWriteTokens?: number;
-    cacheWrite1hTokens?: number;
-    longContextInputTokens: number;
-    longContextOutputTokens: number;
-    longContextCachedTokens: number;
-    longContextCacheWriteTokens?: number;
-    longContextCacheWrite1hTokens?: number;
-    peakInputTokens: number;
-    peakOutputTokens: number;
-    peakCachedTokens: number;
-    peakCacheWriteTokens?: number;
-    peakCacheWrite1hTokens?: number;
-  }>;
 }
 
 interface UsageData {
@@ -65,6 +43,7 @@ interface UsageData {
   };
   period: { from: string; to: string };
   collectorStatus: { lastCollectedAt: string; lastStatus: string };
+  bucketGranularity?: "hour" | "day";
   dailyBreakdown?: Array<{
     date: string;
     requests: number;
@@ -115,6 +94,7 @@ interface CollectionStatus {
 }
 
 type DateFilter = "today" | "7d" | "30d" | "all" | "custom";
+type UsageSectionTab = "breakdown" | "cost" | "events";
 
 function shouldPollDashboard(): boolean {
   if (typeof document === "undefined") return true;
@@ -147,10 +127,6 @@ function getDateRange(period: DateFilter, customFrom?: string, customTo?: string
   }
 }
 
-function formatLatencyValue(value: number): string {
-  return `${value.toLocaleString()} ms`;
-}
-
 export default function UsagePage() {
   const t = useTranslations("usage");
 
@@ -162,10 +138,22 @@ export default function UsagePage() {
   const [activeFilter, setActiveFilter] = useState<DateFilter>("7d");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [activeTab, setActiveTab] = useState<UsageSectionTab>("breakdown");
   const { showToast } = useToast();
   const isFirstLoadRef = useRef(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [livePricing, setLivePricing] = useState<Record<string, ModelPrice>>({});
+  const customPricing = useMemo(() => loadCustomPricing(), []);
+
+  const costSummary = useMemo(() => {
+    if (!usageData) return { totalCost: 0, pricedCount: 0, totalModels: 0 };
+    const rows = buildCostBreakdown(usageData.keys, customPricing, livePricing);
+    return {
+      totalCost: rows.reduce((sum, entry) => sum + entry.estimatedCost, 0),
+      pricedCount: rows.filter((entry) => entry.priced).length,
+      totalModels: rows.length,
+    };
+  }, [usageData, customPricing, livePricing]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -361,12 +349,12 @@ export default function UsagePage() {
     (usageData.totals.cachedTokens ?? 0) > 0 ||
     (usageData.totals.cacheWriteTokens ?? 0) > 0
   );
-  const hasLatencyBreakdown = (usageData?.latencySummary?.sampleCount ?? 0) > 0;
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* ── Page Header & Controls ─────────────────────────── */}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
             <div className="mt-1 flex items-center gap-2">
@@ -375,7 +363,7 @@ export default function UsagePage() {
                 {t('collectionStatus')}: {getCollectionStatusText(collectionStatus)}
               </p>
               {collectionStatus?.errorMessage && (
-                <span className="text-xs text-rose-600" title={collectionStatus.errorMessage}>
+                <span className="text-xs text-rose-600 dark:text-rose-400" title={collectionStatus.errorMessage}>
                   ⚠️
                 </span>
               )}
@@ -396,59 +384,70 @@ export default function UsagePage() {
             </Button>
           </div>
         </div>
-      </section>
 
-      <TimeFilter
-        activeFilter={activeFilter}
-        customFrom={customFrom}
-        customTo={customTo}
-        onFilterChange={handleFilterChange}
-        onCustomFromChange={setCustomFrom}
-        onCustomToChange={setCustomTo}
-        onCustomDateApply={handleCustomDateChange}
-      />
+        <TimeFilter
+          activeFilter={activeFilter}
+          customFrom={customFrom}
+          customTo={customTo}
+          onFilterChange={handleFilterChange}
+          onCustomFromChange={setCustomFrom}
+          onCustomToChange={setCustomTo}
+          onCustomDateApply={handleCustomDateChange}
+        />
+      </div>
 
       {loading ? (
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
+        <div className="border-t border-[var(--surface-border)] py-10 text-center text-sm text-[var(--text-muted)]">
           {t('loadingText')}
         </div>
       ) : !usageData ? (
-        <div className="rounded-md border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-700">
+        <div className="rounded-md border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-400">
           {t('errorLoadFailed')}
         </div>
       ) : (
-        <>
-          {/* ── Unified Overview Strip (Requests · Tokens · Latency) ─── */}
-          <div className={`grid grid-cols-1 gap-3 ${hasLatencyBreakdown ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
-            <div className="flex flex-col justify-between rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-4 py-3.5">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalRequests')}</p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)]">
-                  {usageData.totals.totalRequests.toLocaleString()}
-                </p>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums">
-                <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  {usageData.totals.successCount.toLocaleString()} {t('successful')}
-                  {usageData.totals.totalRequests > 0
-                    ? ` (${((usageData.totals.successCount / usageData.totals.totalRequests) * 100).toFixed(1)}%)`
-                    : ""}
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-medium text-rose-600 dark:text-rose-400">
-                  <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                  {usageData.totals.failureCount.toLocaleString()} {t('failedLabel')}
-                </span>
-              </div>
+        <div className="space-y-6">
+          {/* ── Top Metric Strip (Requests · Tokens · Cost, Flat Ledger) ── */}
+          <div className="grid grid-cols-1 gap-6 border-t border-[var(--surface-border)] pt-5 md:grid-cols-3 md:gap-8">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalRequests')}</p>
+              <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)]">
+                {usageData.totals.totalRequests.toLocaleString()}
+              </p>
+              {(() => {
+                const total = usageData.totals.totalRequests;
+                const successPct = total > 0 ? (usageData.totals.successCount / total) * 100 : 0;
+                const failPct = total > 0 ? (usageData.totals.failureCount / total) * 100 : 0;
+                return (
+                  <div className="mt-2.5 space-y-1.5">
+                    <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                      {successPct > 0 && (
+                        <div className="h-full bg-emerald-500" style={{ width: `${successPct}%` }} />
+                      )}
+                      {failPct > 0 && (
+                        <div className="h-full bg-rose-500" style={{ width: `${failPct}%` }} />
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums">
+                      <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        {usageData.totals.successCount.toLocaleString()} {t('successful')}
+                        {total > 0 ? ` (${successPct.toFixed(1)}%)` : ""}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 font-medium text-rose-600 dark:text-rose-400">
+                        <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                        {usageData.totals.failureCount.toLocaleString()} {t('failedLabel')}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
-            <div className="flex flex-col justify-between rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-4 py-3.5">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalTokens')}</p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)]">
-                  {usageData.totals.totalTokens.toLocaleString()}
-                </p>
-              </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('totalTokens')}</p>
+              <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)]">
+                {usageData.totals.totalTokens.toLocaleString()}
+              </p>
               {hasInputOutputBreakdown && (() => {
                 const inputVal = usageData.totals.uncachedInputTokens ?? usageData.totals.inputTokens;
                 const cachedVal = usageData.totals.cachedTokens ?? 0;
@@ -464,7 +463,7 @@ export default function UsagePage() {
                   { key: "output", label: t("output"), value: outputVal, color: CHART_COLORS.success },
                 ];
                 return (
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-2.5 space-y-1.5">
                     <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
                       {segmentSum > 0 && segments.map((seg) => (
                         <div
@@ -478,9 +477,9 @@ export default function UsagePage() {
                         />
                       ))}
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] tabular-nums text-[var(--text-secondary)]">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums text-[var(--text-secondary)]">
                       {segments.map((seg) => (
-                        <span key={seg.key} className="inline-flex items-center gap-1" title={seg.value.toLocaleString()}>
+                        <span key={seg.key} className="inline-flex items-center gap-1.5" title={seg.value.toLocaleString()}>
                           <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: seg.color }} />
                           <span className="text-[var(--text-muted)]">{seg.label}</span>
                           <span className="font-medium text-[var(--text-primary)]">{formatCompact(seg.value)}</span>
@@ -492,42 +491,78 @@ export default function UsagePage() {
               })()}
             </div>
 
-            {hasLatencyBreakdown && usageData?.latencySummary ? (
-              <div className="flex flex-col justify-between rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-4 py-3.5">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('avgLatency')}</p>
-                  <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)]">
-                    {formatLatencyValue(usageData.latencySummary.averageMs)}
-                  </p>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums">
-                  <span className="font-medium text-amber-700 dark:text-amber-400">
-                    P95 {formatLatencyValue(usageData.latencySummary.p95Ms)}
-                  </span>
-                  <span className="font-medium text-rose-600 dark:text-rose-400">
-                    {t('slowestRequest')} {formatLatencyValue(usageData.latencySummary.maxMs)}
-                  </span>
-                </div>
-              </div>
-            ) : null}
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('estimatedCost')}</p>
+              <button
+                type="button"
+                onClick={() => setActiveTab("cost")}
+                className="mt-1 text-left text-2xl font-semibold tracking-tight tabular-nums text-emerald-700 transition-opacity hover:opacity-80 dark:text-emerald-400"
+              >
+                {formatUSD(costSummary.totalCost)}
+              </button>
+              <p className="mt-2.5 text-xs tabular-nums text-[var(--text-muted)]">
+                {costSummary.pricedCount}/{costSummary.totalModels} {t("pricedModels")} · {Object.keys(usageData.keys).length} API keys
+              </p>
+            </div>
           </div>
 
-          <CostEstimation
-            keys={usageData.keys}
-            livePricing={livePricing}
-          />
-
-          <UsageCharts
-            dailyBreakdown={usageData.dailyBreakdown}
-            modelBreakdown={usageData.modelBreakdown}
-            latencySeries={usageData.latencySeries}
-            latencySummary={usageData.latencySummary}
-            totals={usageData.totals}
-          />
-
           <UsageTable keys={usageData.keys} isAdmin={isAdmin} livePricing={livePricing} />
-          <UsageRequestEvents events={usageData.requestEvents} isAdmin={isAdmin} truncated={usageData.truncated} livePricing={livePricing} />
-        </>
+
+          <section className="space-y-4 border-t border-[var(--surface-border)] pt-5">
+            <div className="flex flex-wrap items-center gap-1 border-b border-[var(--surface-border)]">
+              {(
+                [
+                  { id: "breakdown", label: t("usageTabBreakdown") },
+                  { id: "cost", label: t("usageTabCost") },
+                  { id: "events", label: t("usageTabEvents") },
+                ] as const
+              ).map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "-mb-px border-b-2 px-3 py-2 text-xs font-medium transition-colors",
+                      isActive
+                        ? "border-[var(--accent)] text-[var(--text-primary)]"
+                        : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {activeTab === "breakdown" && (
+              <UsageCharts
+                dailyBreakdown={usageData.dailyBreakdown}
+                bucketGranularity={usageData.bucketGranularity}
+                latencySeries={usageData.latencySeries}
+                latencySummary={usageData.latencySummary}
+              />
+            )}
+
+            {activeTab === "cost" && (
+              <CostEstimation
+                keys={usageData.keys}
+                livePricing={livePricing}
+                defaultExpanded
+              />
+            )}
+
+            {activeTab === "events" && (
+              <UsageRequestEvents
+                events={usageData.requestEvents}
+                isAdmin={isAdmin}
+                truncated={usageData.truncated}
+                livePricing={livePricing}
+              />
+            )}
+          </section>
+        </div>
       )}
     </div>
   );

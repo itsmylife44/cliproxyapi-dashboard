@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-import { Button } from "@/components/ui/button";
-import { HelpTooltip } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/toast";
 import { QuotaToolbar } from "@/components/quota/quota-toolbar";
 import { useQuota } from "@/hooks/use-quota";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { headlineQuotaWindows } from "@/lib/quota/headline";
-import { calcOverallTermCapacities, calcProviderSummary, type ProviderSummary } from "@/lib/quota/provider-summary";
+import { calcProviderSummary } from "@/lib/quota/provider-summary";
+import type { AutoResetCreditSummary, AutoResetRule } from "@/lib/quota/auto-reset-rules";
 import {
   enrichModelFirstGroup,
   isModelFirstAccount,
@@ -20,7 +21,6 @@ import {
   summarizeModelFirstProvider,
   type QuotaAccount,
 } from "@/lib/model-first-monitoring";
-import { formatRelativeTime } from "@/lib/format-relative-time";
 import { maskEmail } from "@/lib/mask-email";
 import {
   buildQuotaSearch,
@@ -106,31 +106,112 @@ export function filterQuotaAccounts(accounts: QuotaAccount[], query: QuotaQueryS
   );
 }
 
-function calcOverallCapacity(
-  summaries: ProviderSummary[],
-  noDataLabel: string,
-  weightedLabel: string
-): { value: number; label: string; provider: string } {
-  const { overall } = calcOverallTermCapacities(summaries);
-  if (overall === null) {
-    return { value: 0, label: noDataLabel, provider: "" };
-  }
-
-  return {
-    value: overall,
-    label: weightedLabel,
-    provider: "all",
-  };
-}
-
 export default function QuotaPage() {
   const t = useTranslations("quota");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { showToast } = useToast();
   const { data: quotaData, isLoading: loading, refreshing, refresh } = useQuota();
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const [autoResetRules, setAutoResetRules] = useState<Record<string, AutoResetRule>>({});
+  const [autoResetCredits, setAutoResetCredits] = useState<Record<string, AutoResetCreditSummary>>({});
+  const [autoResetBusy, setAutoResetBusy] = useState<Record<string, boolean>>({});
   const lastGeneratedAtRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    let active = true;
+    fetch(API_ENDPOINTS.QUOTA.AUTO_RESET)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { rules?: Record<string, AutoResetRule> } | null) => {
+        if (active && data?.rules) setAutoResetRules(data.rules);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleUpdateAutoReset = useCallback(
+    async (
+      authIndex: string,
+      patch: { enabled: boolean; fiveHourThresholdPct: number; weeklyThresholdPct: number }
+    ) => {
+      setAutoResetRules((prev) => ({
+        ...prev,
+        [authIndex]: { ...prev[authIndex], ...patch },
+      }));
+      try {
+        const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ authIndex, ...patch }),
+        });
+        if (!res.ok) {
+          showToast(t("autoResetSaveFailed"), "error");
+          return;
+        }
+        const data = (await res.json()) as { rule?: AutoResetRule };
+        if (data.rule) {
+          setAutoResetRules((prev) => ({ ...prev, [authIndex]: data.rule! }));
+        }
+      } catch {
+        showToast(t("autoResetSaveFailed"), "error");
+      }
+    },
+    [showToast, t]
+  );
+
+  const handleCheckResetCredits = useCallback(
+    async (authIndex: string, provider: string) => {
+      setAutoResetBusy((prev) => ({ ...prev, [authIndex]: true }));
+      try {
+        const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "check_credits", authIndex, provider }),
+        });
+        const data = (await res.json()) as AutoResetCreditSummary;
+        setAutoResetCredits((prev) => ({ ...prev, [authIndex]: data }));
+      } catch {
+        showToast(t("autoResetCheckFailed"), "error");
+      } finally {
+        setAutoResetBusy((prev) => ({ ...prev, [authIndex]: false }));
+      }
+    },
+    [showToast, t]
+  );
+
+  const handleManualReset = useCallback(
+    async (authIndex: string, provider: string) => {
+      setAutoResetBusy((prev) => ({ ...prev, [authIndex]: true }));
+      try {
+        const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "reset_now", authIndex, provider }),
+        });
+        const data = (await res.json()) as { ok?: boolean; message?: string; status?: string };
+        showToast(data.message ?? (res.ok ? t("autoResetApplied") : t("autoResetFailed")), res.ok && data.ok ? "success" : "error");
+        if (res.ok && data.ok) {
+          setAutoResetRules((prev) => ({
+            ...prev,
+            [authIndex]: {
+              ...(prev[authIndex] ?? { enabled: true, fiveHourThresholdPct: 0, weeklyThresholdPct: 0 }),
+              lastResetAt: new Date().toISOString(),
+              lastStatus: data.status ?? "reset",
+            },
+          }));
+          void refresh().catch(() => {});
+        }
+      } catch {
+        showToast(t("autoResetFailed"), "error");
+      } finally {
+        setAutoResetBusy((prev) => ({ ...prev, [authIndex]: false }));
+      }
+    },
+    [refresh, showToast, t]
+  );
 
   const query = useMemo(() => parseQuotaQueryState(searchParams), [searchParams]);
 
@@ -190,11 +271,9 @@ export default function QuotaPage() {
     .map(([, accounts]) => calcProviderSummary(accounts))
     .sort((left, right) => right.healthyAccounts - left.healthyAccounts);
 
-  const overallCapacity = calcOverallCapacity(providerSummaries, t("noData"), t("weightedCapacity"));
   const isModelFirstOnlyView =
     filteredAccounts.length > 0 && filteredAccounts.every((account) => isModelFirstAccount(account));
   const modelFirstSummary = isModelFirstOnlyView ? summarizeModelFirstProvider(filteredAccounts) : null;
-  const modelFirstQuotaUnverified = isModelFirstProviderQuotaUnverified(modelFirstSummary);
   const modelFirstWarnings = providerSummaries
     .filter((summary) => summary.monitorMode === "model-first" && summary.modelFirstSummary)
     .map((summary) => ({
@@ -222,47 +301,67 @@ export default function QuotaPage() {
     setExpandedCards((previous) => ({ ...previous, [accountId]: !previous[accountId] }));
   };
 
-  const freshSnapshotCount = modelFirstSummary
-    ? Math.max(0, modelFirstSummary.totalAccounts - modelFirstSummary.staleAccounts)
-    : 0;
-
   const hasAnyAccounts = allAccounts.length > 0;
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t("pageTitle")}</h1>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              {isModelFirstOnlyView ? t("modelFirstDescription") : t("pageDescription")}
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <Button onClick={() => void refresh().catch(() => {})} disabled={loading || refreshing} className="px-2.5 py-1 text-xs">
-              {loading || refreshing ? t("loadingText") : t("refreshButton")}
-            </Button>
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
+        <div className="flex flex-wrap items-center gap-3 tabular-nums">
+          <span>
+            <strong className="font-semibold text-[var(--text-primary)]">{activeAccounts}</strong>{" "}
+            {t("activeAccountsLabel").toLowerCase()}
+          </span>
+          <span>·</span>
+          <span>
+            <strong className="font-semibold text-[var(--text-primary)]">{providerSummaries.length}</strong>{" "}
+            {t("providersLabel").toLowerCase()}
+          </span>
+          {lowCapacityCount > 0 && (
+            <>
+              <span>·</span>
+              <span className="font-medium text-amber-600 dark:text-amber-400">
+                {lowCapacityCount} {t("lowCapacityLabel").toLowerCase()}
+              </span>
+            </>
+          )}
         </div>
-      </section>
 
-      <QuotaToolbar
-        query={query}
-        total={filteredAccounts.length}
-        onSearchChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { q: value }))}
-        onProviderChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { provider: value }))}
-        onStatusChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { status: value }))}
-        onClear={() => replaceQuery(clearQuotaToolbarQuery())}
-      />
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            {t("autoRefreshBadge")}
+          </span>
+          <button
+            type="button"
+            onClick={() => void refresh().catch(() => {})}
+            disabled={loading || refreshing}
+            aria-label={t("refreshButton")}
+            title={t("refreshButton")}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-50"
+          >
+            <svg
+              className={`h-3.5 w-3.5 ${loading || refreshing ? "animate-spin" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+              <polyline points="21 3 21 9 15 9" />
+            </svg>
+          </button>
+        </div>
+      </div>
 
       {loading && !quotaData ? (
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
+        <div className="border-t border-[var(--surface-border)] py-10 text-center text-sm text-[var(--text-muted)]">
           {t("loadingText")}
         </div>
       ) : (
-        <>
+        <div className="space-y-6">
           {modelFirstWarnings.length > 0 && (
-            <section className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+            <section className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-800 dark:text-amber-300">
               {modelFirstWarnings.map(({ provider, summary }) => (
                 <p key={provider}>
                   {t("modelFirstWarning", {
@@ -273,76 +372,6 @@ export default function QuotaPage() {
               ))}
             </section>
           )}
-
-          <section className={`grid grid-cols-2 gap-2 ${isModelFirstOnlyView ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("activeAccountsLabel")}</p>
-              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{activeAccounts}</p>
-            </div>
-            {isModelFirstOnlyView && modelFirstSummary ? (
-              <>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {modelFirstQuotaUnverified ? t("freshSnapshotsLabel") : t("readyAccountsLabel")}{" "}
-                    <HelpTooltip
-                      content={modelFirstQuotaUnverified ? t("freshSnapshotsTooltip") : t("readyAccountsTooltip")}
-                    />
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
-                    {modelFirstQuotaUnverified ? freshSnapshotCount : modelFirstSummary.readyAccounts}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("staleSnapshotsLabel")} <HelpTooltip content={t("staleSnapshotsTooltip")} />
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{modelFirstSummary.staleAccounts}</p>
-                </div>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("closestResetLabel")} <HelpTooltip content={t("closestResetTooltip")} />
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
-                    {formatRelativeTime(modelFirstSummary.nextWindowResetAt, t)}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("modelFamiliesLabel")} <HelpTooltip content={t("modelFamiliesTooltip")} />
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{modelFirstSummary.groups.length}</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("overallCapacityLabel")} <HelpTooltip content={t("overallCapacityTooltip")} />
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
-                    {overallCapacity.provider ? `${Math.round(overallCapacity.value * 100)}%` : t("noData")}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("lowCapacityLabel")} <HelpTooltip content={t("lowCapacityTooltip")} />
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{lowCapacityCount}</p>
-                </div>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("providersLabel")}</p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{providerSummaries.length}</p>
-                </div>
-              </>
-            )}
-          </section>
-
-          <QuotaChart
-            overallCapacity={overallCapacity}
-            providerSummaries={providerSummaries}
-            modelFirstSummary={modelFirstSummary}
-            modelFirstOnlyView={isModelFirstOnlyView}
-          />
 
           <QuotaDetails
             filteredAccounts={paginatedAccounts}
@@ -355,11 +384,37 @@ export default function QuotaPage() {
             loading={loading}
             modelFirstOnlyView={isModelFirstOnlyView}
             refreshKey={quotaData?.generatedAt}
+            headerRight={
+              <QuotaToolbar
+                query={query}
+                total={filteredAccounts.length}
+                onSearchChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { q: value }))}
+                onProviderChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { provider: value }))}
+                onStatusChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { status: value }))}
+                onClear={() => replaceQuery(clearQuotaToolbarQuery())}
+              />
+            }
+            autoResetRules={autoResetRules}
+            autoResetCredits={autoResetCredits}
+            autoResetBusy={autoResetBusy}
+            onUpdateAutoReset={handleUpdateAutoReset}
+            onCheckResetCredits={handleCheckResetCredits}
+            onManualReset={handleManualReset}
           />
-        </>
+
+          <div className="border-t border-[var(--surface-border)] pt-5">
+            <QuotaChart
+              providerSummaries={providerSummaries}
+              modelFirstSummary={modelFirstSummary}
+              modelFirstOnlyView={isModelFirstOnlyView}
+            />
+          </div>
+        </div>
       )}
 
-      <QuotaAlerts />
+      <div className="border-t border-[var(--surface-border)] pt-5">
+        <QuotaAlerts />
+      </div>
     </div>
   );
 }

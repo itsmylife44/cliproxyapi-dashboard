@@ -201,8 +201,7 @@ export default function LogsPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
+    <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
         <div className="flex flex-wrap items-center gap-2">
@@ -214,7 +213,6 @@ export default function LogsPage() {
           </Button>
         </div>
       </div>
-      </section>
 
       <ConfirmDialog
         isOpen={showConfirm}
@@ -227,12 +225,12 @@ export default function LogsPage() {
         variant="danger"
       />
 
-      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
+      <section className="border-t border-[var(--surface-border)] pt-5">
         <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">{t('recentLogsTitle')}</h2>
           {loading ? (
             <div className="p-4 text-center text-[var(--text-muted)]">{t('loadingText')}</div>
           ) : logs.length === 0 ? (
-              <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-sm text-[var(--text-muted)]">
+              <div className="py-4 text-sm text-[var(--text-muted)]">
                 {t('logsEmptyProxy')}
                 <code className="rounded bg-[var(--surface-muted)] px-1">logging-to-file</code>
               </div>
@@ -277,7 +275,7 @@ export default function LogsPage() {
           )}
       </section>
 
-      <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-xs text-[var(--text-muted)]">
+      <div className="border-t border-[var(--surface-border)] pt-4 text-xs text-[var(--text-muted)]">
         <strong>{t('tipLabel')}</strong> {t('tipText')}
       </div>
     </div>

@@ -187,10 +187,9 @@ export function ModelSelector({
 
   return (
     <div
-      className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]"
       data-testid="model-selector"
     >
-      <div className="flex items-center justify-between gap-3 p-4">
+      <div className="flex items-center justify-between gap-3 py-1">
         <div className="flex items-center gap-3">
           <button
             type="button"

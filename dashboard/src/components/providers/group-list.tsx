@@ -43,9 +43,9 @@ export function GroupList({
         return (
           <div
             key={group.id}
-            className={`rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] overflow-hidden transition-opacity duration-200 ${!group.isActive ? 'opacity-60 grayscale-[30%]' : ''}`}
+            className={`overflow-hidden border-t border-b border-[var(--surface-border)] transition-opacity duration-200 ${!group.isActive ? 'opacity-60 grayscale-[30%]' : ''}`}
           >
-            <div className="flex items-center justify-between border-b border-[var(--surface-border)] bg-[var(--surface-base)]/60 px-3 py-2">
+            <div className="flex items-center justify-between border-b border-[var(--surface-border)] py-2.5">
               <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => onToggleCollapse(group.id)}>
                 {group.color && (
                   <span

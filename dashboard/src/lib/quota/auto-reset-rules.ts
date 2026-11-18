@@ -22,6 +22,7 @@ export interface ResetGrantInfo {
   resetsLeft: number;
   usableNow: boolean;
   program: "cedar_ember" | "juniper_tide";
+  expiresAt?: string | null;
 }
 
 export interface AutoResetCreditSummary {
@@ -29,6 +30,7 @@ export interface AutoResetCreditSummary {
   provider: "codex" | "claude" | "unsupported";
   availableCount: number | null;
   grants: ResetGrantInfo[];
+  nearestExpiresAt?: string | null;
   error?: string;
 }
 
@@ -68,14 +70,16 @@ export function isAutoResetSupportedProvider(provider: string | undefined | null
   return normalizeAutoResetProvider(provider) !== "unsupported";
 }
 
+export interface AutoResetWindows {
+  fiveHourPct: number | null;
+  weeklyPct: number | null;
+  weeklyDaysLeft?: number | null;
+}
+
 export function extractAccountWindowPercentages(
   account: QuotaAccount,
   nowMs = Date.now()
-): {
-  fiveHourPct: number | null;
-  weeklyPct: number | null;
-  weeklyDaysLeft: number | null;
-} {
+): AutoResetWindows {
   if (!account.groups?.length) {
     return { fiveHourPct: null, weeklyPct: null, weeklyDaysLeft: null };
   }
@@ -108,7 +112,7 @@ export function extractAccountWindowPercentages(
 
 export function shouldTriggerAutoReset(
   rule: AutoResetRule,
-  windows: { fiveHourPct: number | null; weeklyPct: number | null; weeklyDaysLeft?: number | null },
+  windows: AutoResetWindows,
   nowMs = Date.now()
 ): boolean {
   if (!rule.enabled) return false;
@@ -119,9 +123,8 @@ export function shouldTriggerAutoReset(
     }
   }
   const { fiveHourPct, weeklyPct, weeklyDaysLeft } = windows;
-  if (fiveHourPct === null && weeklyPct === null) return false;
-  if (fiveHourPct !== null && fiveHourPct > rule.fiveHourThresholdPct) return false;
-  if (weeklyPct !== null && weeklyPct > rule.weeklyThresholdPct) return false;
+  if (fiveHourPct === null || weeklyPct === null) return false;
+  if (fiveHourPct > rule.fiveHourThresholdPct || weeklyPct > rule.weeklyThresholdPct) return false;
   if (rule.minWeeklyDaysLeft > 0) {
     if (weeklyDaysLeft == null || weeklyDaysLeft < rule.minWeeklyDaysLeft) {
       return false;

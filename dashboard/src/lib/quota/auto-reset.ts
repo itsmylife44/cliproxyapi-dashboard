@@ -1,10 +1,12 @@
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/lib/logger";
 import { CACHE_KEYS, quotaCache, quotaAccountCache } from "@/lib/cache";
 import { getManagementUrl } from "@/lib/management-url";
 import type { QuotaAccount } from "@/lib/model-first-monitoring";
 import {
+  AUTO_RESET_COOLDOWN_MS,
   extractAccountWindowPercentages,
   isAutoResetSupportedProvider,
   normalizeAutoResetProvider,
@@ -13,24 +15,12 @@ import {
   type AutoResetCreditSummary,
   type AutoResetRule,
   type AutoResetRulesMap,
+  type AutoResetWindows,
   type ExecuteResetResult,
   type ResetGrantInfo,
 } from "@/lib/quota/auto-reset-rules";
 
-export {
-  extractAccountWindowPercentages,
-  isAutoResetSupportedProvider,
-  normalizeAutoResetProvider,
-  normalizeAutoResetRule,
-  shouldTriggerAutoReset,
-  type AutoResetCreditSummary,
-  type AutoResetRule,
-  type AutoResetRulesMap,
-  type ExecuteResetResult,
-  type ResetGrantInfo,
-};
-
-export const AUTO_RESET_SETTING_KEY = "quota_auto_reset_rules";
+const AUTO_RESET_SETTING_KEY = "quota_auto_reset_rules";
 
 const CODEX_RESET_CREDITS_URL = "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits";
 const CODEX_CONSUME_RESET_URL = "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits/consume";
@@ -59,53 +49,47 @@ interface ManagementApiCallResponse {
   body?: unknown;
 }
 
-export async function loadAutoResetRules(): Promise<AutoResetRulesMap> {
-  try {
-    const row = await prisma.systemSetting.findUnique({
-      where: { key: AUTO_RESET_SETTING_KEY },
-    });
-    if (!row?.value) return {};
-    const parsed = JSON.parse(row.value) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-
-    const clean: AutoResetRulesMap = {};
-    for (const [authIndex, rawRule] of Object.entries(parsed)) {
-      if (!authIndex || !rawRule || typeof rawRule !== "object") continue;
-      clean[authIndex] = normalizeAutoResetRule(rawRule as Partial<AutoResetRule>);
-    }
-    return clean;
-  } catch (err) {
-    logger.warn({ err }, "Failed to load quota auto-reset rules");
-    return {};
+export async function loadAutoResetRules(db: Pick<Prisma.TransactionClient, "systemSetting"> = prisma): Promise<AutoResetRulesMap> {
+  const row = await db.systemSetting.findUnique({ where: { key: AUTO_RESET_SETTING_KEY } });
+  const rules: AutoResetRulesMap = Object.create(null);
+  if (!row) return rules;
+  const parsed = JSON.parse(row.value) as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Invalid quota auto-reset rules");
   }
-}
-
-export async function saveAutoResetRules(rules: AutoResetRulesMap): Promise<AutoResetRulesMap> {
-  await prisma.systemSetting.upsert({
-    where: { key: AUTO_RESET_SETTING_KEY },
-    create: { key: AUTO_RESET_SETTING_KEY, value: JSON.stringify(rules) },
-    update: { value: JSON.stringify(rules) },
-  });
+  for (const [authIndex, rule] of Object.entries(parsed)) {
+    if (authIndex && rule && typeof rule === "object") {
+      rules[authIndex] = normalizeAutoResetRule(rule as Partial<AutoResetRule>);
+    }
+  }
   return rules;
 }
 
-export async function upsertAutoResetRule(
+async function updateAutoResetRule(
   authIndex: string,
-  patch: Partial<AutoResetRule>
-): Promise<{ rules: AutoResetRulesMap; rule: AutoResetRule }> {
-  const rules = await loadAutoResetRules();
-  const prev = rules[authIndex];
-  const next = normalizeAutoResetRule({
-    enabled: patch.enabled ?? prev?.enabled ?? false,
-    fiveHourThresholdPct: patch.fiveHourThresholdPct ?? prev?.fiveHourThresholdPct ?? 0,
-    weeklyThresholdPct: patch.weeklyThresholdPct ?? prev?.weeklyThresholdPct ?? 0,
-    minWeeklyDaysLeft: patch.minWeeklyDaysLeft ?? prev?.minWeeklyDaysLeft ?? 0,
-    lastResetAt: patch.lastResetAt !== undefined ? patch.lastResetAt : prev?.lastResetAt ?? null,
-    lastStatus: patch.lastStatus !== undefined ? patch.lastStatus : prev?.lastStatus ?? null,
+  update: (current: AutoResetRule) => AutoResetRule | null
+): Promise<AutoResetRule | null> {
+  return prisma.$transaction(async (tx) => {
+    // The rules share one settings row, including before the first write creates it.
+    await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${AUTO_RESET_SETTING_KEY}, 0))`;
+    const rules = await loadAutoResetRules(tx);
+    const next = update(rules[authIndex] ?? normalizeAutoResetRule(null));
+    if (!next) return null;
+    rules[authIndex] = next;
+    const value = JSON.stringify(rules);
+    await tx.systemSetting.upsert({
+      where: { key: AUTO_RESET_SETTING_KEY },
+      create: { key: AUTO_RESET_SETTING_KEY, value },
+      update: { value },
+    });
+    return next;
   });
-  rules[authIndex] = next;
-  await saveAutoResetRules(rules);
-  return { rules, rule: next };
+}
+
+export async function upsertAutoResetRule(authIndex: string, patch: Pick<AutoResetRule,
+  "enabled" | "fiveHourThresholdPct" | "weeklyThresholdPct" | "minWeeklyDaysLeft"
+>) {
+  return updateAutoResetRule(authIndex, (rule) => normalizeAutoResetRule({ ...rule, ...patch }));
 }
 
 function parseJsonBody(raw: unknown): unknown {
@@ -155,6 +139,65 @@ async function callUpstreamViaManagement(payload: {
     body: parsedBody,
     rawText: typeof apiCallResult.body === "string" ? apiCallResult.body : undefined,
   };
+}
+
+function parseExpiryIso(obj: Record<string, unknown>): string | null {
+  for (const key of [
+    "expires_at",
+    "expiresAt",
+    "credit_expires_at",
+    "expiration_at",
+    "expiration",
+    "valid_until",
+    "reset_credit_expires_at",
+    "expiry",
+    "next_reset_at",
+    "window_end",
+  ]) {
+    const raw = obj[key];
+    if (typeof raw === "string" && raw.trim()) {
+      const ms = Date.parse(raw);
+      if (Number.isFinite(ms)) return new Date(ms).toISOString();
+    } else if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) {
+      const ms = raw > 1e12 ? raw : raw * 1000;
+      return new Date(ms).toISOString();
+    }
+  }
+  return null;
+}
+
+function extractCodexCreditExpiry(body: unknown): string | null {
+  if (!body || typeof body !== "object") return null;
+  const record = body as Record<string, unknown>;
+  const topLevel = parseExpiryIso(record);
+  if (topLevel) return topLevel;
+
+  const nested = record.reset_credits ?? record.credits;
+  if (Array.isArray(nested)) {
+    const dates = nested
+      .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
+      .map(parseExpiryIso)
+      .filter((v): v is string => v !== null);
+    return earliestIso(dates);
+  }
+  if (nested && typeof nested === "object") {
+    return parseExpiryIso(nested as Record<string, unknown>);
+  }
+  return null;
+}
+
+function earliestIso(dates: Array<string | null | undefined>): string | null {
+  let bestMs = Infinity;
+  let bestIso: string | null = null;
+  for (const iso of dates) {
+    if (!iso) continue;
+    const ms = Date.parse(iso);
+    if (Number.isFinite(ms) && ms < bestMs) {
+      bestMs = ms;
+      bestIso = iso;
+    }
+  }
+  return bestIso;
 }
 
 function extractCodexCreditCount(body: unknown): number {
@@ -226,6 +269,7 @@ function parseClaudeGrantsFromUsage(usageBody: unknown): ResetGrantInfo[] {
         resetsLeft,
         usableNow: g.usable_now === true,
         program: "cedar_ember",
+        expiresAt: parseExpiryIso(g),
       });
     }
   }
@@ -238,6 +282,7 @@ function parseClaudeGrantsFromUsage(usageBody: unknown): ResetGrantInfo[] {
       resetsLeft: 1,
       usableNow: true,
       program: "juniper_tide",
+      expiresAt: parseExpiryIso(juniper),
     });
   }
 
@@ -285,13 +330,24 @@ export async function inspectAccountResetCredits(params: {
       };
     }
     const count = extractCodexCreditCount(res.body);
+    const nearestExpiresAt = extractCodexCreditExpiry(res.body);
     return {
       supported: true,
       provider: "codex",
       availableCount: count,
+      nearestExpiresAt,
       grants:
         count > 0
-          ? [{ id: "codex_banked", label: "Banked Codex Reset Credit", resetsLeft: count, usableNow: true, program: "cedar_ember" }]
+          ? [
+              {
+                id: "codex_banked",
+                label: "Banked Codex Reset Credit",
+                resetsLeft: count,
+                usableNow: true,
+                program: "cedar_ember",
+                expiresAt: nearestExpiresAt,
+              },
+            ]
           : [],
     };
   }
@@ -313,10 +369,12 @@ export async function inspectAccountResetCredits(params: {
   }
   const grants = parseClaudeGrantsFromUsage(res.body);
   const availableCount = grants.reduce((sum, g) => sum + (g.usableNow ? g.resetsLeft : 0), 0);
+  const nearestExpiresAt = earliestIso(grants.map((g) => g.expiresAt));
   return {
     supported: true,
     provider: "claude",
     availableCount,
+    nearestExpiresAt,
     grants,
   };
 }
@@ -328,11 +386,13 @@ function bustQuotaCaches(authIndex: string): void {
   quotaAccountCache.invalidatePattern(new RegExp(`^${escapedPrefix}:`));
 }
 
-export async function executeAccountReset(params: {
+interface ResetAccount {
   auth_index: string;
   provider: string;
   accountId?: string;
-}): Promise<ExecuteResetResult> {
+}
+
+async function redeemAccountReset(params: ResetAccount): Promise<ExecuteResetResult> {
   const providerKind = normalizeAutoResetProvider(params.provider);
   if (providerKind === "unsupported") {
     return {
@@ -448,6 +508,34 @@ export async function executeAccountReset(params: {
   };
 }
 
+export async function executeAccountReset(target: ResetAccount, windows?: AutoResetWindows): Promise<ExecuteResetResult | null> {
+  const reservation = await updateAutoResetRule(target.auth_index, (rule) => {
+    const now = Date.now();
+    if (windows && !shouldTriggerAutoReset(rule, windows, now)) return null;
+    if (rule.lastResetAt && now - Date.parse(rule.lastResetAt) < AUTO_RESET_COOLDOWN_MS) return null;
+    return { ...rule, lastResetAt: new Date(now).toISOString(), lastStatus: "pending" };
+  });
+  if (!reservation) return null;
+
+  // Commit the cooldown before any provider request: a timeout can still consume a credit.
+  let result: ExecuteResetResult;
+  try {
+    result = await redeemAccountReset(target);
+  } catch (error) {
+    logger.warn({ error, authIndex: target.auth_index }, "Quota reset outcome is unknown");
+    result = {
+      ok: false,
+      provider: normalizeAutoResetProvider(target.provider),
+      status: "unknown",
+      message: "The provider did not confirm the reset. Check quota before retrying.",
+    };
+  }
+  await updateAutoResetRule(target.auth_index, (rule) =>
+    rule.lastResetAt === reservation.lastResetAt ? { ...rule, lastStatus: result.status } : null
+  );
+  return result;
+}
+
 async function fetchAuthFilesMeta(): Promise<AuthFileMeta[]> {
   const managementKey = process.env.MANAGEMENT_API_KEY;
   if (!managementKey) return [];
@@ -470,12 +558,11 @@ export async function evaluateAutoResetsForAccounts(accounts: QuotaAccount[]): P
   if (!Object.values(rules).some((rule) => rule.enabled)) return 0;
 
   let triggered = 0;
-  let dirty = false;
   let authMetaMap: Map<string, AuthFileMeta> | null = null;
 
   for (const account of accounts) {
     const rule = rules[account.auth_index];
-    if (!rule?.enabled || !isAutoResetSupportedProvider(account.provider)) continue;
+    if (!rule?.enabled || !account.supported || account.error || !isAutoResetSupportedProvider(account.provider)) continue;
 
     const windows = extractAccountWindowPercentages(account);
     if (!shouldTriggerAutoReset(rule, windows)) continue;
@@ -486,18 +573,13 @@ export async function evaluateAutoResetsForAccounts(accounts: QuotaAccount[]): P
     }
 
     const meta = authMetaMap.get(account.auth_index);
+    if (!meta || meta.disabled || normalizeAutoResetProvider(meta.provider) !== normalizeAutoResetProvider(account.provider)) continue;
     const result = await executeAccountReset({
       auth_index: account.auth_index,
       provider: account.provider,
-      accountId: meta?.id_token?.chatgpt_account_id,
-    });
-
-    rules[account.auth_index] = {
-      ...rule,
-      lastResetAt: new Date().toISOString(),
-      lastStatus: result.ok ? "reset" : result.status,
-    };
-    dirty = true;
+      accountId: meta.id_token?.chatgpt_account_id,
+    }, windows);
+    if (!result) continue;
 
     if (result.ok) {
       triggered++;
@@ -510,8 +592,5 @@ export async function evaluateAutoResetsForAccounts(accounts: QuotaAccount[]): P
     }
   }
 
-  if (dirty) {
-    await saveAutoResetRules(rules);
-  }
   return triggered;
 }

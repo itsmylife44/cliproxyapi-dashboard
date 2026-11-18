@@ -4,13 +4,12 @@ import { QuickStartConfigSection } from "@/components/quick-start-config-section
 import { ConfigPublisher } from "@/components/config-publisher";
 import { ConfigSubscriber } from "@/components/config-subscriber";
 import { verifySession } from "@/lib/auth/session";
-import { getManagementUrl, getProxyBaseUrl } from "@/lib/management-url";
+import { getManagementUrl } from "@/lib/management-url";
 import { prisma } from "@/lib/db";
 import { validateFullConfig, type OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import { validateSlimConfig, type OhMyOpenCodeSlimFullConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
-import { buildAvailableModelIds, fetchProxyModels } from "@/lib/config-generators/shared";
+import { buildAvailableModelIds, fetchProxyModels, type ConfigData, type OAuthAccount } from "@/lib/config-generators/shared";
 import { getProxyUrl, getInternalProxyUrl, buildAvailableModelsFromProxy, extractOAuthModelAliases, fetchModelsDevLimits, inferModelDefinition } from "@/lib/config-generators/opencode";
-import type { ConfigData } from "@/lib/config-generators/shared";
 import { resolveOwnedByDisplay } from "@/lib/providers/model-grouping";
 import { LazyDashboardMiniCharts } from "@/components/lazy-dashboard-mini-charts";
 import { OmoSettingsNotice } from "@/components/omo-settings-notice";
@@ -30,6 +29,7 @@ async function fetchManagementJson({ path }: ManagementFetchParams) {
         Authorization: `Bearer ${process.env.MANAGEMENT_API_KEY}`,
       },
       cache: "no-store",
+      signal: AbortSignal.timeout(5_000),
     });
     if (!res.ok) return null;
     return await res.json();
@@ -38,25 +38,7 @@ async function fetchManagementJson({ path }: ManagementFetchParams) {
   }
 }
 
-async function getServiceHealth() {
-  try {
-    const root = `${getProxyBaseUrl()}/`;
-    const res = await fetch(root, { cache: "no-store" });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
-interface OAuthAccountEntry {
-  id: string;
-  name: string;
-  type?: string;
-  provider?: string;
-  disabled?: boolean;
-}
-
-function extractOAuthAccounts(data: unknown): OAuthAccountEntry[] {
+function extractOAuthAccounts(data: unknown): OAuthAccount[] {
   if (typeof data !== "object" || data === null) return [];
   const record = data as Record<string, unknown>;
   const files = record["files"];
@@ -97,9 +79,8 @@ function buildProvidersMap(proxyModels: { id: string; owned_by: string }[]): Map
 export default async function QuickStartPage() {
   const t = await getTranslations('dashboard');
 
-  const [config, isHealthy, oauthData, session] = await Promise.all([
+  const [config, oauthData, session] = await Promise.all([
     fetchManagementJson({ path: "config" }),
-    getServiceHealth(),
     fetchManagementJson({ path: "auth-files" }),
     verifySession(),
   ]);
@@ -270,13 +251,7 @@ export default async function QuickStartPage() {
   }
   return (
     <div className="space-y-6">
-      <QuickStartHero
-        isHealthy={isHealthy}
-        providerCount={providerCount}
-        apiKeyCount={apiKeys.length}
-        modelCount={availableModelIds.length}
-        proxyUrl={getProxyUrl()}
-      />
+      <QuickStartHero proxyUrl={getProxyUrl()} />
 
       {showOmoNotice && <OmoSettingsNotice userId={session.userId} />}
 
@@ -284,8 +259,7 @@ export default async function QuickStartPage() {
 
       <QuickStartConfigSection
         apiKeys={apiKeys}
-        config={config}
-        oauthAccounts={oauthAccounts}
+        hasConfiguredProvider={providerCount > 0 || proxyModels.length > 0 || customProviders.length > 0}
         availableModels={availableModelIds}
         allModels={allProxyModels}
         modelSourceMap={modelSourceMap}

@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { AccountQuotaHistory, prefetchAccountQuotaHistory } from "@/components/quota/account-quota-history";
-import { formatRelativeTime } from "@/lib/format-relative-time";
+import { QuotaCapacity } from "@/components/quota/quota-capacity";
+import { formatRelativeTime, parseRelativeTime } from "@/lib/format-relative-time";
 import { capacityQuotaGroups, isShortTermQuotaWindow } from "@/lib/quota-window-classification";
 import { headlineQuotaWindows } from "@/lib/quota/headline";
 import { canonicalizeQuotaProvider } from "@/lib/quota/query-state";
@@ -37,16 +40,165 @@ function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: 
   return result;
 }
 
-function getCapacityBarClass(value: number): string {
-  if (value > 0.6) return "bg-emerald-500/80";
-  if (value > 0.2) return "bg-amber-500";
-  return "bg-rose-500/80";
-}
-
-
 function isResettableProvider(provider: string): boolean {
   const canonical = canonicalizeQuotaProvider(provider);
   return canonical === "codex" || canonical === "claude";
+}
+
+interface ResetWindowPreview {
+  currentPct: number;
+  resetsIn: string;
+  resetDuration: string;
+  daysLeft: number | null;
+}
+
+interface PendingManualReset {
+  authIndex: string;
+  label: string;
+  longWindow: ResetWindowPreview | null;
+  shortWindow: ResetWindowPreview | null;
+}
+
+interface ResetAdvice {
+  tone: "good" | "borderline" | "bad";
+  badge: string;
+  title: string;
+  reason: string;
+}
+
+function formatCountdown(isoDate: string | null | undefined): string {
+  const res = parseRelativeTime(isoDate);
+  if (res.type === "resetting") return "now";
+  if (res.type !== "time") return "—";
+  const { days = 0, hours = 0, minutes = 0 } = res;
+  if (days > 0) return `${days}d${hours}h`;
+  if (hours > 0) return minutes > 0 ? `${hours}h${minutes}m` : `${hours}h`;
+  return `${minutes}m`;
+}
+
+function calcDaysLeft(isoDate: string | null | undefined): number | null {
+  if (!isoDate) return null;
+  const ms = Date.parse(isoDate);
+  if (!Number.isFinite(ms)) return null;
+  return Math.max(0, (ms - Date.now()) / 86_400_000);
+}
+
+function formatWindowTarget(group: QuotaGroup, isShortTerm: boolean): string {
+  const sec = group.windowSeconds;
+  if (typeof sec === "number" && sec > 0) {
+    const totalHours = Math.round(sec / 3600);
+    if (totalHours >= 24) {
+      const days = Math.floor(totalHours / 24);
+      const remHours = totalHours % 24;
+      return `${days}d${remHours}h`;
+    }
+    return `${totalHours}h`;
+  }
+  return isShortTerm ? "5h" : "7d0h";
+}
+
+function buildManualResetPreview(account: QuotaAccount, label: string): PendingManualReset {
+  const groups = account.groups
+    ? headlineQuotaWindows(capacityQuotaGroups(account.provider, account.groups)).filter(
+        (g) => g.id !== "extra-usage"
+      )
+    : [];
+
+  let longGroup: QuotaGroup | null = null;
+  let shortGroup: QuotaGroup | null = null;
+  for (const group of groups) {
+    const isShort = isShortTermQuotaWindow(group, groups);
+    if (isShort && !shortGroup) shortGroup = group;
+    if (!isShort && !longGroup) longGroup = group;
+  }
+
+  const toPreview = (group: QuotaGroup | null, isShort: boolean): ResetWindowPreview | null => {
+    if (!group) return null;
+    const score = group.severity === "critical" ? 0 : normalizeFraction(group.remainingFraction);
+    if (score === null) return null;
+    return {
+      currentPct: Math.round(score * 100),
+      resetsIn: formatCountdown(group.resetTime),
+      resetDuration: formatWindowTarget(group, isShort),
+      daysLeft: calcDaysLeft(group.resetTime),
+    };
+  };
+
+  return {
+    authIndex: account.auth_index,
+    label,
+    longWindow: toPreview(longGroup, false),
+    shortWindow: toPreview(shortGroup, true),
+  };
+}
+
+function evaluateResetAdvice(
+  preview: PendingManualReset,
+  creditSummary: AutoResetCreditSummary | undefined,
+  t: (key: string, values?: Record<string, string | number>) => string
+): ResetAdvice {
+  const longPct = preview.longWindow?.currentPct ?? 0;
+  const longGain = Math.max(0, 100 - longPct);
+  const longResetsIn = preview.longWindow?.resetsIn ?? "—";
+  const longDays = preview.longWindow?.daysLeft ?? null;
+  const shortPct = preview.shortWindow?.currentPct ?? 0;
+  const expiresAt = creditSummary?.nearestExpiresAt;
+  const creditDaysLeft = calcDaysLeft(expiresAt);
+
+  if (creditSummary && !creditSummary.error && creditSummary.availableCount === 0) {
+    return {
+      tone: "bad",
+      badge: t("resetVerdictNoCreditsBadge"),
+      title: t("resetVerdictNoCreditsTitle"),
+      reason: t("manualResetConfirmMessage", { account: preview.label }),
+    };
+  }
+
+  if (creditDaysLeft !== null && creditDaysLeft <= 3 && longPct < 80) {
+    return {
+      tone: "good",
+      badge: t("resetVerdictExpSoonBadge"),
+      title: t("resetVerdictExpSoonTitle"),
+      reason: t("resetVerdictReasonExpiringSoon", {
+        expiresIn: formatCountdown(expiresAt),
+        gain: longGain,
+      }),
+    };
+  }
+
+  if (longPct >= 70) {
+    return {
+      tone: "bad",
+      badge: t("resetVerdictBadBadge"),
+      title: t("resetVerdictBadTitle"),
+      reason: t("resetVerdictReasonHighWeekly", { pct: longPct, gain: longGain }),
+    };
+  }
+
+  if (longDays !== null && longDays < 0.75) {
+    return {
+      tone: "bad",
+      badge: t("resetVerdictBadBadge"),
+      title: t("resetVerdictBadTitle"),
+      reason: t("resetVerdictReasonImminentReset", { resetsIn: longResetsIn }),
+    };
+  }
+
+  if ((longPct <= 35 && (longDays === null || longDays >= 2)) || (longPct <= 45 && shortPct <= 25 && (longDays === null || longDays >= 1.5))) {
+    return {
+      tone: "good",
+      badge: t("resetVerdictGoodBadge"),
+      title: t("resetVerdictGoodTitle"),
+      reason: t("resetVerdictReasonDepleted", { gain: longGain, resetsIn: longResetsIn }),
+    };
+  }
+
+  return {
+    tone: "borderline",
+    badge: t("resetVerdictBorderlineBadge"),
+    title: t("resetVerdictBorderlineTitle"),
+    reason: t("resetVerdictReasonModerate", { gain: longGain, resetsIn: longResetsIn }),
+  };
 }
 
 interface QuotaDetailsProps {
@@ -62,13 +214,13 @@ interface QuotaDetailsProps {
   refreshKey?: string;
   autoResetRules?: Record<string, AutoResetRule>;
   autoResetCredits?: Record<string, AutoResetCreditSummary>;
-  autoResetBusy?: Record<string, boolean>;
+  autoResetBusy?: Record<string, "checking" | "resetting" | null>;
   onUpdateAutoReset?: (
     authIndex: string,
     patch: { enabled: boolean; fiveHourThresholdPct: number; weeklyThresholdPct: number; minWeeklyDaysLeft: number }
   ) => void;
-  onCheckResetCredits?: (authIndex: string, provider: string) => void;
-  onManualReset?: (authIndex: string, provider: string) => void;
+  onCheckResetCredits?: (authIndex: string) => void;
+  onManualReset?: (authIndex: string) => void;
 }
 
 export function QuotaDetails({
@@ -89,7 +241,9 @@ export function QuotaDetails({
   onCheckResetCredits,
   onManualReset,
 }: QuotaDetailsProps) {
+  const tCommon = useTranslations("common");
   const t = useTranslations("quota");
+  const [pendingManualReset, setPendingManualReset] = useState<PendingManualReset | null>(null);
 
   const maskedAccountCounts = new Map<string, number>();
   for (const account of filteredAccounts) {
@@ -157,30 +311,15 @@ export function QuotaDetails({
   })();
 
   return (
-    <section id="quota-accounts" className="scroll-mt-24 space-y-2.5">
-      <div className="space-y-3">
+    <section id="quota-accounts" aria-labelledby="quota-accounts-title" className="scroll-mt-24 space-y-3">
+      <h2 id="quota-accounts-title" className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">{t("accountsTitle")}</h2>
+      <div className="space-y-4">
         {sections.map((section) => (
-          <div key={section.key} className="space-y-1">
+          <div key={section.key} className="space-y-2">
             {section.title && sections.length > 1 && (
-              <h3 className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{section.title}</h3>
+              <h3 className="text-sm font-medium text-[var(--text-secondary)]">{section.title}</h3>
             )}
-            <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
-                <div
-                  className={cn(
-                    "hidden border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] md:grid",
-                    section.modelFirstView
-                      ? "md:grid-cols-[24px_minmax(0,1fr)_104px_96px_110px_110px]"
-                      : "md:grid-cols-[24px_minmax(0,1fr)_104px_96px_136px_136px]"
-                  )}
-                >
-                  <span></span>
-                  <span>{t("accountColumn")}</span>
-                  <span>{t("providerColumn")}</span>
-                  <span>{t("statusColumn")}</span>
-                  <span>{section.modelFirstView ? t("readyColumnLabel") : t("longTermLabel")}</span>
-                  <span>{section.modelFirstView ? t("recoveryColumnLabel") : t("shortTermLabel")}</span>
-                </div>
-
+            <div className="divide-y divide-[var(--surface-border)] rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
                 {section.accounts.map((account) => {
                   const isRowExpanded = expandedCards[account.auth_index];
                   const scores = account.groups
@@ -206,19 +345,11 @@ export function QuotaDetails({
                           ? t("snapshotStatus")
                           : t("readyStatus");
 
-                  const statusColorClass = section.modelFirstView
-                    ? account.error
-                      ? "text-rose-600"
-                      : accountSummary?.staleSnapshot || accountQuotaUnverified
-                        ? "text-amber-700"
-                        : account.supported
-                          ? "text-emerald-700"
-                          : "text-amber-700"
-                    : account.error
-                      ? "text-rose-600"
-                      : account.supported
-                        ? "text-emerald-700"
-                        : "text-amber-700";
+                  const statusColorClass = account.error
+                    ? "text-rose-700 dark:text-rose-400"
+                    : !account.supported || accountSummary?.staleSnapshot || accountQuotaUnverified
+                      ? "text-amber-700 dark:text-amber-400"
+                      : "text-[var(--text-secondary)]";
                   const displayStatus = section.modelFirstView ? modelFirstStatus : statusLabel;
 
                   const resetSupported = !section.modelFirstView && isResettableProvider(account.provider);
@@ -229,10 +360,13 @@ export function QuotaDetails({
                     minWeeklyDaysLeft: 0,
                   };
                   const creditSummary = autoResetCredits?.[account.auth_index];
-                  const isBusy = autoResetBusy?.[account.auth_index] === true;
+                  const busyAction = autoResetBusy?.[account.auth_index] ?? null;
+                  const isCheckingCredits = busyAction === "checking";
+                  const isResettingNow = busyAction === "resetting";
+                  const isBusy = busyAction !== null;
 
                   return (
-                    <div key={account.auth_index} className="border-b border-[var(--surface-border)] last:border-b-0">
+                    <div key={account.auth_index}>
                       <button
                         type="button"
                         onMouseEnter={() => {
@@ -245,85 +379,55 @@ export function QuotaDetails({
                             void prefetchAccountQuotaHistory(account.auth_index);
                           }
                         }}
+                        aria-expanded={Boolean(isRowExpanded)}
+                        aria-labelledby={`quota-account-${account.auth_index} quota-toggle-${account.auth_index}`}
                         onClick={() => onToggleCard(account.auth_index)}
                         className={cn(
-                          "grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2.5 px-3 py-2.5 text-left transition-colors hover:bg-[var(--surface-hover)] md:gap-0 md:py-2",
-                          section.modelFirstView
-                            ? "md:grid-cols-[24px_minmax(0,1fr)_104px_96px_110px_110px]"
-                            : "md:grid-cols-[24px_minmax(0,1fr)_104px_96px_136px_136px]"
+                          "grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--accent)] sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:gap-x-6",
+                          isRowExpanded && "rounded-b-none bg-[var(--surface-muted)]"
                         )}
                       >
-                        <span className={cn("col-start-2 row-start-1 justify-self-end text-xs text-[var(--text-muted)] transition-transform md:col-start-1 md:row-start-1 md:justify-self-start", isRowExpanded && "rotate-180")}>⌄</span>
-                        <span className="col-start-1 row-start-1 min-w-0 md:col-start-2 md:row-start-1 md:pr-2">
-                          <span className="block truncate text-xs font-medium text-[var(--text-primary)] md:font-normal">{accountLabels.get(account.auth_index)}</span>
-                          <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] md:hidden">
-                            <span className="capitalize text-[var(--text-secondary)]">{account.provider}</span>
-                            <span aria-hidden="true" className="text-[var(--text-muted)]">·</span>
-                            <span className={statusColorClass}>{displayStatus}</span>
+                        <span className="min-w-0">
+                          <span id={`quota-account-${account.auth_index}`} className="block break-words text-sm font-semibold text-[var(--text-primary)]">
+                            {accountLabels.get(account.auth_index)}
+                          </span>
+                          <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs">
+                            {!section.title && (
+                              <span className="capitalize text-[var(--text-muted)]">{account.provider}</span>
+                            )}
+                            <span className={cn("inline-flex items-center gap-1 before:size-1.5 before:rounded-full before:bg-current", statusColorClass)}>{displayStatus}</span>
                           </span>
                         </span>
-                        <span className="hidden truncate text-xs capitalize text-[var(--text-secondary)] md:col-start-3 md:row-start-1 md:block">{account.provider}</span>
-                        <span className={cn("hidden text-xs md:col-start-4 md:row-start-1 md:block", statusColorClass)}>
-                          {displayStatus}
-                        </span>
-                        <span className="col-span-2 row-start-2 grid grid-cols-2 gap-3 border-t border-[var(--surface-border)]/50 pt-2 md:contents">
-                          {section.modelFirstView ? (
-                            <>
-                              <span className="min-w-0 md:col-start-5 md:row-start-1">
-                                <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)] md:hidden">
-                                  {t("readyColumnLabel")}
+                        {account.supported && !account.error && (section.modelFirstView || longMin !== null || shortMin !== null) && (
+                          <span className="col-span-2 row-start-2 grid min-w-0 auto-cols-fr grid-flow-col gap-3 sm:col-span-1 sm:col-start-2 sm:row-start-1 lg:gap-5">
+                            {section.modelFirstView ? (
+                              <>
+                                <span className="grid min-w-0 gap-0.5">
+                                  <span className="text-xs text-[var(--text-muted)]">{t("readyColumnLabel")}</span>
+                                  <span className="font-mono text-sm text-[var(--text-primary)]">
+                                    {accountSummary ? accountQuotaUnverified ? t("snapshotFullLabel") : `${accountSummary.readyGroups}/${accountSummary.totalGroups}` : "—"}
+                                  </span>
                                 </span>
-                                <span className="text-xs text-[var(--text-secondary)]">
-                                  {accountSummary
-                                    ? accountQuotaUnverified
-                                      ? t("snapshotFullLabel")
-                                      : `${accountSummary.readyGroups}/${accountSummary.totalGroups}`
-                                    : "-"}
+                                <span className="grid min-w-0 gap-0.5">
+                                  <span className="text-xs text-[var(--text-muted)]">{t("recoveryColumnLabel")}</span>
+                                  <span className="text-sm text-[var(--text-primary)]">
+                                    {accountSummary ? formatRelativeTime(accountSummary.nextRecoveryAt ?? accountSummary.nextWindowResetAt, t) : "—"}
+                                  </span>
                                 </span>
-                              </span>
-                              <span className="min-w-0 md:col-start-6 md:row-start-1">
-                                <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)] md:hidden">
-                                  {t("recoveryColumnLabel")}
-                                </span>
-                                <span className="text-xs text-[var(--text-muted)]">
-                                  {accountSummary ? formatRelativeTime(accountSummary.nextRecoveryAt ?? accountSummary.nextWindowResetAt, t) : "-"}
-                                </span>
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="block min-w-0 md:col-start-5 md:row-start-1 md:pr-3">
-                                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)] md:hidden">
-                                  {t("longTermLabel")}
-                                </span>
-                                {longMin !== null ? (
-                                  <>
-                                    <span className="text-xs tabular-nums text-[var(--text-secondary)]">{Math.round(longMin * 100)}%</span>
-                                    <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                                      <span className={cn("block h-full", getCapacityBarClass(longMin))} style={{ width: `${Math.round(longMin * 100)}%` }} />
-                                    </span>
-                                  </>
-                                ) : (
-                                  <span className="text-xs text-[var(--text-muted)]">-</span>
-                                )}
-                              </span>
-                              <span className="block min-w-0 md:col-start-6 md:row-start-1 md:pr-3">
-                                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)] md:hidden">
-                                  {t("shortTermLabel")}
-                                </span>
-                                {shortMin !== null ? (
-                                  <>
-                                    <span className="text-xs tabular-nums text-[var(--text-secondary)]">{Math.round(shortMin * 100)}%</span>
-                                    <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                                      <span className={cn("block h-full", getCapacityBarClass(shortMin))} style={{ width: `${Math.round(shortMin * 100)}%` }} />
-                                    </span>
-                                  </>
-                                ) : (
-                                  <span className="text-xs text-[var(--text-muted)]">-</span>
-                                )}
-                              </span>
-                            </>
-                          )}
+                              </>
+                            ) : (
+                              <>
+                                {longMin !== null && <QuotaCapacity label={t("longTermLabel")} percent={Math.round(longMin * 100)} />}
+                                {shortMin !== null && <QuotaCapacity label={t("shortTermLabel")} percent={Math.round(shortMin * 100)} />}
+                              </>
+                            )}
+                          </span>
+                        )}
+                        <span className="col-start-2 row-start-1 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-primary)] sm:col-start-3">
+                          <span id={`quota-toggle-${account.auth_index}`}>{isRowExpanded ? tCommon("close") : t("accountDetailsButton")}</span>
+                          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={cn("size-4 shrink-0 motion-safe:transition-transform", isRowExpanded && "rotate-180")}>
+                            <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
                         </span>
                       </button>
 
@@ -359,6 +463,7 @@ export function QuotaDetails({
                                         type="number"
                                         min={0}
                                         max={100}
+                                        disabled={isBusy}
                                         value={rule.fiveHourThresholdPct}
                                         onChange={(e) =>
                                           onUpdateAutoReset(account.auth_index, {
@@ -379,6 +484,7 @@ export function QuotaDetails({
                                         type="number"
                                         min={0}
                                         max={100}
+                                        disabled={isBusy}
                                         value={rule.weeklyThresholdPct}
                                         onChange={(e) =>
                                           onUpdateAutoReset(account.auth_index, {
@@ -399,6 +505,7 @@ export function QuotaDetails({
                                         type="number"
                                         min={0}
                                         max={7}
+                                        disabled={isBusy}
                                         value={rule.minWeeklyDaysLeft}
                                         onChange={(e) =>
                                           onUpdateAutoReset(account.auth_index, {
@@ -434,20 +541,30 @@ export function QuotaDetails({
                                     <button
                                       type="button"
                                       disabled={isBusy}
-                                      onClick={() => onCheckResetCredits(account.auth_index, account.provider)}
+                                      onClick={() => onCheckResetCredits(account.auth_index)}
                                       className="rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-50"
                                     >
-                                      {t("autoResetCheckButton")}
+                                      {isCheckingCredits ? t("checkingCreditsStatus") : t("autoResetCheckButton")}
                                     </button>
                                   )}
                                   {onManualReset && (
                                     <button
                                       type="button"
                                       disabled={isBusy}
-                                      onClick={() => onManualReset(account.auth_index, account.provider)}
+                                      onClick={() => {
+                                        if (!creditSummary && onCheckResetCredits) {
+                                          onCheckResetCredits(account.auth_index);
+                                        }
+                                        setPendingManualReset(
+                                          buildManualResetPreview(
+                                            account,
+                                            accountLabels.get(account.auth_index) ?? account.provider
+                                          )
+                                        );
+                                      }}
                                       className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-500/20 disabled:opacity-50 dark:text-emerald-400"
                                     >
-                                      {isBusy ? t("resettingStatus") : t("autoResetNowButton")}
+                                      {isResettingNow ? t("resettingStatus") : t("autoResetNowButton")}
                                     </button>
                                   )}
                                 </div>
@@ -547,6 +664,138 @@ export function QuotaDetails({
           </div>
         </div>
       )}
+
+      {onManualReset && (() => {
+        const liveCreditSummary = pendingManualReset ? autoResetCredits?.[pendingManualReset.authIndex] : undefined;
+        const isCheckingModalCredits = pendingManualReset ? autoResetBusy?.[pendingManualReset.authIndex] === "checking" : false;
+        const advice = pendingManualReset ? evaluateResetAdvice(pendingManualReset, liveCreditSummary, t) : null;
+        const dialogVariant = advice?.tone === "bad" ? "danger" : advice?.tone === "good" ? "info" : "warning";
+        const nearestExpiresAt = liveCreditSummary?.nearestExpiresAt;
+        const creditDaysLeft = calcDaysLeft(nearestExpiresAt);
+
+        return (
+          <ConfirmDialog
+            isOpen={pendingManualReset !== null}
+            onClose={() => setPendingManualReset(null)}
+            onConfirm={() => {
+              if (!pendingManualReset) return;
+              const target = pendingManualReset;
+              setPendingManualReset(null);
+              onManualReset(target.authIndex);
+            }}
+            title={t("manualResetConfirmTitle")}
+            message={
+              pendingManualReset && advice ? (
+                <div className="space-y-3 text-left text-xs">
+                  {/* Blunt Visual Recommendation Banner */}
+                  <div
+                    className={cn(
+                      "rounded-lg border p-3",
+                      advice.tone === "good" && "border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300",
+                      advice.tone === "borderline" && "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300",
+                      advice.tone === "bad" && "border-rose-500/40 bg-rose-500/10 text-rose-800 dark:text-rose-300"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white",
+                          advice.tone === "good" && "bg-emerald-600",
+                          advice.tone === "borderline" && "bg-amber-600",
+                          advice.tone === "bad" && "bg-rose-600"
+                        )}
+                      >
+                        {advice.badge}
+                      </span>
+                      <span className="font-semibold">{advice.title}</span>
+                    </div>
+                    <p className="mt-1.5 text-[11px] opacity-90">{advice.reason}</p>
+                  </div>
+
+                  {/* Before -> After Quota & Timer Breakdown */}
+                  {(pendingManualReset.longWindow || pendingManualReset.shortWindow) && (
+                    <div className="space-y-2.5 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)]/40 p-3 tabular-nums">
+                      {[
+                        { label: t("longTermLabel"), window: pendingManualReset.longWindow },
+                        { label: t("shortTermLabel"), window: pendingManualReset.shortWindow },
+                      ].map(
+                        ({ label, window }) =>
+                          window && (
+                            <div key={label} className="space-y-1">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="font-semibold text-[var(--text-primary)]">{label}</span>
+                                <span className="text-[11px] text-[var(--text-secondary)]">
+                                  <span className="font-semibold text-[var(--text-primary)]">{window.currentPct}%</span>{" "}
+                                  → <span className="font-semibold text-emerald-600 dark:text-emerald-400">100%</span>
+                                  {" "}
+                                  <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                                    (+{100 - window.currentPct}%)
+                                  </span>
+                                  {" · "}
+                                  {t("manualResetResetsLabel")} {window.resetsIn} → <span className="font-medium text-[var(--text-primary)]">{window.resetDuration}</span>
+                                </span>
+                              </div>
+                              <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                                <div
+                                  className="h-full bg-[var(--text-muted)]/50"
+                                  style={{ width: `${window.currentPct}%` }}
+                                />
+                                <div
+                                  className="h-full bg-emerald-500/80"
+                                  style={{ width: `${100 - window.currentPct}%` }}
+                                />
+                              </div>
+                            </div>
+                          )
+                      )}
+                    </div>
+                  )}
+
+                  {/* Credits & Expiry Footer */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--text-muted)] tabular-nums">
+                    {isCheckingModalCredits ? (
+                      <span>{t("checkingCreditsStatus")}</span>
+                    ) : liveCreditSummary?.error ? (
+                      <span className="text-rose-600 dark:text-rose-400">{liveCreditSummary.error}</span>
+                    ) : typeof liveCreditSummary?.availableCount === "number" ? (
+                      <span
+                        className={cn(
+                          "font-medium",
+                          liveCreditSummary.availableCount === 0
+                            ? "text-rose-600 dark:text-rose-400"
+                            : "text-[var(--text-secondary)]"
+                        )}
+                      >
+                        {t("autoResetCreditsCount", { count: liveCreditSummary.availableCount })}
+                      </span>
+                    ) : (
+                      <span>{t("manualResetConfirmMessage", { account: pendingManualReset.label })}</span>
+                    )}
+
+                    {nearestExpiresAt && (
+                      <span
+                        className={cn(
+                          "font-medium",
+                          creditDaysLeft !== null && creditDaysLeft <= 3
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-[var(--text-secondary)]"
+                        )}
+                        title={new Date(nearestExpiresAt).toLocaleString()}
+                      >
+                        {t("resetCreditExpiresLabel", { expiresIn: formatCountdown(nearestExpiresAt) })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                ""
+              )
+            }
+            confirmLabel={t("autoResetNowButton")}
+            variant={dialogVariant}
+          />
+        );
+      })()}
     </section>
   );
 }

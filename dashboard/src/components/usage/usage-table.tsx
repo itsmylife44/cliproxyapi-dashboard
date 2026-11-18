@@ -84,23 +84,18 @@ export function UsageTable({ keys, isAdmin, livePricing }: UsageTableProps) {
 
               return (
                 <React.Fragment key={authIndex}>
-                  <tr
-                    className={`border-b border-[var(--surface-border)] ${hasModels ? "cursor-pointer hover:bg-[var(--surface-muted)]" : ""}`}
-                    tabIndex={hasModels ? 0 : undefined}
-                    aria-expanded={hasModels ? isExpanded : undefined}
-                    onClick={() => hasModels && toggleKey(authIndex)}
-                    onKeyDown={(e) => {
-                      if (hasModels && (e.key === "Enter" || e.key === " ")) {
-                        e.preventDefault();
-                        toggleKey(authIndex);
-                      }
-                    }}
-                  >
+                  <tr className="border-b border-[var(--surface-border)]">
                     <td className="p-2 text-[var(--text-muted)]">
                       {hasModels && (
-                        <span className="text-xs">
-                          {isExpanded ? "\u25BC" : "\u25B6"}
-                        </span>
+                        <button
+                          type="button"
+                          aria-expanded={isExpanded}
+                          aria-label={`${keyUsage.keyName} — ${t("model")}`}
+                          onClick={() => toggleKey(authIndex)}
+                          className="rounded p-1 text-xs hover:bg-[var(--surface-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+                        >
+                          <span aria-hidden="true">{isExpanded ? "\u25BC" : "\u25B6"}</span>
+                        </button>
                       )}
                     </td>
                     <td className="p-2 font-mono text-xs text-[var(--text-primary)]">{keyUsage.keyName}</td>

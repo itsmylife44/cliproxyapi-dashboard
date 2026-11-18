@@ -129,7 +129,7 @@ export function UsageCharts({
   const hasBreakdown = series.length > 0;
   const hasLatency = Boolean(latencySeries && latencySeries.length > 0);
 
-  if (!hasBreakdown && !hasLatency) return null;
+  if (!hasBreakdown && !hasLatency) return <p className="py-6 text-center text-sm text-[var(--text-muted)]">{t("noUsageData")}</p>;
 
   return (
     <div className={`grid grid-cols-1 gap-8 ${hasBreakdown && hasLatency ? "lg:grid-cols-2" : ""}`}>
@@ -141,14 +141,13 @@ export function UsageCharts({
               {t("usageBreakdown")}
             </h2>
             <div
-              role="tablist"
+              role="group"
               aria-label={t("usageBreakdown")}
               className="inline-flex rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 p-0.5"
             >
               <button
                 type="button"
-                role="tab"
-                aria-selected={metric === "tokens"}
+                aria-pressed={metric === "tokens"}
                 onClick={() => setMetric("tokens")}
                 className={`cursor-pointer rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
                   metric === "tokens"
@@ -160,8 +159,7 @@ export function UsageCharts({
               </button>
               <button
                 type="button"
-                role="tab"
-                aria-selected={metric === "requests"}
+                aria-pressed={metric === "requests"}
                 onClick={() => setMetric("requests")}
                 className={`cursor-pointer rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
                   metric === "requests"
@@ -190,7 +188,7 @@ export function UsageCharts({
                 <Tooltip
                   {...tooltipStyle}
                   labelFormatter={(label) => formatBucketTooltip(String(label), isHourly)}
-                  formatter={(value) => [formatCompact(Number(value)), ""]}
+                  formatter={(value, name) => [formatCompact(Number(value)), name]}
                 />
                 <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
                 <Bar dataKey="success" name={t("success")} stackId="req" fill={CHART_COLORS.success} radius={[0, 0, 0, 0]} maxBarSize={24} />
@@ -204,7 +202,7 @@ export function UsageCharts({
                 <Tooltip
                   {...tooltipStyle}
                   labelFormatter={(label) => formatBucketTooltip(String(label), isHourly)}
-                  formatter={(value) => [formatCompact(Number(value)), ""]}
+                  formatter={(value, name) => [formatCompact(Number(value)), name]}
                 />
                 <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
                 <Bar dataKey="uncachedInputTokens" name={t("input")} stackId="tok" fill={CHART_COLORS.primary} maxBarSize={32} />
@@ -245,7 +243,7 @@ export function UsageCharts({
                 <Tooltip
                   {...tooltipStyle}
                   labelFormatter={(label) => formatBucketTooltip(String(label), isHourly)}
-                  formatter={(value) => [formatCompact(Number(value)), ""]}
+                  formatter={(value, name) => [formatCompact(Number(value)), name]}
                 />
                 <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
                 <Area type="monotone" dataKey="uncachedInputTokens" name={t("input")} stackId="1" stroke={CHART_COLORS.primary} fill={`url(#${gradInputId})`} strokeWidth={1.5} />

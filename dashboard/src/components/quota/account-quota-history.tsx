@@ -79,7 +79,10 @@ export function prefetchAccountQuotaHistory(
   const inflight = clientHistoryInflight.get(authIndex);
   if (inflight && !signal) return inflight;
 
-  const request = fetch(`${API_ENDPOINTS.QUOTA.HISTORY}?authIndex=${encodeURIComponent(authIndex)}`, { signal })
+  const request = fetch(`${API_ENDPOINTS.QUOTA.HISTORY}?authIndex=${encodeURIComponent(authIndex)}`, {
+    cache: "no-store",
+    signal,
+  })
     .then((res) => (res.ok ? (res.json() as Promise<AccountQuotaHistoryResponse>) : null))
     .then((json) => {
       if (json) {
@@ -109,7 +112,7 @@ export function prefetchBatchQuotaHistory(authIndices: string[], signal?: AbortS
 
   const batchPromise = fetch(
     `${API_ENDPOINTS.QUOTA.HISTORY}?authIndices=${encodeURIComponent(missing.join(","))}`,
-    { signal }
+    { cache: "no-store", signal }
   )
     .then((res) => (res.ok ? (res.json() as Promise<{ histories?: Record<string, AccountQuotaHistoryResponse> }>) : null))
     .then((json) => {

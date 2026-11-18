@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: session.userId },
-      select: { isAdmin: true, username: true },
+      select: { isAdmin: true },
     });
     const isAdmin = user?.isAdmin ?? false;
     const cacheKey = `usage-history:v1:${session.userId}:${isAdmin ? "admin" : "user"}:${fromParam}:${toParam}`;
@@ -167,37 +167,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(cached);
     }
 
-    let sourceFilter: string[] = [];
-    if (!isAdmin) {
-      const oauthOwnerships = await prisma.providerOAuthOwnership.findMany({
-        where: { userId: session.userId },
-        select: { accountName: true, accountEmail: true },
-      });
-      sourceFilter = [];
-      if (user?.username) sourceFilter.push(user.username);
-      for (const o of oauthOwnerships) {
-        if (o.accountEmail) sourceFilter.push(o.accountEmail);
-        sourceFilter.push(o.accountName);
-      }
-    }
-
     const whereClause = {
       timestamp: {
         gte: fromDate,
         lte: toDate,
       },
-      // Only show usage from dashboard-generated API keys (not OAuth auth-files)
-      apiKeyId: { not: null },
-      ...(isAdmin
-        ? {}
-        : {
-            OR: [
-              { userId: session.userId },
-              ...(sourceFilter.length > 0
-                ? [{ source: { in: sourceFilter } }]
-                : []),
-            ],
-          }),
+      // Authorize by the owning API key, not a mutable request source label.
+      ...(isAdmin ? { apiKeyId: { not: null } } : { apiKey: { userId: session.userId } }),
     };
 
     const usageRecords = await prisma.usageRecord.findMany({

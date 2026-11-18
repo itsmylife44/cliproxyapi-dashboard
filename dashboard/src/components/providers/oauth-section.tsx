@@ -20,9 +20,8 @@ interface OAuthSectionProps {
   showToast: ShowToast;
   currentUser: CurrentUserLike | null;
   refreshProviders: () => Promise<void>;
-  onAccountCountChange: (count: number) => void;
+  onAccountCountChange?: (count: number) => void;
   ctaOnly?: boolean;
-  ctaLabel?: string;
 }
 
 // requiresPlugin: served by a CLIProxyAPI plugin whose oauth_provider equals
@@ -201,7 +200,6 @@ export function OAuthSection({
   refreshProviders,
   onAccountCountChange,
   ctaOnly = false,
-  ctaLabel,
 }: OAuthSectionProps) {
   const t = useTranslations("providers");
   const getCallbackMessage = (result: ReturnType<typeof validateCallbackUrl>): string => {
@@ -264,27 +262,27 @@ export function OAuthSection({
   }, []);
 
   const loadAccounts = useCallback(async () => {
-    setOauthAccountsLoading(true);
+    if (!ctaOnly) setOauthAccountsLoading(true);
     try {
       const res = await fetch(API_ENDPOINTS.PROVIDERS.OAUTH);
       if (!res.ok) {
-        showToast(t("toastOAuthLoadFailed"), "error");
-        setOauthAccountsLoading(false);
+        if (!ctaOnly) showToast(t("toastOAuthLoadFailed"), "error");
         return;
       }
 
       const data = await res.json();
-      const nextAccounts = Array.isArray(data.accounts) ? data.accounts : [];
-      setAccounts(nextAccounts);
       setPluginOAuthProviders(Array.isArray(data.pluginOAuthProviders) ? data.pluginOAuthProviders : []);
-      onAccountCountChange(nextAccounts.length);
-      setOauthAccountsLoading(false);
+      if (!ctaOnly) {
+        const nextAccounts = Array.isArray(data.accounts) ? data.accounts : [];
+        setAccounts(nextAccounts);
+        onAccountCountChange?.(nextAccounts.length);
+      }
     } catch {
-      setOauthAccountsLoading(false);
-      showToast(t("toastNetworkError"), "error");
-      setOauthErrorMessage(t("errorOAuthAccountsNetwork"));
+      if (!ctaOnly) showToast(t("toastNetworkError"), "error");
+    } finally {
+      if (!ctaOnly) setOauthAccountsLoading(false);
     }
-  }, [onAccountCountChange, showToast, t]);
+  }, [ctaOnly, onAccountCountChange, showToast, t]);
 
   const toggleOAuthAccount = async (accountId: string, currentlyDisabled: boolean) => {
     setTogglingAccountId(accountId);
@@ -784,17 +782,17 @@ export function OAuthSection({
     }
   };
 
+  const shouldLoadAccounts = !ctaOnly || pickerMode !== null;
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void loadAccounts();
-    }, 0);
+    if (!shouldLoadAccounts) return;
+    const timer = window.setTimeout(() => void loadAccounts(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadAccounts, shouldLoadAccounts]);
 
-    return () => {
-      window.clearTimeout(timeoutId);
-      stopPolling();
-      stopNoCallbackClaimPolling();
-    };
-  }, [loadAccounts, stopNoCallbackClaimPolling, stopPolling]);
+  useEffect(() => () => {
+    stopPolling();
+    stopNoCallbackClaimPolling();
+  }, [stopNoCallbackClaimPolling, stopPolling]);
 
   const isOAuthSubmitDisabled =
     oauthModalStatus === MODAL_STATUS.LOADING ||
@@ -811,46 +809,20 @@ export function OAuthSection({
 
   return (
     <>
-      {ctaOnly ? (
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button
-            onClick={() => setPickerMode("connect")}
-            className="h-11 rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--surface-base)] shadow-sm transition-all hover:opacity-90 focus-visible:ring-2"
-          >
-            + {ctaLabel ?? t("connectNewAccount")}
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setPickerMode("import")}
-            className="h-11 rounded-lg border border-[var(--surface-border)] px-3.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-          >
-            {t("importJsonButton")}
-          </Button>
-        </div>
-      ) : (
-        <div id="provider-oauth" className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t("oauthSectionTitle")}</h2>
-              <p className="text-xs text-[var(--text-muted)]">{t("oauthSectionDescription")}</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => setPickerMode("import")}
-                className="px-2.5 py-1.5 text-xs"
-              >
-                {t("importJsonButton")}
-              </Button>
-              <Button
-                onClick={() => setPickerMode("connect")}
-                className="px-3 py-1.5 text-xs"
-              >
-                + {t("connectNewAccount")}
-              </Button>
-            </div>
+      <div id={ctaOnly ? undefined : "provider-oauth"} className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {!ctaOnly && <p className="text-xs text-[var(--text-muted)]">{t("oauthSectionDescription")}</p>}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={() => setPickerMode("connect")}>
+              {t("connectNewAccount")}
+            </Button>
+            <Button variant="secondary" onClick={() => setPickerMode("import")}>
+              {t("importJsonButton")}
+            </Button>
           </div>
+        </div>
 
+        {!ctaOnly && (
           <OAuthCredentialList
             accounts={accounts}
             loading={oauthAccountsLoading}
@@ -861,8 +833,8 @@ export function OAuthSection({
             onDelete={confirmDeleteOAuth}
             onClaim={claimOAuthAccount}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       <Modal isOpen={pickerMode !== null} onClose={() => setPickerMode(null)}>
         <ModalHeader>

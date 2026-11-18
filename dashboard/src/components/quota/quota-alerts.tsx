@@ -247,16 +247,22 @@ export function QuotaAlerts() {
       settings.chatId !== savedConnection.chatId);
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3 border-t border-[var(--surface-border)] pt-4">
       <div>
         <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">{t("sectionTitle")}</h2>
         <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t("sectionDescription")}</p>
       </div>
 
       <div className="space-y-3">
-        <div role="radiogroup" aria-label={t("sectionTitle")} className="flex gap-1 rounded-md bg-[var(--surface-muted)] p-1">
-          {(["disabled", "telegram", "discord"] as const).map((channel) => <button key={channel} type="button" role="radio" aria-checked={settings.channel === channel} onClick={() => setSettings((s) => ({ ...s, channel }))} className={cn("flex-1 rounded px-3 py-1.5 text-xs", settings.channel === channel ? "bg-[var(--surface-base)] font-semibold text-[var(--text-primary)]" : "text-[var(--text-muted)]")}>{t(channel)}</button>)}
-        </div>
+        <fieldset className="flex max-w-sm flex-wrap gap-1 rounded-md bg-[var(--surface-muted)] p-1">
+          <legend className="sr-only">{t("sectionTitle")}</legend>
+          {(["disabled", "telegram", "discord"] as const).map((channel) => (
+            <label key={channel} className={cn("flex-1 cursor-pointer rounded px-3 py-1.5 text-center text-xs focus-within:ring-2 focus-within:ring-[var(--accent)]", settings.channel === channel ? "bg-[var(--surface-base)] font-semibold text-[var(--text-primary)]" : "text-[var(--text-muted)]")}>
+              <input type="radio" name="quota-alert-channel" value={channel} checked={settings.channel === channel} onChange={() => setSettings((s) => ({ ...s, channel }))} className="sr-only" />
+              {t(channel)}
+            </label>
+          ))}
+        </fieldset>
         {settings.channel === "discord" && <div className="space-y-1"><label htmlFor="discord-webhook" className="text-xs font-medium text-[var(--text-muted)]">{t("webhookUrl")}</label><Input type="password" name="discord-webhook" value={settings.webhook} onChange={(v) => setSettings((s) => ({ ...s, webhook: v }))} autoComplete="off" /></div>}
         {settings.channel === "telegram" && <>
 
@@ -417,7 +423,7 @@ export function QuotaAlerts() {
         {checkResult && checkResult.accounts && checkResult.accounts.length > 0 && (
           <div className="mt-2 space-y-1 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              Check Result — {checkResult.breachedCount ?? 0} account(s) breached
+              {t("checkResultTitle", { count: checkResult.breachedCount ?? 0 })}
             </p>
             <div className="space-y-0.5">
               {checkResult.accounts.map((a) => (

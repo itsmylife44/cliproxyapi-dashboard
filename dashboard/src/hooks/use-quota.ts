@@ -6,7 +6,7 @@ import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import type { QuotaResponse } from "@/lib/model-first-monitoring";
 
 async function fetchQuota(url: string): Promise<QuotaResponse> {
-  const response = await fetch(url);
+  const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) throw new Error("Failed to load quota");
   return response.json();
 }

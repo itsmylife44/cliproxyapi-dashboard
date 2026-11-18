@@ -37,7 +37,6 @@ export interface RequestEvent {
 interface UsageRequestEventsProps {
   events?: RequestEvent[];
   isAdmin: boolean;
-  truncated?: boolean;
   livePricing?: Record<string, ModelPrice>;
 }
 
@@ -110,7 +109,7 @@ function estimateEventCost(
   return calculateTieredCost(bucket, empty, price);
 }
 
-export function UsageRequestEvents({ events, isAdmin, truncated, livePricing }: UsageRequestEventsProps) {
+export function UsageRequestEvents({ events, isAdmin, livePricing }: UsageRequestEventsProps) {
   const t = useTranslations("usage");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const customPricing = useMemo(() => loadCustomPricing(), []);
@@ -217,8 +216,7 @@ export function UsageRequestEvents({ events, isAdmin, truncated, livePricing }: 
   if (safeEvents.length === 0) {
     return (
       <section className="py-6 text-center">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("requestEvents")}</h2>
-        <p className="mt-3 text-sm text-[var(--text-muted)]">{t("noEventsFound")}</p>
+        <p className="text-sm text-[var(--text-muted)]">{t("noEventsFound")}</p>
       </section>
     );
   }
@@ -227,10 +225,8 @@ export function UsageRequestEvents({ events, isAdmin, truncated, livePricing }: 
     <section className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("requestEvents")}</h2>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
+          <p className="text-xs text-[var(--text-muted)]">
             {t("showingMostRecent", { count: safeEvents.length })}
-            {truncated ? ` ${t("truncatedOnServer")}` : ""}
           </p>
         </div>
         {hasMissingLatency ? (

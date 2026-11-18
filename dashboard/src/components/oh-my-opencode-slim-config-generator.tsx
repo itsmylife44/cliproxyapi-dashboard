@@ -14,8 +14,6 @@ import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import {
   buildSlimConfig,
   resolveInheritedModel,
-  type ConfigData,
-  type OAuthAccount,
 } from "@/lib/config-generators/oh-my-opencode-slim";
 import { buildSlimAgentAssignments } from "@/lib/config-generators/oh-my-opencode-slim-assignments";
 import {
@@ -30,8 +28,6 @@ import {
 
 interface OhMyOpenCodeSlimConfigGeneratorProps {
   apiKeys: { key: string; name: string | null }[];
-  config: ConfigData | null;
-  oauthAccounts: OAuthAccount[];
   proxyModelIds?: string[];
   excludedModels?: string[];
   slimOverrides?: OhMyOpenCodeSlimFullConfig;

@@ -56,6 +56,9 @@ describe("quota auto-reset threshold logic", () => {
       shouldTriggerAutoReset({ ...baseRule, minWeeklyDaysLeft: 2 }, { fiveHourPct: 0, weeklyPct: 0, weeklyDaysLeft: 3 }, 1_000_000)
     ).toBe(true);
 
+    expect(shouldTriggerAutoReset(baseRule, { fiveHourPct: null, weeklyPct: 0 }, 1_000_000)).toBe(false);
+    expect(shouldTriggerAutoReset(baseRule, { fiveHourPct: 0, weeklyPct: null }, 1_000_000)).toBe(false);
+
     const recentReset = new Date(900_000).toISOString();
     expect(
       shouldTriggerAutoReset({ ...baseRule, lastResetAt: recentReset }, { fiveHourPct: 0, weeklyPct: 0, weeklyDaysLeft: 5 }, 1_000_000)

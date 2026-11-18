@@ -6,7 +6,7 @@
 
 import { runAlertCheck, getCheckIntervalMs } from "@/lib/quota-alerts";
 import { recordQuotaSnapshots, pruneQuotaSnapshotsIfDue } from "@/lib/quota/quota-snapshots";
-import { evaluateAutoResetsForAccounts, loadAutoResetRules } from "@/lib/quota/auto-reset";
+import { evaluateAutoResetsForAccounts } from "@/lib/quota/auto-reset";
 import { resyncCustomProviders } from "@/lib/providers/resync";
 import { logger } from "@/lib/logger";
 import type { QuotaResponse } from "@/lib/model-first-monitoring";
@@ -36,10 +36,6 @@ export function registerNodeInstrumentation() {
   scheduleTimeout(() => {
     startQuotaAlertScheduler();
   }, STARTUP_DELAY_MS);
-
-  scheduleTimeout(() => {
-    startQuotaAutoResetScheduler();
-  }, 45_000);
 
   scheduleTimeout(() => {
     resyncCustomProviders().catch((err) => {
@@ -165,51 +161,6 @@ function startQuotaAlertScheduler() {
       // Fallback to 5 minutes if DB read fails
       scheduleTimeout(scheduleNext, 5 * 60 * 1000);
     }
-  };
-
-  scheduleNext();
-}
-
-function startQuotaAutoResetScheduler() {
-  const CHECK_INTERVAL_MS = 60_000;
-  let isRunning = false;
-
-  const run = async () => {
-    if (isRunning) return;
-    isRunning = true;
-
-    try {
-      const managementKey = process.env.MANAGEMENT_API_KEY;
-      if (!managementKey) return;
-
-      const rules = await loadAutoResetRules();
-      const hasEnabled = Object.values(rules).some((r) => r.enabled);
-      if (!hasEnabled) return;
-
-      const port = process.env.PORT ?? "3000";
-      const baseUrl = process.env.NEXTAUTH_URL ?? process.env.DASHBOARD_URL ?? `http://127.0.0.1:${port}`;
-      const res = await fetch(`${baseUrl}/api/quota`, {
-        headers: { "X-Internal-Key": managementKey },
-        signal: AbortSignal.timeout(60_000),
-      });
-      if (!res.ok) {
-        await res.body?.cancel().catch(() => undefined);
-        return;
-      }
-      const quotaData = (await res.json()) as QuotaResponse;
-      if (quotaData?.accounts?.length) {
-        await evaluateAutoResetsForAccounts(quotaData.accounts);
-      }
-    } catch (error) {
-      logger.warn({ err: error }, "Quota auto-reset scheduler error");
-    } finally {
-      isRunning = false;
-    }
-  };
-
-  const scheduleNext = async () => {
-    await run();
-    scheduleTimeout(scheduleNext, CHECK_INTERVAL_MS);
   };
 
   scheduleNext();

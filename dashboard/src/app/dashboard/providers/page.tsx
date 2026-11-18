@@ -145,9 +145,8 @@ export default function ProvidersPage() {
         </p>
       </div>
 
-      {/* ── Segmented Provider Tabs ─────────────────────────── */}
       <div className="border-b border-[var(--surface-border)]">
-        <div role="tablist" aria-label={t("pageTitle")} className="-mb-px flex flex-wrap gap-x-4 gap-y-1 sm:gap-x-6">
+        <div role="group" aria-label={t("pageTitle")} className="-mb-px flex flex-wrap gap-x-4 gap-y-1 sm:gap-x-6">
           {(
             [
               { id: "oauth", label: t("oauthSectionTitle"), count: oauthAccountCount },
@@ -163,10 +162,9 @@ export default function ProvidersPage() {
               <button
                 key={tab.id}
                 type="button"
-                role="tab"
-                aria-selected={active}
+                aria-pressed={active}
                 onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap border-b-2 pb-2 text-xs font-medium transition-colors sm:gap-2 sm:pb-2.5 sm:text-sm ${
+                className={`inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap border-b-2 pb-2 text-xs font-medium transition-colors sm:gap-2 sm:pb-2.5 ${
                   active
                     ? "border-[var(--text-primary)] text-[var(--text-primary)]"
                     : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
@@ -193,7 +191,7 @@ export default function ProvidersPage() {
         </div>
       ) : (
         <div className="space-y-8">
-          <div className={activeTab === "oauth" ? "block" : "hidden"}>
+          <div hidden={activeTab !== "oauth"}>
             <OAuthSection
               showToast={showToast}
               currentUser={currentUser}
@@ -202,7 +200,7 @@ export default function ProvidersPage() {
             />
           </div>
 
-          <div className={activeTab === "api-keys" ? "block" : "hidden"}>
+          <div hidden={activeTab !== "api-keys"}>
             <ApiKeySection
               showToast={showToast}
               currentUser={currentUser}
@@ -212,7 +210,7 @@ export default function ProvidersPage() {
             />
           </div>
 
-          <div className={activeTab === "custom" ? "block" : "hidden"}>
+          <div hidden={activeTab !== "custom"}>
             <CustomProviderSection
               showToast={showToast}
               onProviderCountChange={setCustomProviderCount}
@@ -220,7 +218,7 @@ export default function ProvidersPage() {
           </div>
 
           {currentUser?.isAdmin && (
-            <div className={activeTab === "admin" ? "space-y-8" : "hidden"}>
+            <div className="space-y-8" hidden={activeTab !== "admin"}>
               <section id="provider-admin" className="space-y-4">
                 <div>
                   <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t("keyLimitsTitle")}</h2>

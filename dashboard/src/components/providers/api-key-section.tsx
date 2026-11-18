@@ -199,45 +199,25 @@ export function ApiKeySection({
   const configuredProviders = API_KEY_PROVIDERS.filter(
     (provider) => (configs[provider.id]?.keys.length ?? 0) > 0
   );
-  const totalApiKeys = configuredProviders.reduce(
-    (sum, provider) => sum + (configs[provider.id]?.keys.length ?? 0),
-    0
-  );
   const defaultProviderId: ProviderId = API_KEY_PROVIDERS[0]?.id ?? PROVIDER_IDS.CLAUDE;
 
   return (
     <>
       <div id="provider-api-keys" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t("sectionTitle")}</h2>
-            <p className="text-xs text-[var(--text-muted)]">{t("sectionDescription")}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-medium tabular-nums text-[var(--text-muted)]">
-              {t("keysTotal", { count: totalApiKeys })}
-            </span>
-            <Button
-              onClick={() => openModal(defaultProviderId)}
-              className="px-3 py-1.5 text-xs"
-              disabled={!currentUser}
-            >
-              + {t("addKeyButton")}
-            </Button>
-          </div>
+          <p className="text-xs text-[var(--text-muted)]">{t("sectionDescription")}</p>
+          <Button
+            onClick={() => openModal(defaultProviderId)}
+            className="px-3 py-1.5 text-xs"
+            disabled={!currentUser}
+          >
+            {t("addKeyButton")}
+          </Button>
         </div>
 
         {configuredProviders.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 border-t border-b border-[var(--surface-border)] py-10 text-center">
             <p className="text-sm text-[var(--text-muted)]">{t("noApiKeysConfigured")}</p>
-            <Button
-              onClick={() => openModal(defaultProviderId)}
-              variant="secondary"
-              className="px-3 py-1.5 text-xs"
-              disabled={!currentUser}
-            >
-              + {t("addKeyButton")}
-            </Button>
           </div>
         ) : (
           <div className="divide-y divide-[var(--surface-border)] border-t border-b border-[var(--surface-border)]">

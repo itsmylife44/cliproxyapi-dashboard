@@ -32,7 +32,10 @@ export function CostEstimation({ keys, livePricing }: CostEstimationProps) {
     () => buildCostBreakdown(keys, customPricing, livePricing),
     [keys, customPricing, livePricing]
   );
-  const providerBreakdown = useMemo(() => aggregateByProvider(costBreakdown), [costBreakdown]);
+  const providerBreakdown = useMemo(
+    () => activeTab === "providers" ? aggregateByProvider(costBreakdown) : [],
+    [activeTab, costBreakdown]
+  );
   const totalEstimatedCost = useMemo(
     () => costBreakdown.reduce((sum, e) => sum + e.estimatedCost, 0),
     [costBreakdown]
@@ -40,70 +43,24 @@ export function CostEstimation({ keys, livePricing }: CostEstimationProps) {
   const unpricedModels = useMemo(() => costBreakdown.filter((e) => !e.priced), [costBreakdown]);
   const pricedModels = useMemo(() => costBreakdown.filter((e) => e.priced), [costBreakdown]);
 
-  if (costBreakdown.length === 0) return null;
+  if (costBreakdown.length === 0) return <p className="py-6 text-center text-sm text-[var(--text-muted)]">{t("noUsageData")}</p>;
 
   const maxModelCost = pricedModels[0]?.estimatedCost ?? 0;
   const displayUnpriced = showUnpriced || pricedModels.length === 0;
-  const topProviders = providerBreakdown.slice(0, 3);
-  const extraProviderCount = Math.max(0, providerBreakdown.length - topProviders.length);
 
   return (
     <section className="space-y-4">
-      {/* Inline Provider Composition Preview */}
-      {totalEstimatedCost > 0 && providerBreakdown.length > 0 && (
-        <div className="space-y-1.5">
-          <div className="flex h-2 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-            {providerBreakdown.map((prov, index) => {
-              const pct = (prov.estimatedCost / totalEstimatedCost) * 100;
-              if (pct <= 0) return null;
-              return (
-                <div
-                  key={prov.provider}
-                  className="h-full transition-[width] duration-300"
-                  style={{
-                    width: `${pct}%`,
-                    backgroundColor: SERIES_PALETTE[index % SERIES_PALETTE.length],
-                  }}
-                  title={`${prov.provider}: ${formatUSD(prov.estimatedCost)} (${pct.toFixed(1)}%)`}
-                />
-              );
-            })}
-          </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--text-secondary)]">
-            {topProviders.map((prov, index) => {
-              const pct = (prov.estimatedCost / totalEstimatedCost) * 100;
-              return (
-                <span key={prov.provider} className="inline-flex min-w-0 items-center gap-1.5">
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: SERIES_PALETTE[index % SERIES_PALETTE.length] }}
-                  />
-                  <span className="max-w-[110px] truncate font-medium">{prov.provider}</span>
-                  <span className="tabular-nums text-[var(--text-muted)]">{pct.toFixed(1)}%</span>
-                </span>
-              );
-            })}
-            {extraProviderCount > 0 && (
-              <span className="text-[10px] tabular-nums text-[var(--text-muted)]">
-                +{extraProviderCount}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
       <div>
         {/* Toolbar: Single View Switch */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--surface-border)] pb-2.5">
           <div
-            role="tablist"
+            role="group"
             aria-label={t("costBreakdownTitle")}
             className="inline-flex rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 p-0.5"
           >
             <button
               type="button"
-              role="tab"
-              aria-selected={activeTab === "models"}
+              aria-pressed={activeTab === "models"}
               onClick={() => setActiveTab("models")}
               className={`cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                 activeTab === "models"
@@ -112,14 +69,10 @@ export function CostEstimation({ keys, livePricing }: CostEstimationProps) {
               }`}
             >
               {t("byModelTab")}{" "}
-              <span className="ml-1 text-[10px] tabular-nums opacity-75">
-                {pricedModels.length}
-              </span>
             </button>
             <button
               type="button"
-              role="tab"
-              aria-selected={activeTab === "providers"}
+              aria-pressed={activeTab === "providers"}
               onClick={() => setActiveTab("providers")}
               className={`cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                 activeTab === "providers"
@@ -128,9 +81,6 @@ export function CostEstimation({ keys, livePricing }: CostEstimationProps) {
               }`}
             >
               {t("byProviderTab")}{" "}
-              <span className="ml-1 text-[10px] tabular-nums opacity-75">
-                {providerBreakdown.length}
-              </span>
             </button>
           </div>
 

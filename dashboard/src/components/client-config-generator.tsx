@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { OpenCodeConfigGenerator, type OmoVariant } from "@/components/opencode-config-generator";
 import { OhMyOpenCodeConfigGenerator } from "@/components/oh-my-opencode-config-generator";
@@ -12,14 +14,13 @@ import {
   downloadTextFile,
   type ClientHarnessId,
 } from "@/lib/config-generators/client-configs";
-import type { ConfigData, ModelDefinition, OAuthAccount } from "@/lib/config-generators/opencode";
+import type { ModelDefinition } from "@/lib/config-generators/opencode";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import type { OhMyOpenCodeSlimFullConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
 
 interface ClientConfigGeneratorProps {
   apiKeys: { key: string; name: string | null }[];
-  config: ConfigData | null;
-  oauthAccounts: OAuthAccount[];
+  hasConfiguredProvider: boolean;
   availableModels: string[];
   allModels: Record<string, ModelDefinition>;
   modelSourceMap: Map<string, string>;
@@ -31,8 +32,7 @@ interface ClientConfigGeneratorProps {
 
 export function ClientConfigGenerator({
   apiKeys,
-  config,
-  oauthAccounts,
+  hasConfiguredProvider,
   availableModels,
   allModels,
   modelSourceMap,
@@ -42,26 +42,25 @@ export function ClientConfigGenerator({
   proxyUrl,
 }: ClientConfigGeneratorProps) {
   const t = useTranslations("quickStartConfig");
+  const tConfig = useTranslations("openCodeConfig");
+  const tCommon = useTranslations("common");
+  const { showToast } = useToast();
   const [harness, setHarness] = useState<ClientHarnessId>("opencode");
   const [selectedKeyIndex, setSelectedKeyIndex] = useState(0);
   const [omoVariant, setOmoVariant] = useState<OmoVariant>("normal");
   const [showAgentAssignments, setShowAgentAssignments] = useState(false);
   const [copiedFile, setCopiedFile] = useState<string | null>(null);
 
-  const activeApiKey = apiKeys[selectedKeyIndex]?.key ?? apiKeys[0]?.key ?? "";
-  const activeHarnessInfo = CLIENT_HARNESSES.find((h) => h.id === harness);
-
+  const keyIndex = selectedKeyIndex < apiKeys.length ? selectedKeyIndex : 0;
+  const activeApiKey = apiKeys[keyIndex]?.key;
+  const selectedModels = useMemo(() => {
+    const excluded = new Set(excludedModels);
+    return availableModels.filter((model) => !excluded.has(model));
+  }, [availableModels, excludedModels]);
   const generatedFiles = useMemo(() => {
-    if (harness === "opencode") return [];
-    const excludedSet = new Set(excludedModels);
-    const filteredModels = availableModels.filter((m) => !excludedSet.has(m));
-    return buildClientConfigFiles({
-      harness,
-      proxyUrl,
-      apiKey: activeApiKey,
-      availableModels: filteredModels.length > 0 ? filteredModels : availableModels,
-    });
-  }, [harness, proxyUrl, activeApiKey, availableModels, excludedModels]);
+    if (harness === "opencode" || !activeApiKey || !selectedModels.length) return [];
+    return buildClientConfigFiles({ harness, proxyUrl, apiKey: activeApiKey, availableModels: selectedModels, models: allModels });
+  }, [harness, proxyUrl, activeApiKey, selectedModels, allModels]);
 
   const handleCopy = async (key: string, content: string) => {
     try {
@@ -69,50 +68,42 @@ export function ClientConfigGenerator({
       setCopiedFile(key);
       window.setTimeout(() => setCopiedFile((prev) => (prev === key ? null : prev)), 2000);
     } catch {
-      // Ignore clipboard failure
+      showToast(t("copyFailed"), "error");
     }
   };
 
+  const blocker = !hasConfiguredProvider
+    ? { title: tConfig("noProvidersTitle"), link: "/dashboard/providers", action: tConfig("noProvidersLink") }
+    : !activeApiKey
+      ? { title: tConfig("apiKeyRequiredTitle"), link: "/dashboard/api-keys", action: tConfig("createApiKeyLink") }
+      : selectedModels.length === 0
+        ? { title: tConfig("noModelsTitle"), link: availableModels.length ? "#model-selection" : "/dashboard/providers", action: availableModels.length ? t("selectModels") : tConfig("noProvidersLink") }
+        : null;
+
   return (
     <section id="generate-config" className="scroll-mt-24 space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            {t("clientConfigTitle")}
-          </h2>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">{activeHarnessInfo?.subtitle}</p>
-        </div>
-
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-base font-semibold text-[var(--text-primary)]">{t("clientConfigTitle")}</h2>
         <div className="flex flex-wrap items-center gap-3">
-          {harness !== "opencode" && apiKeys.length > 1 && (
-            <div className="flex items-center gap-2">
-              <label htmlFor="client-key-select" className="text-[11px] font-medium text-[var(--text-muted)]">
-                API Key
-              </label>
-              <select
-                id="client-key-select"
-                value={selectedKeyIndex}
-                onChange={(e) => setSelectedKeyIndex(Number(e.target.value))}
-                className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-1.5 font-mono text-xs text-[var(--text-primary)] focus:outline-none"
-              >
-                {apiKeys.map((entry, index) => (
-                  <option key={entry.key} value={index}>
-                    {entry.name || entry.key.slice(0, 12)}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {!blocker && apiKeys.length > 1 && (
+            <select
+              aria-label={tConfig("selectApiKeyLabel")}
+              value={keyIndex}
+              onChange={(e) => setSelectedKeyIndex(Number(e.target.value))}
+              className="max-w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2 text-xs text-[var(--text-primary)]"
+            >
+              {apiKeys.map((entry, index) => (
+                <option key={index} value={index}>{entry.name || tConfig("unnamedKey")}</option>
+              ))}
+            </select>
           )}
-
-          <div className="flex items-center gap-2">
-            <label htmlFor="client-harness-select" className="text-[11px] font-medium text-[var(--text-muted)]">
-              {t("targetClientLabel")}
-            </label>
+          <div>
+            <label htmlFor="client-harness-select" className="sr-only">{t("targetClientLabel")}</label>
             <select
               id="client-harness-select"
               value={harness}
               onChange={(e) => setHarness(e.target.value as ClientHarnessId)}
-              className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] focus:outline-none"
+              className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-xs font-medium text-[var(--text-primary)]"
             >
               {CLIENT_HARNESSES.map((option) => (
                 <option key={option.id} value={option.id}>
@@ -124,20 +115,24 @@ export function ClientConfigGenerator({
         </div>
       </div>
 
-      {harness === "opencode" ? (
+      {blocker ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--surface-border)] px-4 py-3">
+          <p className="text-sm text-[var(--text-secondary)]">{blocker.title}</p>
+          <Link href={blocker.link} className="text-sm font-medium text-[var(--text-primary)] underline underline-offset-4">
+            {blocker.action}
+          </Link>
+        </div>
+      ) : harness === "opencode" && activeApiKey ? (
         <div className="space-y-4">
           {omoVariant === "slim" && (
             <div className="flex flex-wrap items-center gap-2 rounded-md border border-rose-500/20 bg-rose-500/5 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
               <span className="font-semibold">{t("firstTimeSetup")}</span>
               <code className="select-all font-mono">bunx oh-my-opencode-slim@latest install --no-tui</code>
-              <span className="opacity-75">{t("runOnce")}</span>
             </div>
           )}
 
           <OpenCodeConfigGenerator
-            apiKeys={apiKeys}
-            config={config}
-            oauthAccounts={oauthAccounts}
+            apiKey={activeApiKey}
             models={allModels}
             excludedModels={excludedModels}
             proxyUrl={proxyUrl}
@@ -171,8 +166,6 @@ export function ClientConfigGenerator({
                 {omoVariant === "slim" ? (
                   <OhMyOpenCodeSlimConfigGenerator
                     apiKeys={apiKeys}
-                    config={config}
-                    oauthAccounts={oauthAccounts}
                     proxyModelIds={availableModels}
                     excludedModels={excludedModels}
                     slimOverrides={slimOverrides}
@@ -181,8 +174,6 @@ export function ClientConfigGenerator({
                 ) : (
                   <OhMyOpenCodeConfigGenerator
                     apiKeys={apiKeys}
-                    config={config}
-                    oauthAccounts={oauthAccounts}
                     proxyModelIds={availableModels}
                     excludedModels={excludedModels}
                     agentOverrides={agentOverrides}
@@ -202,9 +193,6 @@ export function ClientConfigGenerator({
               <div key={fileKey} className="space-y-2.5 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span className="font-mono text-xs font-semibold text-[var(--text-primary)]">
-                      {file.filename}
-                    </span>
                     <span className="truncate font-mono text-[11px] text-[var(--text-muted)]">
                       {file.targetPath}
                     </span>
@@ -215,7 +203,7 @@ export function ClientConfigGenerator({
                       onClick={() => void handleCopy(fileKey, file.content)}
                       className="px-2.5 py-1 text-xs"
                     >
-                      {isCopied ? t("copiedButton") : t("copyButton")}
+                      {isCopied ? tCommon("copied") : tCommon("copy")}
                     </Button>
                     <Button
                       onClick={() => downloadTextFile(file.content, file.filename, file.mimeType)}

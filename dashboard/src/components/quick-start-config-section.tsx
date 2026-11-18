@@ -3,41 +3,15 @@
 import { useState } from "react";
 import { ModelSelector } from "@/components/model-selector";
 import { ClientConfigGenerator } from "@/components/client-config-generator";
+import type { ModelDefinition } from "@/lib/config-generators/opencode";
 import type { OhMyOpenCodeFullConfig } from "@/lib/config-generators/oh-my-opencode-types";
 import type { OhMyOpenCodeSlimFullConfig } from "@/lib/config-generators/oh-my-opencode-slim-types";
 
-interface OAuthAccountEntry {
-  id: string;
-  name: string;
-  type?: string;
-  provider?: string;
-  disabled?: boolean;
-}
-
-interface ConfigData {
-  "gemini-api-key"?: unknown;
-  "claude-api-key"?: unknown;
-  "codex-api-key"?: unknown;
-  "openai-compatibility"?: unknown;
-  "oauth-model-alias"?: unknown;
-}
-
-interface ModelDefinitionLike {
-  name: string;
-  context: number;
-  output: number;
-  attachment: boolean;
-  reasoning: boolean;
-  modalities: { input: string[]; output: string[] };
-  options?: Record<string, unknown>;
-}
-
 interface QuickStartConfigSectionProps {
   apiKeys: { key: string; name: string | null }[];
-  config: unknown;
-  oauthAccounts: OAuthAccountEntry[];
+  hasConfiguredProvider: boolean;
   availableModels: string[];
-  allModels: Record<string, ModelDefinitionLike>;
+  allModels: Record<string, ModelDefinition>;
   modelSourceMap: Map<string, string>;
   modelProvidersMap?: Map<string, string[]>;
   initialExcludedModels: string[];
@@ -49,8 +23,7 @@ interface QuickStartConfigSectionProps {
 
 export function QuickStartConfigSection({
   apiKeys,
-  config,
-  oauthAccounts,
+  hasConfiguredProvider,
   availableModels,
   allModels,
   modelSourceMap,
@@ -83,10 +56,9 @@ export function QuickStartConfigSection({
       <div className="border-t border-[var(--surface-border)] pt-6">
         <ClientConfigGenerator
           apiKeys={apiKeys}
-          config={config as ConfigData | null}
-          oauthAccounts={oauthAccounts}
+          hasConfiguredProvider={hasConfiguredProvider}
           availableModels={availableModels}
-          allModels={allModels as Record<string, import("@/lib/config-generators/opencode").ModelDefinition>}
+          allModels={allModels}
           modelSourceMap={modelSourceMap}
           excludedModels={excludedModels}
           agentOverrides={agentOverrides}

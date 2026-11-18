@@ -74,6 +74,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
           className="rounded-md p-1 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--surface-hover)] lg:hidden"
           aria-label={tMobile("toggleMenuAriaLabel")}
           aria-expanded={isSidebarOpen}
+          aria-controls="dashboard-navigation"
         >
           <svg
             className="h-5 w-5"

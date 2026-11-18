@@ -1,20 +1,20 @@
 import yaml from "js-yaml";
+import type { ModelDefinition } from "./opencode";
 
 export type ClientHarnessId = "opencode" | "omp" | "codex" | "claude" | "kilocode";
 
 export interface ClientHarnessOption {
   id: ClientHarnessId;
   label: string;
-  subtitle: string;
 }
 
 export const CLIENT_HARNESSES: readonly ClientHarnessOption[] = [
-  { id: "opencode", label: "OpenCode", subtitle: "opencode.json + Oh My OpenAgent / Slim" },
-  { id: "omp", label: "Oh My Pi (omp)", subtitle: "~/.omp/agent/ (models.yml, config.yml, keybindings.json)" },
-  { id: "codex", label: "Codex CLI", subtitle: "~/.codex/ (config.toml, auth.json)" },
-  { id: "claude", label: "Claude Code", subtitle: "~/.claude/settings.json" },
-  { id: "kilocode", label: "KiloCode", subtitle: "~/.local/share/kilo/auth.json" },
-] as const;
+  { id: "opencode", label: "OpenCode" },
+  { id: "omp", label: "Oh My Pi" },
+  { id: "codex", label: "Codex CLI" },
+  { id: "claude", label: "Claude Code" },
+  { id: "kilocode", label: "Kilo Code" },
+];
 
 export interface GeneratedConfigFile {
   filename: string;
@@ -23,39 +23,21 @@ export interface GeneratedConfigFile {
   content: string;
 }
 
-function normalizeProxyBase(proxyUrl: string): string {
-  return proxyUrl.replace(/\/+$/, "");
-}
-
-function pickModel(
-  models: string[],
-  preferences: string[],
-  fallback: string,
-): string {
-  for (const pref of preferences) {
-    const exact = models.find((m) => m.toLowerCase() === pref.toLowerCase());
-    if (exact) return exact;
-  }
-  for (const pref of preferences) {
-    const partial = models.find((m) => m.toLowerCase().includes(pref.toLowerCase()));
-    if (partial) return partial;
-  }
-  return models[0] ?? fallback;
-}
-
 export function buildClientConfigFiles({
   harness,
   proxyUrl,
   apiKey,
   availableModels,
+  models,
 }: {
   harness: Exclude<ClientHarnessId, "opencode">;
   proxyUrl: string;
   apiKey: string;
   availableModels: string[];
+  models: Record<string, ModelDefinition>;
 }): GeneratedConfigFile[] {
-  const baseUrl = normalizeProxyBase(proxyUrl);
-  const key = apiKey || "your-api-key-from-dashboard";
+  const baseUrl = proxyUrl.replace(/\/+$/, "");
+  if (!apiKey || !availableModels.length) return [];
 
   switch (harness) {
     case "omp": {
@@ -64,69 +46,14 @@ export function buildClientConfigFiles({
           cliproxyapi: {
             baseUrl: `${baseUrl}/v1`,
             api: "openai-completions",
-            apiKey: key,
+            apiKey,
             authHeader: true,
             discovery: { type: "openai-models-list" },
-            compat: {
-              supportsReasoningEffort: true,
-              omitReasoningEffort: false,
-            },
-          },
-          "openai-codex": {
-            baseUrl: `${baseUrl}/v1`,
-            api: "openai-codex-responses",
-            apiKey: key,
           },
         },
       };
 
-      const defaultMain = pickModel(availableModels, ["gpt-6.1-terra", "gpt-5.4", "claude-sonnet-4-6", "gemini-2.5-pro"], "gpt-5.4");
-      const defaultFast = pickModel(availableModels, ["gpt-6-luna", "gemini-2.5-flash", "claude-haiku-4-5"], defaultMain);
-      const defaultDesigner = pickModel(availableModels, ["claude-opus-5", "claude-opus-4-6", "claude-sonnet-4-6"], defaultMain);
-      const defaultWeb = pickModel(availableModels, ["gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.4"], defaultMain);
-
-      const configDoc = {
-        modelRoles: {
-          smol: `cliproxyapi/${defaultMain}:minimal`,
-          slow: `cliproxyapi/${defaultMain}:medium`,
-          designer: `cliproxyapi/${defaultDesigner}`,
-          web: `openai-codex/${defaultWeb}`,
-          tiny: `cliproxyapi/${defaultFast}`,
-          task: `cliproxyapi/${defaultMain}:auto`,
-          advisor: `cliproxyapi/${defaultMain}:minimal`,
-          default: `cliproxyapi/${defaultMain}`,
-        },
-        steeringMode: "all",
-        followUpMode: "all",
-        interruptMode: "wait",
-        symbolPreset: "unicode",
-        composer: { shape: "claude" },
-        theme: { dark: "titanium", light: "light" },
-        statusLine: { preset: "nerd", compactThinkingLevel: false },
-        display: { showTokenUsage: true },
-        tools: { approvalMode: "yolo" },
-        compaction: {
-          thresholdPercent: -1,
-          thresholdTokens: 270000,
-          idleEnabled: true,
-          idleThresholdTokens: 270000,
-          experimentalContextManagement: true,
-        },
-        defaultThinkingLevel: "auto",
-        hideThinkingBlock: false,
-        providers: { webSearchOrder: ["codex"] },
-        task: {
-          agentModelOverrides: {
-            reviewer: `cliproxyapi/${defaultMain}`,
-          },
-        },
-      };
-
-      const keybindingsDoc = {
-        "app.message.followUp": ["Tab", "Ctrl+Enter", "Ctrl+Q"],
-        "app.model.selectTemporary": ["Alt+M", "Alt+P"],
-        "app.model.select": "Ctrl+Alt+M",
-      };
+      const configDoc = { modelRoles: { default: `cliproxyapi/${availableModels[0]}` } };
 
       return [
         {
@@ -141,31 +68,25 @@ export function buildClientConfigFiles({
           mimeType: "text/yaml",
           content: yaml.dump(configDoc, { lineWidth: -1, noRefs: true }),
         },
-        {
-          filename: "keybindings.json",
-          targetPath: "~/.omp/agent/keybindings.json",
-          mimeType: "application/json",
-          content: JSON.stringify(keybindingsDoc, null, 2),
-        },
       ];
     }
 
     case "codex": {
-      const hasGpt = availableModels.some((m) => m.toLowerCase().startsWith("gpt-"));
+      const model = availableModels.find((id) => id.startsWith("gpt-")) ?? availableModels[0];
       const tomlLines = [
-        "[model_providers.cliproxyapi]",
+        `model = ${JSON.stringify(model)}`,
+        'model_provider = "cliproxyapi"',
+        '',
+        '[model_providers.cliproxyapi]',
         'name = "CLIProxyAPI"',
-        `base_url = "${baseUrl}/v1"`,
+        `base_url = ${JSON.stringify(`${baseUrl}/v1`)}`,
         'wire_api = "responses"',
-        "requires_openai_auth = true",
+        'requires_openai_auth = true',
       ];
-      if (hasGpt) {
-        tomlLines.push("supports_standalone_web_search = true");
-      }
 
       const authDoc = {
         auth_mode: "apikey",
-        OPENAI_API_KEY: key,
+        OPENAI_API_KEY: apiKey,
       };
 
       return [
@@ -188,11 +109,8 @@ export function buildClientConfigFiles({
       const settingsDoc = {
         env: {
           ANTHROPIC_BASE_URL: baseUrl,
-          ANTHROPIC_AUTH_TOKEN: key,
+          ANTHROPIC_AUTH_TOKEN: apiKey,
           CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY: "1",
-        },
-        permissions: {
-          defaultMode: "bypassPermissions",
         },
       };
 
@@ -207,19 +125,26 @@ export function buildClientConfigFiles({
     }
 
     case "kilocode": {
-      const authDoc = {
-        cliproxyapi: {
-          type: "api",
-          key,
+      const config = {
+        model: `cliproxyapi/${availableModels[0]}`,
+        provider: {
+          cliproxyapi: {
+            name: "CLIProxyAPI",
+            npm: "@ai-sdk/openai-compatible",
+            options: { baseURL: `${baseUrl}/v1`, apiKey },
+            models: Object.fromEntries(availableModels.map((id) => {
+              const model = models[id];
+              return [id, model ? { name: model.name, limit: { context: model.context, output: model.output } } : { name: id }];
+            })),
+          },
         },
       };
-
       return [
         {
-          filename: "auth.json",
-          targetPath: "~/.local/share/kilo/auth.json",
+          filename: "kilo.json",
+          targetPath: "~/.config/kilo/kilo.json",
           mimeType: "application/json",
-          content: JSON.stringify(authDoc, null, 2),
+          content: JSON.stringify(config, null, 2),
         },
       ];
     }

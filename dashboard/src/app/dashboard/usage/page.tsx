@@ -113,11 +113,11 @@ function getDateRange(period: DateFilter, customFrom?: string, customTo?: string
   switch (period) {
     case "today": return { from: to, to };
     case "7d": {
-      const d = new Date(now); d.setDate(d.getDate() - 7);
+      const d = new Date(now); d.setDate(d.getDate() - 6);
       return { from: toLocalDateString(d), to };
     }
     case "30d": {
-      const d = new Date(now); d.setDate(d.getDate() - 30);
+      const d = new Date(now); d.setDate(d.getDate() - 29);
       return { from: toLocalDateString(d), to };
     }
     case "all": return { from: "2020-01-01", to: "2099-12-31" };
@@ -137,6 +137,7 @@ export default function UsagePage() {
   const [activeFilter, setActiveFilter] = useState<DateFilter>("7d");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [appliedCustomRange, setAppliedCustomRange] = useState({ from: "", to: "" });
   const [activeTab, setActiveTab] = useState<UsageSectionTab>("cost");
   const { showToast } = useToast();
   const isFirstLoadRef = useRef(true);
@@ -192,7 +193,7 @@ export default function UsagePage() {
       }
 
       try {
-        const { from, to } = getDateRange(activeFilter, customFrom, customTo);
+        const { from, to } = getDateRange(activeFilter, appliedCustomRange.from, appliedCustomRange.to);
         
         // Fetch both usage data and collection status in parallel
         const [usageRes] = await Promise.all([
@@ -236,16 +237,22 @@ export default function UsagePage() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [activeFilter, customFrom, customTo, showToast, t]);
+  }, [activeFilter, appliedCustomRange, showToast, t]);
 
   const handleFilterChange = (filter: DateFilter) => {
-    setActiveFilter(filter);
-    isFirstLoadRef.current = true;
+    if (filter !== activeFilter) {
+      isFirstLoadRef.current = true;
+      setActiveFilter(filter);
+    }
   };
 
   const handleCustomDateChange = () => {
-    if (customFrom && customTo) {
-      handleFilterChange("custom");
+    if (customFrom && customTo && customFrom <= customTo) {
+      if (activeFilter !== "custom" || customFrom !== appliedCustomRange.from || customTo !== appliedCustomRange.to) {
+        isFirstLoadRef.current = true;
+        setAppliedCustomRange({ from: customFrom, to: customTo });
+        setActiveFilter("custom");
+      }
     }
   };
 
@@ -260,7 +267,7 @@ export default function UsagePage() {
         }
       }
 
-      const { from, to } = getDateRange(activeFilter, customFrom, customTo);
+      const { from, to } = getDateRange(activeFilter, appliedCustomRange.from, appliedCustomRange.to);
       const res = await fetch(`/api/usage/history?from=${from}&to=${to}`);
 
       if (!res.ok) {
@@ -374,8 +381,15 @@ export default function UsagePage() {
         <div className="rounded-md border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-400">
           {t('errorLoadFailed')}
         </div>
+      ) : usageData.totals.totalRequests === 0 ? (
+        <p role="status" className="border-t border-[var(--surface-border)] py-10 text-center text-sm text-[var(--text-muted)]">
+          {t("noUsageData")}
+        </p>
       ) : (
         <div className="space-y-6">
+          {usageData.truncated && (
+            <p role="status" className="text-xs text-amber-700 dark:text-amber-400">{t("truncatedOnServer")}</p>
+          )}
           {/* ── Top Metric Strip (Requests · Tokens · Cost, Flat Ledger) ── */}
           <div className="grid grid-cols-1 gap-6 border-t border-[var(--surface-border)] pt-5 md:grid-cols-3 md:gap-8">
             <div>
@@ -463,15 +477,11 @@ export default function UsagePage() {
 
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('estimatedCost')}</p>
-              <button
-                type="button"
-                onClick={() => setActiveTab("cost")}
-                className="mt-1 text-left text-2xl font-semibold tracking-tight tabular-nums text-emerald-700 transition-opacity hover:opacity-80 dark:text-emerald-400"
-              >
+              <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-emerald-700 dark:text-emerald-400">
                 {formatUSD(costSummary.totalCost)}
-              </button>
+              </p>
               <p className="mt-2.5 text-xs tabular-nums text-[var(--text-muted)]">
-                {costSummary.pricedCount}/{costSummary.totalModels} {t("pricedModels")} · {Object.keys(usageData.keys).length} API keys
+                {costSummary.pricedCount}/{costSummary.totalModels} {t("pricedModels")}
               </p>
             </div>
           </div>
@@ -493,6 +503,7 @@ export default function UsagePage() {
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
+                    aria-pressed={isActive}
                     className={cn(
                       "-mb-px border-b-2 px-3 py-2 text-xs font-medium transition-colors",
                       isActive
@@ -526,7 +537,6 @@ export default function UsagePage() {
               <UsageRequestEvents
                 events={usageData.requestEvents}
                 isAdmin={isAdmin}
-                truncated={usageData.truncated}
                 livePricing={livePricing}
               />
             )}

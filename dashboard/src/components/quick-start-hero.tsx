@@ -8,18 +8,10 @@ import { useToast } from "@/components/ui/toast";
 import { OAuthSection } from "@/components/providers/oauth-section";
 
 interface QuickStartHeroProps {
-  isHealthy: boolean;
-  providerCount: number;
-  apiKeyCount: number;
-  modelCount: number;
   proxyUrl: string;
 }
 
 export function QuickStartHero({
-  isHealthy,
-  providerCount,
-  apiKeyCount,
-  modelCount,
   proxyUrl,
 }: QuickStartHeroProps) {
   const router = useRouter();
@@ -28,9 +20,6 @@ export function QuickStartHero({
   const { showToast } = useToast();
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-  const currentUser = user
-    ? { id: user.id, username: user.username, isAdmin: user.isAdmin }
-    : null;
 
   const copyEndpoint = async () => {
     try {
@@ -43,50 +32,32 @@ export function QuickStartHero({
   };
 
   return (
-    <section
-      aria-label={t("heroConnectLabel")}
-      className="flex flex-col gap-3 border-b border-[var(--surface-border)] pb-5"
-    >
+    <section aria-labelledby="quick-start-title" className="space-y-4">
       <div>
-        <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
+        <h1 id="quick-start-title" className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
           {t("pageTitle")}
         </h1>
-        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-          {t("pageDescription")}
-        </p>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t("pageDescription")}</p>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3 sm:justify-between">
         <OAuthSection
           ctaOnly
-          ctaLabel={t("addAccountHeroCta")}
           showToast={showToast}
-          currentUser={currentUser}
-          refreshProviders={async () => {
-            router.refresh();
-          }}
-          onAccountCountChange={() => {}}
+          currentUser={user}
+          refreshProviders={async () => router.refresh()}
         />
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)] tabular-nums">
-          <span className="inline-flex items-center gap-1.5 font-medium text-[var(--text-secondary)]">
-            <span className={`h-1.5 w-1.5 rounded-full ${isHealthy ? "bg-emerald-500" : "bg-rose-500"}`} />
-            {isHealthy ? t("statusOnline") : t("statusOffline")}
+        <button
+          type="button"
+          onClick={() => void copyEndpoint()}
+          aria-label={`${copiedUrl ? t("copiedShort") : t("copyShort")}: ${proxyUrl}`}
+          className="inline-flex max-w-full items-center gap-2 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-2 font-mono text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+        >
+          <span className="truncate">{proxyUrl}</span>
+          <span aria-live="polite" className="shrink-0 text-[10px] text-[var(--text-muted)]">
+            {copiedUrl ? t("copiedShort") : t("copyShort")}
           </span>
-          <span>{t("statusProvidersValue", { count: providerCount })}</span>
-          <span>{t("statusApiKeysValue", { count: apiKeyCount })}</span>
-          <span>{t("heroModelsValue", { count: modelCount })}</span>
-          <button
-            type="button"
-            onClick={() => void copyEndpoint()}
-            title={proxyUrl}
-            className="inline-flex max-w-[280px] items-center gap-1.5 truncate font-mono text-[11px] text-[var(--text-secondary)] underline decoration-[var(--surface-border)] underline-offset-4 transition-colors hover:text-[var(--text-primary)]"
-          >
-            <span className="truncate">{proxyUrl}</span>
-            <span className="shrink-0 text-[10px] text-[var(--text-muted)]">
-              {copiedUrl ? t("copiedShort") : t("copyShort")}
-            </span>
-          </button>
-        </div>
+        </button>
       </div>
     </section>
   );

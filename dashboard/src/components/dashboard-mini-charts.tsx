@@ -9,6 +9,7 @@ import {
   Tooltip,
 } from "recharts";
 import { CHART_COLORS, formatCompact, useChartTheme } from "@/components/ui/chart-theme";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface DailyPoint {
   date: string;
@@ -45,7 +46,7 @@ export function DashboardMiniCharts() {
       const toStr = toLocalDateString(now);
 
       try {
-        const res = await fetch(`/api/usage/history?from=${fromStr}&to=${toStr}`);
+        const res = await fetch(`${API_ENDPOINTS.USAGE.HISTORY}?from=${fromStr}&to=${toStr}`);
         if (!res.ok) return;
         const json = await res.json();
         const rawDaily: Array<{ date: string; requests: number; tokens: number; success: number; failure: number }> = json.data?.dailyBreakdown ?? [];

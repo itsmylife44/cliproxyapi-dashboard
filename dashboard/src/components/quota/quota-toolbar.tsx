@@ -31,6 +31,7 @@ export function QuotaToolbar({
   const t = useTranslations("quota");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
 
   const hasFacetFilter = query.provider !== "all" || query.status !== "all";
   const hasFilters = query.q !== "" || hasFacetFilter || query.page !== 1;
@@ -43,7 +44,10 @@ export function QuotaToolbar({
       }
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        filterButtonRef.current?.focus();
+      }
     };
     document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -78,10 +82,12 @@ export function QuotaToolbar({
         />
         <button
           type="button"
+          ref={filterButtonRef}
           onClick={() => setOpen((prev) => !prev)}
-          aria-label={t("providerFilterLabel")}
+          aria-label={`${t("providerFilterLabel")} / ${t("statusFilterLabel")}`}
           aria-expanded={open}
-          title={t("providerFilterLabel")}
+          aria-controls="quota-filters"
+          title={`${t("providerFilterLabel")} / ${t("statusFilterLabel")}`}
           className={`absolute right-1 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded transition-colors ${
             hasFacetFilter || open
               ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
@@ -98,7 +104,7 @@ export function QuotaToolbar({
       </div>
 
       {open && (
-        <div className="glass-card absolute right-0 top-9 z-30 w-60 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 shadow-lg">
+        <div id="quota-filters" className="glass-card absolute right-0 top-9 z-30 w-60 max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 shadow-lg">
           <div className="space-y-2.5">
             <label className="block space-y-1 text-[11px] font-medium text-[var(--text-muted)]">
               <span>{t("providerFilterLabel")}</span>

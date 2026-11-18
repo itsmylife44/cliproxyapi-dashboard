@@ -37,7 +37,7 @@ export function TimeFilter({
       <div
         role="group"
         aria-label={t("timePeriod")}
-        className="inline-flex rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 p-0.5"
+        className="inline-flex max-w-full flex-wrap rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 p-0.5"
       >
         {PRESETS.map((preset) => {
           const active = activeFilter === preset.id;
@@ -68,6 +68,7 @@ export function TimeFilter({
           type="date"
           value={customFrom}
           onChange={(e) => onCustomFromChange(e.target.value)}
+          max={customTo || undefined}
           className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-1 text-xs text-[var(--text-primary)]"
         />
         <label htmlFor="custom-to" className="text-[11px] text-[var(--text-muted)]">
@@ -78,9 +79,10 @@ export function TimeFilter({
           type="date"
           value={customTo}
           onChange={(e) => onCustomToChange(e.target.value)}
+          min={customFrom || undefined}
           className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-1 text-xs text-[var(--text-primary)]"
         />
-        <Button onClick={onCustomDateApply} disabled={!customFrom || !customTo} variant="secondary" className="px-2.5 py-1 text-xs">
+        <Button onClick={onCustomDateApply} disabled={!customFrom || !customTo || customFrom > customTo} variant="secondary" className="px-2.5 py-1 text-xs">
           {t("apply")}
         </Button>
       </div>

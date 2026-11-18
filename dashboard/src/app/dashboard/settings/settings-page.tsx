@@ -378,7 +378,7 @@ export function SettingsPage({ dashboardVersion }: { dashboardVersion?: string }
           <button
             type="button"
             onClick={() => setActiveTab("general")}
-            className={`cursor-pointer border-b-2 pb-2.5 text-sm font-medium transition-colors ${
+            className={`cursor-pointer border-b-2 pb-2.5 text-xs font-medium transition-colors ${
               activeTab === "general"
                 ? "border-[var(--text-primary)] text-[var(--text-primary)]"
                 : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
@@ -389,7 +389,7 @@ export function SettingsPage({ dashboardVersion }: { dashboardVersion?: string }
           <button
             type="button"
             onClick={() => setActiveTab("backup")}
-            className={`cursor-pointer border-b-2 pb-2.5 text-sm font-medium transition-colors ${
+            className={`cursor-pointer border-b-2 pb-2.5 text-xs font-medium transition-colors ${
               activeTab === "backup"
                 ? "border-[var(--text-primary)] text-[var(--text-primary)]"
                 : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"

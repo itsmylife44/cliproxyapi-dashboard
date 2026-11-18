@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { useToast } from "@/components/ui/toast";
 import { QuotaToolbar } from "@/components/quota/quota-toolbar";
 import { useQuota } from "@/hooks/use-quota";
+import { useAuth } from "@/hooks/use-auth";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { headlineQuotaWindows } from "@/lib/quota/headline";
 import { calcProviderSummary } from "@/lib/quota/provider-summary";
@@ -35,7 +36,7 @@ import {
 
 const QuotaChart = dynamic(
   () => import("@/components/quota/quota-chart").then((mod) => ({ default: mod.QuotaChart })),
-  { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> }
+  { ssr: false, loading: () => <div className="h-28 animate-pulse rounded-lg bg-[var(--surface-muted)] motion-reduce:animate-none" /> }
 );
 import { QuotaDetails } from "@/components/quota/quota-details";
 import { QuotaAlerts } from "@/components/quota/quota-alerts";
@@ -108,29 +109,52 @@ export function filterQuotaAccounts(accounts: QuotaAccount[], query: QuotaQueryS
 
 export default function QuotaPage() {
   const t = useTranslations("quota");
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const canManageResets = user?.isAdmin === true;
   const { data: quotaData, isLoading: loading, refreshing, refresh } = useQuota();
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [autoResetRules, setAutoResetRules] = useState<Record<string, AutoResetRule>>({});
   const [autoResetCredits, setAutoResetCredits] = useState<Record<string, AutoResetCreditSummary>>({});
-  const [autoResetBusy, setAutoResetBusy] = useState<Record<string, boolean>>({});
+  const [autoResetBusy, setAutoResetBusy] = useState<Record<string, "checking" | "resetting" | null>>({});
+  const [autoResetLoaded, setAutoResetLoaded] = useState(false);
+  const [refreshSeq, setRefreshSeq] = useState(0);
+  const resetSaveQueue = useRef<Record<string, Promise<void>>>({});
   const lastGeneratedAtRef = useRef<string | undefined>(undefined);
 
+  const fetchAutoResetRules = useCallback(async () => {
+    const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, { cache: "no-store" });
+    if (!res.ok) throw new Error("Failed to load auto-reset rules");
+    const data = (await res.json()) as { rules: Record<string, AutoResetRule> };
+    setAutoResetRules(data.rules);
+    setAutoResetLoaded(true);
+  }, []);
+
   useEffect(() => {
+    if (!canManageResets) return;
     let active = true;
-    fetch(API_ENDPOINTS.QUOTA.AUTO_RESET)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { rules?: Record<string, AutoResetRule> } | null) => {
-        if (active && data?.rules) setAutoResetRules(data.rules);
-      })
-      .catch(() => {});
+    fetchAutoResetRules().catch(() => {
+      if (active) showToast(t("autoResetSaveFailed"), "error");
+    });
     return () => {
       active = false;
     };
-  }, []);
+  }, [canManageResets, fetchAutoResetRules, showToast, t]);
+
+  const handleFullRefresh = useCallback(async () => {
+    invalidateClientQuotaHistoryCache();
+    setAutoResetCredits({});
+    setRefreshSeq((prev) => prev + 1);
+    const tasks = [refresh()];
+    if (canManageResets) {
+      tasks.push(fetchAutoResetRules().catch(() => {
+        showToast(t("autoResetSaveFailed"), "error");
+      }));
+    }
+    await Promise.allSettled(tasks);
+  }, [canManageResets, fetchAutoResetRules, refresh, showToast, t]);
 
   const handleUpdateAutoReset = useCallback(
     async (
@@ -141,83 +165,95 @@ export default function QuotaPage() {
         ...prev,
         [authIndex]: { ...prev[authIndex], ...patch },
       }));
-      try {
-        const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ authIndex, ...patch }),
-        });
-        if (!res.ok) {
+      const save = async () => {
+        try {
+          const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ authIndex, ...patch }),
+          });
+          if (!res.ok) throw new Error("Failed to save auto-reset rule");
+          const data = (await res.json()) as { rule: AutoResetRule };
+          if (resetSaveQueue.current[authIndex] === pending) {
+            setAutoResetRules((prev) => ({ ...prev, [authIndex]: data.rule }));
+          }
+        } catch {
           showToast(t("autoResetSaveFailed"), "error");
-          return;
+          if (resetSaveQueue.current[authIndex] === pending) {
+            try {
+              const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET);
+              if (!res.ok) throw new Error("Failed to load auto-reset rules");
+              const data = (await res.json()) as { rules: Record<string, AutoResetRule> };
+              if (resetSaveQueue.current[authIndex] === pending) {
+                setAutoResetRules((prev) => {
+                  const next = { ...prev };
+                  if (data.rules[authIndex]) next[authIndex] = data.rules[authIndex];
+                  else delete next[authIndex];
+                  return next;
+                });
+              }
+            } catch {
+              setAutoResetLoaded(false);
+            }
+          }
         }
-        const data = (await res.json()) as { rule?: AutoResetRule };
-        if (data.rule) {
-          setAutoResetRules((prev) => ({ ...prev, [authIndex]: data.rule! }));
-        }
-      } catch {
-        showToast(t("autoResetSaveFailed"), "error");
-      }
+      };
+      const pending = (resetSaveQueue.current[authIndex] ?? Promise.resolve()).then(save);
+      resetSaveQueue.current[authIndex] = pending;
     },
     [showToast, t]
   );
 
   const handleCheckResetCredits = useCallback(
-    async (authIndex: string, provider: string) => {
-      setAutoResetBusy((prev) => ({ ...prev, [authIndex]: true }));
+    async (authIndex: string) => {
+      setAutoResetBusy((prev) => ({ ...prev, [authIndex]: "checking" }));
       try {
         const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "check_credits", authIndex, provider }),
+          body: JSON.stringify({ action: "check_credits", authIndex }),
         });
+        if (!res.ok) throw new Error("Failed to check reset credits");
         const data = (await res.json()) as AutoResetCreditSummary;
         setAutoResetCredits((prev) => ({ ...prev, [authIndex]: data }));
       } catch {
         showToast(t("autoResetCheckFailed"), "error");
       } finally {
-        setAutoResetBusy((prev) => ({ ...prev, [authIndex]: false }));
+        setAutoResetBusy((prev) => ({ ...prev, [authIndex]: null }));
       }
     },
     [showToast, t]
   );
 
   const handleManualReset = useCallback(
-    async (authIndex: string, provider: string) => {
-      setAutoResetBusy((prev) => ({ ...prev, [authIndex]: true }));
+    async (authIndex: string) => {
+      setAutoResetBusy((prev) => ({ ...prev, [authIndex]: "resetting" }));
       try {
         const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "reset_now", authIndex, provider }),
+          body: JSON.stringify({ action: "reset_now", authIndex }),
         });
         const data = (await res.json()) as { ok?: boolean; message?: string; status?: string };
         showToast(data.message ?? (res.ok ? t("autoResetApplied") : t("autoResetFailed")), res.ok && data.ok ? "success" : "error");
         if (res.ok && data.ok) {
-          setAutoResetRules((prev) => ({
-            ...prev,
-            [authIndex]: {
-              ...(prev[authIndex] ?? { enabled: true, fiveHourThresholdPct: 0, weeklyThresholdPct: 0, minWeeklyDaysLeft: 0 }),
-              lastResetAt: new Date().toISOString(),
-              lastStatus: data.status ?? "reset",
-            },
-          }));
           void refresh().catch(() => {});
         }
+        await fetchAutoResetRules();
       } catch {
         showToast(t("autoResetFailed"), "error");
       } finally {
-        setAutoResetBusy((prev) => ({ ...prev, [authIndex]: false }));
+        setAutoResetBusy((prev) => ({ ...prev, [authIndex]: null }));
       }
     },
-    [refresh, showToast, t]
+    [fetchAutoResetRules, refresh, showToast, t]
   );
 
   const query = useMemo(() => parseQuotaQueryState(searchParams), [searchParams]);
 
   const replaceQuery = (nextQuery: QuotaQueryState) => {
     const nextSearch = buildQuotaSearch(nextQuery);
-    router.replace(`${pathname}${nextSearch}`, { scroll: false });
+    window.history.replaceState(null, "", `${pathname}${nextSearch}`);
   };
 
   useEffect(() => {
@@ -250,9 +286,9 @@ export default function QuotaPage() {
   useEffect(() => {
     if (!quotaData) return;
     if (currentSearch !== expectedSearch) {
-      router.replace(`${pathname}${normalizedSearch}`, { scroll: false });
+      window.history.replaceState(null, "", `${pathname}${normalizedSearch}`);
     }
-  }, [quotaData, currentSearch, expectedSearch, normalizedSearch, pathname, router]);
+  }, [quotaData, currentSearch, expectedSearch, normalizedSearch, pathname]);
 
   const activeAccounts = filteredAccounts.filter((account) => account.supported && !account.error).length;
 
@@ -305,7 +341,7 @@ export default function QuotaPage() {
 
   return (
     <div className="space-y-5">
-      <div className="space-y-3 text-xs text-[var(--text-muted)]">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div>
           <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t("pageTitle")}</h1>
           <p className="mt-0.5 text-xs text-[var(--text-muted)]">
@@ -321,7 +357,7 @@ export default function QuotaPage() {
           </p>
         </div>
 
-        <div className="flex w-full items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto sm:min-w-64 sm:flex-1 sm:max-w-sm">
           <QuotaToolbar
             query={query}
             total={filteredAccounts.length}
@@ -332,7 +368,7 @@ export default function QuotaPage() {
           />
           <button
             type="button"
-            onClick={() => void refresh().catch(() => {})}
+            onClick={() => void handleFullRefresh()}
             disabled={loading || refreshing}
             aria-label={t("refreshButton")}
             title={t("refreshButton")}
@@ -372,40 +408,36 @@ export default function QuotaPage() {
             </section>
           )}
 
-          <div className="border-t border-[var(--surface-border)] pt-4">
+          <div className="border-t border-[var(--surface-border)] pt-3">
             <QuotaChart
+              key={refreshSeq}
               providerSummaries={providerSummaries}
               modelFirstSummary={modelFirstSummary}
               modelFirstOnlyView={isModelFirstOnlyView}
             />
           </div>
-
-          <div className="border-t border-[var(--surface-border)] pt-4">
-            <QuotaDetails
-              filteredAccounts={paginatedAccounts}
-              hasAnyAccounts={hasAnyAccounts}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={(page) => replaceQuery({ ...query, page })}
-              expandedCards={expandedCards}
-              onToggleCard={toggleCard}
-              loading={loading}
-              modelFirstOnlyView={isModelFirstOnlyView}
-              refreshKey={quotaData?.generatedAt}
-              autoResetRules={autoResetRules}
-              autoResetCredits={autoResetCredits}
-              autoResetBusy={autoResetBusy}
-              onUpdateAutoReset={handleUpdateAutoReset}
-              onCheckResetCredits={handleCheckResetCredits}
-              onManualReset={handleManualReset}
-            />
-          </div>
+          <QuotaDetails
+            filteredAccounts={paginatedAccounts}
+            hasAnyAccounts={hasAnyAccounts}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={(page) => replaceQuery({ ...query, page })}
+            expandedCards={expandedCards}
+            onToggleCard={toggleCard}
+            loading={loading}
+            modelFirstOnlyView={isModelFirstOnlyView}
+            refreshKey={`${quotaData?.generatedAt ?? ""}:${refreshSeq}`}
+            autoResetRules={autoResetRules}
+            autoResetCredits={autoResetCredits}
+            autoResetBusy={autoResetBusy}
+            onUpdateAutoReset={canManageResets && autoResetLoaded ? handleUpdateAutoReset : undefined}
+            onCheckResetCredits={canManageResets ? handleCheckResetCredits : undefined}
+            onManualReset={canManageResets ? handleManualReset : undefined}
+          />
         </div>
       )}
 
-      <div className="border-t border-[var(--surface-border)] pt-5">
-        <QuotaAlerts />
-      </div>
+      <QuotaAlerts key={refreshSeq} />
     </div>
   );
 }

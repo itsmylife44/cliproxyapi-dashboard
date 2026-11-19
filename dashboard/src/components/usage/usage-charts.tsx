@@ -588,9 +588,6 @@ export function UsageCharts({
     );
   }
 
-  const providerChartHeight = Math.max(170, Math.min(260, sortedProviders.length * 36 + 32));
-  const slowModelChartHeight = Math.max(170, Math.min(260, slowestModels.length * 32 + 32));
-
   return (
     <div className="space-y-6">
       {/* ── Latency Triage Spotlight (Slowest Provider · Slowest Model) ── */}
@@ -699,62 +696,7 @@ export function UsageCharts({
                 </div>
               </div>
 
-              {sortedProviders.some((p) => p.p95LatencyMs > 0 || p.avgLatencyMs > 0) && (
-                <div style={{ height: providerChartHeight }} className="w-full">
-                  <ResponsiveContainer
-                    width="100%"
-                    height="100%"
-                    minWidth={0}
-                    minHeight={0}
-                    initialDimension={{ width: 320, height: providerChartHeight }}
-                  >
-                    <BarChart
-                      layout="vertical"
-                      data={sortedProviders.slice(0, 8)}
-                      margin={{ top: 4, right: 12, left: 4, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} horizontal={false} />
-                      <YAxis
-                        type="category"
-                        dataKey="provider"
-                        width={88}
-                        tick={axisTickStyle}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v) => truncateAxisLabel(String(v), 14)}
-                      />
-                      <XAxis
-                        type="number"
-                        tick={axisTickStyle}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v) => formatDurationCompact(Number(v))}
-                      />
-                      <Tooltip
-                        {...tooltipStyle}
-                        formatter={(value, name) => [formatLatencyValue(Number(value)), name]}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
-                      <Bar
-                        dataKey="avgLatencyMs"
-                        name={t("avgLatency")}
-                        fill={CHART_COLORS.primary}
-                        radius={[0, 3, 3, 0]}
-                        maxBarSize={14}
-                      />
-                      <Bar
-                        dataKey="p95LatencyMs"
-                        name={t("p95Latency")}
-                        fill={CHART_COLORS.warning}
-                        radius={[0, 3, 3, 0]}
-                        maxBarSize={14}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-
-              {/* Direct-Comparison Provider Latency Rows */}
+              {/* Direct-Comparison Provider Latency Rows (single layered bar: Avg overlaid on P95) */}
               <div className="divide-y divide-[var(--surface-border)]/60 border-t border-[var(--surface-border)]">
                 {sortedProviders.map((prov) => {
                   const p95Pct = Math.min(100, (prov.p95LatencyMs / maxProviderLatency) * 100);
@@ -817,108 +759,53 @@ export function UsageCharts({
               </div>
 
               {slowestModels.length > 0 ? (
-                <>
-                  <div style={{ height: slowModelChartHeight }} className="w-full">
-                    <ResponsiveContainer
-                      width="100%"
-                      height="100%"
-                      minWidth={0}
-                      minHeight={0}
-                      initialDimension={{ width: 320, height: slowModelChartHeight }}
-                    >
-                      <BarChart
-                        layout="vertical"
-                        data={slowestModels}
-                        margin={{ top: 4, right: 12, left: 4, bottom: 0 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} horizontal={false} />
-                        <YAxis
-                          type="category"
-                          dataKey="model"
-                          width={120}
-                          tick={axisTickStyle}
-                          tickLine={false}
-                          axisLine={false}
-                          tickFormatter={(v) => truncateAxisLabel(String(v), 18)}
-                        />
-                        <XAxis
-                          type="number"
-                          tick={axisTickStyle}
-                          tickLine={false}
-                          axisLine={false}
-                          tickFormatter={(v) => formatDurationCompact(Number(v))}
-                        />
-                        <Tooltip
-                          {...tooltipStyle}
-                          formatter={(value, name) => [formatLatencyValue(Number(value)), name]}
-                        />
-                        <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
-                        <Bar
-                          dataKey="avgLatencyMs"
-                          name={t("avgLatency")}
-                          fill={CHART_COLORS.primary}
-                          radius={[0, 3, 3, 0]}
-                          maxBarSize={12}
-                        />
-                        <Bar
-                          dataKey="p95LatencyMs"
-                          name={t("p95Latency")}
-                          fill={CHART_COLORS.rose}
-                          radius={[0, 3, 3, 0]}
-                          maxBarSize={12}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className="divide-y divide-[var(--surface-border)]/60 border-t border-[var(--surface-border)]">
-                    {slowestModels.map((m) => {
-                      const p95Pct = Math.min(100, (m.p95LatencyMs / maxSlowModelLatency) * 100);
-                      const avgPct = Math.min(100, (m.avgLatencyMs / maxSlowModelLatency) * 100);
-                      return (
-                        <div key={m.model} className="space-y-1.5 py-2">
-                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                            <div className="flex min-w-0 items-center gap-1.5">
-                              <span
-                                className="truncate font-mono text-[11px] font-medium text-[var(--text-primary)]"
-                                title={m.model}
-                              >
-                                {m.model}
-                              </span>
-                              <span className="shrink-0 rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
-                                {m.provider}
-                              </span>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
-                              <span className="font-mono text-[var(--text-secondary)]">
-                                {t("avgLatency")} <strong className="text-[var(--text-primary)]">{formatDurationCompact(m.avgLatencyMs)}</strong>
-                              </span>
-                              <span className="font-mono text-rose-600 dark:text-rose-400">
-                                {t("p95Latency")} <strong>{formatDurationCompact(m.p95LatencyMs)}</strong>
-                              </span>
-                            </div>
+                <div className="divide-y divide-[var(--surface-border)]/60 border-t border-[var(--surface-border)]">
+                  {slowestModels.map((m) => {
+                    const p95Pct = Math.min(100, (m.p95LatencyMs / maxSlowModelLatency) * 100);
+                    const avgPct = Math.min(100, (m.avgLatencyMs / maxSlowModelLatency) * 100);
+                    return (
+                      <div key={m.model} className="space-y-1.5 py-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <span
+                              className="truncate font-mono text-[11px] font-medium text-[var(--text-primary)]"
+                              title={m.model}
+                            >
+                              {m.model}
+                            </span>
+                            <span className="shrink-0 rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
+                              {m.provider}
+                            </span>
                           </div>
-                          <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                            <div
-                              className="absolute inset-y-0 left-0 rounded-full opacity-45"
-                              style={{
-                                width: `${Math.max(p95Pct, 2)}%`,
-                                backgroundColor: CHART_COLORS.rose,
-                              }}
-                            />
-                            <div
-                              className="absolute inset-y-0 left-0 rounded-full"
-                              style={{
-                                width: `${Math.max(avgPct, 1.5)}%`,
-                                backgroundColor: CHART_COLORS.primary,
-                              }}
-                            />
+                          <div className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
+                            <span className="font-mono text-[var(--text-secondary)]">
+                              {t("avgLatency")} <strong className="text-[var(--text-primary)]">{formatDurationCompact(m.avgLatencyMs)}</strong>
+                            </span>
+                            <span className="font-mono text-rose-600 dark:text-rose-400">
+                              {t("p95Latency")} <strong>{formatDurationCompact(m.p95LatencyMs)}</strong>
+                            </span>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </>
+                        <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                          <div
+                            className="absolute inset-y-0 left-0 rounded-full opacity-45"
+                            style={{
+                              width: `${Math.max(p95Pct, 2)}%`,
+                              backgroundColor: CHART_COLORS.rose,
+                            }}
+                          />
+                          <div
+                            className="absolute inset-y-0 left-0 rounded-full"
+                            style={{
+                              width: `${Math.max(avgPct, 1.5)}%`,
+                              backgroundColor: CHART_COLORS.primary,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
                 <p className="py-8 text-center text-xs text-[var(--text-muted)]">{t("noLatencySamples")}</p>
               )}

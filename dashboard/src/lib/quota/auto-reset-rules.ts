@@ -90,7 +90,7 @@ export function extractAccountWindowPercentages(
 
   for (const group of groups) {
     if (group.id === "extra-usage") continue;
-    const score = group.severity === "critical" ? 0 : normalizeFraction(group.remainingFraction);
+    const score = normalizeFraction(group.remainingFraction);
     if (score === null) continue;
     const pct = Math.round(score * 100);
     if (isShortTermQuotaWindow(group, groups)) {

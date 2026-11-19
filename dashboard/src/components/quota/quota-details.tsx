@@ -27,9 +27,7 @@ function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: 
   const result: Record<string, { score: number; label: string; isShortTerm: boolean }> = {};
   for (const group of groups) {
     if (group.id === "extra-usage") continue;
-    // A provider-reported critical limit is exhausted even if the reported
-    // utilization alone would still leave headroom.
-    const score = group.severity === "critical" ? 0 : normalizeFraction(group.remainingFraction);
+    const score = normalizeFraction(group.remainingFraction);
     if (score === null) continue;
     result[group.id] = {
       score,
@@ -107,14 +105,21 @@ function buildManualResetPreview(account: QuotaAccount, label: string): PendingM
   let longGroup: QuotaGroup | null = null;
   let shortGroup: QuotaGroup | null = null;
   for (const group of groups) {
+    const score = normalizeFraction(group.remainingFraction);
+    if (score === null) continue;
     const isShort = isShortTermQuotaWindow(group, groups);
-    if (isShort && !shortGroup) shortGroup = group;
-    if (!isShort && !longGroup) longGroup = group;
+    if (isShort) {
+      const currentScore = shortGroup ? (normalizeFraction(shortGroup.remainingFraction) ?? Infinity) : Infinity;
+      if (score < currentScore) shortGroup = group;
+    } else {
+      const currentScore = longGroup ? (normalizeFraction(longGroup.remainingFraction) ?? Infinity) : Infinity;
+      if (score < currentScore) longGroup = group;
+    }
   }
 
   const toPreview = (group: QuotaGroup | null, isShort: boolean): ResetWindowPreview | null => {
     if (!group) return null;
-    const score = group.severity === "critical" ? 0 : normalizeFraction(group.remainingFraction);
+    const score = normalizeFraction(group.remainingFraction);
     if (score === null) return null;
     return {
       currentPct: Math.round(score * 100),

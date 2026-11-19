@@ -269,7 +269,12 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
       : [];
   });
   const selectedGroup = groups?.find((group) => group.id === selectedModel.groupId);
-  const selectedFraction = selectedGroup ? normalizeFraction(selectedGroup.remainingFraction) : null;
+  const selectedLiveModel = selectedGroup?.models.find((item) => item.id === selectedModel.modelId);
+  const selectedFraction = selectedLiveModel
+    ? normalizeFraction(selectedLiveModel.remainingFraction)
+    : selectedGroup
+      ? normalizeFraction(selectedGroup.remainingFraction)
+      : null;
   const selectedRemainingUsd = calcLiveRemainingUsd(
     selectedFraction,
     selectedModel.estimatedFullWindowUsd,
@@ -438,14 +443,19 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
               {visibleModels.map((model) => {
                 const isSelected = model.modelId === selectedModel.modelId;
                 const group = groups?.find((item) => item.id === model.groupId);
-                const fraction = group ? normalizeFraction(group.remainingFraction) : null;
+                const liveModel = group?.models.find((item) => item.id === model.modelId);
+                const fraction = liveModel
+                  ? normalizeFraction(liveModel.remainingFraction)
+                  : group
+                    ? normalizeFraction(group.remainingFraction)
+                    : null;
                 const remainingPct = fraction !== null ? Math.round(fraction * 1000) / 10 : model.currentRemainingPct;
                 const remainingUsd = calcLiveRemainingUsd(
                   fraction,
                   model.estimatedFullWindowUsd,
                   model.estimatedRemainingUsd
                 );
-                const displayLabel = model.modelId || (group?.label ?? model.groupId);
+                const displayLabel = liveModel?.displayName || model.modelId || (group?.label ?? model.groupId);
                 return (
                   <tr
                     key={`${model.groupId}:${model.modelId}`}
@@ -470,7 +480,7 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
                       />
                     </td>
                     <td className="px-2.5 py-1.5 text-right text-[var(--text-muted)]">
-                      {formatRelativeTime(group ? group.resetTime : model.resetTime, t)}
+                      {formatRelativeTime(liveModel ? liveModel.resetTime : group ? group.resetTime : model.resetTime, t)}
                     </td>
                   </tr>
                 );

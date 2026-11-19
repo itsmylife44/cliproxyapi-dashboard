@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import useSWR from "swr";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { useHealthStatus } from "@/hooks/use-health-status";
-import { useQuota } from "@/hooks/use-quota";
 import {
   buildNotifications,
   type Notification,
@@ -33,22 +32,6 @@ const MOCK_NOTIFICATIONS: Notification[] = [
     type: "critical",
     title: "Database Unreachable",
     message: "The database connection has failed. Some features may not work.",
-    timestamp: Date.now(),
-  },
-  {
-    id: "mock-quota-critical",
-    type: "critical",
-    title: "claude Quota Exhausted",
-    message: "user@example.com — 5h Session at 2%",
-    link: "/dashboard/quota",
-    timestamp: Date.now(),
-  },
-  {
-    id: "mock-quota-warn",
-    type: "warning",
-    title: "gemini Quota Low",
-    message: "user@example.com — Daily Limit at 15%",
-    link: "/dashboard/quota",
     timestamp: Date.now(),
   },
   {
@@ -89,8 +72,6 @@ export function useHeaderNotifications(isAdmin: boolean, userId: string) {
   const { raw: healthRaw } = useHealthStatus();
   const healthData = (debug ? undefined : healthRaw) as HealthStatus | undefined;
 
-  const { data: quotaData } = useQuota(!debug);
-
   const { data: proxyUpdateData } = useSWR<UpdateCheckResult>(
     debug || !isAdmin ? null : API_ENDPOINTS.UPDATE.CHECK,
     silentFetcher,
@@ -106,9 +87,9 @@ export function useHeaderNotifications(isAdmin: boolean, userId: string) {
   const notifications = useMemo<Notification[]>(() => {
     if (debug) return MOCK_NOTIFICATIONS;
 
-    const raw = buildNotifications(healthData, quotaData, proxyUpdateData, dashUpdateData, t as unknown as TranslationFn);
+    const raw = buildNotifications(healthData, proxyUpdateData, dashUpdateData, t as unknown as TranslationFn);
     return filterNotifications(raw, dismissedIds);
-  }, [debug, t, healthData, quotaData, proxyUpdateData, dashUpdateData, dismissedIds]);
+  }, [debug, t, healthData, proxyUpdateData, dashUpdateData, dismissedIds]);
 
   const criticalCount = notifications.filter((n) => n.type === "critical").length;
   const totalCount = notifications.length;

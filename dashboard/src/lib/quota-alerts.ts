@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import type { QuotaGroupScope } from "@/lib/model-first-monitoring";
+import { capacityQuotaGroups } from "@/lib/quota-window-classification";
 import { sendTelegramMessage, formatQuotaAlertBatch } from "@/lib/telegram";
 
 export const QUOTA_ALERT_SETTING_KEYS = {
@@ -182,7 +183,7 @@ function calcPooledCapacity(accounts: QuotaAccount[]): CapacityEntry[] {
   for (const account of accounts) {
     if (!account.supported || account.error || !account.groups) continue;
 
-    for (const group of account.groups) {
+    for (const group of capacityQuotaGroups(account.provider, account.groups)) {
       if (group.id === "extra-usage") continue;
       // Scoped limits (e.g. Codex per-model or code review) are informational;
       // alerts track the account's main quota only.

@@ -72,7 +72,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
-  overflow-x: clip;
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }

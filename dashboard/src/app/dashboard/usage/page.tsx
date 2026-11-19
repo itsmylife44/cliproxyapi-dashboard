@@ -96,7 +96,7 @@ interface CollectionStatus {
 }
 
 type DateFilter = "today" | "7d" | "30d" | "all" | "custom";
-type UsageSectionTab = "breakdown" | "cost" | "events";
+type UsageSectionTab = "cost" | "latency" | "failures" | "events";
 
 function shouldPollDashboard(): boolean {
   if (typeof document === "undefined") return true;
@@ -496,9 +496,14 @@ export default function UsagePage() {
               {(
                 [
                   { id: "cost", label: t("usageTabCost") },
-                  { id: "breakdown", label: t("usageTabBreakdown") },
+                  { id: "latency", label: t("usageTabLatency") },
+                  {
+                    id: "failures",
+                    label: t("usageTabFailures"),
+                    badge: usageData.totals.failureCount > 0 ? usageData.totals.failureCount : undefined,
+                  },
                   { id: "events", label: t("usageTabEvents") },
-                ] as const
+                ] as ReadonlyArray<{ id: UsageSectionTab; label: string; badge?: number }>
               ).map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
@@ -508,24 +513,38 @@ export default function UsagePage() {
                     onClick={() => setActiveTab(tab.id)}
                     aria-pressed={isActive}
                     className={cn(
-                      "-mb-px border-b-2 px-3 py-2 text-xs font-medium transition-colors",
+                      "-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-medium transition-colors",
                       isActive
                         ? "border-[var(--accent)] text-[var(--text-primary)]"
                         : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                     )}
                   >
-                    {tab.label}
+                    <span>{tab.label}</span>
+                    {tab.badge !== undefined && (
+                      <span className="rounded-full border border-rose-500/25 bg-rose-500/10 px-1.5 py-0 text-[10px] font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                        {tab.badge.toLocaleString()}
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
 
-            {activeTab === "breakdown" && (
+            {activeTab === "latency" && (
               <UsageCharts
+                mode="latency"
                 dailyBreakdown={usageData.dailyBreakdown}
                 bucketGranularity={usageData.bucketGranularity}
                 latencySeries={usageData.latencySeries}
                 latencySummary={usageData.latencySummary}
+                modelBreakdown={usageData.modelBreakdown}
+                providerBreakdown={usageData.providerBreakdown}
+              />
+            )}
+
+            {activeTab === "failures" && (
+              <UsageCharts
+                mode="failures"
                 modelBreakdown={usageData.modelBreakdown}
                 providerBreakdown={usageData.providerBreakdown}
               />

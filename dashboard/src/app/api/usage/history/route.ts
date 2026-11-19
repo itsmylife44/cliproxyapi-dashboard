@@ -6,8 +6,8 @@ import { usageCache } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
 import { isLongContextPrompt, isPeakRequest, resolveModelPrice, splitCachedInput, type ModelPrice } from "@/lib/model-pricing";
 import { getLiveModelPricing } from "@/lib/model-pricing-catalog";
-import { inferModelProvider } from "@/lib/usage-cost-breakdown";
-import { isCancelledFailure } from "@/lib/usage-failures";
+import { inferModelProvider, type ModelFailureReasonEntry } from "@/lib/usage-cost-breakdown";
+import { isCancelledFailure, summarizeFailureReason } from "@/lib/usage-failures";
 
 // Cache for 5 seconds to allow frequent polling without overwhelming the database
 // The frontend polls every 60 seconds, so 5s cache won't cause missed updates
@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
       select: { isAdmin: true },
     });
     const isAdmin = user?.isAdmin ?? false;
-    const cacheKey = `usage-history:v2:${session.userId}:${isAdmin ? "admin" : "user"}:${fromParam}:${toParam}`;
+    const cacheKey = `usage-history:v3:${session.userId}:${isAdmin ? "admin" : "user"}:${fromParam}:${toParam}`;
     const cached = usageCache.get(cacheKey) as { data: unknown; isAdmin: boolean } | null;
     if (cached) {
       logger.debug({ userId: session.userId, from: fromParam, to: toParam }, "Usage history cache hit");
@@ -265,6 +265,14 @@ export async function GET(request: NextRequest) {
     }> = {};
     const requestEvents: RequestEvent[] = [];
     const requestEventRecords: Array<{ id?: string; userId: string | null }> = [];
+    const failedRecordsMeta: Array<{
+      id?: string;
+      userId: string | null;
+      model: string;
+      failureStatus: number | null;
+      failureCode: string | null;
+      timestamp: string;
+    }> = [];
     const latencySeriesSeed: LatencyPoint[] = [];
     const latencyValues: number[] = [];
     let totalRequests = 0;
@@ -453,10 +461,22 @@ export async function GET(request: NextRequest) {
 
       const failureStatus = record.failureStatus ?? null;
       const failureCode = record.failureCode ?? null;
+      const timestampIso = record.timestamp.toISOString();
+
+      if (record.failed) {
+        failedRecordsMeta.push({
+          id: record.id,
+          userId: record.userId,
+          model: modelName,
+          failureStatus,
+          failureCode,
+          timestamp: timestampIso,
+        });
+      }
 
       const event: RequestEvent = {
         ...(record.id ? { id: record.id } : {}),
-        timestamp: record.timestamp.toISOString(),
+        timestamp: timestampIso,
         keyName: keyUsage.keyName,
         ...(isAdmin && username ? { username } : {}),
         model: modelName,
@@ -506,16 +526,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const failedEventIds = requestEventRecords
-      .filter((meta, index) => Boolean(requestEvents[index]?.failed && meta.id))
-      .map((meta) => meta.id as string);
+    const failedRecordIds = failedRecordsMeta
+      .map((meta) => meta.id)
+      .filter((id): id is string => Boolean(id));
 
-    if (failedEventIds.length > 0) {
+    const failureBodyById = new Map<string, string | null>();
+    if (failedRecordIds.length > 0) {
       const failureBodies = await prisma.usageRecord.findMany({
-        where: { id: { in: failedEventIds } },
+        where: { id: { in: failedRecordIds } },
         select: { id: true, failureBody: true },
       });
-      const failureBodyById = new Map(failureBodies.map((row) => [row.id, row.failureBody ?? null]));
+      for (const row of failureBodies) {
+        failureBodyById.set(row.id, row.failureBody ?? null);
+      }
       for (let i = 0; i < requestEvents.length; i++) {
         const event = requestEvents[i];
         const meta = requestEventRecords[i];
@@ -523,6 +546,32 @@ export async function GET(request: NextRequest) {
         const body = failureBodyById.get(meta.id) ?? null;
         event.cancelled = isCancelledFailure(event.failed, event.failureStatus, event.failureCode, body);
         event.failureBody = isAdmin || meta.userId === session.userId ? body : null;
+      }
+    }
+
+    const modelFailureReasonsMap = new Map<string, Map<string, ModelFailureReasonEntry>>();
+    for (const meta of failedRecordsMeta) {
+      const rawBody = meta.id ? (failureBodyById.get(meta.id) ?? null) : null;
+      const scopedBody = isAdmin || meta.userId === session.userId ? rawBody : null;
+      const summary = summarizeFailureReason(meta.failureStatus, meta.failureCode, scopedBody);
+      let reasonsForModel = modelFailureReasonsMap.get(meta.model);
+      if (!reasonsForModel) {
+        reasonsForModel = new Map<string, ModelFailureReasonEntry>();
+        modelFailureReasonsMap.set(meta.model, reasonsForModel);
+      }
+      const existing = reasonsForModel.get(summary.key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        reasonsForModel.set(summary.key, {
+          key: summary.key,
+          status: summary.status,
+          code: summary.code,
+          message: summary.message,
+          count: 1,
+          ...(summary.cancelled ? { cancelled: true } : {}),
+          lastSeen: meta.timestamp,
+        });
       }
     }
 
@@ -560,6 +609,10 @@ export async function GET(request: NextRequest) {
       .map(([model, data]) => {
         const latency = summarizeLatency(data.latencyValues);
         const failureRate = data.requests > 0 ? Number(((data.failureCount / data.requests) * 100).toFixed(1)) : 0;
+        const reasonsMap = modelFailureReasonsMap.get(model);
+        const failureReasons = reasonsMap
+          ? Array.from(reasonsMap.values()).sort((a, b) => b.count - a.count)
+          : undefined;
         return {
           model,
           provider: data.provider,
@@ -568,6 +621,7 @@ export async function GET(request: NextRequest) {
           successCount: data.successCount,
           failureCount: data.failureCount,
           failureRate,
+          ...(failureReasons && failureReasons.length > 0 ? { failureReasons } : {}),
           avgLatencyMs: latency.averageMs,
           p95LatencyMs: latency.p95Ms,
           maxLatencyMs: latency.maxMs,

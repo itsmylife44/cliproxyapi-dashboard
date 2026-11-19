@@ -53,6 +53,7 @@ interface LatencySummary {
 }
 
 interface UsageChartsProps {
+  mode?: "latency" | "failures";
   dailyBreakdown?: DailyBreakdown[];
   bucketGranularity?: "hour" | "day";
   latencySeries?: LatencyPoint[];
@@ -62,8 +63,7 @@ interface UsageChartsProps {
 }
 
 type BreakdownMetric = "tokens" | "requests";
-type ProviderSortMode = "p95" | "avg" | "failures";
-type ModelDiagnosticMode = "slowest" | "failures";
+type ProviderSortMode = "p95" | "avg";
 
 function formatBucketTick(value: string, isHourly: boolean): string {
   if (isHourly && value.includes("T")) {
@@ -125,6 +125,7 @@ function truncateAxisLabel(value: string, maxLen = 18): string {
 }
 
 export function UsageCharts({
+  mode = "latency",
   dailyBreakdown,
   bucketGranularity,
   latencySeries,
@@ -136,13 +137,22 @@ export function UsageCharts({
   const uid = useId();
   const [metric, setMetric] = useState<BreakdownMetric>("tokens");
   const [providerSort, setProviderSort] = useState<ProviderSortMode>("p95");
-  const [modelMode, setModelMode] = useState<ModelDiagnosticMode>("slowest");
+  const [expandedFailureModels, setExpandedFailureModels] = useState<Set<string>>(() => new Set());
   const { axisTickStyle, tooltipStyle, tokens } = useChartTheme();
   const gradInputId = `${uid}-gradInput`;
   const gradCachedId = `${uid}-gradCached`;
   const gradCacheWriteId = `${uid}-gradCacheWrite`;
   const gradOutputId = `${uid}-gradOutput`;
   const gradLatencyId = `${uid}-gradLatency`;
+
+  const toggleFailureModel = (model: string) => {
+    setExpandedFailureModels((prev) => {
+      const next = new Set(prev);
+      if (next.has(model)) next.delete(model);
+      else next.add(model);
+      return next;
+    });
+  };
 
   const series = useMemo(
     () =>
@@ -170,6 +180,7 @@ export function UsageCharts({
         successCount,
         failureCount,
         failureRate,
+        failureReasons: item.failureReasons ?? [],
         avgLatencyMs: item.avgLatencyMs ?? 0,
         p95LatencyMs: item.p95LatencyMs ?? item.avgLatencyMs ?? 0,
         maxLatencyMs: item.maxLatencyMs ?? item.p95LatencyMs ?? item.avgLatencyMs ?? 0,
@@ -237,9 +248,6 @@ export function UsageCharts({
     if (providerSort === "avg") {
       return list.sort((a, b) => b.avgLatencyMs - a.avgLatencyMs || b.p95LatencyMs - a.p95LatencyMs || b.requests - a.requests);
     }
-    if (providerSort === "failures") {
-      return list.sort((a, b) => b.failureCount - a.failureCount || b.failureRate - a.failureRate || b.requests - a.requests);
-    }
     return list.sort((a, b) => b.p95LatencyMs - a.p95LatencyMs || b.avgLatencyMs - a.avgLatencyMs || b.requests - a.requests);
   }, [normalizedProviders, providerSort]);
 
@@ -253,8 +261,18 @@ export function UsageCharts({
   const failingModels = useMemo(() => {
     return [...normalizedModels]
       .filter((m) => m.failureCount > 0)
-      .sort((a, b) => b.failureCount - a.failureCount || b.failureRate - a.failureRate || b.requests - a.requests)
-      .slice(0, 8);
+      .sort((a, b) => b.failureCount - a.failureCount || b.failureRate - a.failureRate || b.requests - a.requests);
+  }, [normalizedModels]);
+
+  const failureTotals = useMemo(() => {
+    let totalRequests = 0;
+    let totalFailures = 0;
+    for (const m of normalizedModels) {
+      totalRequests += m.requests;
+      totalFailures += m.failureCount;
+    }
+    const overallRate = totalRequests > 0 ? Number(((totalFailures / totalRequests) * 100).toFixed(1)) : 0;
+    return { totalRequests, totalFailures, overallRate };
   }, [normalizedModels]);
 
   const slowestProvider = useMemo(() => {
@@ -286,11 +304,298 @@ export function UsageCharts({
     ...slowestModels.map((m) => Math.max(m.p95LatencyMs, m.avgLatencyMs))
   );
 
+  if (mode === "failures") {
+    const chartFailingModels = failingModels.slice(0, 10);
+    const chartHeight = Math.max(170, Math.min(300, chartFailingModels.length * 32 + 36));
+
+    return (
+      <div className="space-y-6">
+        {/* ── Failure Triage Spotlight ── */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {/* Card 1: Top Problem Model */}
+          <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 px-3.5 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              {t("topProblemModel")}
+            </p>
+            {topProblemModel ? (
+              <div className="mt-1 space-y-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span
+                    className="truncate font-mono text-xs font-semibold text-[var(--text-primary)]"
+                    title={topProblemModel.model}
+                  >
+                    {topProblemModel.model}
+                  </span>
+                  <span className="shrink-0 font-mono text-xs font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                    {t("failureRateLabel", { rate: topProblemModel.failureRate })}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] tabular-nums text-[var(--text-muted)]">
+                  <span className="inline-block rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
+                    {topProblemModel.provider}
+                  </span>
+                  <span>
+                    {t("failedRequestsCount", {
+                      failed: topProblemModel.failureCount.toLocaleString(),
+                      total: topProblemModel.requests.toLocaleString(),
+                    })}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                {t("allModelsHealthy")}
+              </p>
+            )}
+          </div>
+
+          {/* Card 2: Total Failed Requests */}
+          <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 px-3.5 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              {t("totalFailedRequests")}
+            </p>
+            <div className="mt-1 space-y-1">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="font-mono text-sm font-semibold tabular-nums text-[var(--text-primary)]">
+                  {failureTotals.totalFailures.toLocaleString()}
+                </span>
+                <span
+                  className={`shrink-0 font-mono text-xs font-semibold tabular-nums ${
+                    failureTotals.totalFailures > 0
+                      ? "text-rose-600 dark:text-rose-400"
+                      : "text-emerald-700 dark:text-emerald-400"
+                  }`}
+                >
+                  {t("failureRateLabel", { rate: failureTotals.overallRate })}
+                </span>
+              </div>
+              <p className="text-[11px] tabular-nums text-[var(--text-muted)]">
+                {t("failedRequestsCount", {
+                  failed: failureTotals.totalFailures.toLocaleString(),
+                  total: failureTotals.totalRequests.toLocaleString(),
+                })}
+              </p>
+            </div>
+          </div>
+
+          {/* Card 3: Affected Models */}
+          <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 px-3.5 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              {t("affectedModels")}
+            </p>
+            <div className="mt-1 space-y-1">
+              <p className="font-mono text-sm font-semibold tabular-nums text-[var(--text-primary)]">
+                {failingModels.length.toLocaleString()}
+              </p>
+              <p className="text-[11px] tabular-nums text-[var(--text-muted)]">
+                {t("affectedModelsCount", {
+                  failed: failingModels.length.toLocaleString(),
+                  total: normalizedModels.length.toLocaleString(),
+                })}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {failingModels.length > 0 ? (
+          <section className="min-w-0 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                {t("failingModelsTitle")}
+              </h2>
+              <p className="text-[11px] text-[var(--text-muted)]">{t("failureReasonsHint")}</p>
+            </div>
+
+            <div style={{ height: chartHeight }} className="w-full">
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+                minWidth={0}
+                minHeight={0}
+                initialDimension={{ width: 320, height: chartHeight }}
+              >
+                <BarChart
+                  layout="vertical"
+                  data={chartFailingModels}
+                  margin={{ top: 4, right: 12, left: 4, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} horizontal={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="model"
+                    width={140}
+                    tick={axisTickStyle}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => truncateAxisLabel(String(v), 20)}
+                  />
+                  <XAxis
+                    type="number"
+                    tick={axisTickStyle}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={formatCompact}
+                  />
+                  <Tooltip
+                    {...tooltipStyle}
+                    formatter={(value, name) => [Number(value).toLocaleString(), name]}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
+                  <Bar
+                    dataKey="failureCount"
+                    name={t("failed")}
+                    stackId="health"
+                    fill={CHART_COLORS.rose}
+                    maxBarSize={14}
+                  />
+                  <Bar
+                    dataKey="successCount"
+                    name={t("success")}
+                    stackId="health"
+                    fill={CHART_COLORS.success}
+                    radius={[0, 3, 3, 0]}
+                    maxBarSize={14}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Expandable Per-Model Failure Breakdown */}
+            <div className="divide-y divide-[var(--surface-border)]/60 border-t border-b border-[var(--surface-border)]">
+              {failingModels.map((m) => {
+                const isExpanded = expandedFailureModels.has(m.model);
+                const reasons = m.failureReasons;
+
+                return (
+                  <div key={m.model}>
+                    <button
+                      type="button"
+                      aria-expanded={isExpanded}
+                      onClick={() => toggleFailureModel(m.model)}
+                      className="w-full cursor-pointer space-y-1.5 px-2 py-2.5 text-left transition-colors hover:bg-[var(--surface-muted)]/50"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span
+                            aria-hidden="true"
+                            className="inline-block w-3 shrink-0 text-[10px] text-[var(--text-muted)]"
+                          >
+                            {isExpanded ? "\u25BC" : "\u25B6"}
+                          </span>
+                          <span
+                            className="truncate font-mono text-[11px] font-medium text-[var(--text-primary)]"
+                            title={m.model}
+                          >
+                            {m.model}
+                          </span>
+                          <span className="shrink-0 rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
+                            {m.provider}
+                          </span>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
+                          <span className="text-[var(--text-muted)]">
+                            {t("failedRequestsCount", {
+                              failed: m.failureCount.toLocaleString(),
+                              total: m.requests.toLocaleString(),
+                            })}
+                          </span>
+                          <span
+                            className={`rounded-full border px-1.5 py-0 text-[10px] font-semibold ${
+                              m.failureRate >= 15
+                                ? "border-rose-500/25 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                                : "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                            }`}
+                          >
+                            {t("failureRateLabel", { rate: m.failureRate })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                        <div
+                          className="h-full bg-rose-500"
+                          style={{ width: `${Math.min(100, Math.max(m.failureRate, 2))}%` }}
+                        />
+                        <div
+                          className="h-full bg-emerald-500/50"
+                          style={{ width: `${Math.max(0, 100 - m.failureRate)}%` }}
+                        />
+                      </div>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="border-t border-[var(--surface-border)]/50 bg-[var(--surface-muted)]/35 px-4 py-2.5">
+                        {reasons.length > 0 ? (
+                          <ul className="divide-y divide-[var(--surface-border)]/50">
+                            {reasons.map((reason) => {
+                              const hasDetail = Boolean(reason.status || reason.code || reason.message || reason.cancelled);
+                              return (
+                                <li key={reason.key} className="space-y-1 py-2 first:pt-0 last:pb-0">
+                                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-1.5 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-[var(--text-primary)]">
+                                        {t("failureOccurrences", { count: reason.count.toLocaleString() })}
+                                      </span>
+                                      {reason.cancelled ? (
+                                        <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                                          {t("cancelled")}
+                                          {reason.status ? ` \u00B7 ${reason.status}` : ""}
+                                        </span>
+                                      ) : reason.status ? (
+                                        <span className="rounded-full border border-rose-500/25 bg-rose-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-rose-600 dark:text-rose-400">
+                                          HTTP {reason.status}
+                                        </span>
+                                      ) : (
+                                        <span className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-muted)]">
+                                          {t("unknownStatus")}
+                                        </span>
+                                      )}
+                                      {reason.code ? (
+                                        <span className="rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-secondary)]">
+                                          {reason.code}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                  {reason.message ? (
+                                    <p className="break-words font-mono text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                                      {reason.message}
+                                    </p>
+                                  ) : !hasDetail ? (
+                                    <p className="text-[11px] text-[var(--text-muted)]">
+                                      {t("errorDetailsUnavailable")}
+                                    </p>
+                                  ) : null}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : (
+                          <p className="text-[11px] text-[var(--text-muted)]">{t("errorDetailsUnavailable")}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ) : (
+          <p className="py-10 text-center text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            {t("allModelsHealthy")}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  const providerChartHeight = Math.max(170, Math.min(260, sortedProviders.length * 36 + 32));
+  const slowModelChartHeight = Math.max(170, Math.min(260, slowestModels.length * 32 + 32));
+
   return (
     <div className="space-y-6">
-      {/* ── Diagnostic Triage Spotlight (Slowest Provider · Slowest Model · Top Problem Model) ── */}
-      {(slowestProvider || slowestModel || topProblemModel) && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {/* ── Latency Triage Spotlight (Slowest Provider · Slowest Model) ── */}
+      {(slowestProvider || slowestModel) && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {/* Card 1: Slowest Provider */}
           <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 px-3.5 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
@@ -353,66 +658,28 @@ export function UsageCharts({
               <p className="mt-1 text-xs text-[var(--text-muted)]">{t("noLatencySamples")}</p>
             )}
           </div>
-
-          {/* Card 3: Top Problem Model (Failures) */}
-          <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 px-3.5 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              {t("topProblemModel")}
-            </p>
-            {topProblemModel ? (
-              <div className="mt-1 space-y-1">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span
-                    className="truncate font-mono text-xs font-semibold text-[var(--text-primary)]"
-                    title={topProblemModel.model}
-                  >
-                    {topProblemModel.model}
-                  </span>
-                  <span className="shrink-0 font-mono text-xs font-semibold tabular-nums text-rose-600 dark:text-rose-400">
-                    {t("failureRateLabel", { rate: topProblemModel.failureRate })}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5 text-[11px] tabular-nums text-[var(--text-muted)]">
-                  <span className="inline-block rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
-                    {topProblemModel.provider}
-                  </span>
-                  <span>
-                    {t("failedRequestsCount", {
-                      failed: topProblemModel.failureCount.toLocaleString(),
-                      total: topProblemModel.requests.toLocaleString(),
-                    })}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                {t("allModelsHealthy")}
-              </p>
-            )}
-          </div>
         </div>
       )}
 
-      {/* ── Primary Diagnostic Charts: Provider Speed & Problem Models ── */}
+      {/* ── Primary Latency Charts: Provider Speed & Slowest Models ── */}
       {(hasProviderDiagnostics || hasModelDiagnostics) && (
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-          {/* Left: Provider Speed & Health */}
+          {/* Left: Provider Speed */}
           {hasProviderDiagnostics && (
             <section className="min-w-0 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                  {t("providerSpeedTitle")}
+                  {t("providerSpeedOnlyTitle")}
                 </h2>
                 <div
                   role="group"
-                  aria-label={t("providerSpeedTitle")}
+                  aria-label={t("providerSpeedOnlyTitle")}
                   className="inline-flex rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 p-0.5"
                 >
                   {(
                     [
                       { id: "p95", label: t("p95Latency") },
                       { id: "avg", label: t("avgLatency") },
-                      { id: "failures", label: t("sortByFailures") },
                     ] as const
                   ).map((item) => (
                     <button
@@ -433,59 +700,61 @@ export function UsageCharts({
               </div>
 
               {sortedProviders.some((p) => p.p95LatencyMs > 0 || p.avgLatencyMs > 0) && (
-                <ResponsiveContainer
-                  width="100%"
-                  height={Math.max(170, Math.min(260, sortedProviders.length * 36 + 32))}
-                  minWidth={0}
-                  minHeight={0}
-                  initialDimension={{ width: 320, height: 200 }}
-                >
-                  <BarChart
-                    layout="vertical"
-                    data={sortedProviders.slice(0, 8)}
-                    margin={{ top: 4, right: 12, left: 4, bottom: 0 }}
+                <div style={{ height: providerChartHeight }} className="w-full">
+                  <ResponsiveContainer
+                    width="100%"
+                    height="100%"
+                    minWidth={0}
+                    minHeight={0}
+                    initialDimension={{ width: 320, height: providerChartHeight }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} horizontal={false} />
-                    <YAxis
-                      type="category"
-                      dataKey="provider"
-                      width={88}
-                      tick={axisTickStyle}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v) => truncateAxisLabel(String(v), 14)}
-                    />
-                    <XAxis
-                      type="number"
-                      tick={axisTickStyle}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v) => formatDurationCompact(Number(v))}
-                    />
-                    <Tooltip
-                      {...tooltipStyle}
-                      formatter={(value, name) => [formatLatencyValue(Number(value)), name]}
-                    />
-                    <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
-                    <Bar
-                      dataKey="avgLatencyMs"
-                      name={t("avgLatency")}
-                      fill={CHART_COLORS.primary}
-                      radius={[0, 3, 3, 0]}
-                      maxBarSize={14}
-                    />
-                    <Bar
-                      dataKey="p95LatencyMs"
-                      name={t("p95Latency")}
-                      fill={CHART_COLORS.warning}
-                      radius={[0, 3, 3, 0]}
-                      maxBarSize={14}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                    <BarChart
+                      layout="vertical"
+                      data={sortedProviders.slice(0, 8)}
+                      margin={{ top: 4, right: 12, left: 4, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} horizontal={false} />
+                      <YAxis
+                        type="category"
+                        dataKey="provider"
+                        width={88}
+                        tick={axisTickStyle}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v) => truncateAxisLabel(String(v), 14)}
+                      />
+                      <XAxis
+                        type="number"
+                        tick={axisTickStyle}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v) => formatDurationCompact(Number(v))}
+                      />
+                      <Tooltip
+                        {...tooltipStyle}
+                        formatter={(value, name) => [formatLatencyValue(Number(value)), name]}
+                      />
+                      <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
+                      <Bar
+                        dataKey="avgLatencyMs"
+                        name={t("avgLatency")}
+                        fill={CHART_COLORS.primary}
+                        radius={[0, 3, 3, 0]}
+                        maxBarSize={14}
+                      />
+                      <Bar
+                        dataKey="p95LatencyMs"
+                        name={t("p95Latency")}
+                        fill={CHART_COLORS.warning}
+                        radius={[0, 3, 3, 0]}
+                        maxBarSize={14}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               )}
 
-              {/* Direct-Comparison Provider Telemetry Rows */}
+              {/* Direct-Comparison Provider Latency Rows */}
               <div className="divide-y divide-[var(--surface-border)]/60 border-t border-[var(--surface-border)]">
                 {sortedProviders.map((prov) => {
                   const p95Pct = Math.min(100, (prov.p95LatencyMs / maxProviderLatency) * 100);
@@ -505,17 +774,6 @@ export function UsageCharts({
                           </span>
                         </div>
                         <div className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
-                          {prov.failureCount > 0 && (
-                            <span
-                              className={`rounded-full border px-1.5 py-0 text-[10px] font-semibold ${
-                                prov.failureRate >= 15
-                                  ? "border-rose-500/25 bg-rose-500/10 text-rose-600 dark:text-rose-400"
-                                  : "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                              }`}
-                            >
-                              {t("failureRateLabel", { rate: prov.failureRate })}
-                            </span>
-                          )}
                           <span className="font-mono text-[var(--text-secondary)]">
                             {t("avgLatency")} <strong className="text-[var(--text-primary)]">{formatDurationCompact(prov.avgLatencyMs)}</strong>
                           </span>
@@ -549,54 +807,24 @@ export function UsageCharts({
             </section>
           )}
 
-          {/* Right: Model Bottlenecks (Slowest Models vs Most Failures) */}
+          {/* Right: Slowest Models */}
           {hasModelDiagnostics && (
             <section className="min-w-0 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                  {t("modelDiagnosticsTitle")}
+                  {t("slowestModelsTitle")}
                 </h2>
-                <div
-                  role="group"
-                  aria-label={t("modelDiagnosticsTitle")}
-                  className="inline-flex rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 p-0.5"
-                >
-                  <button
-                    type="button"
-                    aria-pressed={modelMode === "slowest"}
-                    onClick={() => setModelMode("slowest")}
-                    className={`cursor-pointer rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                      modelMode === "slowest"
-                        ? "bg-[var(--surface-base)] text-[var(--text-primary)] shadow-xs"
-                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                    }`}
-                  >
-                    {t("slowestModelsTab")}
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={modelMode === "failures"}
-                    onClick={() => setModelMode("failures")}
-                    className={`cursor-pointer rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                      modelMode === "failures"
-                        ? "bg-[var(--surface-base)] text-[var(--text-primary)] shadow-xs"
-                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                    }`}
-                  >
-                    {t("failingModelsTab")}
-                  </button>
-                </div>
               </div>
 
-              {modelMode === "slowest" ? (
-                slowestModels.length > 0 ? (
-                  <>
+              {slowestModels.length > 0 ? (
+                <>
+                  <div style={{ height: slowModelChartHeight }} className="w-full">
                     <ResponsiveContainer
                       width="100%"
-                      height={Math.max(170, Math.min(260, slowestModels.length * 32 + 32))}
+                      height="100%"
                       minWidth={0}
                       minHeight={0}
-                      initialDimension={{ width: 320, height: 200 }}
+                      initialDimension={{ width: 320, height: slowModelChartHeight }}
                     >
                       <BarChart
                         layout="vertical"
@@ -641,168 +869,58 @@ export function UsageCharts({
                         />
                       </BarChart>
                     </ResponsiveContainer>
-
-                    <div className="divide-y divide-[var(--surface-border)]/60 border-t border-[var(--surface-border)]">
-                      {slowestModels.map((m) => {
-                        const p95Pct = Math.min(100, (m.p95LatencyMs / maxSlowModelLatency) * 100);
-                        const avgPct = Math.min(100, (m.avgLatencyMs / maxSlowModelLatency) * 100);
-                        return (
-                          <div key={m.model} className="space-y-1.5 py-2">
-                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                              <div className="flex min-w-0 items-center gap-1.5">
-                                <span
-                                  className="truncate font-mono text-[11px] font-medium text-[var(--text-primary)]"
-                                  title={m.model}
-                                >
-                                  {m.model}
-                                </span>
-                                <span className="shrink-0 rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
-                                  {m.provider}
-                                </span>
-                              </div>
-                              <div className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
-                                {m.failureCount > 0 && (
-                                  <span className="rounded-full border border-rose-500/25 bg-rose-500/10 px-1.5 py-0 text-[10px] font-semibold text-rose-600 dark:text-rose-400">
-                                    {t("failureRateLabel", { rate: m.failureRate })}
-                                  </span>
-                                )}
-                                <span className="font-mono text-[var(--text-secondary)]">
-                                  {t("avgLatency")} <strong className="text-[var(--text-primary)]">{formatDurationCompact(m.avgLatencyMs)}</strong>
-                                </span>
-                                <span className="font-mono text-rose-600 dark:text-rose-400">
-                                  {t("p95Latency")} <strong>{formatDurationCompact(m.p95LatencyMs)}</strong>
-                                </span>
-                              </div>
-                            </div>
-                            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                              <div
-                                className="absolute inset-y-0 left-0 rounded-full opacity-45"
-                                style={{
-                                  width: `${Math.max(p95Pct, 2)}%`,
-                                  backgroundColor: CHART_COLORS.rose,
-                                }}
-                              />
-                              <div
-                                className="absolute inset-y-0 left-0 rounded-full"
-                                style={{
-                                  width: `${Math.max(avgPct, 1.5)}%`,
-                                  backgroundColor: CHART_COLORS.primary,
-                                }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : (
-                  <p className="py-8 text-center text-xs text-[var(--text-muted)]">{t("noLatencySamples")}</p>
-                )
-              ) : failingModels.length > 0 ? (
-                <>
-                  <ResponsiveContainer
-                    width="100%"
-                    height={Math.max(170, Math.min(260, failingModels.length * 32 + 32))}
-                    minWidth={0}
-                    minHeight={0}
-                    initialDimension={{ width: 320, height: 200 }}
-                  >
-                    <BarChart
-                      layout="vertical"
-                      data={failingModels}
-                      margin={{ top: 4, right: 12, left: 4, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} horizontal={false} />
-                      <YAxis
-                        type="category"
-                        dataKey="model"
-                        width={120}
-                        tick={axisTickStyle}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v) => truncateAxisLabel(String(v), 18)}
-                      />
-                      <XAxis
-                        type="number"
-                        tick={axisTickStyle}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={formatCompact}
-                      />
-                      <Tooltip
-                        {...tooltipStyle}
-                        formatter={(value, name) => [Number(value).toLocaleString(), name]}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
-                      <Bar
-                        dataKey="failureCount"
-                        name={t("failed")}
-                        stackId="health"
-                        fill={CHART_COLORS.rose}
-                        maxBarSize={14}
-                      />
-                      <Bar
-                        dataKey="successCount"
-                        name={t("success")}
-                        stackId="health"
-                        fill={CHART_COLORS.success}
-                        radius={[0, 3, 3, 0]}
-                        maxBarSize={14}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  </div>
 
                   <div className="divide-y divide-[var(--surface-border)]/60 border-t border-[var(--surface-border)]">
-                    {failingModels.map((m) => (
-                      <div key={m.model} className="space-y-1.5 py-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                          <div className="flex min-w-0 items-center gap-1.5">
-                            <span
-                              className="truncate font-mono text-[11px] font-medium text-[var(--text-primary)]"
-                              title={m.model}
-                            >
-                              {m.model}
-                            </span>
-                            <span className="shrink-0 rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
-                              {m.provider}
-                            </span>
+                    {slowestModels.map((m) => {
+                      const p95Pct = Math.min(100, (m.p95LatencyMs / maxSlowModelLatency) * 100);
+                      const avgPct = Math.min(100, (m.avgLatencyMs / maxSlowModelLatency) * 100);
+                      return (
+                        <div key={m.model} className="space-y-1.5 py-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <span
+                                className="truncate font-mono text-[11px] font-medium text-[var(--text-primary)]"
+                                title={m.model}
+                              >
+                                {m.model}
+                              </span>
+                              <span className="shrink-0 rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
+                                {m.provider}
+                              </span>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
+                              <span className="font-mono text-[var(--text-secondary)]">
+                                {t("avgLatency")} <strong className="text-[var(--text-primary)]">{formatDurationCompact(m.avgLatencyMs)}</strong>
+                              </span>
+                              <span className="font-mono text-rose-600 dark:text-rose-400">
+                                {t("p95Latency")} <strong>{formatDurationCompact(m.p95LatencyMs)}</strong>
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
-                            <span className="text-[var(--text-muted)]">
-                              {t("failedRequestsCount", {
-                                failed: m.failureCount.toLocaleString(),
-                                total: m.requests.toLocaleString(),
-                              })}
-                            </span>
-                            <span
-                              className={`rounded-full border px-1.5 py-0 text-[10px] font-semibold ${
-                                m.failureRate >= 15
-                                  ? "border-rose-500/25 bg-rose-500/10 text-rose-600 dark:text-rose-400"
-                                  : "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                              }`}
-                            >
-                              {t("failureRateLabel", { rate: m.failureRate })}
-                            </span>
+                          <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                            <div
+                              className="absolute inset-y-0 left-0 rounded-full opacity-45"
+                              style={{
+                                width: `${Math.max(p95Pct, 2)}%`,
+                                backgroundColor: CHART_COLORS.rose,
+                              }}
+                            />
+                            <div
+                              className="absolute inset-y-0 left-0 rounded-full"
+                              style={{
+                                width: `${Math.max(avgPct, 1.5)}%`,
+                                backgroundColor: CHART_COLORS.primary,
+                              }}
+                            />
                           </div>
                         </div>
-                        <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                          <div
-                            className="h-full bg-rose-500"
-                            style={{ width: `${Math.min(100, Math.max(m.failureRate, 2))}%` }}
-                          />
-                          <div
-                            className="h-full bg-emerald-500/50"
-                            style={{ width: `${Math.max(0, 100 - m.failureRate)}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               ) : (
-                <p className="py-8 text-center text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                  {t("allModelsHealthy")}
-                </p>
+                <p className="py-8 text-center text-xs text-[var(--text-muted)]">{t("noLatencySamples")}</p>
               )}
             </section>
           )}
@@ -855,13 +973,14 @@ export function UsageCharts({
                 </div>
               </div>
 
-              <ResponsiveContainer
-                width="100%"
-                height={236}
-                minWidth={0}
-                minHeight={0}
-                initialDimension={{ width: 320, height: 220 }}
-              >
+              <div style={{ height: 236 }} className="w-full">
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                  minWidth={0}
+                  minHeight={0}
+                  initialDimension={{ width: 320, height: 236 }}
+                >
                 {metric === "requests" ? (
                   <BarChart data={series} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} vertical={false} />
@@ -1004,7 +1123,8 @@ export function UsageCharts({
                     />
                   </AreaChart>
                 )}
-              </ResponsiveContainer>
+                </ResponsiveContainer>
+              </div>
             </section>
           )}
 
@@ -1036,13 +1156,14 @@ export function UsageCharts({
                 )}
               </div>
 
-              <ResponsiveContainer
-                width="100%"
-                height={236}
-                minWidth={0}
-                minHeight={0}
-                initialDimension={{ width: 320, height: 220 }}
-              >
+              <div style={{ height: 236 }} className="w-full">
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                  minWidth={0}
+                  minHeight={0}
+                  initialDimension={{ width: 320, height: 236 }}
+                >
                 <AreaChart data={latencySeries} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
                   <defs>
                     <linearGradient id={gradLatencyId} x1="0" y1="0" x2="0" y2="1">
@@ -1093,7 +1214,8 @@ export function UsageCharts({
                     activeDot={{ r: 4, fill: CHART_COLORS.warning }}
                   />
                 </AreaChart>
-              </ResponsiveContainer>
+                </ResponsiveContainer>
+              </div>
             </section>
           )}
         </div>

@@ -124,12 +124,18 @@ async function migrate() {
       "userId" TEXT NOT NULL,
       "key" TEXT NOT NULL,
       "name" TEXT NOT NULL DEFAULT 'Default',
+      "isActive" BOOLEAN NOT NULL DEFAULT true,
+      "expiresAt" TIMESTAMP(3),
+      "spendLimit" DOUBLE PRECISION,
       "lastUsedAt" TIMESTAMP(3),
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "user_api_keys_pkey" PRIMARY KEY ("id")
     );
     CREATE UNIQUE INDEX IF NOT EXISTS "user_api_keys_key_key" ON "user_api_keys"("key");
     CREATE INDEX IF NOT EXISTS "user_api_keys_userId_idx" ON "user_api_keys"("userId");
+    ALTER TABLE "user_api_keys" ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE "user_api_keys" ADD COLUMN IF NOT EXISTS "expiresAt" TIMESTAMP(3);
+    ALTER TABLE "user_api_keys" ADD COLUMN IF NOT EXISTS "spendLimit" DOUBLE PRECISION;
     DO $$ BEGIN
       ALTER TABLE "user_api_keys" ADD CONSTRAINT "user_api_keys_userId_fkey"
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
@@ -364,6 +370,7 @@ async function migrate() {
     );
     CREATE UNIQUE INDEX IF NOT EXISTS "usage_dedup_key" ON "usage_records"("authIndex", "model", "timestamp", "source", "totalTokens");
     CREATE INDEX IF NOT EXISTS "usage_records_userId_idx" ON "usage_records"("userId");
+    CREATE INDEX IF NOT EXISTS "usage_records_apiKeyId_idx" ON "usage_records"("apiKeyId");
     CREATE INDEX IF NOT EXISTS "usage_records_authIndex_idx" ON "usage_records"("authIndex");
     CREATE INDEX IF NOT EXISTS "usage_records_timestamp_idx" ON "usage_records"("timestamp");
     CREATE INDEX IF NOT EXISTS "usage_records_model_idx" ON "usage_records"("model");

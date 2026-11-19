@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { validateOrigin } from "@/lib/auth/origin";
 import { generateApiKey } from "@/lib/api-keys/generate";
-import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
+import {
+  getApiKeyUsageSummaries,
+  invalidateApiKeyUsageCache,
+  syncKeysToCliProxyApi,
+} from "@/lib/api-keys/sync";
 import { prisma } from "@/lib/db";
 import { checkRateLimitWithPreset } from "@/lib/auth/rate-limit";
 import { logger } from "@/lib/logger";
@@ -13,12 +17,46 @@ interface ApiKeyResponse {
   id: string;
   name: string;
   keyPreview: string;
+  isActive: boolean;
   createdAt: string;
   lastUsedAt: string | null;
+  expiresAt: string | null;
+  spendLimit: number | null;
+  totalSpend: number;
 }
 
+const NullableExpirySchema = z
+  .union([z.string().trim(), z.null()])
+  .optional()
+  .transform((val, ctx) => {
+    if (val === undefined) return undefined;
+    if (val === null || val === "") return null;
+    const parsed = new Date(
+      /^\d{4}-\d{2}-\d{2}$/.test(val) ? `${val}T23:59:59.999` : val
+    );
+    if (Number.isNaN(parsed.getTime())) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid expiry date" });
+      return z.NEVER;
+    }
+    return parsed;
+  });
+
+const NullableSpendLimitSchema = z
+  .union([z.number().finite().nonnegative(), z.null()])
+  .optional();
+
 const CreateApiKeyRequestSchema = z.object({
-  name: z.string().optional()
+  name: z.string().optional(),
+  expiresAt: NullableExpirySchema,
+  spendLimit: NullableSpendLimitSchema,
+});
+
+const UpdateApiKeyRequestSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1).optional(),
+  isActive: z.boolean().optional(),
+  expiresAt: NullableExpirySchema,
+  spendLimit: NullableSpendLimitSchema,
 });
 
 interface CreateApiKeyResponse {
@@ -26,6 +64,8 @@ interface CreateApiKeyResponse {
   key: string;
   name: string;
   createdAt: string;
+  expiresAt: string | null;
+  spendLimit: number | null;
   syncStatus: "ok" | "failed" | "pending";
   syncMessage?: string;
 }
@@ -51,29 +91,21 @@ export async function GET() {
         id: true,
         name: true,
         key: true,
+        isActive: true,
         createdAt: true,
         lastUsedAt: true,
+        expiresAt: true,
+        spendLimit: true,
       },
     });
 
-    const latestUsageByKey = new Map<string, Date>();
-    if (apiKeys.length > 0) {
-      const groupedUsage = await prisma.usageRecord.groupBy({
-        by: ["apiKeyId"],
-        where: {
-          apiKeyId: { in: apiKeys.map((apiKey) => apiKey.id) },
-        },
-        _max: { timestamp: true },
-      });
-      for (const row of groupedUsage) {
-        if (row.apiKeyId && row._max.timestamp) {
-          latestUsageByKey.set(row.apiKeyId, row._max.timestamp);
-        }
-      }
-    }
+    const usageByKey = await getApiKeyUsageSummaries(
+      apiKeys.map((apiKey) => apiKey.id)
+    );
 
     const response: ApiKeyResponse[] = apiKeys.map((apiKey) => {
-      const usageTs = latestUsageByKey.get(apiKey.id) ?? null;
+      const usageSummary = usageByKey.get(apiKey.id);
+      const usageTs = usageSummary?.lastUsedAt ?? null;
       const effectiveLastUsed =
         apiKey.lastUsedAt && usageTs
           ? usageTs > apiKey.lastUsedAt
@@ -85,8 +117,12 @@ export async function GET() {
         id: apiKey.id,
         name: apiKey.name,
         keyPreview: maskApiKey(apiKey.key),
+        isActive: apiKey.isActive,
         createdAt: apiKey.createdAt.toISOString(),
         lastUsedAt: effectiveLastUsed?.toISOString() || null,
+        expiresAt: apiKey.expiresAt?.toISOString() || null,
+        spendLimit: apiKey.spendLimit ?? null,
+        totalSpend: usageSummary?.totalSpend ?? 0,
       };
     });
 
@@ -128,6 +164,8 @@ export async function POST(request: NextRequest) {
         userId: session.userId,
         key,
         name,
+        expiresAt: parsed.data.expiresAt ?? null,
+        spendLimit: parsed.data.spendLimit ?? null,
       },
     });
 
@@ -144,6 +182,8 @@ export async function POST(request: NextRequest) {
       key: apiKey.key,
       name: apiKey.name,
       createdAt: apiKey.createdAt.toISOString(),
+      expiresAt: apiKey.expiresAt?.toISOString() || null,
+      spendLimit: apiKey.spendLimit ?? null,
       syncStatus: "pending",
       syncMessage: "Key created - backend sync in progress",
     };
@@ -151,6 +191,72 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
     return Errors.internal("Failed to create API key", error);
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const session = await verifySession();
+  if (!session) {
+    return Errors.unauthorized();
+  }
+
+  const originError = validateOrigin(request);
+  if (originError) {
+    return originError;
+  }
+
+  try {
+    const body = await request.json();
+    const parsed = UpdateApiKeyRequestSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return Errors.zodValidation(parsed.error.issues);
+    }
+
+    const existingKey = await prisma.userApiKey.findFirst({
+      where: {
+        id: parsed.data.id,
+        userId: session.userId,
+      },
+      select: { id: true },
+    });
+
+    if (!existingKey) {
+      return Errors.notFound("API key");
+    }
+
+    const updated = await prisma.userApiKey.update({
+      where: { id: parsed.data.id },
+      data: {
+        ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+        ...(parsed.data.isActive !== undefined ? { isActive: parsed.data.isActive } : {}),
+        ...(parsed.data.expiresAt !== undefined ? { expiresAt: parsed.data.expiresAt } : {}),
+        ...(parsed.data.spendLimit !== undefined ? { spendLimit: parsed.data.spendLimit } : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        isActive: true,
+        expiresAt: true,
+        spendLimit: true,
+      },
+    });
+
+    const syncResult = await syncKeysToCliProxyApi();
+    if (!syncResult.ok) {
+      logger.error({ error: syncResult.error }, "Sync failed after API key update");
+    }
+
+    return apiSuccess({
+      id: updated.id,
+      name: updated.name,
+      isActive: updated.isActive,
+      expiresAt: updated.expiresAt?.toISOString() || null,
+      spendLimit: updated.spendLimit ?? null,
+      syncStatus: syncResult.ok ? "ok" : ("failed" as const),
+    });
+  } catch (error) {
+    return Errors.internal("Failed to update API key", error);
   }
 }
 
@@ -188,6 +294,7 @@ export async function DELETE(request: NextRequest) {
     await prisma.userApiKey.delete({
       where: { id },
     });
+    invalidateApiKeyUsageCache([id]);
 
     const syncResult = await syncKeysToCliProxyApi();
     if (!syncResult.ok) {

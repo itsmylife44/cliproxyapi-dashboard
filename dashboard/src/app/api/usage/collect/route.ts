@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth/session";
 import { getManagementUrl } from "@/lib/management-url";
 import { validateOrigin } from "@/lib/auth/origin";
-import { syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
+import { invalidateApiKeyUsageCache, syncKeysToCliProxyApi } from "@/lib/api-keys/sync";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { randomUUID, timingSafeEqual } from "crypto";
@@ -550,6 +550,11 @@ export async function POST(request: NextRequest) {
           })
         )
       );
+      invalidateApiKeyUsageCache(latestKeyUsage.keys());
+      const postCollectSync = await syncKeysToCliProxyApi();
+      if (!postCollectSync.ok) {
+        logger.warn({ error: postCollectSync.error }, "API key sync failed after usage collection");
+      }
     }
 
     let latencyBackfilled = 0;

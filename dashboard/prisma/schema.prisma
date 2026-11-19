@@ -83,6 +83,9 @@ model UserApiKey {
   userId     String
   key        String    @unique
   name       String    @default("Default")
+  isActive   Boolean   @default(true)
+  expiresAt  DateTime?
+  spendLimit Float?
   lastUsedAt DateTime?
   createdAt  DateTime  @default(now())
 
@@ -281,6 +284,7 @@ model UsageRecord {
 
   @@unique([authIndex, model, timestamp, source, totalTokens], name: "usage_dedup_key")
   @@index([userId])
+  @@index([apiKeyId])
   @@index([authIndex])
   @@index([timestamp])
   @@index([model])

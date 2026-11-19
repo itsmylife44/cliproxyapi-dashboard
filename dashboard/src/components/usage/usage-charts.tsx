@@ -124,6 +124,29 @@ function truncateAxisLabel(value: string, maxLen = 18): string {
   return str.length > maxLen ? `${str.slice(0, maxLen - 1)}\u2026` : str;
 }
 
+function LayeredLatencyBar({
+  avgPct,
+  p95Pct,
+  p95Color,
+}: {
+  avgPct: number;
+  p95Pct: number;
+  p95Color: string;
+}) {
+  return (
+    <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+      <div
+        className="absolute inset-y-0 left-0 rounded-full opacity-45"
+        style={{ width: `${Math.max(p95Pct, 2)}%`, backgroundColor: p95Color }}
+      />
+      <div
+        className="absolute inset-y-0 left-0 rounded-full"
+        style={{ width: `${Math.max(avgPct, 1.5)}%`, backgroundColor: CHART_COLORS.primary }}
+      />
+    </div>
+  );
+}
+
 export function UsageCharts({
   mode = "latency",
   dailyBreakdown,
@@ -189,67 +212,13 @@ export function UsageCharts({
     });
   }, [modelBreakdown]);
 
-  const normalizedProviders = useMemo(() => {
-    if (providerBreakdown && providerBreakdown.length > 0) {
-      return providerBreakdown;
-    }
-    const map = new Map<string, {
-      models: number;
-      requests: number;
-      tokens: number;
-      successCount: number;
-      failureCount: number;
-      weightedLatencySum: number;
-      latencySamples: number;
-      maxP95: number;
-      maxMs: number;
-    }>();
-    for (const m of normalizedModels) {
-      const entry = map.get(m.provider) ?? {
-        models: 0,
-        requests: 0,
-        tokens: 0,
-        successCount: 0,
-        failureCount: 0,
-        weightedLatencySum: 0,
-        latencySamples: 0,
-        maxP95: 0,
-        maxMs: 0,
-      };
-      entry.models += 1;
-      entry.requests += m.requests;
-      entry.tokens += m.tokens;
-      entry.successCount += m.successCount;
-      entry.failureCount += m.failureCount;
-      const samples = m.latencySampleCount > 0 ? m.latencySampleCount : (m.avgLatencyMs > 0 ? m.requests : 0);
-      entry.weightedLatencySum += m.avgLatencyMs * samples;
-      entry.latencySamples += samples;
-      entry.maxP95 = Math.max(entry.maxP95, m.p95LatencyMs);
-      entry.maxMs = Math.max(entry.maxMs, m.maxLatencyMs);
-      map.set(m.provider, entry);
-    }
-    return Array.from(map.entries()).map(([provider, data]): ProviderBreakdownEntry => ({
-      provider,
-      models: data.models,
-      requests: data.requests,
-      tokens: data.tokens,
-      successCount: data.successCount,
-      failureCount: data.failureCount,
-      failureRate: data.requests > 0 ? Number(((data.failureCount / data.requests) * 100).toFixed(1)) : 0,
-      avgLatencyMs: data.latencySamples > 0 ? Math.round(data.weightedLatencySum / data.latencySamples) : 0,
-      p95LatencyMs: data.maxP95,
-      maxLatencyMs: data.maxMs,
-      latencySampleCount: data.latencySamples,
-    }));
-  }, [providerBreakdown, normalizedModels]);
-
   const sortedProviders = useMemo(() => {
-    const list = [...normalizedProviders];
+    const list = [...(providerBreakdown ?? [])];
     if (providerSort === "avg") {
       return list.sort((a, b) => b.avgLatencyMs - a.avgLatencyMs || b.p95LatencyMs - a.p95LatencyMs || b.requests - a.requests);
     }
     return list.sort((a, b) => b.p95LatencyMs - a.p95LatencyMs || b.avgLatencyMs - a.avgLatencyMs || b.requests - a.requests);
-  }, [normalizedProviders, providerSort]);
+  }, [providerBreakdown, providerSort]);
 
   const slowestModels = useMemo(() => {
     return [...normalizedModels]
@@ -276,10 +245,10 @@ export function UsageCharts({
   }, [normalizedModels]);
 
   const slowestProvider = useMemo(() => {
-    return [...normalizedProviders]
+    return [...(providerBreakdown ?? [])]
       .filter((p) => p.p95LatencyMs > 0 || p.avgLatencyMs > 0)
       .sort((a, b) => b.p95LatencyMs - a.p95LatencyMs || b.avgLatencyMs - a.avgLatencyMs)[0] ?? null;
-  }, [normalizedProviders]);
+  }, [providerBreakdown]);
 
   const slowestModel = slowestModels[0] ?? null;
   const topProblemModel = failingModels[0] ?? null;
@@ -725,22 +694,11 @@ export function UsageCharts({
                         </div>
                       </div>
                       {(prov.p95LatencyMs > 0 || prov.avgLatencyMs > 0) && (
-                        <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                          <div
-                            className="absolute inset-y-0 left-0 rounded-full opacity-45"
-                            style={{
-                              width: `${Math.max(p95Pct, 2)}%`,
-                              backgroundColor: prov.p95LatencyMs >= 20_000 ? CHART_COLORS.rose : CHART_COLORS.warning,
-                            }}
-                          />
-                          <div
-                            className="absolute inset-y-0 left-0 rounded-full"
-                            style={{
-                              width: `${Math.max(avgPct, 1.5)}%`,
-                              backgroundColor: CHART_COLORS.primary,
-                            }}
-                          />
-                        </div>
+                        <LayeredLatencyBar
+                          avgPct={avgPct}
+                          p95Pct={p95Pct}
+                          p95Color={prov.p95LatencyMs >= 20_000 ? CHART_COLORS.rose : CHART_COLORS.warning}
+                        />
                       )}
                     </div>
                   );
@@ -786,22 +744,7 @@ export function UsageCharts({
                             </span>
                           </div>
                         </div>
-                        <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                          <div
-                            className="absolute inset-y-0 left-0 rounded-full opacity-45"
-                            style={{
-                              width: `${Math.max(p95Pct, 2)}%`,
-                              backgroundColor: CHART_COLORS.rose,
-                            }}
-                          />
-                          <div
-                            className="absolute inset-y-0 left-0 rounded-full"
-                            style={{
-                              width: `${Math.max(avgPct, 1.5)}%`,
-                              backgroundColor: CHART_COLORS.primary,
-                            }}
-                          />
-                        </div>
+                        <LayeredLatencyBar avgPct={avgPct} p95Pct={p95Pct} p95Color={CHART_COLORS.rose} />
                       </div>
                     );
                   })}

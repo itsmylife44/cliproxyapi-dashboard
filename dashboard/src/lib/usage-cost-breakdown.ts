@@ -65,6 +65,16 @@ export interface ProviderCostEntry {
   requests: number;
 }
 
+export interface ModelFailureReasonEntry {
+  key: string;
+  status: number | null;
+  code: string | null;
+  message: string | null;
+  count: number;
+  cancelled?: boolean;
+  lastSeen?: string;
+}
+
 export interface ModelBreakdownEntry {
   model: string;
   provider?: string;
@@ -73,6 +83,7 @@ export interface ModelBreakdownEntry {
   successCount?: number;
   failureCount?: number;
   failureRate?: number;
+  failureReasons?: ModelFailureReasonEntry[];
   avgLatencyMs?: number;
   p95LatencyMs?: number;
   maxLatencyMs?: number;

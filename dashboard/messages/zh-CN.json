@@ -970,7 +970,22 @@
     "triggering": "采集中…",
     "usageTabBreakdown": "用量与延迟",
     "usageTabCost": "费用明细",
-    "usageTabEvents": "请求记录"
+    "usageTabEvents": "请求记录",
+    "slowestProvider": "最慢提供商",
+    "slowestModel": "最慢模型",
+    "topProblemModel": "主要异常模型",
+    "allModelsHealthy": "无失败请求",
+    "noLatencySamples": "无延迟样本",
+    "providerSpeedTitle": "提供商速度与健康度",
+    "modelDiagnosticsTitle": "问题模型诊断",
+    "slowestModelsTab": "响应最慢",
+    "failingModelsTab": "失败最多",
+    "sortByCost": "费用",
+    "sortBySlowest": "最慢",
+    "sortByFailures": "失败",
+    "p95Latency": "P95",
+    "failureRateLabel": "失败率 {rate}%",
+    "failedRequestsCount": "{total} 次中失败 {failed} 次"
   },
   "monitoring": {
     "pageTitle": "监控",

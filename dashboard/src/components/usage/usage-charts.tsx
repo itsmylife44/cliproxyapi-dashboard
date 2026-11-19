@@ -16,6 +16,11 @@ import {
   ReferenceLine,
 } from "recharts";
 import { CHART_COLORS, useChartTheme, formatCompact, formatDateShort } from "@/components/ui/chart-theme";
+import {
+  inferModelProvider,
+  type ModelBreakdownEntry,
+  type ProviderBreakdownEntry,
+} from "@/lib/usage-cost-breakdown";
 
 interface DailyBreakdown {
   date: string;
@@ -35,6 +40,7 @@ interface LatencyPoint {
   keyName: string;
   username?: string;
   model: string;
+  provider?: string;
   latencyMs: number;
   failed: boolean;
 }
@@ -51,9 +57,13 @@ interface UsageChartsProps {
   bucketGranularity?: "hour" | "day";
   latencySeries?: LatencyPoint[];
   latencySummary?: LatencySummary;
+  modelBreakdown?: ModelBreakdownEntry[];
+  providerBreakdown?: ProviderBreakdownEntry[];
 }
 
 type BreakdownMetric = "tokens" | "requests";
+type ProviderSortMode = "p95" | "avg" | "failures";
+type ModelDiagnosticMode = "slowest" | "failures";
 
 function formatBucketTick(value: string, isHourly: boolean): string {
   if (isHourly && value.includes("T")) {
@@ -69,7 +79,13 @@ function formatBucketTooltip(value: string, isHourly: boolean): string {
   if (isHourly && value.includes("T")) {
     const dt = new Date(value);
     if (!Number.isNaN(dt.getTime())) {
-      return dt.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+      return dt.toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
     }
   }
   return formatDateShort(value.slice(0, 10));
@@ -97,15 +113,30 @@ function formatLatencyValue(value: number): string {
   return `${Math.round(value).toLocaleString()} ms`;
 }
 
+function formatDurationCompact(ms: number): string {
+  if (ms <= 0) return "\u2014";
+  if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
+  return `${Math.round(ms)}ms`;
+}
+
+function truncateAxisLabel(value: string, maxLen = 18): string {
+  const str = String(value);
+  return str.length > maxLen ? `${str.slice(0, maxLen - 1)}\u2026` : str;
+}
+
 export function UsageCharts({
   dailyBreakdown,
   bucketGranularity,
   latencySeries,
   latencySummary,
+  modelBreakdown,
+  providerBreakdown,
 }: UsageChartsProps) {
   const t = useTranslations("usage");
   const uid = useId();
   const [metric, setMetric] = useState<BreakdownMetric>("tokens");
+  const [providerSort, setProviderSort] = useState<ProviderSortMode>("p95");
+  const [modelMode, setModelMode] = useState<ModelDiagnosticMode>("slowest");
   const { axisTickStyle, tooltipStyle, tokens } = useChartTheme();
   const gradInputId = `${uid}-gradInput`;
   const gradCachedId = `${uid}-gradCached`;
@@ -124,211 +155,948 @@ export function UsageCharts({
     [dailyBreakdown]
   );
 
+  const normalizedModels = useMemo(() => {
+    return (modelBreakdown ?? []).map((item) => {
+      const requests = item.requests ?? 0;
+      const failureCount = item.failureCount ?? 0;
+      const successCount = item.successCount ?? Math.max(0, requests - failureCount);
+      const failureRate =
+        item.failureRate ?? (requests > 0 ? Number(((failureCount / requests) * 100).toFixed(1)) : 0);
+      return {
+        model: item.model,
+        provider: inferModelProvider(item.model, item.provider),
+        requests,
+        tokens: item.tokens ?? 0,
+        successCount,
+        failureCount,
+        failureRate,
+        avgLatencyMs: item.avgLatencyMs ?? 0,
+        p95LatencyMs: item.p95LatencyMs ?? item.avgLatencyMs ?? 0,
+        maxLatencyMs: item.maxLatencyMs ?? item.p95LatencyMs ?? item.avgLatencyMs ?? 0,
+        latencySampleCount: item.latencySampleCount ?? 0,
+      };
+    });
+  }, [modelBreakdown]);
+
+  const normalizedProviders = useMemo(() => {
+    if (providerBreakdown && providerBreakdown.length > 0) {
+      return providerBreakdown;
+    }
+    const map = new Map<string, {
+      models: number;
+      requests: number;
+      tokens: number;
+      successCount: number;
+      failureCount: number;
+      weightedLatencySum: number;
+      latencySamples: number;
+      maxP95: number;
+      maxMs: number;
+    }>();
+    for (const m of normalizedModels) {
+      const entry = map.get(m.provider) ?? {
+        models: 0,
+        requests: 0,
+        tokens: 0,
+        successCount: 0,
+        failureCount: 0,
+        weightedLatencySum: 0,
+        latencySamples: 0,
+        maxP95: 0,
+        maxMs: 0,
+      };
+      entry.models += 1;
+      entry.requests += m.requests;
+      entry.tokens += m.tokens;
+      entry.successCount += m.successCount;
+      entry.failureCount += m.failureCount;
+      const samples = m.latencySampleCount > 0 ? m.latencySampleCount : (m.avgLatencyMs > 0 ? m.requests : 0);
+      entry.weightedLatencySum += m.avgLatencyMs * samples;
+      entry.latencySamples += samples;
+      entry.maxP95 = Math.max(entry.maxP95, m.p95LatencyMs);
+      entry.maxMs = Math.max(entry.maxMs, m.maxLatencyMs);
+      map.set(m.provider, entry);
+    }
+    return Array.from(map.entries()).map(([provider, data]): ProviderBreakdownEntry => ({
+      provider,
+      models: data.models,
+      requests: data.requests,
+      tokens: data.tokens,
+      successCount: data.successCount,
+      failureCount: data.failureCount,
+      failureRate: data.requests > 0 ? Number(((data.failureCount / data.requests) * 100).toFixed(1)) : 0,
+      avgLatencyMs: data.latencySamples > 0 ? Math.round(data.weightedLatencySum / data.latencySamples) : 0,
+      p95LatencyMs: data.maxP95,
+      maxLatencyMs: data.maxMs,
+      latencySampleCount: data.latencySamples,
+    }));
+  }, [providerBreakdown, normalizedModels]);
+
+  const sortedProviders = useMemo(() => {
+    const list = [...normalizedProviders];
+    if (providerSort === "avg") {
+      return list.sort((a, b) => b.avgLatencyMs - a.avgLatencyMs || b.p95LatencyMs - a.p95LatencyMs || b.requests - a.requests);
+    }
+    if (providerSort === "failures") {
+      return list.sort((a, b) => b.failureCount - a.failureCount || b.failureRate - a.failureRate || b.requests - a.requests);
+    }
+    return list.sort((a, b) => b.p95LatencyMs - a.p95LatencyMs || b.avgLatencyMs - a.avgLatencyMs || b.requests - a.requests);
+  }, [normalizedProviders, providerSort]);
+
+  const slowestModels = useMemo(() => {
+    return [...normalizedModels]
+      .filter((m) => m.p95LatencyMs > 0 || m.avgLatencyMs > 0)
+      .sort((a, b) => b.p95LatencyMs - a.p95LatencyMs || b.avgLatencyMs - a.avgLatencyMs || b.requests - a.requests)
+      .slice(0, 8);
+  }, [normalizedModels]);
+
+  const failingModels = useMemo(() => {
+    return [...normalizedModels]
+      .filter((m) => m.failureCount > 0)
+      .sort((a, b) => b.failureCount - a.failureCount || b.failureRate - a.failureRate || b.requests - a.requests)
+      .slice(0, 8);
+  }, [normalizedModels]);
+
+  const slowestProvider = useMemo(() => {
+    return [...normalizedProviders]
+      .filter((p) => p.p95LatencyMs > 0 || p.avgLatencyMs > 0)
+      .sort((a, b) => b.p95LatencyMs - a.p95LatencyMs || b.avgLatencyMs - a.avgLatencyMs)[0] ?? null;
+  }, [normalizedProviders]);
+
+  const slowestModel = slowestModels[0] ?? null;
+  const topProblemModel = failingModels[0] ?? null;
+
   const isHourly = bucketGranularity === "hour" || series.some((d) => d.date.includes("T"));
   const hasCacheWrites = series.some((d) => d.cacheWriteTokens > 0);
   const hasBreakdown = series.length > 0;
   const hasLatency = Boolean(latencySeries && latencySeries.length > 0);
+  const hasProviderDiagnostics = sortedProviders.length > 0;
+  const hasModelDiagnostics = normalizedModels.length > 0;
 
-  if (!hasBreakdown && !hasLatency) return <p className="py-6 text-center text-sm text-[var(--text-muted)]">{t("noUsageData")}</p>;
+  if (!hasBreakdown && !hasLatency && !hasProviderDiagnostics && !hasModelDiagnostics) {
+    return <p className="py-6 text-center text-sm text-[var(--text-muted)]">{t("noUsageData")}</p>;
+  }
+
+  const maxProviderLatency = Math.max(
+    1,
+    ...sortedProviders.map((p) => Math.max(p.p95LatencyMs, p.avgLatencyMs))
+  );
+  const maxSlowModelLatency = Math.max(
+    1,
+    ...slowestModels.map((m) => Math.max(m.p95LatencyMs, m.avgLatencyMs))
+  );
 
   return (
-    <div className={`grid grid-cols-1 gap-8 ${hasBreakdown && hasLatency ? "lg:grid-cols-2" : ""}`}>
-      {/* ── Unified Usage Breakdown (Tokens | Requests) ───── */}
-      {hasBreakdown && (
-        <section className="min-w-0">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              {t("usageBreakdown")}
-            </h2>
-            <div
-              role="group"
-              aria-label={t("usageBreakdown")}
-              className="inline-flex rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 p-0.5"
-            >
-              <button
-                type="button"
-                aria-pressed={metric === "tokens"}
-                onClick={() => setMetric("tokens")}
-                className={`cursor-pointer rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                  metric === "tokens"
-                    ? "bg-[var(--surface-base)] text-[var(--text-primary)] shadow-xs"
-                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                }`}
-              >
-                {t("tokens")}
-              </button>
-              <button
-                type="button"
-                aria-pressed={metric === "requests"}
-                onClick={() => setMetric("requests")}
-                className={`cursor-pointer rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                  metric === "requests"
-                    ? "bg-[var(--surface-base)] text-[var(--text-primary)] shadow-xs"
-                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                }`}
-              >
-                {t("requests")}
-              </button>
-            </div>
-          </div>
-
-          <ResponsiveContainer width="100%" height={236} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 220 }}>
-            {metric === "requests" ? (
-              <BarChart data={series} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={(v) => formatBucketTick(String(v), isHourly)}
-                  tick={axisTickStyle}
-                  tickLine={false}
-                  axisLine={false}
-                  minTickGap={16}
-                />
-                <YAxis tickFormatter={formatCompact} tick={axisTickStyle} tickLine={false} axisLine={false} />
-                <Tooltip
-                  {...tooltipStyle}
-                  labelFormatter={(label) => formatBucketTooltip(String(label), isHourly)}
-                  formatter={(value, name) => [formatCompact(Number(value)), name]}
-                />
-                <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
-                <Bar dataKey="success" name={t("success")} stackId="req" fill={CHART_COLORS.success} radius={[0, 0, 0, 0]} maxBarSize={24} />
-                <Bar dataKey="failure" name={t("failed")} stackId="req" fill={CHART_COLORS.rose} radius={[3, 3, 0, 0]} maxBarSize={24} />
-              </BarChart>
-            ) : series.length === 1 ? (
-              <BarChart data={series} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} vertical={false} />
-                <XAxis dataKey="date" tickFormatter={(v) => formatBucketTick(String(v), isHourly)} tick={axisTickStyle} tickLine={false} axisLine={false} />
-                <YAxis tickFormatter={formatCompact} tick={axisTickStyle} tickLine={false} axisLine={false} />
-                <Tooltip
-                  {...tooltipStyle}
-                  labelFormatter={(label) => formatBucketTooltip(String(label), isHourly)}
-                  formatter={(value, name) => [formatCompact(Number(value)), name]}
-                />
-                <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
-                <Bar dataKey="uncachedInputTokens" name={t("input")} stackId="tok" fill={CHART_COLORS.primary} maxBarSize={32} />
-                <Bar dataKey="cachedTokens" name={t("cached")} stackId="tok" fill={CHART_COLORS.violet} maxBarSize={32} />
-                {hasCacheWrites ? <Bar dataKey="cacheWriteTokens" name={t("cacheWrite")} stackId="tok" fill={CHART_COLORS.warning} maxBarSize={32} /> : null}
-                <Bar dataKey="outputTokens" name={t("output")} stackId="tok" fill={CHART_COLORS.success} radius={[3, 3, 0, 0]} maxBarSize={32} />
-              </BarChart>
-            ) : (
-              <AreaChart data={series} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-                <defs>
-                  <linearGradient id={gradInputId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={CHART_COLORS.primary} stopOpacity={0.28} />
-                    <stop offset="100%" stopColor={CHART_COLORS.primary} stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id={gradCachedId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={CHART_COLORS.violet} stopOpacity={0.28} />
-                    <stop offset="100%" stopColor={CHART_COLORS.violet} stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id={gradCacheWriteId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={CHART_COLORS.warning} stopOpacity={0.28} />
-                    <stop offset="100%" stopColor={CHART_COLORS.warning} stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id={gradOutputId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={CHART_COLORS.success} stopOpacity={0.28} />
-                    <stop offset="100%" stopColor={CHART_COLORS.success} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={(v) => formatBucketTick(String(v), isHourly)}
-                  tick={axisTickStyle}
-                  tickLine={false}
-                  axisLine={false}
-                  minTickGap={16}
-                />
-                <YAxis tickFormatter={formatCompact} tick={axisTickStyle} tickLine={false} axisLine={false} />
-                <Tooltip
-                  {...tooltipStyle}
-                  labelFormatter={(label) => formatBucketTooltip(String(label), isHourly)}
-                  formatter={(value, name) => [formatCompact(Number(value)), name]}
-                />
-                <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
-                <Area type="monotone" dataKey="uncachedInputTokens" name={t("input")} stackId="1" stroke={CHART_COLORS.primary} fill={`url(#${gradInputId})`} strokeWidth={1.5} />
-                <Area type="monotone" dataKey="cachedTokens" name={t("cached")} stackId="1" stroke={CHART_COLORS.violet} fill={`url(#${gradCachedId})`} strokeWidth={1.5} />
-                {hasCacheWrites ? (
-                  <Area type="monotone" dataKey="cacheWriteTokens" name={t("cacheWrite")} stackId="1" stroke={CHART_COLORS.warning} fill={`url(#${gradCacheWriteId})`} strokeWidth={1.5} />
-                ) : null}
-                <Area type="monotone" dataKey="outputTokens" name={t("output")} stackId="1" stroke={CHART_COLORS.success} fill={`url(#${gradOutputId})`} strokeWidth={1.5} />
-              </AreaChart>
-            )}
-          </ResponsiveContainer>
-        </section>
-      )}
-
-      {/* ── Request Latency (with inline Avg / P95 / Max) ─── */}
-      {hasLatency && latencySeries && (
-        <section className="min-w-0">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              {t("requestLatency")}
-            </h2>
-            {latencySummary && latencySummary.sampleCount > 0 ? (
-              <div className="flex flex-wrap items-center gap-3 text-[11px] tabular-nums">
-                <span className="text-[var(--text-secondary)]">
-                  {t("avgLatency")}: <strong className="font-semibold text-[var(--text-primary)]">{formatLatencyValue(latencySummary.averageMs)}</strong>
-                </span>
-                <span className="text-amber-700 dark:text-amber-400">
-                  P95: <strong className="font-semibold">{formatLatencyValue(latencySummary.p95Ms)}</strong>
-                </span>
-                <span className="text-rose-600 dark:text-rose-400">
-                  {t("slowestRequest")}: <strong className="font-semibold">{formatLatencyValue(latencySummary.maxMs)}</strong>
-                </span>
+    <div className="space-y-6">
+      {/* ── Diagnostic Triage Spotlight (Slowest Provider · Slowest Model · Top Problem Model) ── */}
+      {(slowestProvider || slowestModel || topProblemModel) && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {/* Card 1: Slowest Provider */}
+          <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 px-3.5 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              {t("slowestProvider")}
+            </p>
+            {slowestProvider ? (
+              <div className="mt-1 space-y-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                    {slowestProvider.provider}
+                  </span>
+                  <span className="shrink-0 font-mono text-xs font-semibold tabular-nums text-amber-700 dark:text-amber-400">
+                    {t("p95Latency")} {formatDurationCompact(slowestProvider.p95LatencyMs)}
+                  </span>
+                </div>
+                <p className="text-[11px] tabular-nums text-[var(--text-muted)]">
+                  {t("avgLatency")} <strong className="font-medium text-[var(--text-secondary)]">{formatDurationCompact(slowestProvider.avgLatencyMs)}</strong>
+                  {" · "}
+                  {t("providerStats", {
+                    models: slowestProvider.models,
+                    requests: formatCompact(slowestProvider.requests),
+                  })}
+                </p>
               </div>
             ) : (
-              <span className="text-[11px] text-[var(--text-muted)]">{t("recentRequestsLatency")}</span>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">{t("noLatencySamples")}</p>
             )}
           </div>
 
-          <ResponsiveContainer width="100%" height={236} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 220 }}>
-            <AreaChart data={latencySeries} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
-              <defs>
-                <linearGradient id={gradLatencyId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={CHART_COLORS.warning} stopOpacity={0.28} />
-                  <stop offset="100%" stopColor={CHART_COLORS.warning} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} vertical={false} />
-              <XAxis
-                dataKey="timestamp"
-                tickFormatter={formatLatencyTick}
-                tick={axisTickStyle}
-                tickLine={false}
-                axisLine={false}
-                minTickGap={20}
-              />
-              <YAxis
-                tickFormatter={(value) => `${formatCompact(Number(value))}ms`}
-                tick={axisTickStyle}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip
-                {...tooltipStyle}
-                labelFormatter={(label, payload) => {
-                  const point = payload?.[0]?.payload as LatencyPoint | undefined;
-                  const status = point == null ? t("unknownProvider") : point.failed ? t("failed") : t("success");
-                  return `${formatLatencyLabel(String(label))} • ${point?.model ?? t("unknownProvider")} • ${status}`;
-                }}
-                formatter={(value) => [formatLatencyValue(Number(value)), t("latency")]}
-              />
-              {latencySummary && latencySummary.p95Ms > 0 ? (
-                <ReferenceLine y={latencySummary.p95Ms} stroke={CHART_COLORS.rose} strokeDasharray="4 4" ifOverflow="extendDomain" />
-              ) : null}
-              <Area
-                type="monotone"
-                dataKey="latencyMs"
-                name={t("latency")}
-                stroke={CHART_COLORS.warning}
-                fill={`url(#${gradLatencyId})`}
-                strokeWidth={2}
-                activeDot={{ r: 4, fill: CHART_COLORS.warning }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </section>
+          {/* Card 2: Slowest Model */}
+          <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 px-3.5 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              {t("slowestModel")}
+            </p>
+            {slowestModel ? (
+              <div className="mt-1 space-y-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span
+                    className="truncate font-mono text-xs font-semibold text-[var(--text-primary)]"
+                    title={slowestModel.model}
+                  >
+                    {slowestModel.model}
+                  </span>
+                  <span className="shrink-0 font-mono text-xs font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                    {t("p95Latency")} {formatDurationCompact(slowestModel.p95LatencyMs)}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] tabular-nums text-[var(--text-muted)]">
+                  <span className="inline-block rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
+                    {slowestModel.provider}
+                  </span>
+                  <span>
+                    {t("avgLatency")} <strong className="font-medium text-[var(--text-secondary)]">{formatDurationCompact(slowestModel.avgLatencyMs)}</strong>
+                  </span>
+                  <span>·</span>
+                  <span>{formatCompact(slowestModel.requests)} {t("requests").toLowerCase()}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-1 text-xs text-[var(--text-muted)]">{t("noLatencySamples")}</p>
+            )}
+          </div>
+
+          {/* Card 3: Top Problem Model (Failures) */}
+          <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 px-3.5 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              {t("topProblemModel")}
+            </p>
+            {topProblemModel ? (
+              <div className="mt-1 space-y-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span
+                    className="truncate font-mono text-xs font-semibold text-[var(--text-primary)]"
+                    title={topProblemModel.model}
+                  >
+                    {topProblemModel.model}
+                  </span>
+                  <span className="shrink-0 font-mono text-xs font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                    {t("failureRateLabel", { rate: topProblemModel.failureRate })}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] tabular-nums text-[var(--text-muted)]">
+                  <span className="inline-block rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
+                    {topProblemModel.provider}
+                  </span>
+                  <span>
+                    {t("failedRequestsCount", {
+                      failed: topProblemModel.failureCount.toLocaleString(),
+                      total: topProblemModel.requests.toLocaleString(),
+                    })}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                {t("allModelsHealthy")}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Primary Diagnostic Charts: Provider Speed & Problem Models ── */}
+      {(hasProviderDiagnostics || hasModelDiagnostics) && (
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          {/* Left: Provider Speed & Health */}
+          {hasProviderDiagnostics && (
+            <section className="min-w-0 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                  {t("providerSpeedTitle")}
+                </h2>
+                <div
+                  role="group"
+                  aria-label={t("providerSpeedTitle")}
+                  className="inline-flex rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 p-0.5"
+                >
+                  {(
+                    [
+                      { id: "p95", label: t("p95Latency") },
+                      { id: "avg", label: t("avgLatency") },
+                      { id: "failures", label: t("sortByFailures") },
+                    ] as const
+                  ).map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      aria-pressed={providerSort === item.id}
+                      onClick={() => setProviderSort(item.id)}
+                      className={`cursor-pointer rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                        providerSort === item.id
+                          ? "bg-[var(--surface-base)] text-[var(--text-primary)] shadow-xs"
+                          : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {sortedProviders.some((p) => p.p95LatencyMs > 0 || p.avgLatencyMs > 0) && (
+                <ResponsiveContainer
+                  width="100%"
+                  height={Math.max(170, Math.min(260, sortedProviders.length * 36 + 32))}
+                  minWidth={0}
+                  minHeight={0}
+                  initialDimension={{ width: 320, height: 200 }}
+                >
+                  <BarChart
+                    layout="vertical"
+                    data={sortedProviders.slice(0, 8)}
+                    margin={{ top: 4, right: 12, left: 4, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} horizontal={false} />
+                    <YAxis
+                      type="category"
+                      dataKey="provider"
+                      width={88}
+                      tick={axisTickStyle}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => truncateAxisLabel(String(v), 14)}
+                    />
+                    <XAxis
+                      type="number"
+                      tick={axisTickStyle}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => formatDurationCompact(Number(v))}
+                    />
+                    <Tooltip
+                      {...tooltipStyle}
+                      formatter={(value, name) => [formatLatencyValue(Number(value)), name]}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
+                    <Bar
+                      dataKey="avgLatencyMs"
+                      name={t("avgLatency")}
+                      fill={CHART_COLORS.primary}
+                      radius={[0, 3, 3, 0]}
+                      maxBarSize={14}
+                    />
+                    <Bar
+                      dataKey="p95LatencyMs"
+                      name={t("p95Latency")}
+                      fill={CHART_COLORS.warning}
+                      radius={[0, 3, 3, 0]}
+                      maxBarSize={14}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+
+              {/* Direct-Comparison Provider Telemetry Rows */}
+              <div className="divide-y divide-[var(--surface-border)]/60 border-t border-[var(--surface-border)]">
+                {sortedProviders.map((prov) => {
+                  const p95Pct = Math.min(100, (prov.p95LatencyMs / maxProviderLatency) * 100);
+                  const avgPct = Math.min(100, (prov.avgLatencyMs / maxProviderLatency) * 100);
+                  return (
+                    <div key={prov.provider} className="space-y-1.5 py-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="truncate font-medium text-[var(--text-primary)]">
+                            {prov.provider}
+                          </span>
+                          <span className="text-[11px] tabular-nums text-[var(--text-muted)]">
+                            {t("providerStats", {
+                              models: prov.models,
+                              requests: formatCompact(prov.requests),
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
+                          {prov.failureCount > 0 && (
+                            <span
+                              className={`rounded-full border px-1.5 py-0 text-[10px] font-semibold ${
+                                prov.failureRate >= 15
+                                  ? "border-rose-500/25 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                                  : "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                              }`}
+                            >
+                              {t("failureRateLabel", { rate: prov.failureRate })}
+                            </span>
+                          )}
+                          <span className="font-mono text-[var(--text-secondary)]">
+                            {t("avgLatency")} <strong className="text-[var(--text-primary)]">{formatDurationCompact(prov.avgLatencyMs)}</strong>
+                          </span>
+                          <span className="font-mono text-amber-700 dark:text-amber-400">
+                            {t("p95Latency")} <strong>{formatDurationCompact(prov.p95LatencyMs)}</strong>
+                          </span>
+                        </div>
+                      </div>
+                      {(prov.p95LatencyMs > 0 || prov.avgLatencyMs > 0) && (
+                        <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                          <div
+                            className="absolute inset-y-0 left-0 rounded-full opacity-45"
+                            style={{
+                              width: `${Math.max(p95Pct, 2)}%`,
+                              backgroundColor: prov.p95LatencyMs >= 20_000 ? CHART_COLORS.rose : CHART_COLORS.warning,
+                            }}
+                          />
+                          <div
+                            className="absolute inset-y-0 left-0 rounded-full"
+                            style={{
+                              width: `${Math.max(avgPct, 1.5)}%`,
+                              backgroundColor: CHART_COLORS.primary,
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Right: Model Bottlenecks (Slowest Models vs Most Failures) */}
+          {hasModelDiagnostics && (
+            <section className="min-w-0 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                  {t("modelDiagnosticsTitle")}
+                </h2>
+                <div
+                  role="group"
+                  aria-label={t("modelDiagnosticsTitle")}
+                  className="inline-flex rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 p-0.5"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={modelMode === "slowest"}
+                    onClick={() => setModelMode("slowest")}
+                    className={`cursor-pointer rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                      modelMode === "slowest"
+                        ? "bg-[var(--surface-base)] text-[var(--text-primary)] shadow-xs"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {t("slowestModelsTab")}
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={modelMode === "failures"}
+                    onClick={() => setModelMode("failures")}
+                    className={`cursor-pointer rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                      modelMode === "failures"
+                        ? "bg-[var(--surface-base)] text-[var(--text-primary)] shadow-xs"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {t("failingModelsTab")}
+                  </button>
+                </div>
+              </div>
+
+              {modelMode === "slowest" ? (
+                slowestModels.length > 0 ? (
+                  <>
+                    <ResponsiveContainer
+                      width="100%"
+                      height={Math.max(170, Math.min(260, slowestModels.length * 32 + 32))}
+                      minWidth={0}
+                      minHeight={0}
+                      initialDimension={{ width: 320, height: 200 }}
+                    >
+                      <BarChart
+                        layout="vertical"
+                        data={slowestModels}
+                        margin={{ top: 4, right: 12, left: 4, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} horizontal={false} />
+                        <YAxis
+                          type="category"
+                          dataKey="model"
+                          width={120}
+                          tick={axisTickStyle}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(v) => truncateAxisLabel(String(v), 18)}
+                        />
+                        <XAxis
+                          type="number"
+                          tick={axisTickStyle}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(v) => formatDurationCompact(Number(v))}
+                        />
+                        <Tooltip
+                          {...tooltipStyle}
+                          formatter={(value, name) => [formatLatencyValue(Number(value)), name]}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
+                        <Bar
+                          dataKey="avgLatencyMs"
+                          name={t("avgLatency")}
+                          fill={CHART_COLORS.primary}
+                          radius={[0, 3, 3, 0]}
+                          maxBarSize={12}
+                        />
+                        <Bar
+                          dataKey="p95LatencyMs"
+                          name={t("p95Latency")}
+                          fill={CHART_COLORS.rose}
+                          radius={[0, 3, 3, 0]}
+                          maxBarSize={12}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+
+                    <div className="divide-y divide-[var(--surface-border)]/60 border-t border-[var(--surface-border)]">
+                      {slowestModels.map((m) => {
+                        const p95Pct = Math.min(100, (m.p95LatencyMs / maxSlowModelLatency) * 100);
+                        const avgPct = Math.min(100, (m.avgLatencyMs / maxSlowModelLatency) * 100);
+                        return (
+                          <div key={m.model} className="space-y-1.5 py-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                              <div className="flex min-w-0 items-center gap-1.5">
+                                <span
+                                  className="truncate font-mono text-[11px] font-medium text-[var(--text-primary)]"
+                                  title={m.model}
+                                >
+                                  {m.model}
+                                </span>
+                                <span className="shrink-0 rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
+                                  {m.provider}
+                                </span>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
+                                {m.failureCount > 0 && (
+                                  <span className="rounded-full border border-rose-500/25 bg-rose-500/10 px-1.5 py-0 text-[10px] font-semibold text-rose-600 dark:text-rose-400">
+                                    {t("failureRateLabel", { rate: m.failureRate })}
+                                  </span>
+                                )}
+                                <span className="font-mono text-[var(--text-secondary)]">
+                                  {t("avgLatency")} <strong className="text-[var(--text-primary)]">{formatDurationCompact(m.avgLatencyMs)}</strong>
+                                </span>
+                                <span className="font-mono text-rose-600 dark:text-rose-400">
+                                  {t("p95Latency")} <strong>{formatDurationCompact(m.p95LatencyMs)}</strong>
+                                </span>
+                              </div>
+                            </div>
+                            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                              <div
+                                className="absolute inset-y-0 left-0 rounded-full opacity-45"
+                                style={{
+                                  width: `${Math.max(p95Pct, 2)}%`,
+                                  backgroundColor: CHART_COLORS.rose,
+                                }}
+                              />
+                              <div
+                                className="absolute inset-y-0 left-0 rounded-full"
+                                style={{
+                                  width: `${Math.max(avgPct, 1.5)}%`,
+                                  backgroundColor: CHART_COLORS.primary,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <p className="py-8 text-center text-xs text-[var(--text-muted)]">{t("noLatencySamples")}</p>
+                )
+              ) : failingModels.length > 0 ? (
+                <>
+                  <ResponsiveContainer
+                    width="100%"
+                    height={Math.max(170, Math.min(260, failingModels.length * 32 + 32))}
+                    minWidth={0}
+                    minHeight={0}
+                    initialDimension={{ width: 320, height: 200 }}
+                  >
+                    <BarChart
+                      layout="vertical"
+                      data={failingModels}
+                      margin={{ top: 4, right: 12, left: 4, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} horizontal={false} />
+                      <YAxis
+                        type="category"
+                        dataKey="model"
+                        width={120}
+                        tick={axisTickStyle}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v) => truncateAxisLabel(String(v), 18)}
+                      />
+                      <XAxis
+                        type="number"
+                        tick={axisTickStyle}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={formatCompact}
+                      />
+                      <Tooltip
+                        {...tooltipStyle}
+                        formatter={(value, name) => [Number(value).toLocaleString(), name]}
+                      />
+                      <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
+                      <Bar
+                        dataKey="failureCount"
+                        name={t("failed")}
+                        stackId="health"
+                        fill={CHART_COLORS.rose}
+                        maxBarSize={14}
+                      />
+                      <Bar
+                        dataKey="successCount"
+                        name={t("success")}
+                        stackId="health"
+                        fill={CHART_COLORS.success}
+                        radius={[0, 3, 3, 0]}
+                        maxBarSize={14}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+
+                  <div className="divide-y divide-[var(--surface-border)]/60 border-t border-[var(--surface-border)]">
+                    {failingModels.map((m) => (
+                      <div key={m.model} className="space-y-1.5 py-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <span
+                              className="truncate font-mono text-[11px] font-medium text-[var(--text-primary)]"
+                              title={m.model}
+                            >
+                              {m.model}
+                            </span>
+                            <span className="shrink-0 rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
+                              {m.provider}
+                            </span>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
+                            <span className="text-[var(--text-muted)]">
+                              {t("failedRequestsCount", {
+                                failed: m.failureCount.toLocaleString(),
+                                total: m.requests.toLocaleString(),
+                              })}
+                            </span>
+                            <span
+                              className={`rounded-full border px-1.5 py-0 text-[10px] font-semibold ${
+                                m.failureRate >= 15
+                                  ? "border-rose-500/25 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                                  : "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                              }`}
+                            >
+                              {t("failureRateLabel", { rate: m.failureRate })}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                          <div
+                            className="h-full bg-rose-500"
+                            style={{ width: `${Math.min(100, Math.max(m.failureRate, 2))}%` }}
+                          />
+                          <div
+                            className="h-full bg-emerald-500/50"
+                            style={{ width: `${Math.max(0, 100 - m.failureRate)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="py-8 text-center text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                  {t("allModelsHealthy")}
+                </p>
+              )}
+            </section>
+          )}
+        </div>
+      )}
+
+      {/* ── Time-Series Volume & Recent Request Latency Pulse ── */}
+      {(hasBreakdown || hasLatency) && (
+        <div
+          className={`grid grid-cols-1 gap-8 border-t border-[var(--surface-border)] pt-6 ${
+            hasBreakdown && hasLatency ? "lg:grid-cols-2" : ""
+          }`}
+        >
+          {/* Unified Usage Breakdown (Tokens | Requests) */}
+          {hasBreakdown && (
+            <section className="min-w-0">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                  {t("usageBreakdown")}
+                </h2>
+                <div
+                  role="group"
+                  aria-label={t("usageBreakdown")}
+                  className="inline-flex rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 p-0.5"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={metric === "tokens"}
+                    onClick={() => setMetric("tokens")}
+                    className={`cursor-pointer rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                      metric === "tokens"
+                        ? "bg-[var(--surface-base)] text-[var(--text-primary)] shadow-xs"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {t("tokens")}
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={metric === "requests"}
+                    onClick={() => setMetric("requests")}
+                    className={`cursor-pointer rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                      metric === "requests"
+                        ? "bg-[var(--surface-base)] text-[var(--text-primary)] shadow-xs"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {t("requests")}
+                  </button>
+                </div>
+              </div>
+
+              <ResponsiveContainer
+                width="100%"
+                height={236}
+                minWidth={0}
+                minHeight={0}
+                initialDimension={{ width: 320, height: 220 }}
+              >
+                {metric === "requests" ? (
+                  <BarChart data={series} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(v) => formatBucketTick(String(v), isHourly)}
+                      tick={axisTickStyle}
+                      tickLine={false}
+                      axisLine={false}
+                      minTickGap={16}
+                    />
+                    <YAxis tickFormatter={formatCompact} tick={axisTickStyle} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      {...tooltipStyle}
+                      labelFormatter={(label) => formatBucketTooltip(String(label), isHourly)}
+                      formatter={(value, name) => [formatCompact(Number(value)), name]}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
+                    <Bar
+                      dataKey="success"
+                      name={t("success")}
+                      stackId="req"
+                      fill={CHART_COLORS.success}
+                      radius={[0, 0, 0, 0]}
+                      maxBarSize={24}
+                    />
+                    <Bar
+                      dataKey="failure"
+                      name={t("failed")}
+                      stackId="req"
+                      fill={CHART_COLORS.rose}
+                      radius={[3, 3, 0, 0]}
+                      maxBarSize={24}
+                    />
+                  </BarChart>
+                ) : series.length === 1 ? (
+                  <BarChart data={series} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(v) => formatBucketTick(String(v), isHourly)}
+                      tick={axisTickStyle}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis tickFormatter={formatCompact} tick={axisTickStyle} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      {...tooltipStyle}
+                      labelFormatter={(label) => formatBucketTooltip(String(label), isHourly)}
+                      formatter={(value, name) => [formatCompact(Number(value)), name]}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
+                    <Bar dataKey="uncachedInputTokens" name={t("input")} stackId="tok" fill={CHART_COLORS.primary} maxBarSize={32} />
+                    <Bar dataKey="cachedTokens" name={t("cached")} stackId="tok" fill={CHART_COLORS.violet} maxBarSize={32} />
+                    {hasCacheWrites ? (
+                      <Bar dataKey="cacheWriteTokens" name={t("cacheWrite")} stackId="tok" fill={CHART_COLORS.warning} maxBarSize={32} />
+                    ) : null}
+                    <Bar
+                      dataKey="outputTokens"
+                      name={t("output")}
+                      stackId="tok"
+                      fill={CHART_COLORS.success}
+                      radius={[3, 3, 0, 0]}
+                      maxBarSize={32}
+                    />
+                  </BarChart>
+                ) : (
+                  <AreaChart data={series} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id={gradInputId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={CHART_COLORS.primary} stopOpacity={0.28} />
+                        <stop offset="100%" stopColor={CHART_COLORS.primary} stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id={gradCachedId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={CHART_COLORS.violet} stopOpacity={0.28} />
+                        <stop offset="100%" stopColor={CHART_COLORS.violet} stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id={gradCacheWriteId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={CHART_COLORS.warning} stopOpacity={0.28} />
+                        <stop offset="100%" stopColor={CHART_COLORS.warning} stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id={gradOutputId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={CHART_COLORS.success} stopOpacity={0.28} />
+                        <stop offset="100%" stopColor={CHART_COLORS.success} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(v) => formatBucketTick(String(v), isHourly)}
+                      tick={axisTickStyle}
+                      tickLine={false}
+                      axisLine={false}
+                      minTickGap={16}
+                    />
+                    <YAxis tickFormatter={formatCompact} tick={axisTickStyle} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      {...tooltipStyle}
+                      labelFormatter={(label) => formatBucketTooltip(String(label), isHourly)}
+                      formatter={(value, name) => [formatCompact(Number(value)), name]}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 10, color: tokens.text.muted }} />
+                    <Area
+                      type="monotone"
+                      dataKey="uncachedInputTokens"
+                      name={t("input")}
+                      stackId="1"
+                      stroke={CHART_COLORS.primary}
+                      fill={`url(#${gradInputId})`}
+                      strokeWidth={1.5}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="cachedTokens"
+                      name={t("cached")}
+                      stackId="1"
+                      stroke={CHART_COLORS.violet}
+                      fill={`url(#${gradCachedId})`}
+                      strokeWidth={1.5}
+                    />
+                    {hasCacheWrites ? (
+                      <Area
+                        type="monotone"
+                        dataKey="cacheWriteTokens"
+                        name={t("cacheWrite")}
+                        stackId="1"
+                        stroke={CHART_COLORS.warning}
+                        fill={`url(#${gradCacheWriteId})`}
+                        strokeWidth={1.5}
+                      />
+                    ) : null}
+                    <Area
+                      type="monotone"
+                      dataKey="outputTokens"
+                      name={t("output")}
+                      stackId="1"
+                      stroke={CHART_COLORS.success}
+                      fill={`url(#${gradOutputId})`}
+                      strokeWidth={1.5}
+                    />
+                  </AreaChart>
+                )}
+              </ResponsiveContainer>
+            </section>
+          )}
+
+          {/* Request Latency Timeline (with inline Avg / P95 / Max) */}
+          {hasLatency && latencySeries && (
+            <section className="min-w-0">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                  {t("requestLatency")}
+                </h2>
+                {latencySummary && latencySummary.sampleCount > 0 ? (
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] tabular-nums">
+                    <span className="text-[var(--text-secondary)]">
+                      {t("avgLatency")}:{" "}
+                      <strong className="font-semibold text-[var(--text-primary)]">
+                        {formatLatencyValue(latencySummary.averageMs)}
+                      </strong>
+                    </span>
+                    <span className="text-amber-700 dark:text-amber-400">
+                      P95: <strong className="font-semibold">{formatLatencyValue(latencySummary.p95Ms)}</strong>
+                    </span>
+                    <span className="text-rose-600 dark:text-rose-400">
+                      {t("slowestRequest")}:{" "}
+                      <strong className="font-semibold">{formatLatencyValue(latencySummary.maxMs)}</strong>
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-[11px] text-[var(--text-muted)]">{t("recentRequestsLatency")}</span>
+                )}
+              </div>
+
+              <ResponsiveContainer
+                width="100%"
+                height={236}
+                minWidth={0}
+                minHeight={0}
+                initialDimension={{ width: 320, height: 220 }}
+              >
+                <AreaChart data={latencySeries} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id={gradLatencyId} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART_COLORS.warning} stopOpacity={0.28} />
+                      <stop offset="100%" stopColor={CHART_COLORS.warning} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={tokens.grid} vertical={false} />
+                  <XAxis
+                    dataKey="timestamp"
+                    tickFormatter={formatLatencyTick}
+                    tick={axisTickStyle}
+                    tickLine={false}
+                    axisLine={false}
+                    minTickGap={20}
+                  />
+                  <YAxis
+                    tickFormatter={(value) => formatDurationCompact(Number(value))}
+                    tick={axisTickStyle}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip
+                    {...tooltipStyle}
+                    labelFormatter={(label, payload) => {
+                      const point = payload?.[0]?.payload as LatencyPoint | undefined;
+                      const status = point == null ? t("unknownProvider") : point.failed ? t("failed") : t("success");
+                      const providerPrefix = point?.provider ? `${point.provider} · ` : "";
+                      return `${formatLatencyLabel(String(label))} • ${providerPrefix}${point?.model ?? t("unknownProvider")} • ${status}`;
+                    }}
+                    formatter={(value) => [formatLatencyValue(Number(value)), t("latency")]}
+                  />
+                  {latencySummary && latencySummary.p95Ms > 0 ? (
+                    <ReferenceLine
+                      y={latencySummary.p95Ms}
+                      stroke={CHART_COLORS.rose}
+                      strokeDasharray="4 4"
+                      ifOverflow="extendDomain"
+                    />
+                  ) : null}
+                  <Area
+                    type="monotone"
+                    dataKey="latencyMs"
+                    name={t("latency")}
+                    stroke={CHART_COLORS.warning}
+                    fill={`url(#${gradLatencyId})`}
+                    strokeWidth={2}
+                    activeDot={{ r: 4, fill: CHART_COLORS.warning }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </section>
+          )}
+        </div>
       )}
     </div>
   );

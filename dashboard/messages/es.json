@@ -970,7 +970,22 @@
     "triggering": "Recolectando...",
     "usageTabBreakdown": "Desglose y latencia",
     "usageTabCost": "Registro de costos",
-    "usageTabEvents": "Eventos de solicitud"
+    "usageTabEvents": "Eventos de solicitud",
+    "slowestProvider": "Proveedor más lento",
+    "slowestModel": "Modelo más lento",
+    "topProblemModel": "Modelo con más fallos",
+    "allModelsHealthy": "Sin solicitudes fallidas",
+    "noLatencySamples": "Sin muestras de latencia",
+    "providerSpeedTitle": "Velocidad y salud por proveedor",
+    "modelDiagnosticsTitle": "Modelos con problemas",
+    "slowestModelsTab": "Más lentos",
+    "failingModelsTab": "Más fallos",
+    "sortByCost": "Coste",
+    "sortBySlowest": "Más lentos",
+    "sortByFailures": "Fallos",
+    "p95Latency": "P95",
+    "failureRateLabel": "{rate}% fallidas",
+    "failedRequestsCount": "{failed} de {total} fallidas"
   },
   "monitoring": {
     "pageTitle": "Monitoreo",

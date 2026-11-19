@@ -112,6 +112,7 @@ export default function ApiKeysPage() {
   const [editSpendLimitInput, setEditSpendLimitInput] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
 
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(() => new Set());
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const { showToast } = useToast();
@@ -251,6 +252,46 @@ export default function ApiKeysPage() {
     } catch {
       showToast(t("toastNetworkError"), "error");
       setSavingEdit(false);
+    }
+  };
+
+  const handleToggleKeyActive = async (apiKey: ApiKey) => {
+    if (togglingIds.has(apiKey.id)) return;
+    const nextActive = !apiKey.isActive;
+
+    // Immediate optimistic UI update
+    setApiKeys((prev) =>
+      prev.map((item) => (item.id === apiKey.id ? { ...item, isActive: nextActive } : item))
+    );
+    setTogglingIds((prev) => new Set(prev).add(apiKey.id));
+
+    try {
+      const res = await fetch(API_ENDPOINTS.USER.API_KEYS, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: apiKey.id,
+          isActive: nextActive,
+        }),
+      });
+
+      if (!res.ok) {
+        setApiKeys((prev) =>
+          prev.map((item) => (item.id === apiKey.id ? { ...item, isActive: !nextActive } : item))
+        );
+        showToast(t("toastUpdateFailed"), "error");
+      }
+    } catch {
+      setApiKeys((prev) =>
+        prev.map((item) => (item.id === apiKey.id ? { ...item, isActive: !nextActive } : item))
+      );
+      showToast(t("toastNetworkError"), "error");
+    } finally {
+      setTogglingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(apiKey.id);
+        return next;
+      });
     }
   };
 
@@ -445,14 +486,22 @@ export default function ApiKeysPage() {
                   {apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleDateString() : t('neverUsed')}
                 </span>
                 <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    variant="danger"
-                    onClick={() => confirmDelete(apiKey.id)}
-                    className="shrink-0 whitespace-nowrap px-2.5 py-1 text-xs"
-                    data-testid={`api-key-delete-trigger-${apiKey.id}`}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={apiKey.isActive}
+                    onClick={() => void handleToggleKeyActive(apiKey)}
+                    disabled={togglingIds.has(apiKey.id)}
+                    className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60 ${
+                      apiKey.isActive
+                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
+                        : "border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                    }`}
+                    data-testid={`api-key-toggle-trigger-${apiKey.id}`}
                   >
-                    {t('deleteButton')}
-                  </Button>
+                    <span className={`size-2 rounded-full ${apiKey.isActive ? "bg-emerald-500" : "bg-[var(--text-muted)]"}`} />
+                    {apiKey.isActive ? t("keyEnabled") : t("keyDisabled")}
+                  </button>
                 </div>
               </div>
             );

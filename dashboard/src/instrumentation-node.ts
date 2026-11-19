@@ -60,12 +60,12 @@ function startUsageCollectorScheduler() {
       }
 
       const port = process.env.PORT ?? "3000";
-      const baseUrl = process.env.NEXTAUTH_URL ?? process.env.DASHBOARD_URL ?? `http://127.0.0.1:${port}`;
+      const internalBaseUrl = `http://127.0.0.1:${port}`;
       const headers: Record<string, string> = {};
       if (collectorKey) headers.Authorization = `Bearer ${collectorKey}`;
       else if (managementKey) headers["X-Internal-Key"] = managementKey;
 
-      const res = await fetch(`${baseUrl}/api/usage/collect`, {
+      const res = await fetch(`${internalBaseUrl}/api/usage/collect`, {
         method: "POST",
         headers,
         signal: AbortSignal.timeout(45_000),
@@ -104,11 +104,12 @@ function startQuotaAlertScheduler() {
       }
 
       const port = process.env.PORT ?? "3000";
-      const baseUrl = process.env.NEXTAUTH_URL ?? process.env.DASHBOARD_URL ?? `http://localhost:${port}`;
+      const internalBaseUrl = `http://127.0.0.1:${port}`;
+      const publicDashboardUrl = process.env.NEXTAUTH_URL ?? process.env.DASHBOARD_URL ?? internalBaseUrl;
 
       let quotaData: QuotaResponse | null = null;
       try {
-        const res = await fetch(`${baseUrl}/api/quota`, {
+        const res = await fetch(`${internalBaseUrl}/api/quota`, {
           headers: { "X-Internal-Key": managementKey },
           signal: AbortSignal.timeout(60_000),
         });
@@ -135,7 +136,7 @@ function startQuotaAlertScheduler() {
         await pruneQuotaSnapshotsIfDue();
       }
 
-      const result = await runAlertCheck(async () => quotaData, baseUrl);
+      const result = await runAlertCheck(async () => quotaData, publicDashboardUrl);
 
       if (result.alertsSent && result.alertsSent > 0) {
         logger.info(

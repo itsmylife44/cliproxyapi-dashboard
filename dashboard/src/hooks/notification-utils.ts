@@ -14,19 +14,6 @@ export interface Notification {
   timestamp: number;
 }
 
-export interface QuotaAccount {
-  auth_index: string;
-  provider: string;
-  email?: string | null;
-  supported: boolean;
-  error?: string;
-  groups?: Array<{
-    id: string;
-    label: string;
-    remainingFraction?: number | null;
-  }>;
-}
-
 export interface HealthStatus {
   status: "ok" | "degraded";
   database: "connected" | "error";
@@ -40,12 +27,8 @@ export interface UpdateCheckResult {
   buildInProgress: boolean;
 }
 
-export const QUOTA_CRITICAL_THRESHOLD = 0.05; // 5%
-export const QUOTA_WARNING_THRESHOLD = 0.20;  // 20%
-
 export function buildNotifications(
   healthData: HealthStatus | null | undefined,
-  quotaData: { accounts: readonly QuotaAccount[] } | null | undefined,
   proxyUpdateData: UpdateCheckResult | null | undefined,
   dashUpdateData: UpdateCheckResult | null | undefined,
   t: TranslationFn,
@@ -76,37 +59,7 @@ export function buildNotifications(
     }
   }
 
-  // 2. Quota warnings
-  const accounts = quotaData?.accounts ?? [];
-  for (const account of accounts) {
-    if (!account.supported || !account.groups) continue;
-    for (const group of account.groups) {
-      if (group.remainingFraction == null) continue;
-      const percent = Math.round(group.remainingFraction * 100);
-      const message = t("quotaMessage", { email: account.email ?? account.auth_index, label: group.label, percent });
-      if (group.remainingFraction <= QUOTA_CRITICAL_THRESHOLD) {
-        items.push({
-          id: `quota-critical-${account.provider}-${account.auth_index}-${group.id}`,
-          type: "critical",
-          title: t("quotaExhaustedTitle", { provider: account.provider }),
-          message,
-          link: "/dashboard/quota",
-          timestamp: now,
-        });
-      } else if (group.remainingFraction <= QUOTA_WARNING_THRESHOLD) {
-        items.push({
-          id: `quota-warn-${account.provider}-${account.auth_index}-${group.id}`,
-          type: "warning",
-          title: t("quotaLowTitle", { provider: account.provider }),
-          message,
-          link: "/dashboard/quota",
-          timestamp: now,
-        });
-      }
-    }
-  }
-
-  // 3. Update checks
+  // 2. Update checks
   if (proxyUpdateData?.updateAvailable && !proxyUpdateData.buildInProgress) {
     items.push({
       id: "update-proxy",

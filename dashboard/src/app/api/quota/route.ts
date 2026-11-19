@@ -1057,6 +1057,7 @@ function buildClaudeLimitGroups(limits: ClaudeUsageLimit[] | undefined): QuotaGr
 
     let id: string;
     let label: string;
+    let scope: QuotaGroup["scope"];
 
     if (limit.kind === "session" || limit.group === "session") {
       id = "five-hour";
@@ -1065,12 +1066,18 @@ function buildClaudeLimitGroups(limits: ClaudeUsageLimit[] | undefined): QuotaGr
       id = "seven-day";
       label = "7d Weekly";
     } else if (scopedModelName) {
-      id = `seven-day-${slugifyLabel(scopedModelName)}`;
+      const slug = slugifyLabel(scopedModelName);
+      id = `seven-day-${slug}`;
       label = `7d ${scopedModelName}`;
+      scope = { id: slug, label: scopedModelName };
     } else {
       const fallbackKind = limit.kind ?? limit.group ?? "limit";
-      id = `limit-${slugifyLabel(fallbackKind)}`;
+      const slug = slugifyLabel(fallbackKind);
+      id = `limit-${slug}`;
       label = humanizeLimitKind(fallbackKind);
+      if (fallbackKind.toLowerCase().includes("scoped")) {
+        scope = { id: slug, label };
+      }
     }
 
     if (seenIds.has(id)) continue;
@@ -1079,6 +1086,7 @@ function buildClaudeLimitGroups(limits: ClaudeUsageLimit[] | undefined): QuotaGr
     groups.push({
       id,
       label,
+      ...(scope ? { scope } : {}),
       remainingFraction,
       resetTime,
       severity: typeof limit.severity === "string" ? limit.severity : undefined,
@@ -1108,7 +1116,8 @@ async function fetchClaudeQuota(
         const pushUsageGroup = (
           id: string,
           label: string,
-          window: ClaudeUsageWindow | undefined
+          window: ClaudeUsageWindow | undefined,
+          scope?: QuotaGroup["scope"]
         ) => {
           // `limits[]` entries take precedence for the windows they cover.
           if (usageGroups.some((group) => group.id === id)) return;
@@ -1124,6 +1133,7 @@ async function fetchClaudeQuota(
           usageGroups.push({
             id,
             label,
+            ...(scope ? { scope } : {}),
             remainingFraction,
             resetTime: window.resets_at ?? null,
             models: [
@@ -1143,8 +1153,8 @@ async function fetchClaudeQuota(
 
         pushUsageGroup("five-hour", "5h Session", usageData.five_hour);
         pushUsageGroup("seven-day", "7d Weekly", usageData.seven_day);
-        pushUsageGroup("seven-day-sonnet", "7d Sonnet", usageData.seven_day_sonnet);
-        pushUsageGroup("seven-day-opus", "7d Opus", usageData.seven_day_opus);
+        pushUsageGroup("seven-day-sonnet", "7d Sonnet", usageData.seven_day_sonnet, { id: "sonnet", label: "Sonnet" });
+        pushUsageGroup("seven-day-opus", "7d Opus", usageData.seven_day_opus, { id: "opus", label: "Opus" });
 
         if (
           usageData.extra_usage?.is_enabled &&
@@ -1262,7 +1272,8 @@ async function fetchClaudeQuota(
         label: string,
         utilization: string | null,
         resetEpoch: string | null,
-        status?: string | null
+        status?: string | null,
+        scope?: QuotaGroup["scope"]
       ) => {
         if (!utilization) return;
         const util = parseFloat(utilization);
@@ -1276,6 +1287,7 @@ async function fetchClaudeQuota(
         unifiedGroups.push({
           id,
           label,
+          ...(scope ? { scope } : {}),
           remainingFraction,
           resetTime,
           severity: severityFromUnifiedStatus(status),
@@ -1297,13 +1309,21 @@ async function fetchClaudeQuota(
         unified7dReset,
         getHeaderValue(headers, "anthropic-ratelimit-unified-7d-status")
       );
-      pushUnifiedGroup("seven-day-sonnet", "7d Sonnet", unified7dSonnetUtilization, unified7dSonnetReset);
+      pushUnifiedGroup(
+        "seven-day-sonnet",
+        "7d Sonnet",
+        unified7dSonnetUtilization,
+        unified7dSonnetReset,
+        undefined,
+        { id: "sonnet", label: "Sonnet" }
+      );
       pushUnifiedGroup(
         "seven-day-oi",
         "7d Fable",
         unified7dOiUtilization,
         unified7dOiReset,
-        getHeaderValue(headers, "anthropic-ratelimit-unified-7d_oi-status")
+        getHeaderValue(headers, "anthropic-ratelimit-unified-7d_oi-status"),
+        { id: "fable", label: "Fable" }
       );
 
       if (unifiedGroups.length > 0) {

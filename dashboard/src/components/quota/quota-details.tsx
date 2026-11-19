@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
@@ -61,7 +61,7 @@ interface ResetAdvice {
   tone: "good" | "borderline" | "bad";
   badge: string;
   title: string;
-  reason: string;
+  reason?: string;
 }
 
 function formatCountdown(isoDate: string | null | undefined): string {
@@ -155,7 +155,6 @@ function evaluateResetAdvice(
       tone: "bad",
       badge: t("resetVerdictNoCreditsBadge"),
       title: t("resetVerdictNoCreditsTitle"),
-      reason: t("manualResetConfirmMessage", { account: preview.label }),
     };
   }
 
@@ -183,7 +182,7 @@ function evaluateResetAdvice(
       tone: "good",
       badge: t("resetVerdictGoodBadge"),
       title: t("resetVerdictGoodTitle"),
-      reason: t("resetVerdictReasonDepleted", { gain: longGain, resetsIn: longResetsIn }),
+      reason: t("resetVerdictReasonSummary", { gain: longGain, resetsIn: longResetsIn }),
     };
   }
 
@@ -192,7 +191,7 @@ function evaluateResetAdvice(
       tone: "borderline",
       badge: t("resetVerdictBorderlineBadge"),
       title: t("resetVerdictBorderlineTitle"),
-      reason: t("resetVerdictReasonModerate", { gain: longGain, resetsIn: longResetsIn }),
+      reason: t("resetVerdictReasonSummary", { gain: longGain, resetsIn: longResetsIn }),
     };
   }
 
@@ -201,7 +200,7 @@ function evaluateResetAdvice(
       ? t("resetVerdictReasonHighWeekly", { pct: longPct, gain: longGain })
       : longDays !== null && longDays < 1
         ? t("resetVerdictReasonImminentReset", { resetsIn: longResetsIn })
-        : t("resetVerdictReasonModerate", { gain: longGain, resetsIn: longResetsIn });
+        : t("resetVerdictReasonSummary", { gain: longGain, resetsIn: longResetsIn });
 
   return {
     tone: "bad",
@@ -254,6 +253,20 @@ export function QuotaDetails({
   const tCommon = useTranslations("common");
   const t = useTranslations("quota");
   const [pendingManualReset, setPendingManualReset] = useState<PendingManualReset | null>(null);
+  const autoFetchedCreditsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!onCheckResetCredits) return;
+    for (const account of filteredAccounts) {
+      if (!expandedCards[account.auth_index]) continue;
+      if (!isResettableProvider(account.provider)) continue;
+      if (autoResetCredits?.[account.auth_index] !== undefined) continue;
+      if (autoResetBusy?.[account.auth_index]) continue;
+      if (autoFetchedCreditsRef.current.has(account.auth_index)) continue;
+      autoFetchedCreditsRef.current.add(account.auth_index);
+      onCheckResetCredits(account.auth_index);
+    }
+  }, [filteredAccounts, expandedCards, autoResetCredits, autoResetBusy, onCheckResetCredits]);
 
   const maskedAccountCounts = new Map<string, number>();
   for (const account of filteredAccounts) {
@@ -534,43 +547,42 @@ export function QuotaDetails({
                               </div>
 
                               <div className="flex flex-wrap items-center gap-2">
-                                {creditSummary && (
+                                {isCheckingCredits ? (
+                                  <span className="text-[11px] text-[var(--text-muted)]">
+                                    {t("checkingCreditsStatus")}
+                                  </span>
+                                ) : creditSummary ? (
                                   <span className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[11px] tabular-nums text-[var(--text-secondary)]">
                                     {creditSummary.error
                                       ? creditSummary.error
                                       : t("autoResetCreditsCount", { count: creditSummary.availableCount ?? 0 })}
                                   </span>
-                                )}
-                                {onCheckResetCredits && (
-                                  <button
-                                    type="button"
-                                    disabled={isBusy}
-                                    onClick={() => onCheckResetCredits(account.auth_index)}
-                                    className="rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-50"
-                                  >
-                                    {isCheckingCredits ? t("checkingCreditsStatus") : t("autoResetCheckButton")}
-                                  </button>
-                                )}
-                                {onManualReset && (
-                                  <button
-                                    type="button"
-                                    disabled={isBusy}
-                                    onClick={() => {
-                                      if (!creditSummary && onCheckResetCredits) {
-                                        onCheckResetCredits(account.auth_index);
-                                      }
-                                      setPendingManualReset(
-                                        buildManualResetPreview(
-                                          account,
-                                          accountLabels.get(account.auth_index) ?? account.provider
-                                        )
-                                      );
-                                    }}
-                                    className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-500/20 disabled:opacity-50 dark:text-emerald-400"
-                                  >
-                                    {isResettingNow ? t("resettingStatus") : t("autoResetNowButton")}
-                                  </button>
-                                )}
+                                ) : null}
+                                {onManualReset && (() => {
+                                  const hasNoCredits = Boolean(
+                                    creditSummary && !creditSummary.error && creditSummary.availableCount === 0
+                                  );
+                                  return (
+                                    <button
+                                      type="button"
+                                      disabled={isBusy || hasNoCredits}
+                                      onClick={() => {
+                                        if (!creditSummary && onCheckResetCredits) {
+                                          onCheckResetCredits(account.auth_index);
+                                        }
+                                        setPendingManualReset(
+                                          buildManualResetPreview(
+                                            account,
+                                            accountLabels.get(account.auth_index) ?? account.provider
+                                          )
+                                        );
+                                      }}
+                                      className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-45 dark:text-emerald-400"
+                                    >
+                                      {isResettingNow ? t("resettingStatus") : t("autoResetNowButton")}
+                                    </button>
+                                  );
+                                })()}
                               </div>
                             </div>
                           )}
@@ -670,6 +682,9 @@ export function QuotaDetails({
 
       {onManualReset && (() => {
         const liveCreditSummary = pendingManualReset ? autoResetCredits?.[pendingManualReset.authIndex] : undefined;
+        const hasNoModalCredits = Boolean(
+          liveCreditSummary && !liveCreditSummary.error && liveCreditSummary.availableCount === 0
+        );
         const isCheckingModalCredits = pendingManualReset ? autoResetBusy?.[pendingManualReset.authIndex] === "checking" : false;
         const advice = pendingManualReset ? evaluateResetAdvice(pendingManualReset, liveCreditSummary, t) : null;
         const dialogVariant = advice?.tone === "bad" ? "danger" : advice?.tone === "good" ? "info" : "warning";
@@ -712,7 +727,9 @@ export function QuotaDetails({
                       </span>
                       <span className="font-semibold">{advice.title}</span>
                     </div>
-                    <p className="mt-1.5 text-[11px] opacity-90">{advice.reason}</p>
+                    {advice.reason && (
+                      <p className="mt-1 text-[11px] opacity-90">{advice.reason}</p>
+                    )}
                   </div>
 
                   {/* Before -> After Quota & Timer Breakdown */}
@@ -795,6 +812,7 @@ export function QuotaDetails({
               )
             }
             confirmLabel={t("autoResetNowButton")}
+            confirmDisabled={hasNoModalCredits}
             variant={dialogVariant}
           />
         );

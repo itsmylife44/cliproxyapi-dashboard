@@ -15,6 +15,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: "danger" | "warning" | "info";
+  confirmDisabled?: boolean;
 }
 
 export function ConfirmDialog({
@@ -25,7 +26,8 @@ export function ConfirmDialog({
   message,
   confirmLabel,
   cancelLabel,
-  variant = "warning"
+  variant = "warning",
+  confirmDisabled = false,
 }: ConfirmDialogProps) {
   const t = useTranslations('common');
   const resolvedConfirmLabel = confirmLabel ?? t('confirm');
@@ -151,10 +153,11 @@ export function ConfirmDialog({
           </Button>
           <button
             type="button"
+            disabled={confirmDisabled}
             onClick={handleConfirm}
             className={cn(
               "flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-[background-color,color,box-shadow] duration-200",
-              "focus:outline-none focus-visible:ring-2",
+              "focus:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-45",
               variant === "danger" && "bg-red-500/100 hover:bg-red-600 text-white focus-visible:ring-red-500/50",
               variant === "warning" && "bg-yellow-500/100 hover:bg-yellow-600 text-white focus-visible:ring-yellow-500/50",
               variant === "info" && "bg-blue-500/100 hover:bg-blue-600 text-white focus-visible:ring-blue-500/50"

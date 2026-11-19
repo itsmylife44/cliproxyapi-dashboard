@@ -171,25 +171,14 @@ function evaluateResetAdvice(
     };
   }
 
-  if (longPct >= 70) {
-    return {
-      tone: "bad",
-      badge: t("resetVerdictBadBadge"),
-      title: t("resetVerdictBadTitle"),
-      reason: t("resetVerdictReasonHighWeekly", { pct: longPct, gain: longGain }),
-    };
-  }
+  const hoursUntilReset = Math.max(0, Math.min(168, (longDays ?? 7) * 24));
+  const weeklyRemaining = Math.max(0, Math.min(1, longPct / 100));
+  const fiveHourRemaining = preview.shortWindow ? Math.max(0, Math.min(1, shortPct / 100)) : 1;
+  const timeFactor = 1 - Math.pow(1 - hoursUntilReset / 168, 3);
+  const quotaFactor = (1 - weeklyRemaining) + 0.2 * weeklyRemaining * (1 - fiveHourRemaining);
+  const score = timeFactor * quotaFactor;
 
-  if (longDays !== null && longDays < 0.75) {
-    return {
-      tone: "bad",
-      badge: t("resetVerdictBadBadge"),
-      title: t("resetVerdictBadTitle"),
-      reason: t("resetVerdictReasonImminentReset", { resetsIn: longResetsIn }),
-    };
-  }
-
-  if ((longPct <= 35 && (longDays === null || longDays >= 2)) || (longPct <= 45 && shortPct <= 25 && (longDays === null || longDays >= 1.5))) {
+  if (score >= 0.7) {
     return {
       tone: "good",
       badge: t("resetVerdictGoodBadge"),
@@ -198,11 +187,27 @@ function evaluateResetAdvice(
     };
   }
 
+  if (score >= 0.4) {
+    return {
+      tone: "borderline",
+      badge: t("resetVerdictBorderlineBadge"),
+      title: t("resetVerdictBorderlineTitle"),
+      reason: t("resetVerdictReasonModerate", { gain: longGain, resetsIn: longResetsIn }),
+    };
+  }
+
+  const badReason =
+    longPct >= 70
+      ? t("resetVerdictReasonHighWeekly", { pct: longPct, gain: longGain })
+      : longDays !== null && longDays < 1
+        ? t("resetVerdictReasonImminentReset", { resetsIn: longResetsIn })
+        : t("resetVerdictReasonModerate", { gain: longGain, resetsIn: longResetsIn });
+
   return {
-    tone: "borderline",
-    badge: t("resetVerdictBorderlineBadge"),
-    title: t("resetVerdictBorderlineTitle"),
-    reason: t("resetVerdictReasonModerate", { gain: longGain, resetsIn: longResetsIn }),
+    tone: "bad",
+    badge: t("resetVerdictBadBadge"),
+    title: t("resetVerdictBadTitle"),
+    reason: badReason,
   };
 }
 

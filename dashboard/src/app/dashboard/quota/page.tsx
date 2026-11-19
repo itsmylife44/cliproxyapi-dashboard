@@ -244,7 +244,30 @@ export default function QuotaPage() {
         const data = (await res.json()) as { ok?: boolean; message?: string; status?: string };
         showToast(data.message ?? (res.ok ? t("autoResetApplied") : t("autoResetFailed")), res.ok && data.ok ? "success" : "error");
         if (res.ok && data.ok) {
+          setAutoResetCredits((prev) => {
+            const current = prev[authIndex];
+            if (!current || typeof current.availableCount !== "number") return prev;
+            return {
+              ...prev,
+              [authIndex]: {
+                ...current,
+                availableCount: Math.max(0, current.availableCount - 1),
+              },
+            };
+          });
           void refresh().catch(() => {});
+          void fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "check_credits", authIndex }),
+          })
+            .then((r) => (r.ok ? (r.json() as Promise<AutoResetCreditSummary>) : null))
+            .then((updated) => {
+              if (updated && !updated.error) {
+                setAutoResetCredits((prev) => ({ ...prev, [authIndex]: updated }));
+              }
+            })
+            .catch(() => {});
         }
         await fetchAutoResetRules();
       } catch {

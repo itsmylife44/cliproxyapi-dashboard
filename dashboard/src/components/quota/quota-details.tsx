@@ -528,52 +528,45 @@ export function QuotaDetails({
                                 )}
                               </div>
 
-                              {rule.enabled && (
-                                <div className="flex flex-wrap items-center gap-2">
-                                  {creditSummary && (
-                                    <span className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[11px] tabular-nums text-[var(--text-secondary)]">
-                                      {creditSummary.error
-                                        ? creditSummary.error
-                                        : t("autoResetCreditsCount", { count: creditSummary.availableCount ?? 0 })}
-                                    </span>
-                                  )}
-                                  {rule.lastStatus && (
-                                    <span className="text-[11px] text-[var(--text-muted)]">
-                                      {t("autoResetLastStatus", { status: rule.lastStatus })}
-                                    </span>
-                                  )}
-                                  {onCheckResetCredits && (
-                                    <button
-                                      type="button"
-                                      disabled={isBusy}
-                                      onClick={() => onCheckResetCredits(account.auth_index)}
-                                      className="rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-50"
-                                    >
-                                      {isCheckingCredits ? t("checkingCreditsStatus") : t("autoResetCheckButton")}
-                                    </button>
-                                  )}
-                                  {onManualReset && (
-                                    <button
-                                      type="button"
-                                      disabled={isBusy}
-                                      onClick={() => {
-                                        if (!creditSummary && onCheckResetCredits) {
-                                          onCheckResetCredits(account.auth_index);
-                                        }
-                                        setPendingManualReset(
-                                          buildManualResetPreview(
-                                            account,
-                                            accountLabels.get(account.auth_index) ?? account.provider
-                                          )
-                                        );
-                                      }}
-                                      className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-500/20 disabled:opacity-50 dark:text-emerald-400"
-                                    >
-                                      {isResettingNow ? t("resettingStatus") : t("autoResetNowButton")}
-                                    </button>
-                                  )}
-                                </div>
-                              )}
+                              <div className="flex flex-wrap items-center gap-2">
+                                {creditSummary && (
+                                  <span className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[11px] tabular-nums text-[var(--text-secondary)]">
+                                    {creditSummary.error
+                                      ? creditSummary.error
+                                      : t("autoResetCreditsCount", { count: creditSummary.availableCount ?? 0 })}
+                                  </span>
+                                )}
+                                {onCheckResetCredits && (
+                                  <button
+                                    type="button"
+                                    disabled={isBusy}
+                                    onClick={() => onCheckResetCredits(account.auth_index)}
+                                    className="rounded border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-50"
+                                  >
+                                    {isCheckingCredits ? t("checkingCreditsStatus") : t("autoResetCheckButton")}
+                                  </button>
+                                )}
+                                {onManualReset && (
+                                  <button
+                                    type="button"
+                                    disabled={isBusy}
+                                    onClick={() => {
+                                      if (!creditSummary && onCheckResetCredits) {
+                                        onCheckResetCredits(account.auth_index);
+                                      }
+                                      setPendingManualReset(
+                                        buildManualResetPreview(
+                                          account,
+                                          accountLabels.get(account.auth_index) ?? account.provider
+                                        )
+                                      );
+                                    }}
+                                    className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-500/20 disabled:opacity-50 dark:text-emerald-400"
+                                  >
+                                    {isResettingNow ? t("resettingStatus") : t("autoResetNowButton")}
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           )}
                           {account.error && <p className="mb-2 break-all text-xs text-rose-600">{account.error}</p>}

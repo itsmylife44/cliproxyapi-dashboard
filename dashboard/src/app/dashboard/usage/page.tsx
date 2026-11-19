@@ -390,9 +390,6 @@ export default function UsagePage() {
         </p>
       ) : (
         <div className="space-y-6">
-          {usageData.truncated && (
-            <p role="status" className="text-xs text-amber-700 dark:text-amber-400">{t("truncatedOnServer")}</p>
-          )}
           {/* ── Top Metric Strip (Requests · Tokens · Cost, Flat Ledger) ── */}
           <div className="grid grid-cols-1 gap-6 border-t border-[var(--surface-border)] pt-5 md:grid-cols-3 md:gap-8">
             <div>
@@ -400,6 +397,11 @@ export default function UsagePage() {
               <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)]">
                 {usageData.totals.totalRequests.toLocaleString()}
               </p>
+              {usageData.truncated && (
+                <p role="status" className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400">
+                  {t("truncatedOnServer")}
+                </p>
+              )}
               {(() => {
                 const total = usageData.totals.totalRequests;
                 const successPct = total > 0 ? (usageData.totals.successCount / total) * 100 : 0;
@@ -497,13 +499,9 @@ export default function UsagePage() {
                 [
                   { id: "cost", label: t("usageTabCost") },
                   { id: "latency", label: t("usageTabLatency") },
-                  {
-                    id: "failures",
-                    label: t("usageTabFailures"),
-                    badge: usageData.totals.failureCount > 0 ? usageData.totals.failureCount : undefined,
-                  },
+                  { id: "failures", label: t("usageTabFailures") },
                   { id: "events", label: t("usageTabEvents") },
-                ] as ReadonlyArray<{ id: UsageSectionTab; label: string; badge?: number }>
+                ] as const
               ).map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
@@ -513,18 +511,13 @@ export default function UsagePage() {
                     onClick={() => setActiveTab(tab.id)}
                     aria-pressed={isActive}
                     className={cn(
-                      "-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-medium transition-colors",
+                      "-mb-px border-b-2 px-3 py-2 text-xs font-medium transition-colors",
                       isActive
                         ? "border-[var(--accent)] text-[var(--text-primary)]"
                         : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                     )}
                   >
-                    <span>{tab.label}</span>
-                    {tab.badge !== undefined && (
-                      <span className="rounded-full border border-rose-500/25 bg-rose-500/10 px-1.5 py-0 text-[10px] font-semibold tabular-nums text-rose-600 dark:text-rose-400">
-                        {tab.badge.toLocaleString()}
-                      </span>
-                    )}
+                    {tab.label}
                   </button>
                 );
               })}
@@ -554,8 +547,6 @@ export default function UsagePage() {
               <CostEstimation
                 keys={usageData.keys}
                 livePricing={livePricing}
-                modelBreakdown={usageData.modelBreakdown}
-                providerBreakdown={usageData.providerBreakdown}
               />
             )}
 

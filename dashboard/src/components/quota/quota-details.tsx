@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -23,8 +23,15 @@ import {
   type QuotaGroup,
 } from "@/lib/model-first-monitoring";
 
-function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: number; label: string; isShortTerm: boolean }> {
-  const result: Record<string, { score: number; label: string; isShortTerm: boolean }> = {};
+interface WindowScore {
+  score: number;
+  label: string;
+  isShortTerm: boolean;
+  resetTime?: string | null;
+}
+
+function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, WindowScore> {
+  const result: Record<string, WindowScore> = {};
   for (const group of groups) {
     if (group.id === "extra-usage") continue;
     const score = normalizeFraction(group.remainingFraction);
@@ -33,9 +40,71 @@ function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, { score: 
       score,
       label: group.label,
       isShortTerm: isShortTermQuotaWindow(group, groups),
+      resetTime: group.resetTime,
     };
   }
   return result;
+}
+
+function formatCompactResetAt(isoDate: string, locale: string): string {
+  const date = new Date(isoDate);
+  const now = new Date();
+  const timeStr = new Intl.DateTimeFormat(locale, {
+    hour: "numeric",
+    minute: "2-digit",
+  })
+    .format(date)
+    .replace(/\s+([AP]M)$/i, (_, meridiem: string) => meridiem.toLowerCase());
+
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (sameDay) return timeStr;
+
+  const dateStr = new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+
+  return `${dateStr} ${timeStr}`;
+}
+
+function summarizeWindowCapacity(
+  scores: WindowScore[],
+  locale: string,
+  t: (key: string, values?: Record<string, string | number>) => string
+): { percent: number; resetLabel: string | null; resetTitle?: string; isResetting: boolean } | null {
+  let bottleneck: WindowScore | null = null;
+  for (const candidate of scores) {
+    if (
+      !bottleneck ||
+      candidate.score < bottleneck.score ||
+      (candidate.score === bottleneck.score && !bottleneck.resetTime && Boolean(candidate.resetTime))
+    ) {
+      bottleneck = candidate;
+    }
+  }
+  if (!bottleneck) return null;
+  const parsed = parseRelativeTime(bottleneck.resetTime);
+  const hasKnownReset = parsed.type !== "unknown";
+  const isResetting = parsed.type === "resetting";
+  const relative = hasKnownReset ? formatRelativeTime(bottleneck.resetTime, t) : null;
+  const resetLabel =
+    relative && !isResetting && bottleneck.resetTime
+      ? `${relative} · ${formatCompactResetAt(bottleneck.resetTime, locale)}`
+      : relative;
+  const resetTitle =
+    hasKnownReset && bottleneck.resetTime
+      ? `${t("resetColumnLabel")}: ${new Date(bottleneck.resetTime).toLocaleString()}`
+      : undefined;
+  return {
+    percent: Math.round(bottleneck.score * 100),
+    resetLabel,
+    resetTitle,
+    isResetting,
+  };
 }
 
 function isResettableProvider(provider: string): boolean {
@@ -246,6 +315,7 @@ export function QuotaDetails({
   onManualReset,
 }: QuotaDetailsProps) {
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const t = useTranslations("quota");
   const [pendingManualReset, setPendingManualReset] = useState<PendingManualReset | null>(null);
   const autoFetchedCreditsRef = useRef<Set<string>>(new Set());
@@ -343,10 +413,8 @@ export function QuotaDetails({
                   const scores = account.groups
                     ? Object.values(calcAccountWindowScores(headlineQuotaWindows(capacityQuotaGroups(account.provider, account.groups))))
                     : [];
-                  const longScores = scores.filter((score) => !score.isShortTerm);
-                  const shortScores = scores.filter((score) => score.isShortTerm);
-                  const longMin = longScores.length > 0 ? Math.min(...longScores.map((score) => score.score)) : null;
-                  const shortMin = shortScores.length > 0 ? Math.min(...shortScores.map((score) => score.score)) : null;
+                  const longWindow = summarizeWindowCapacity(scores.filter((score) => !score.isShortTerm), locale, t);
+                  const shortWindow = summarizeWindowCapacity(scores.filter((score) => score.isShortTerm), locale, t);
                   const statusLabel = account.supported ? (account.error ? t("errorStatus") : t("activeStatus")) : t("unsupportedStatus");
                   const accountSummary = isModelFirstAccount(account) ? summarizeModelFirstAccount(account) : null;
                   const accountQuotaUnverified =
@@ -416,8 +484,8 @@ export function QuotaDetails({
                             <span className={cn("inline-flex items-center gap-1 before:size-1.5 before:rounded-full before:bg-current", statusColorClass)}>{displayStatus}</span>
                           </span>
                         </span>
-                        {account.supported && !account.error && (section.modelFirstView || longMin !== null || shortMin !== null) && (
-                          <span className="col-span-2 row-start-2 grid min-w-0 auto-cols-fr grid-flow-col gap-3 sm:col-span-1 sm:col-start-2 sm:row-start-1 lg:gap-5">
+                        {account.supported && !account.error && (section.modelFirstView || longWindow !== null || shortWindow !== null) && (
+                          <span className="col-span-2 row-start-2 grid min-w-0 auto-cols-fr grid-flow-col items-start gap-3 sm:col-span-1 sm:col-start-2 sm:row-start-1 lg:gap-5">
                             {section.modelFirstView ? (
                               <>
                                 <span className="grid min-w-0 gap-0.5">
@@ -435,8 +503,24 @@ export function QuotaDetails({
                               </>
                             ) : (
                               <>
-                                {longMin !== null && <QuotaCapacity label={t("longTermLabel")} percent={Math.round(longMin * 100)} />}
-                                {shortMin !== null && <QuotaCapacity label={t("shortTermLabel")} percent={Math.round(shortMin * 100)} />}
+                                {longWindow !== null && (
+                                  <QuotaCapacity
+                                    label={t("longTermLabel")}
+                                    percent={longWindow.percent}
+                                    resetLabel={longWindow.resetLabel}
+                                    resetTitle={longWindow.resetTitle}
+                                    isResetting={longWindow.isResetting}
+                                  />
+                                )}
+                                {shortWindow !== null && (
+                                  <QuotaCapacity
+                                    label={t("shortTermLabel")}
+                                    percent={shortWindow.percent}
+                                    resetLabel={shortWindow.resetLabel}
+                                    resetTitle={shortWindow.resetTitle}
+                                    isResetting={shortWindow.isResetting}
+                                  />
+                                )}
                               </>
                             )}
                           </span>

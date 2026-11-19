@@ -109,8 +109,11 @@ function estimateEventCost(
   return calculateTieredCost(bucket, empty, price);
 }
 
+const EVENTS_PER_PAGE = 10;
+
 export function UsageRequestEvents({ events, isAdmin, livePricing }: UsageRequestEventsProps) {
   const t = useTranslations("usage");
+  const [currentPage, setCurrentPage] = useState(1);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const customPricing = useMemo(() => loadCustomPricing(), []);
 
@@ -147,6 +150,13 @@ export function UsageRequestEvents({ events, isAdmin, livePricing }: UsageReques
       }),
     [safeEvents, customPricing, livePricing, t]
   );
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / EVENTS_PER_PAGE));
+  const activePage = Math.min(currentPage, totalPages);
+  const pagedRows = useMemo(() => {
+    const start = (activePage - 1) * EVENTS_PER_PAGE;
+    return rows.slice(start, start + EVENTS_PER_PAGE);
+  }, [activePage, rows]);
 
   const toggleRow = (rowKey: string) => {
     setExpandedRows((prev) => {
@@ -236,7 +246,7 @@ export function UsageRequestEvents({ events, isAdmin, livePricing }: UsageReques
 
       {/* Responsive Event Feed (Mobile / Tablet, no horizontal scroll) */}
       <div className="divide-y divide-[var(--surface-border)] border-t border-b border-[var(--surface-border)] lg:hidden">
-        {rows.map(({ event, rowKey, isExpandable, isCancelled, statusLabel, hasDetails, shown, estCost }) => {
+        {pagedRows.map(({ event, rowKey, isExpandable, isCancelled, statusLabel, hasDetails, shown, estCost }) => {
           const isExpanded = isExpandable && expandedRows.has(rowKey);
           const tokenCells = [
             { key: "input", label: t("input"), value: shown.uncachedInput },
@@ -323,7 +333,7 @@ export function UsageRequestEvents({ events, isAdmin, livePricing }: UsageReques
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ event, rowKey, isExpandable, isCancelled, statusLabel, hasDetails, shown, estCost }) => {
+            {pagedRows.map(({ event, rowKey, isExpandable, isCancelled, statusLabel, hasDetails, shown, estCost }) => {
               const isExpanded = isExpandable && expandedRows.has(rowKey);
 
               return (
@@ -372,6 +382,28 @@ export function UsageRequestEvents({ events, isAdmin, livePricing }: UsageReques
             })}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex items-center justify-between pt-1">
+        <button
+          type="button"
+          onClick={() => setCurrentPage((page) => Math.max(1, Math.min(page, totalPages) - 1))}
+          disabled={activePage <= 1}
+          className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {t("previous")}
+        </button>
+        <span className="text-xs font-medium tabular-nums text-[var(--text-muted)]">
+          {t("pageOf", { page: activePage, total: totalPages })}
+        </span>
+        <button
+          type="button"
+          onClick={() => setCurrentPage((page) => Math.min(totalPages, Math.min(page, totalPages) + 1))}
+          disabled={activePage >= totalPages}
+          className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {t("next")}
+        </button>
       </div>
     </section>
   );

@@ -941,7 +941,22 @@
     "triggering": "Sammelt...",
     "usageTabBreakdown": "Verlauf & Latenz",
     "usageTabCost": "Kostenübersicht",
-    "usageTabEvents": "Anfrage-Ereignisse"
+    "usageTabEvents": "Anfrage-Ereignisse",
+    "slowestProvider": "Langsamster Anbieter",
+    "slowestModel": "Langsamstes Modell",
+    "topProblemModel": "Hauptproblem-Modell",
+    "allModelsHealthy": "Keine fehlgeschlagenen Anfragen",
+    "noLatencySamples": "Keine Latenzdaten",
+    "providerSpeedTitle": "Anbieter-Geschwindigkeit & Status",
+    "modelDiagnosticsTitle": "Problem-Modelle",
+    "slowestModelsTab": "Langsamste",
+    "failingModelsTab": "Meiste Fehler",
+    "sortByCost": "Kosten",
+    "sortBySlowest": "Langsamste",
+    "sortByFailures": "Fehler",
+    "p95Latency": "P95",
+    "failureRateLabel": "{rate}% fehlgeschlagen",
+    "failedRequestsCount": "{failed} von {total} fehlgeschlagen"
   },
   "monitoring": {
     "pageTitle": "Überwachung",

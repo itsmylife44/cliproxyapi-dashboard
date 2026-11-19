@@ -6,6 +6,7 @@ import { usageCache } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
 import { isLongContextPrompt, isPeakRequest, resolveModelPrice, splitCachedInput, type ModelPrice } from "@/lib/model-pricing";
 import { getLiveModelPricing } from "@/lib/model-pricing-catalog";
+import { inferModelProvider } from "@/lib/usage-cost-breakdown";
 import { isCancelledFailure } from "@/lib/usage-failures";
 
 // Cache for 5 seconds to allow frequent polling without overwhelming the database
@@ -83,6 +84,7 @@ interface LatencyPoint {
   keyName: string;
   username?: string;
   model: string;
+  provider?: string;
   latencyMs: number;
   failed: boolean;
 }
@@ -160,7 +162,7 @@ export async function GET(request: NextRequest) {
       select: { isAdmin: true },
     });
     const isAdmin = user?.isAdmin ?? false;
-    const cacheKey = `usage-history:v1:${session.userId}:${isAdmin ? "admin" : "user"}:${fromParam}:${toParam}`;
+    const cacheKey = `usage-history:v2:${session.userId}:${isAdmin ? "admin" : "user"}:${fromParam}:${toParam}`;
     const cached = usageCache.get(cacheKey) as { data: unknown; isAdmin: boolean } | null;
     if (cached) {
       logger.debug({ userId: session.userId, from: fromParam, to: toParam }, "Usage history cache hit");
@@ -245,7 +247,22 @@ export async function GET(request: NextRequest) {
       success: number;
       failure: number;
     }> = {};
-    const modelTotalsMap: Record<string, { requests: number; tokens: number }> = {};
+    const modelTotalsMap: Record<string, {
+      provider: string;
+      requests: number;
+      tokens: number;
+      successCount: number;
+      failureCount: number;
+      latencyValues: number[];
+    }> = {};
+    const providerTotalsMap: Record<string, {
+      models: Set<string>;
+      requests: number;
+      tokens: number;
+      successCount: number;
+      failureCount: number;
+      latencyValues: number[];
+    }> = {};
     const requestEvents: RequestEvent[] = [];
     const requestEventRecords: Array<{ id?: string; userId: string | null }> = [];
     const latencySeriesSeed: LatencyPoint[] = [];
@@ -393,12 +410,46 @@ export async function GET(request: NextRequest) {
         dailyMap[dayKey].success += 1;
       }
 
-      // Model totals aggregation for charts
-      if (!modelTotalsMap[modelName]) {
-        modelTotalsMap[modelName] = { requests: 0, tokens: 0 };
+      // Model and provider performance aggregation for diagnostic charts
+      const providerName = inferModelProvider(modelName, price?.provider);
+      const modelEntry = (modelTotalsMap[modelName] ??= {
+        provider: providerName,
+        requests: 0,
+        tokens: 0,
+        successCount: 0,
+        failureCount: 0,
+        latencyValues: [],
+      });
+      modelEntry.requests += 1;
+      modelEntry.tokens += record.totalTokens;
+      if (record.failed) {
+        modelEntry.failureCount += 1;
+      } else {
+        modelEntry.successCount += 1;
       }
-      modelTotalsMap[modelName].requests += 1;
-      modelTotalsMap[modelName].tokens += record.totalTokens;
+      if (record.latencyMs > 0) {
+        modelEntry.latencyValues.push(record.latencyMs);
+      }
+
+      const providerEntry = (providerTotalsMap[providerName] ??= {
+        models: new Set<string>(),
+        requests: 0,
+        tokens: 0,
+        successCount: 0,
+        failureCount: 0,
+        latencyValues: [],
+      });
+      providerEntry.models.add(modelName);
+      providerEntry.requests += 1;
+      providerEntry.tokens += record.totalTokens;
+      if (record.failed) {
+        providerEntry.failureCount += 1;
+      } else {
+        providerEntry.successCount += 1;
+      }
+      if (record.latencyMs > 0) {
+        providerEntry.latencyValues.push(record.latencyMs);
+      }
 
       const failureStatus = record.failureStatus ?? null;
       const failureCode = record.failureCode ?? null;
@@ -434,6 +485,7 @@ export async function GET(request: NextRequest) {
             keyName: event.keyName,
             ...(event.username ? { username: event.username } : {}),
             model: event.model,
+            provider: providerName,
             latencyMs: event.latencyMs,
             failed: event.failed,
           });
@@ -505,7 +557,44 @@ export async function GET(request: NextRequest) {
     // Build sorted model breakdown array (top models first)
     const modelBreakdown = Object.entries(modelTotalsMap)
       .sort(([, a], [, b]) => b.requests - a.requests)
-      .map(([model, data]) => ({ model, ...data }));
+      .map(([model, data]) => {
+        const latency = summarizeLatency(data.latencyValues);
+        const failureRate = data.requests > 0 ? Number(((data.failureCount / data.requests) * 100).toFixed(1)) : 0;
+        return {
+          model,
+          provider: data.provider,
+          requests: data.requests,
+          tokens: data.tokens,
+          successCount: data.successCount,
+          failureCount: data.failureCount,
+          failureRate,
+          avgLatencyMs: latency.averageMs,
+          p95LatencyMs: latency.p95Ms,
+          maxLatencyMs: latency.maxMs,
+          latencySampleCount: latency.sampleCount,
+        };
+      });
+
+    const providerBreakdown = Object.entries(providerTotalsMap)
+      .map(([provider, data]) => {
+        const latency = summarizeLatency(data.latencyValues);
+        const failureRate = data.requests > 0 ? Number(((data.failureCount / data.requests) * 100).toFixed(1)) : 0;
+        return {
+          provider,
+          models: data.models.size,
+          requests: data.requests,
+          tokens: data.tokens,
+          successCount: data.successCount,
+          failureCount: data.failureCount,
+          failureRate,
+          avgLatencyMs: latency.averageMs,
+          p95LatencyMs: latency.p95Ms,
+          maxLatencyMs: latency.maxMs,
+          latencySampleCount: latency.sampleCount,
+        };
+      })
+      .sort((a, b) => b.p95LatencyMs - a.p95LatencyMs || b.avgLatencyMs - a.avgLatencyMs || b.requests - a.requests);
+
     const latencySummary = summarizeLatency(latencyValues);
     const latencySeries = [...latencySeriesSeed].reverse();
 
@@ -526,6 +615,7 @@ export async function GET(request: NextRequest) {
         bucketGranularity: useHourlyBuckets ? "hour" : "day",
         dailyBreakdown,
         modelBreakdown,
+        providerBreakdown,
         requestEvents,
         latencySeries,
         latencySummary,

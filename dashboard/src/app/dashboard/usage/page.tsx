@@ -14,7 +14,12 @@ import { UsageRequestEvents, type RequestEvent } from "@/components/usage/usage-
 import { UsageTable } from "@/components/usage/usage-table";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { formatUSD, loadCustomPricing, type ModelPrice } from "@/lib/model-pricing";
-import { buildCostBreakdown, type UsageKey } from "@/lib/usage-cost-breakdown";
+import {
+  buildCostBreakdown,
+  type ModelBreakdownEntry,
+  type ProviderBreakdownEntry,
+  type UsageKey,
+} from "@/lib/usage-cost-breakdown";
 import { cn } from "@/lib/utils";
 
 import { useTranslations } from "next-intl";
@@ -55,16 +60,14 @@ interface UsageData {
     success: number;
     failure: number;
   }>;
-  modelBreakdown?: Array<{
-    model: string;
-    requests: number;
-    tokens: number;
-  }>;
+  modelBreakdown?: ModelBreakdownEntry[];
+  providerBreakdown?: ProviderBreakdownEntry[];
   latencySeries?: Array<{
     timestamp: string;
     keyName: string;
     username?: string;
     model: string;
+    provider?: string;
     latencyMs: number;
     failed: boolean;
   }>;
@@ -523,6 +526,8 @@ export default function UsagePage() {
                 bucketGranularity={usageData.bucketGranularity}
                 latencySeries={usageData.latencySeries}
                 latencySummary={usageData.latencySummary}
+                modelBreakdown={usageData.modelBreakdown}
+                providerBreakdown={usageData.providerBreakdown}
               />
             )}
 
@@ -530,6 +535,8 @@ export default function UsagePage() {
               <CostEstimation
                 keys={usageData.keys}
                 livePricing={livePricing}
+                modelBreakdown={usageData.modelBreakdown}
+                providerBreakdown={usageData.providerBreakdown}
               />
             )}
 

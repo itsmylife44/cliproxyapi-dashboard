@@ -941,7 +941,22 @@
     "triggering": "Collecting...",
     "usageTabBreakdown": "Breakdown & Latency",
     "usageTabCost": "Cost Ledger",
-    "usageTabEvents": "Request Events"
+    "usageTabEvents": "Request Events",
+    "slowestProvider": "Slowest Provider",
+    "slowestModel": "Slowest Model",
+    "topProblemModel": "Top Problem Model",
+    "allModelsHealthy": "No failed requests",
+    "noLatencySamples": "No latency samples",
+    "providerSpeedTitle": "Provider Speed & Health",
+    "modelDiagnosticsTitle": "Problem Models",
+    "slowestModelsTab": "Slowest",
+    "failingModelsTab": "Most Failures",
+    "sortByCost": "Cost",
+    "sortBySlowest": "Slowest",
+    "sortByFailures": "Failures",
+    "p95Latency": "P95",
+    "failureRateLabel": "{rate}% failed",
+    "failedRequestsCount": "{failed} of {total} failed"
   },
   "monitoring": {
     "pageTitle": "Monitoring",

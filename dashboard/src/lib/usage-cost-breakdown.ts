@@ -65,6 +65,120 @@ export interface ProviderCostEntry {
   requests: number;
 }
 
+export interface ModelBreakdownEntry {
+  model: string;
+  provider?: string;
+  requests: number;
+  tokens: number;
+  successCount?: number;
+  failureCount?: number;
+  failureRate?: number;
+  avgLatencyMs?: number;
+  p95LatencyMs?: number;
+  maxLatencyMs?: number;
+  latencySampleCount?: number;
+}
+
+export interface ProviderBreakdownEntry {
+  provider: string;
+  models: number;
+  requests: number;
+  tokens: number;
+  successCount: number;
+  failureCount: number;
+  failureRate: number;
+  avgLatencyMs: number;
+  p95LatencyMs: number;
+  maxLatencyMs: number;
+  latencySampleCount: number;
+}
+
+const VENDOR_PREFIX_LABELS: Record<string, string> = {
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  google: "Google",
+  "google-vertex": "Google",
+  gemini: "Google",
+  xai: "xAI",
+  "x-ai": "xAI",
+  deepseek: "DeepSeek",
+  zhipuai: "Zhipu AI",
+  "z-ai": "Zhipu AI",
+  zai: "Zhipu AI",
+  moonshotai: "Moonshot AI",
+  moonshot: "Moonshot AI",
+  qwen: "Alibaba",
+  alibaba: "Alibaba",
+  minimax: "MiniMax",
+  xiaomi: "Xiaomi",
+  mimo: "Xiaomi",
+  perplexity: "Perplexity",
+  "meta-llama": "Meta",
+  meta: "Meta",
+  mistralai: "Mistral",
+  mistral: "Mistral",
+};
+
+/**
+ * Resolve the canonical provider name for a model slug when the pricing entry
+ * is absent (e.g. `-free` variants or preview slugs).
+ */
+export function inferModelProvider(model: string, resolvedProvider?: string): string {
+  if (resolvedProvider && resolvedProvider !== "Unknown") {
+    return resolvedProvider;
+  }
+
+  const lower = model.trim().toLowerCase();
+  const slashIdx = lower.indexOf("/");
+  if (slashIdx > 0) {
+    const vendor = lower.slice(0, slashIdx);
+    const mapped = VENDOR_PREFIX_LABELS[vendor];
+    if (mapped) return mapped;
+  }
+
+  const bare = slashIdx > 0 ? lower.slice(slashIdx + 1) : lower;
+
+  if (bare.startsWith("claude-")) return "Anthropic";
+  if (
+    bare.startsWith("gpt-") ||
+    bare.startsWith("chatgpt-") ||
+    bare.includes("codex") ||
+    /^o[134](?:-|$)/.test(bare)
+  ) {
+    return "OpenAI";
+  }
+  if (
+    bare.startsWith("gemini-") ||
+    bare.startsWith("gemma-") ||
+    bare.startsWith("imagen-") ||
+    bare.startsWith("learnlm-")
+  ) {
+    return "Google";
+  }
+  if (bare.startsWith("grok-")) return "xAI";
+  if (bare.startsWith("deepseek-")) return "DeepSeek";
+  if (bare.startsWith("glm-") || bare.startsWith("chatglm")) return "Zhipu AI";
+  if (bare.startsWith("kimi-") || bare.startsWith("moonshot-")) return "Moonshot AI";
+  if (bare.startsWith("qwen") || bare.startsWith("qwq-")) return "Alibaba";
+  if (bare.startsWith("mimo-")) return "Xiaomi";
+  if (bare.startsWith("minimax-") || bare.startsWith("abab")) return "MiniMax";
+  if (bare.startsWith("sonar") || bare.startsWith("perplexity-") || bare.startsWith("r1-1776")) {
+    return "Perplexity";
+  }
+  if (bare.startsWith("llama-")) return "Meta";
+  if (
+    bare.startsWith("mistral-") ||
+    bare.startsWith("mixtral-") ||
+    bare.startsWith("codestral-") ||
+    bare.startsWith("pixtral-")
+  ) {
+    return "Mistral";
+  }
+  if (bare.startsWith("muse-")) return "Muse";
+
+  return "Unknown";
+}
+
 /* ── Builders ─────────────────────────────────────────────── */
 
 type ModelAgg = Required<Omit<UsageModelTotals, "totalRequests">> & { requests: number };
@@ -161,7 +275,7 @@ export function buildCostBreakdown(
       return {
         model,
         displayName: price?.displayName ?? model,
-        provider: price?.provider ?? "Unknown",
+        provider: inferModelProvider(model, price?.provider),
         inputTokens: shown.uncachedInput,
         cachedTokens: shown.cached,
         cacheWriteTokens: data.cacheWriteTokens,
@@ -175,13 +289,12 @@ export function buildCostBreakdown(
         priced: price !== null,
       };
     })
-    .sort((a, b) => b.estimatedCost - a.estimatedCost);
+    .sort((a, b) => b.estimatedCost - a.estimatedCost || b.requests - a.requests);
 }
 
 export function aggregateByProvider(entries: ModelCostEntry[]): ProviderCostEntry[] {
   const providerMap: Record<string, ProviderCostEntry> = {};
   for (const entry of entries) {
-    if (!entry.priced) continue;
     let provider = providerMap[entry.provider];
     if (!provider) {
       provider = { provider: entry.provider, estimatedCost: 0, models: 0, requests: 0 };
@@ -191,7 +304,7 @@ export function aggregateByProvider(entries: ModelCostEntry[]): ProviderCostEntr
     provider.models += 1;
     provider.requests += entry.requests;
   }
-  return Object.values(providerMap).sort((a, b) => b.estimatedCost - a.estimatedCost);
+  return Object.values(providerMap).sort((a, b) => b.estimatedCost - a.estimatedCost || b.requests - a.requests);
 }
 
 /** Rate column text: `in/cacheRead/out` when a cache-read rate exists, else `in/out`. */

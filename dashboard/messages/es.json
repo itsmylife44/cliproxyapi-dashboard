@@ -847,7 +847,7 @@
     "resetVerdictExpSoonTitle": "El crédito caduca pronto",
     "resetVerdictReasonSummary": "+{gain}% semanal · quedan {resetsIn}",
     "resetVerdictReasonHighWeekly": "Semanal aún al {pct}% (+{gain}%)",
-    "resetVerdictReasonImminentReset": "Se reinicia en {resetsIn}",
+    "resetVerdictReasonImminentReset": "Semanal se reinicia en {resetsIn}",
     "resetVerdictReasonExpiringSoon": "Caduca en {expiresIn} · +{gain}% semanal",
     "resetCreditExpiresLabel": "Caduca en {expiresIn}",
     "relativeTimeDaysHours": "{days}d {hours}h",

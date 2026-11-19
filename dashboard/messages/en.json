@@ -847,7 +847,7 @@
     "resetVerdictExpSoonTitle": "Credit expires soon",
     "resetVerdictReasonSummary": "+{gain}% weekly · {resetsIn} left",
     "resetVerdictReasonHighWeekly": "Weekly still at {pct}% (+{gain}%)",
-    "resetVerdictReasonImminentReset": "Resets in {resetsIn}",
+    "resetVerdictReasonImminentReset": "Weekly resets in {resetsIn}",
     "resetVerdictReasonExpiringSoon": "Expires in {expiresIn} · +{gain}% weekly",
     "resetCreditExpiresLabel": "Expires in {expiresIn}",
     "relativeTimeDaysHours": "{days}d {hours}h",

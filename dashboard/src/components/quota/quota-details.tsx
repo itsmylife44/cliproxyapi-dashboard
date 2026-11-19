@@ -60,8 +60,7 @@ interface PendingManualReset {
 interface ResetAdvice {
   tone: "good" | "borderline" | "bad";
   badge: string;
-  title: string;
-  reason?: string;
+  summary: string;
 }
 
 function formatCountdown(isoDate: string | null | undefined): string {
@@ -154,7 +153,7 @@ function evaluateResetAdvice(
     return {
       tone: "bad",
       badge: t("resetVerdictNoCreditsBadge"),
-      title: t("resetVerdictNoCreditsTitle"),
+      summary: t("resetVerdictNoCreditsTitle"),
     };
   }
 
@@ -162,8 +161,7 @@ function evaluateResetAdvice(
     return {
       tone: "good",
       badge: t("resetVerdictExpSoonBadge"),
-      title: t("resetVerdictExpSoonTitle"),
-      reason: t("resetVerdictReasonExpiringSoon", {
+      summary: t("resetVerdictReasonExpiringSoon", {
         expiresIn: formatCountdown(expiresAt),
         gain: longGain,
       }),
@@ -181,8 +179,7 @@ function evaluateResetAdvice(
     return {
       tone: "good",
       badge: t("resetVerdictGoodBadge"),
-      title: t("resetVerdictGoodTitle"),
-      reason: t("resetVerdictReasonSummary", { gain: longGain, resetsIn: longResetsIn }),
+      summary: t("resetVerdictReasonSummary", { gain: longGain, resetsIn: longResetsIn }),
     };
   }
 
@@ -190,12 +187,11 @@ function evaluateResetAdvice(
     return {
       tone: "borderline",
       badge: t("resetVerdictBorderlineBadge"),
-      title: t("resetVerdictBorderlineTitle"),
-      reason: t("resetVerdictReasonSummary", { gain: longGain, resetsIn: longResetsIn }),
+      summary: t("resetVerdictReasonSummary", { gain: longGain, resetsIn: longResetsIn }),
     };
   }
 
-  const badReason =
+  const badSummary =
     longPct >= 70
       ? t("resetVerdictReasonHighWeekly", { pct: longPct, gain: longGain })
       : longDays !== null && longDays < 1
@@ -205,8 +201,7 @@ function evaluateResetAdvice(
   return {
     tone: "bad",
     badge: t("resetVerdictBadBadge"),
-    title: t("resetVerdictBadTitle"),
-    reason: badReason,
+    summary: badSummary,
   };
 }
 
@@ -725,11 +720,8 @@ export function QuotaDetails({
                       >
                         {advice.badge}
                       </span>
-                      <span className="font-semibold">{advice.title}</span>
+                      <span className="font-semibold">{advice.summary}</span>
                     </div>
-                    {advice.reason && (
-                      <p className="mt-1 text-[11px] opacity-90">{advice.reason}</p>
-                    )}
                   </div>
 
                   {/* Before -> After Quota & Timer Breakdown */}

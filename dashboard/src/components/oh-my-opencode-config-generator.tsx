@@ -21,8 +21,6 @@ import {
   buildOhMyOpenCodeConfig,
   applyPreset,
   getMissingPresetModels,
-  type ConfigData,
-  type OAuthAccount,
 } from "@/lib/config-generators/oh-my-opencode";
 import {
   canonicalizeCategories,
@@ -39,8 +37,6 @@ import {
 
 interface OhMyOpenCodeConfigGeneratorProps {
   apiKeys: { key: string; name: string | null }[];
-  config: ConfigData | null;
-  oauthAccounts: OAuthAccount[];
   proxyModelIds?: string[];
   excludedModels?: string[];
   agentOverrides?: OhMyOpenCodeFullConfig;

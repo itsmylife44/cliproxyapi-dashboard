@@ -1,16 +1,18 @@
 "use client";
 
-import { Bar, BarChart, Legend, RadialBar, RadialBarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useTranslations } from "next-intl";
 
-import { CHART_COLORS, ChartContainer, ChartEmpty, useChartTheme } from "@/components/ui/chart-theme";
+import { ChartEmpty } from "@/components/ui/chart-theme";
+import { QuotaCapacity, QuotaCapacityBar } from "@/components/quota/quota-capacity";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { isModelFirstProviderQuotaUnverified, type ModelFirstProviderSummary } from "@/lib/model-first-monitoring";
-import { headlineQuotaWindows } from "@/lib/quota/headline";
-import type { ProviderSummary, WindowCapacity } from "@/lib/quota/provider-summary";
+import {
+  getWindowTermFractions,
+  type ProviderSummary,
+  type WindowCapacity,
+} from "@/lib/quota/provider-summary";
 
 interface QuotaChartProps {
-  overallCapacity: { value: number; label: string; provider: string };
   providerSummaries: ProviderSummary[];
   modelFirstSummary: ModelFirstProviderSummary | null;
   modelFirstOnlyView: boolean;
@@ -24,26 +26,23 @@ export function getComparableProviderSummaries(providerSummaries: ProviderSummar
   );
 }
 
-/** Lowest long- and short-term headline capacity of a window-based provider, in whole percent. */
+/** Average remaining capacity percentage across accounts for each headline term. */
 export function getProviderCapacityBars(windowCapacities: WindowCapacity[]): {
   longTerm: number | null;
   shortTerm: number | null;
 } {
-  const windows = headlineQuotaWindows(windowCapacities);
-  const lowest = (isShortTerm: boolean) => {
-    const capacities = windows.filter((window) => window.isShortTerm === isShortTerm).map((window) => window.capacity);
-    return capacities.length > 0 ? Math.round(Math.min(...capacities) * 100) : null;
+  const { longTerm, shortTerm } = getWindowTermFractions(windowCapacities);
+  return {
+    longTerm: longTerm !== null ? Math.round(longTerm * 100) : null,
+    shortTerm: shortTerm !== null ? Math.round(shortTerm * 100) : null,
   };
-  return { longTerm: lowest(false), shortTerm: lowest(true) };
 }
 
 export function QuotaChart({
-  overallCapacity,
   providerSummaries,
   modelFirstSummary,
   modelFirstOnlyView,
 }: QuotaChartProps) {
-  const { axisTickStyle, tooltipStyle, tokens } = useChartTheme();
   const t = useTranslations("quota");
 
   if (modelFirstOnlyView && modelFirstSummary) {
@@ -52,251 +51,104 @@ export function QuotaChart({
       modelFirstSummary.totalAccounts > 0
         ? Math.round((modelFirstSummary.readyAccounts / modelFirstSummary.totalAccounts) * 100)
         : 0;
-    const gaugeColor = quotaUnverified
-      ? CHART_COLORS.text.dimmed
-      : readyPct > 60
-        ? CHART_COLORS.success
-        : readyPct > 20
-          ? CHART_COLORS.warning
-          : CHART_COLORS.danger;
-    const gaugeData = [{ value: quotaUnverified ? 100 : readyPct, fill: gaugeColor }];
-    const groupData = modelFirstSummary.groups.map((group) => ({
-      group: group.label,
-      minRemaining: group.minRemainingFraction === null ? null : Math.round(group.minRemainingFraction * 100),
-      p50Remaining: group.p50RemainingFraction === null ? null : Math.round(group.p50RemainingFraction * 100),
-      readyAccounts: group.readyAccounts,
-      totalAccounts: group.totalAccounts,
-      nextReset: group.nextWindowResetAt,
-      fullReset: group.fullWindowResetAt,
-      nextRecovery: group.nextRecoveryAt,
-      bottleneckModel: group.bottleneckModel,
-    }));
 
     return (
-      <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <ChartContainer title={t("modelFirstReadinessTitle")} subtitle={t("modelFirstReadinessSubtitle")}>
-          {modelFirstSummary.totalAccounts === 0 ? (
-            <ChartEmpty message={t("noAntigravitySnapshots")} />
-          ) : (
-            <div className="relative flex h-48 items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
-                <RadialBarChart
-                  cx="50%"
-                  cy="60%"
-                  innerRadius="55%"
-                  outerRadius="80%"
-                  startAngle={210}
-                  endAngle={-30}
-                  data={[{ value: 100, fill: "rgba(148,163,184,0.1)" }, ...gaugeData]}
-                  barSize={14}
-                >
-                  <RadialBar dataKey="value" background={false} cornerRadius={4} />
-                </RadialBarChart>
-              </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold" style={{ color: gaugeColor }}>
-                  {quotaUnverified ? "N/A" : `${readyPct}%`}
-                </span>
-                <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: CHART_COLORS.text.dimmed }}>
-                  {quotaUnverified ? t("snapshotLabel") : t("readyLabel")}
-                </span>
-                <span className="mt-2 text-[11px]" style={{ color: CHART_COLORS.text.dimmed }}>
-                  {quotaUnverified
-                    ? t("freshSnapshotsCount", { fresh: Math.max(0, modelFirstSummary.totalAccounts - modelFirstSummary.staleAccounts), total: modelFirstSummary.totalAccounts })
-                    : t("readyAccountsCount", { ready: modelFirstSummary.readyAccounts, total: modelFirstSummary.totalAccounts })}
-                </span>
-                <span className="mt-1 text-[10px]" style={{ color: CHART_COLORS.text.muted }}>
-                  {t("nextResetShort")}: {formatRelativeTime(modelFirstSummary.nextWindowResetAt, t)}
-                </span>
-              </div>
-            </div>
-          )}
-        </ChartContainer>
+      <section aria-labelledby="quota-capacity-title" className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="quota-capacity-title" className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">
+            {t("groupedSnapshotTitle")}
+          </h2>
+          <div className="flex items-center gap-3 text-xs tabular-nums text-[var(--text-secondary)]">
+            <span>
+              {quotaUnverified
+                ? t("freshSnapshotsCount", {
+                    fresh: Math.max(0, modelFirstSummary.totalAccounts - modelFirstSummary.staleAccounts),
+                    total: modelFirstSummary.totalAccounts,
+                  })
+                : `${readyPct}% ${t("readyLabel").toLowerCase()} (${modelFirstSummary.readyAccounts}/${modelFirstSummary.totalAccounts})`}
+            </span>
+            <span className="text-[var(--text-muted)]">
+              {t("nextResetShort")}: {formatRelativeTime(modelFirstSummary.nextWindowResetAt, t)}
+            </span>
+          </div>
+        </div>
 
-        <ChartContainer title={t("groupedSnapshotTitle")} subtitle={t("groupedSnapshotSubtitle")}>
-          {groupData.length === 0 ? (
-            <ChartEmpty message={t("noGroupedModelData")} />
-          ) : (
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
-                <BarChart data={groupData} layout="vertical" margin={{ top: 4, right: 12, bottom: 4, left: 4 }} barSize={8} barGap={2}>
-                  <XAxis
-                    type="number"
-                    domain={[0, 100]}
-                    tick={axisTickStyle}
-                    tickLine={false}
-                    axisLine={{ stroke: tokens.border }}
-                    tickFormatter={(value) => `${value}%`}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="group"
-                    tick={{ ...axisTickStyle, fontSize: 10 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={96}
-                  />
-                  <Tooltip
-                    {...tooltipStyle}
-                    formatter={(value, name, props) => {
-                      if (value === null) return ["-", name];
-                      const label = name === "p50Remaining" ? t("medianRemainingLabel") : t("minimumRemainingLabel");
-                      const extra = ` | ${props.payload.readyAccounts}/${props.payload.totalAccounts} ${t("readyLabel").toLowerCase()}`;
-                      return [`${value}%${extra}`, label];
-                    }}
-                    labelFormatter={(label, payload) => {
-                      const item = payload?.[0]?.payload as
-                        | { nextReset?: string | null; fullReset?: string | null; nextRecovery?: string | null; bottleneckModel?: string | null }
-                        | undefined;
-                      if (!item) return label;
-                      return `${label} | ${t("resetLabel")} ${formatRelativeTime(item.nextReset, t)} | ${t("recoveryLabel")} ${formatRelativeTime(item.nextRecovery, t)} | ${t("bottleneckLabel")} ${item.bottleneckModel ?? "-"}`;
-                    }}
-                  />
-                  <Legend
-                    verticalAlign="top"
-                    height={24}
-                    formatter={(value: string) => (value === "p50Remaining" ? t("medianRemainingLabel") : t("minimumRemainingLabel"))}
-                    wrapperStyle={{ fontSize: 10, color: tokens.text.dimmed }}
-                  />
-                  <Bar dataKey="p50Remaining" radius={[0, 3, 3, 0]} fill={CHART_COLORS.cyan} />
-                  <Bar dataKey="minRemaining" radius={[0, 3, 3, 0]} fill={CHART_COLORS.success} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </ChartContainer>
+        {modelFirstSummary.groups.length === 0 ? (
+          <ChartEmpty message={t("noGroupedModelData")} />
+        ) : (
+          <div className="space-y-2.5">
+            {modelFirstSummary.groups.map((group) => {
+              const minPct = group.minRemainingFraction === null ? null : Math.round(group.minRemainingFraction * 100);
+              const p50Pct = group.p50RemainingFraction === null ? null : Math.round(group.p50RemainingFraction * 100);
+              const barPct = minPct ?? p50Pct ?? 0;
+              return (
+                <div key={group.label} className="space-y-1">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="truncate font-medium text-[var(--text-primary)]">{group.label}</span>
+                    <span className="shrink-0 tabular-nums text-[var(--text-muted)]">
+                      {minPct !== null ? `${minPct}% min` : "-"}
+                      {p50Pct !== null ? ` · ${p50Pct}% p50` : ""}
+                      {" · "}
+                      {group.readyAccounts}/{group.totalAccounts} {t("readyLabel").toLowerCase()}
+                    </span>
+                  </div>
+                  <QuotaCapacityBar percent={barPct} />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
     );
   }
 
+  const chartSummaries = getComparableProviderSummaries(providerSummaries);
+
   return (
-    <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-      <ChartContainer title={t("overallCapacityTitle")} subtitle={t("overallCapacitySubtitle")}>
-        {providerSummaries.length === 0 || !overallCapacity.provider ? (
-          <ChartEmpty message={providerSummaries.length === 0 ? t("noProviderData") : t("noAggregatedQuota")} />
-        ) : (() => {
-          const pct = Math.round(overallCapacity.value * 100);
-          const gaugeColor =
-            overallCapacity.value > 0.6
-              ? CHART_COLORS.success
-              : overallCapacity.value > 0.2
-                ? CHART_COLORS.warning
-                : CHART_COLORS.danger;
-          const gaugeData = [{ value: pct, fill: gaugeColor }];
-          return (
-            <div className="relative flex h-48 items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
-                <RadialBarChart
-                  cx="50%"
-                  cy="60%"
-                  innerRadius="55%"
-                  outerRadius="80%"
-                  startAngle={210}
-                  endAngle={-30}
-                  data={[{ value: 100, fill: "rgba(148,163,184,0.1)" }, ...gaugeData]}
-                  barSize={14}
-                >
-                  <RadialBar dataKey="value" background={false} cornerRadius={4} />
-                </RadialBarChart>
-              </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold" style={{ color: gaugeColor }}>{pct}%</span>
-                <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: tokens.text.dimmed }}>{t("capacityLabel")}</span>
-              </div>
-            </div>
-          );
-        })()}
-      </ChartContainer>
+    <section aria-labelledby="quota-capacity-title" className="space-y-3">
+      <h2 id="quota-capacity-title" className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">
+        {t("providerCapacityTitle")}
+      </h2>
 
-      <ChartContainer title={t("providerCapacityTitle")} subtitle={t("providerCapacitySubtitle")}>
-        {providerSummaries.length === 0 ? (
-          <ChartEmpty message={t("noProviderData")} />
-        ) : (() => {
-          const chartSummaries = getComparableProviderSummaries(providerSummaries);
-          if (chartSummaries.length === 0) {
-            return <ChartEmpty message={t("noComparableProviderQuota")} />;
-          }
+      {providerSummaries.length === 0 ? (
+        <ChartEmpty message={t("noProviderData")} />
+      ) : chartSummaries.length === 0 ? (
+        <ChartEmpty message={t("noComparableProviderQuota")} />
+      ) : (
+        <ul className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))]">
+          {chartSummaries.map((summary) => {
+            const bars =
+              summary.monitorMode === "model-first" && summary.modelFirstSummary
+                ? {
+                    longTerm:
+                      (summary.modelFirstSummary.avgRemainingFraction ?? summary.modelFirstSummary.minRemainingFraction) != null
+                        ? Math.round((summary.modelFirstSummary.avgRemainingFraction ?? summary.modelFirstSummary.minRemainingFraction)! * 100)
+                        : null,
+                    shortTerm: null,
+                  }
+                : getProviderCapacityBars(summary.windowCapacities);
 
-          const barData = chartSummaries.map((summary) => {
-            if (summary.monitorMode === "model-first" && summary.modelFirstSummary) {
-              return {
-                provider: summary.provider,
-                longTerm:
-                  summary.modelFirstSummary.minRemainingFraction === null
-                    ? null
-                    : Math.round(summary.modelFirstSummary.minRemainingFraction * 100),
-                shortTerm: null,
-                healthy: summary.healthyAccounts,
-                total: summary.totalAccounts,
-                issues: summary.errorAccounts,
-                monitorMode: summary.monitorMode,
-              };
-            }
-
-            const { longTerm, shortTerm } = getProviderCapacityBars(summary.windowCapacities);
-
-            return {
-              provider: summary.provider,
-              longTerm,
-              shortTerm,
-              healthy: summary.healthyAccounts,
-              total: summary.totalAccounts,
-              issues: summary.errorAccounts,
-              monitorMode: summary.monitorMode,
-            };
-          });
-
-          return (
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
-                <BarChart data={barData} layout="vertical" margin={{ top: 4, right: 12, bottom: 4, left: 4 }} barSize={8} barGap={2}>
-                  <XAxis
-                    type="number"
-                    domain={[0, 100]}
-                    tick={axisTickStyle}
-                    tickLine={false}
-                    axisLine={{ stroke: tokens.border }}
-                    tickFormatter={(value) => `${value}%`}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="provider"
-                    tick={{ ...axisTickStyle, fontSize: 10 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={72}
-                  />
-                  <Tooltip
-                    {...tooltipStyle}
-                    formatter={(value, name, props) => {
-                      if (value === null) return ["-", name];
-
-                      if (props.payload.monitorMode === "model-first") {
-                        return [`${value}% (${props.payload.healthy}/${props.payload.total} ${t("healthyLabel")})`, t("groupedSnapshotMinLabel")];
-                      }
-
-                      const label = name === "longTerm" ? t("longTermLabel") : t("shortTermLabel");
-                      const extra =
-                        name === "longTerm"
-                          ? ` (${props.payload.healthy}/${props.payload.total} ${t("healthyLabel")}${props.payload.issues > 0 ? `, ${props.payload.issues} ${t("issuesLabel")}` : ""})`
-                          : "";
-                      return [`${value}%${extra}`, label];
-                    }}
-                  />
-                  <Legend
-                    verticalAlign="top"
-                    height={24}
-                    formatter={(value: string) => (value === "longTerm" ? t("longTermLabel") : t("shortTermLabel"))}
-                    wrapperStyle={{ fontSize: 10, color: tokens.text.dimmed }}
-                  />
-                  <Bar dataKey="longTerm" radius={[0, 3, 3, 0]} fill={CHART_COLORS.success} />
-                  <Bar dataKey="shortTerm" radius={[0, 3, 3, 0]} fill={CHART_COLORS.cyan} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          );
-        })()}
-      </ChartContainer>
+            const { longTerm, shortTerm } = bars;
+            return (
+              <li key={summary.provider} className="min-w-0 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 px-3 py-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+                  <h3 className="text-sm font-semibold capitalize text-[var(--text-primary)]">{summary.provider}</h3>
+                  <span className="text-xs tabular-nums text-[var(--text-muted)]">
+                    {summary.healthyAccounts}/{summary.totalAccounts} {t("healthyLabel")}
+                    {summary.errorAccounts > 0 ? ` · ${summary.errorAccounts} ${t("issuesLabel")}` : ""}
+                  </span>
+                </div>
+                <div className="mt-2.5 grid auto-cols-fr grid-flow-col gap-3 border-t border-[var(--surface-border)] pt-2">
+                  {longTerm !== null && (
+                    <QuotaCapacity label={t(summary.monitorMode === "model-first" ? "remainingColumnLabel" : "longTermLabel")} percent={longTerm} />
+                  )}
+                  {shortTerm !== null && <QuotaCapacity label={t("shortTermLabel")} percent={shortTerm} />}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 }

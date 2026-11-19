@@ -373,11 +373,8 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
   return (
     <>
       <div id="provider-custom" className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('customProvidersTitle')}</h2>
-            <p className="text-xs text-[var(--text-muted)]">{t('customSectionDescription')}</p>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-[var(--text-muted)]">{t("customSectionDescription")}</p>
           <div className="flex items-center gap-2">
             <Button variant="secondary" onClick={() => setShowGroupModal(true)} className="px-2.5 py-1 text-xs">
               {t("manageGroupsButton")}
@@ -408,9 +405,6 @@ export function CustomProviderSection({ showToast, onProviderCountChange }: Cust
               <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('noCustomProviders')}</h3>
               <p className="text-xs text-[var(--text-muted)]">{t('noCustomProvidersDescription')}</p>
             </div>
-            <Button onClick={() => setShowCustomProviderModal(true)} className="px-3 py-1.5 text-xs">
-              {t("addCustomProviderButton")}
-            </Button>
           </div>
         ) : (
           <div className="space-y-4">

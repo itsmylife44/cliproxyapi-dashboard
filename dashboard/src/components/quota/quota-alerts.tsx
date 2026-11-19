@@ -14,6 +14,8 @@ interface TelegramSettings {
   chatId: string;
   threshold: number;
   enabled: boolean;
+  channel: "disabled" | "telegram" | "discord";
+  webhook: string;
   providers: string[];
   checkInterval: number;
   cooldown: number;
@@ -64,11 +66,19 @@ export function QuotaAlerts() {
     chatId: "",
     threshold: 20,
     enabled: false,
+    channel: "disabled",
+    webhook: "",
     providers: ALERT_PROVIDERS.map((p) => p.key),
     checkInterval: 5,
     cooldown: 60,
   });
   const [showToken, setShowToken] = useState(false);
+  const [savedConnection, setSavedConnection] = useState<{
+    channel: TelegramSettings["channel"];
+    webhook: string;
+    botToken: string;
+    chatId: string;
+  } | null>(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -88,14 +98,23 @@ export function QuotaAlerts() {
         const res = await fetch(API_ENDPOINTS.ADMIN.TELEGRAM);
         if (res.ok) {
           const data = await res.json();
-          setSettings({
+          const nextSettings: TelegramSettings = {
             botToken: data.botToken ?? "",
             chatId: data.chatId ?? "",
             threshold: data.threshold ?? 20,
             enabled: data.enabled ?? false,
+            channel: data.channel ?? "disabled",
+            webhook: data.webhook ?? "",
             providers: Array.isArray(data.providers) ? data.providers : ALERT_PROVIDERS.map((p) => p.key),
             checkInterval: data.checkInterval ?? 5,
             cooldown: data.cooldown ?? 60,
+          };
+          setSettings(nextSettings);
+          setSavedConnection({
+            channel: nextSettings.channel,
+            webhook: nextSettings.webhook,
+            botToken: nextSettings.botToken,
+            chatId: nextSettings.chatId,
           });
         }
       } catch {
@@ -114,7 +133,9 @@ export function QuotaAlerts() {
       const body: Record<string, unknown> = {
         chatId: settings.chatId,
         threshold: settings.threshold,
-        enabled: settings.enabled,
+        enabled: settings.channel === "telegram",
+        channel: settings.channel,
+        webhook: settings.webhook,
         providers: settings.providers,
         checkInterval: settings.checkInterval,
         cooldown: settings.cooldown,
@@ -132,14 +153,23 @@ export function QuotaAlerts() {
         const refreshRes = await fetch(API_ENDPOINTS.ADMIN.TELEGRAM);
         if (refreshRes.ok) {
           const refreshData = await refreshRes.json();
-          setSettings({
+          const nextSettings: TelegramSettings = {
             botToken: refreshData.botToken ?? "",
             chatId: refreshData.chatId ?? "",
             threshold: refreshData.threshold ?? 20,
             enabled: refreshData.enabled ?? false,
+            channel: refreshData.channel ?? "disabled",
+            webhook: refreshData.webhook ?? "",
             providers: Array.isArray(refreshData.providers) ? refreshData.providers : ALERT_PROVIDERS.map((p) => p.key),
             checkInterval: refreshData.checkInterval ?? 5,
             cooldown: refreshData.cooldown ?? 60,
+          };
+          setSettings(nextSettings);
+          setSavedConnection({
+            channel: nextSettings.channel,
+            webhook: nextSettings.webhook,
+            botToken: nextSettings.botToken,
+            chatId: nextSettings.chatId,
           });
           setShowToken(false);
         }
@@ -208,38 +238,33 @@ export function QuotaAlerts() {
     }
   };
 
-  const hasSavedConfig = settings.botToken.length > 0 && settings.chatId.length > 0;
+  const hasSavedConfig = settings.channel === "discord" ? settings.webhook.length > 0 : settings.channel === "telegram" && settings.botToken.length > 0 && settings.chatId.length > 0;
+  const hasUnsavedConnectionChanges =
+    savedConnection !== null &&
+    (settings.channel !== savedConnection.channel ||
+      settings.webhook !== savedConnection.webhook ||
+      settings.botToken !== savedConnection.botToken ||
+      settings.chatId !== savedConnection.chatId);
 
   return (
-    <section className="space-y-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
+    <section className="space-y-3 border-t border-[var(--surface-border)] pt-4">
       <div>
         <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">{t("sectionTitle")}</h2>
         <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t("sectionDescription")}</p>
       </div>
 
       <div className="space-y-3">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={settings.enabled}
-            onClick={() => setSettings((s) => ({ ...s, enabled: !s.enabled }))}
-            className={cn(
-              "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors",
-              settings.enabled
-                ? "bg-blue-500/100 border-blue-500"
-                : "bg-[var(--surface-muted)] border-[var(--surface-border)]"
-            )}
-          >
-            <span
-              className={cn(
-                "inline-block h-3.5 w-3.5 rounded-full bg-[var(--surface-base)] transition-transform",
-                settings.enabled ? "translate-x-4" : "translate-x-0.5"
-              )}
-            />
-          </button>
-            <span className="text-xs text-[var(--text-secondary)]">{t("enableAlertsLabel")}</span>
-        </label>
+        <fieldset className="flex max-w-sm flex-wrap gap-1 rounded-md bg-[var(--surface-muted)] p-1">
+          <legend className="sr-only">{t("sectionTitle")}</legend>
+          {(["disabled", "telegram", "discord"] as const).map((channel) => (
+            <label key={channel} className={cn("flex-1 cursor-pointer rounded px-3 py-1.5 text-center text-xs focus-within:ring-2 focus-within:ring-[var(--accent)]", settings.channel === channel ? "bg-[var(--surface-base)] font-semibold text-[var(--text-primary)]" : "text-[var(--text-muted)]")}>
+              <input type="radio" name="quota-alert-channel" value={channel} checked={settings.channel === channel} onChange={() => setSettings((s) => ({ ...s, channel }))} className="sr-only" />
+              {t(channel)}
+            </label>
+          ))}
+        </fieldset>
+        {settings.channel === "discord" && <div className="space-y-1"><label htmlFor="discord-webhook" className="text-xs font-medium text-[var(--text-muted)]">{t("webhookUrl")}</label><Input type="password" name="discord-webhook" value={settings.webhook} onChange={(v) => setSettings((s) => ({ ...s, webhook: v }))} autoComplete="off" /></div>}
+        {settings.channel === "telegram" && <>
 
         <div className="space-y-1">
           <label htmlFor="tg-bot-token" className="text-xs font-medium text-[var(--text-muted)]">{t("botTokenLabel")}</label>
@@ -273,118 +298,132 @@ export function QuotaAlerts() {
           />
           <p className="text-[10px] text-[var(--text-muted)]">{t("chatIdHint")}</p>
         </div>
+        </>}
 
-        <div className="space-y-1">
-          <label htmlFor="tg-threshold" className="text-xs font-medium text-[var(--text-muted)]">{t("thresholdLabel")}</label>
-          <Input
-            type="number"
-            name="tg-threshold"
-            value={String(settings.threshold)}
-            onChange={(v) => {
-              const num = parseInt(v, 10);
-              if (!Number.isNaN(num) && num >= 1 && num <= 100) {
-                setSettings((s) => ({ ...s, threshold: num }));
-              } else if (v === "") {
-                setSettings((s) => ({ ...s, threshold: 1 }));
-              }
-            }}
-            placeholder="20"
-          />
-          <p className="text-[10px] text-[var(--text-muted)]">{t("thresholdHint")}</p>
-        </div>
+        {settings.channel !== "disabled" && (
+          <>
+            <div className="space-y-1">
+              <label htmlFor="tg-threshold" className="text-xs font-medium text-[var(--text-muted)]">{t("thresholdLabel")}</label>
+              <Input
+                type="number"
+                name="tg-threshold"
+                value={String(settings.threshold)}
+                onChange={(v) => {
+                  const num = parseInt(v, 10);
+                  if (!Number.isNaN(num) && num >= 1 && num <= 100) {
+                    setSettings((s) => ({ ...s, threshold: num }));
+                  } else if (v === "") {
+                    setSettings((s) => ({ ...s, threshold: 1 }));
+                  }
+                }}
+                placeholder="20"
+              />
+              <p className="text-[10px] text-[var(--text-muted)]">{t("thresholdHint")}</p>
+            </div>
 
-        <div className="space-y-1">
-          <label htmlFor="tg-check-interval" className="text-xs font-medium text-[var(--text-muted)]">{t("checkIntervalLabel")}</label>
-          <Input
-            type="number"
-            name="tg-check-interval"
-            value={String(settings.checkInterval)}
-            onChange={(v) => {
-              const num = parseInt(v, 10);
-              if (!Number.isNaN(num) && num >= 1 && num <= 1440) {
-                setSettings((s) => ({ ...s, checkInterval: num }));
-              } else if (v === "") {
-                setSettings((s) => ({ ...s, checkInterval: 1 }));
-              }
-            }}
-            placeholder="5"
-          />
-          <p className="text-[10px] text-[var(--text-muted)]">{t("checkIntervalHint")}</p>
-        </div>
+            <div className="space-y-1">
+              <label htmlFor="tg-check-interval" className="text-xs font-medium text-[var(--text-muted)]">{t("checkIntervalLabel")}</label>
+              <Input
+                type="number"
+                name="tg-check-interval"
+                value={String(settings.checkInterval)}
+                onChange={(v) => {
+                  const num = parseInt(v, 10);
+                  if (!Number.isNaN(num) && num >= 1 && num <= 1440) {
+                    setSettings((s) => ({ ...s, checkInterval: num }));
+                  } else if (v === "") {
+                    setSettings((s) => ({ ...s, checkInterval: 1 }));
+                  }
+                }}
+                placeholder="5"
+              />
+              <p className="text-[10px] text-[var(--text-muted)]">{t("checkIntervalHint")}</p>
+            </div>
 
-        <div className="space-y-1">
-          <label htmlFor="tg-cooldown" className="text-xs font-medium text-[var(--text-muted)]">{t("cooldownLabel")}</label>
-          <Input
-            type="number"
-            name="tg-cooldown"
-            value={String(settings.cooldown)}
-            onChange={(v) => {
-              const num = parseInt(v, 10);
-              if (!Number.isNaN(num) && num >= 1 && num <= 1440) {
-                setSettings((s) => ({ ...s, cooldown: num }));
-              } else if (v === "") {
-                setSettings((s) => ({ ...s, cooldown: 1 }));
-              }
-            }}
-            placeholder="60"
-          />
-          <p className="text-[10px] text-[var(--text-muted)]">{t("cooldownHint")}</p>
-        </div>
+            <div className="space-y-1">
+              <label htmlFor="tg-cooldown" className="text-xs font-medium text-[var(--text-muted)]">{t("cooldownLabel")}</label>
+              <Input
+                type="number"
+                name="tg-cooldown"
+                value={String(settings.cooldown)}
+                onChange={(v) => {
+                  const num = parseInt(v, 10);
+                  if (!Number.isNaN(num) && num >= 1 && num <= 1440) {
+                    setSettings((s) => ({ ...s, cooldown: num }));
+                  } else if (v === "") {
+                    setSettings((s) => ({ ...s, cooldown: 1 }));
+                  }
+                }}
+                placeholder="60"
+              />
+              <p className="text-[10px] text-[var(--text-muted)]">{t("cooldownHint")}</p>
+            </div>
 
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-[var(--text-muted)]">{t("monitoredProviders")}</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-            {ALERT_PROVIDERS.map((provider) => {
-              const isChecked = settings.providers.includes(provider.key);
-              return (
-                <label key={provider.key} className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => {
-                      setSettings((s) => ({
-                        ...s,
-                        providers: isChecked
-                          ? s.providers.filter((p) => p !== provider.key)
-                          : [...s.providers, provider.key],
-                      }));
-                    }}
-                    className="size-3.5 rounded border-[var(--surface-border)] bg-[var(--surface-muted)] text-blue-500 focus:ring-blue-500/30 focus:ring-offset-0"
-                  />
-                  <span className="text-xs text-[var(--text-secondary)]">{t(ALERT_PROVIDER_LABEL_KEYS[provider.key] as Parameters<typeof t>[0])}</span>
-                </label>
-              );
-            })}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-[var(--text-muted)]">{t("monitoredProviders")}</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                {ALERT_PROVIDERS.map((provider) => {
+                  const isChecked = settings.providers.includes(provider.key);
+                  return (
+                    <label key={provider.key} className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          setSettings((s) => ({
+                            ...s,
+                            providers: isChecked
+                              ? s.providers.filter((p) => p !== provider.key)
+                              : [...s.providers, provider.key],
+                          }));
+                        }}
+                        className="size-3.5 rounded border-[var(--surface-border)] bg-[var(--surface-muted)] text-blue-500 focus:ring-blue-500/30 focus:ring-offset-0"
+                      />
+                      <span className="text-xs text-[var(--text-secondary)]">{t(ALERT_PROVIDER_LABEL_KEYS[provider.key] as Parameters<typeof t>[0])}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-[var(--text-muted)]">{t("monitoredProvidersHint")}</p>
+            </div>
+          </>
+        )}
+
+        {(settings.channel !== "disabled" || hasUnsavedConnectionChanges) && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button onClick={handleSave} disabled={saving} className="text-xs">
+              {saving ? t("buttonSaving") : t("buttonSave")}
+            </Button>
+            {settings.channel !== "disabled" && (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={handleTest}
+                  disabled={testing || !hasSavedConfig || hasUnsavedConnectionChanges}
+                  className="text-xs"
+                >
+                  {testing ? t("buttonSending") : t("buttonSendTest")}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleCheckNow}
+                  disabled={checking || !hasSavedConfig}
+                  className="text-xs"
+                >
+                  {checking ? t("buttonChecking") : t("buttonCheckNow")}
+                </Button>
+              </>
+            )}
           </div>
-          <p className="text-[10px] text-[var(--text-muted)]">{t("monitoredProvidersHint")}</p>
-        </div>
-
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button onClick={handleSave} disabled={saving} className="text-xs">
-            {saving ? t("buttonSaving") : t("buttonSave")}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={handleTest}
-            disabled={testing || !hasSavedConfig}
-            className="text-xs"
-          >
-            {testing ? t("buttonSending") : t("buttonSendTest")}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={handleCheckNow}
-            disabled={checking || !hasSavedConfig}
-            className="text-xs"
-          >
-            {checking ? t("buttonChecking") : t("buttonCheckNow")}
-          </Button>
-        </div>
+        )}
+        {hasUnsavedConnectionChanges && hasSavedConfig && (
+          <p className="text-[10px] text-[var(--text-muted)]">{t("unsavedTestHint")}</p>
+        )}
 
         {checkResult && checkResult.accounts && checkResult.accounts.length > 0 && (
           <div className="mt-2 space-y-1 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              Check Result — {checkResult.breachedCount ?? 0} account(s) breached
+              {t("checkResultTitle", { count: checkResult.breachedCount ?? 0 })}
             </p>
             <div className="space-y-0.5">
               {checkResult.accounts.map((a) => (

@@ -8,6 +8,7 @@ import { LatencyIndicator } from "@/components/header/latency-indicator";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useHeaderNotifications } from "@/hooks/use-header-notifications";
 import { useAuth } from "@/hooks/use-auth";
+import { useMobileSidebar } from "@/components/mobile-sidebar-context";
 
 interface DashboardHeaderProps {
   onUserClick: () => void;
@@ -57,54 +58,82 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
   const status = hasExternalStatus ? externalStatus : (swrStatus ?? null);
   const isLoading = hasExternalStatus ? status === null : swrLoading;
 
+  const { isOpen: isSidebarOpen, toggle: toggleSidebar } = useMobileSidebar();
   const t = useTranslations("header");
+  const tMobile = useTranslations("mobile");
 
   const initial = username ? username.charAt(0).toUpperCase() : "?";
 
   return (
-    <header className="w-full bg-[var(--surface-base)] border-b border-[var(--surface-border)] py-2.5 px-4 lg:px-6 rounded-2xl mb-4 shadow-[rgba(0,0,0,0.06)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_1px_2px] flex items-center justify-between">
-      {/* Left Side: Status + Latency */}
-      <div className="flex items-center gap-3 text-sm">
-        <div className="flex items-center gap-2">
-          {isLoading ? (
-            <>
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-500/100 animate-pulse" />
-              <span className="text-[var(--text-muted)]">{t('checking')}</span>
-            </>
-          ) : status?.running ? (
-            <>
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/100 animate-pulse-dot" />
-              <span className="text-emerald-600 font-medium">{t('allSystemsOperational')}</span>
-            </>
-          ) : (
-            <>
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500/100" />
-              <span className="text-red-600 font-medium">{t('systemOffline')}</span>
-            </>
-          )}
+    <header className="sticky top-0 z-30 -mx-4 mb-4 flex items-center justify-between gap-2 border-b border-[var(--surface-border)] bg-[var(--surface-base)]/85 px-3 py-2 backdrop-blur-md lg:static lg:mx-0 lg:mb-5 lg:w-full lg:bg-transparent lg:px-0 lg:py-2.5 lg:backdrop-blur-none">
+      {/* Left Side: Mobile Menu + Brand (merged) + Live Ping */}
+      <div className="flex min-w-0 items-center gap-2 text-sm">
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="rounded-md p-1 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--surface-hover)] lg:hidden"
+          aria-label={tMobile("toggleMenuAriaLabel")}
+          aria-expanded={isSidebarOpen}
+          aria-controls="dashboard-navigation"
+        >
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        </button>
+
+        <div className="flex min-w-0 items-center gap-1.5 lg:hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icon.png"
+            alt={tMobile("logoAlt")}
+            width={20}
+            height={22}
+            className="shrink-0 rounded-sm"
+          />
+          <span className="hidden truncate text-sm font-semibold tracking-tight text-[var(--text-primary)] min-[360px]:inline">
+            {tMobile("appName")}
+          </span>
         </div>
 
-        {status?.running && status.uptime != null && (
-          <>
-            <div className="w-px h-4 bg-[var(--surface-border)]" />
-            <span className="text-[var(--text-muted)] text-xs">
-              {t('uptimeLabel')}{formatUptime(status.uptime)}
-            </span>
-          </>
-        )}
-
-        {status?.running && (
-          <>
-            <div className="hidden sm:block w-px h-4 bg-[var(--surface-border)]" />
-            <div className="hidden sm:block">
+        <div
+          className="flex shrink-0 items-center"
+          title={
+            status?.running && status.uptime != null
+              ? `${t('uptimeLabel')}${formatUptime(status.uptime)}`
+              : undefined
+          }
+        >
+          {isLoading ? (
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-xs text-[var(--text-muted)]">{t('checking')}</span>
+            </div>
+          ) : status?.running ? (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--surface-border)] bg-[var(--surface-muted)]/40 px-2 py-0.5 sm:px-2.5 sm:py-1">
               <LatencyIndicator />
             </div>
-          </>
-        )}
+          ) : (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/25 bg-rose-500/10 px-2 py-0.5 sm:px-2.5 sm:py-1">
+              <div className="h-2 w-2 rounded-full bg-rose-500" />
+              <span className="text-xs font-medium text-rose-600">{t('systemOffline')}</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Right Side: Notifications + User */}
-      <div className="flex items-center gap-2">
+      {/* Right Side: Notifications + Theme + User */}
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <NotificationBell
           notifications={notifications}
           criticalCount={criticalCount}
@@ -129,7 +158,7 @@ export function DashboardHeader({ onUserClick, username, isAdmin, externalStatus
               </span>
             )}
           </div>
-          <div className="w-9 h-9 rounded-full bg-[var(--surface-muted)] border border-[var(--surface-border)] flex items-center justify-center text-sm font-medium text-[var(--text-primary)] group-hover:border-[rgba(0,0,0,0.15)] group-hover:shadow-[rgba(78,50,23,0.04)_0px_6px_16px] transition-[color,border-color,box-shadow]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--surface-border)] bg-[var(--surface-muted)] text-xs font-medium text-[var(--text-primary)] transition-[color,border-color,box-shadow] group-hover:border-[rgba(0,0,0,0.15)] group-hover:shadow-[rgba(78,50,23,0.04)_0px_6px_16px] sm:h-9 sm:w-9 sm:text-sm">
             {initial}
           </div>
         </button>

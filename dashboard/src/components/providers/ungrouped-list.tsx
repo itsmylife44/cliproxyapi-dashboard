@@ -24,8 +24,8 @@ export function UngroupedList({
   if (providers.length === 0) return null;
 
   return (
-    <div className="rounded-sm border border-[var(--surface-border)] bg-[var(--surface-base)] overflow-hidden">
-      <div className="flex items-center gap-2 border-b border-[var(--surface-border)] bg-[var(--surface-base)]/60 px-3 py-2">
+    <div className="overflow-hidden border-t border-b border-[var(--surface-border)]">
+      <div className="flex items-center gap-2 border-b border-[var(--surface-border)] py-2.5">
         <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
           {t("ungroupedTitle")}
         </span>

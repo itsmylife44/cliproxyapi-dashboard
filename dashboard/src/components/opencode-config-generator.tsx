@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { PluginSection } from "@/components/opencode/plugin-section";
 import { McpSection } from "@/components/opencode/mcp-section";
@@ -10,28 +9,18 @@ import { extractApiError } from "@/lib/utils";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import {
-  type OAuthAccount,
-  type ConfigData,
   type McpEntry,
   type ModelDefinition,
   generateConfigJson,
 } from "@/lib/config-generators/opencode";
-import { PROVIDER_CONFIG_KEYS } from "@/lib/providers/constants";
 import { AGENT_ROLES, CATEGORY_ROLES } from "@/lib/config-generators/oh-my-opencode";
 import { SLIM_AGENT_ROLES } from "@/lib/config-generators/oh-my-opencode-slim";
 import { isOmoPlugin, isSlimPlugin, normalizePlugin, OMO_PLUGIN, SLIM_PLUGIN, SYNC_PLUGIN } from "@/lib/config-generators/upstream/plugins";
 
-interface ApiKeyEntry {
-  key: string;
-  name: string | null;
-}
-
 export type OmoVariant = "normal" | "slim";
 
 interface OpenCodeConfigGeneratorProps {
-   apiKeys: ApiKeyEntry[];
-   config: ConfigData | null;
-   oauthAccounts: OAuthAccount[];
+   apiKey: string;
    models: Record<string, ModelDefinition>;
    excludedModels?: string[];
    proxyUrl: string;
@@ -59,8 +48,7 @@ const variantCounts = {
 };
 
 export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
-  const { apiKeys, config, oauthAccounts, models: allModels, excludedModels, proxyUrl, onVariantChange } = props;
-   const [selectedKeyIndex, setSelectedKeyIndex] = useState(0);
+  const { apiKey, models: allModels, excludedModels, proxyUrl, onVariantChange } = props;
    const [isExpanded, setIsExpanded] = useState(false);
    const [plugins, setPlugins] = useState<string[]>(DEFAULT_PLUGINS);
    const [pluginInput, setPluginInput] = useState("");
@@ -171,19 +159,6 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
         Object.entries(allModels).filter(([id]) => !excludedModels.includes(id))
       )
     : allModels;
-  const hasModels = Object.keys(availableModels).length > 0;
-  const hasKeys = apiKeys.length > 0;
-  const hasActiveOAuth = oauthAccounts.some((a) => !a.disabled);
-  const hasConfiguredProviderKey = PROVIDER_CONFIG_KEYS.some((key) => {
-    const value = (config as Record<string, unknown> | null)?.[key];
-    return Array.isArray(value) ? value.length > 0 : Boolean(value);
-  });
-  const hasAnyProviderConfigured = hasConfiguredProviderKey || hasActiveOAuth;
-
-  const selectedEntry = hasKeys
-    ? apiKeys[selectedKeyIndex] ?? apiKeys[0]
-    : null;
-  const activeKey = selectedEntry?.key ?? "your-api-key-from-dashboard";
   const availableModelOptions = Object.keys(availableModels).map((modelId) => ({
     id: modelId,
     value: `cliproxyapi/${modelId}`,
@@ -194,7 +169,7 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
     && !availableModelOptions.some((option) => option.value === defaultModel.trim());
   const resolvedDefaultModel = defaultModel.trim() || fallbackModel;
 
-   const configJson = generateConfigJson(activeKey, availableModels, proxyUrl, {
+   const configJson = generateConfigJson(apiKey, availableModels, proxyUrl, {
       plugins,
       mcps,
       defaultModel: resolvedDefaultModel,
@@ -295,62 +270,6 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
     downloadFile(configJson, "opencode.json");
   };
 
-  if (!hasAnyProviderConfigured) {
-    return (
-      <div className="space-y-4">
-        <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 text-sm rounded-r-xl">
-          <p className="text-[var(--text-primary)] font-medium mb-1">{t("noProvidersTitle")}</p>
-          <p className="text-[var(--text-muted)] text-xs">
-            {t("noProvidersDesc")}{" "}
-            <Link href="/dashboard/providers" className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[#ccc]">
-              {t("noProvidersLink")}
-            </Link>{" "}
-            {t("noProvidersDescMid")}{" "}
-            <Link href="/dashboard/providers" className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[#ccc]">
-              {t("noProvidersLink")}
-            </Link>.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (apiKeys.length === 0) {
-    return (
-      <div className="space-y-3">
-        <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 rounded-r-xl">
-          <div className="text-sm font-medium text-[var(--text-primary)] mb-1">{t("apiKeyRequiredTitle")}</div>
-          <p className="text-sm text-[var(--text-secondary)]">
-            {t("apiKeyRequiredDesc")}
-          </p>
-          <Link
-            href="/dashboard/api-keys"
-            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] text-[var(--text-primary)] text-sm font-medium hover:bg-[var(--surface-hover)] transition-colors"
-          >
-            {t("createApiKeyLink")}
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasModels) {
-    return (
-      <div className="space-y-4">
-        <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 text-sm rounded-r-xl">
-          <p className="text-[var(--text-primary)] font-medium mb-1">{t("noModelsTitle")}</p>
-          <p className="text-[var(--text-muted)] text-xs">
-            {t("noModelsDesc")}{" "}
-            <Link href="/dashboard/providers" className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[#ccc]">
-              {t("noModelsLink")}
-            </Link>{" "}
-            {t("noModelsDescSuffix")}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -369,56 +288,6 @@ export function OpenCodeConfigGenerator(props: OpenCodeConfigGeneratorProps) {
           <p className="text-red-600 text-xs">{saveError}</p>
         </div>
       )}
-      {hasKeys ? (
-        apiKeys.length > 1 ? (
-          <div className="space-y-2">
-            <label htmlFor="api-key-select" className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-              {t("selectApiKeyLabel")}
-            </label>
-            <select
-              id="api-key-select"
-              value={selectedKeyIndex}
-              onChange={(e) => setSelectedKeyIndex(Number(e.target.value))}
-              className="w-full bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-primary)] font-mono focus:border-[var(--accent)]/20 focus:bg-[var(--surface-base)] focus:outline-none transition-colors"
-            >
-              {apiKeys.map((apiKey, index) => (
-                <option key={apiKey.key} value={index} className="bg-[var(--surface-base)] text-[var(--text-primary)]">
-                  {apiKey.name || t("unnamedKey")}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-            <span>
-              {t("usingApiKeyPrefix")} <strong className="text-[var(--text-secondary)]">{selectedEntry?.name || t("unnamedKey")}</strong>
-            </span>
-          </div>
-        )
-      ) : hasActiveOAuth ? (
-        <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-          <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-          <span>
-            {t("oauthConnected")} <code className="px-1.5 py-0.5 rounded bg-[var(--surface-hover)] text-amber-700 font-mono">your-api-key-from-dashboard</code>
-          </span>
-        </div>
-      ) : (
-        <div className="border-l-4 border-amber-300 bg-amber-500/10 p-4 text-sm rounded-r-xl">
-          <p className="text-[var(--text-primary)] font-medium mb-1">{t("noApiKeysTitle")}</p>
-          <p className="text-[var(--text-muted)] text-xs">
-            {t("noApiKeysDesc")}{" "}
-            <Link href="/dashboard/api-keys" className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[#ccc]">
-              {t("noApiKeysApiKeysLink")}
-            </Link>{" "}
-            {t("noApiKeysDescMid")}{" "}
-            <Link href="/dashboard/providers" className="text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)] underline underline-offset-2 decoration-[#ccc]">
-              {t("noApiKeysProvidersLink")}
-            </Link>{" "}
-            {t("noApiKeysDescSuffix")}
-          </p>
-        </div>
-       )}
 
         <div className="space-y-4 border-t border-[var(--surface-border)] pt-4">
           <div className="space-y-2">

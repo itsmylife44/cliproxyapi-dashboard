@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 
 interface LogEntry {
@@ -218,12 +217,10 @@ export default function AdminLogsPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <Breadcrumbs items={[{ label: tc('dashboard'), href: "/dashboard" }, { label: tc('admin') }, { label: t('breadcrumbLabel') }]} />
-      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('applicationLogsTitle')}</h1>
+            <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t('applicationLogsTitle')}</h1>
             <p className="mt-1 text-xs text-[var(--text-muted)]">{t('eventLogDescription')}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -267,7 +264,6 @@ export default function AdminLogsPage() {
             </Button>
           </div>
         </div>
-      </section>
 
       {stats && (
         <div className="flex flex-wrap gap-4 text-xs text-[var(--text-muted)]">
@@ -281,8 +277,8 @@ export default function AdminLogsPage() {
         </div>
       )}
 
-      <section className="overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
-        <div className="flex items-center justify-between border-b border-[var(--surface-border)] bg-[var(--surface-muted)] px-3 py-2">
+      <section className="overflow-hidden border-t border-b border-[var(--surface-border)]">
+        <div className="flex items-center justify-between border-b border-[var(--surface-border)] py-2">
           <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('logEntriesHeader')}</span>
           <span className="text-xs text-[var(--text-muted)]">
             {logs.length > 0

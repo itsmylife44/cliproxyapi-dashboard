@@ -50,6 +50,7 @@ export interface BackupData {
     usageRecords: BackupUsageRecord[];
     perplexityCookies: BackupPerplexityCookie[];
     collectorState: BackupCollectorState[];
+    quotaSnapshots: BackupQuotaSnapshot[];
   };
   metadata: BackupMetadata;
 }
@@ -218,6 +219,8 @@ export interface BackupUsageRecord {
   outputTokens: number;
   reasoningTokens: number;
   cachedTokens: number;
+  cacheWriteTokens: number;
+  cacheWrite1hTokens: number;
   totalTokens: number;
   failed: boolean;
   collectedAt: string;
@@ -241,6 +244,17 @@ export interface BackupCollectorState {
   recordsStored: number;
   errorMessage: string | null;
   updatedAt: string;
+}
+
+export interface BackupQuotaSnapshot {
+  id: string;
+  authIndex: string;
+  provider: string;
+  groupId: string;
+  modelId: string;
+  remaining: number;
+  resetTime: string | null;
+  capturedAt: string;
 }
 
 /**

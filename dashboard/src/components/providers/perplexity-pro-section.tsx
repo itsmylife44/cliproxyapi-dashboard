@@ -162,14 +162,13 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
   if (perplexityEnabled === null && perplexityCookiesLoading) return null;
 
   return (
-    <div className="border-t border-[var(--surface-border)] pt-6">
-    <div id="provider-perplexity" className="space-y-3">
+    <div id="provider-perplexity" className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t("perplexitySectionTitle")}</h2>
           <p className="text-xs text-[var(--text-muted)]">{t("perplexitySectionDescription")}</p>
         </div>
-        <span className="text-xs font-medium text-[var(--text-muted)]">{t("perplexityConfiguredCount", { count: perplexityCookies.length })}</span>
+        <span className="text-xs font-medium tabular-nums text-[var(--text-muted)]">{t("perplexityConfiguredCount", { count: perplexityCookies.length })}</span>
       </div>
 
       <div className="space-y-3">
@@ -335,7 +334,6 @@ export function PerplexityProSection({ showToast }: PerplexityProSectionProps) {
           </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }

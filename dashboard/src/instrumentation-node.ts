@@ -5,8 +5,11 @@
  */
 
 import { runAlertCheck, getCheckIntervalMs } from "@/lib/quota-alerts";
+import { recordQuotaSnapshots, pruneQuotaSnapshotsIfDue } from "@/lib/quota/quota-snapshots";
+import { evaluateAutoResetsForAccounts } from "@/lib/quota/auto-reset";
 import { resyncCustomProviders } from "@/lib/providers/resync";
 import { logger } from "@/lib/logger";
+import type { QuotaResponse } from "@/lib/model-first-monitoring";
 
 // Idempotency guard for HMR in dev — prevents duplicate intervals
 const globalForScheduler = globalThis as typeof globalThis & {
@@ -27,6 +30,10 @@ export function registerNodeInstrumentation() {
   const STARTUP_DELAY_MS = 30_000; // 30 seconds
 
   scheduleTimeout(() => {
+    startUsageCollectorScheduler();
+  }, 10_000);
+
+  scheduleTimeout(() => {
     startQuotaAlertScheduler();
   }, STARTUP_DELAY_MS);
 
@@ -35,6 +42,51 @@ export function registerNodeInstrumentation() {
       logger.error({ err }, "Startup custom provider resync failed");
     });
   }, 15_000);
+}
+
+function startUsageCollectorScheduler() {
+  const COLLECT_INTERVAL_MS = 60_000;
+  let isRunning = false;
+
+  const run = async () => {
+    if (isRunning) return;
+    isRunning = true;
+
+    try {
+      const managementKey = process.env.MANAGEMENT_API_KEY;
+      const collectorKey = process.env.COLLECTOR_API_KEY;
+      if (!managementKey && !collectorKey) {
+        return;
+      }
+
+      const port = process.env.PORT ?? "3000";
+      const internalBaseUrl = `http://127.0.0.1:${port}`;
+      const headers: Record<string, string> = {};
+      if (collectorKey) headers.Authorization = `Bearer ${collectorKey}`;
+      else if (managementKey) headers["X-Internal-Key"] = managementKey;
+
+      const res = await fetch(`${internalBaseUrl}/api/usage/collect`, {
+        method: "POST",
+        headers,
+        signal: AbortSignal.timeout(45_000),
+      });
+      await res.body?.cancel().catch(() => undefined);
+      if (!res.ok) {
+        logger.warn({ status: res.status }, "Usage collector scheduler: /api/usage/collect returned non-OK");
+      }
+    } catch (error) {
+      logger.warn({ err: error }, "Usage collector scheduler error");
+    } finally {
+      isRunning = false;
+    }
+  };
+
+  const scheduleNext = async () => {
+    await run();
+    scheduleTimeout(scheduleNext, COLLECT_INTERVAL_MS);
+  };
+
+  scheduleNext();
 }
 
 function startQuotaAlertScheduler() {
@@ -52,22 +104,39 @@ function startQuotaAlertScheduler() {
       }
 
       const port = process.env.PORT ?? "3000";
-      const baseUrl = process.env.NEXTAUTH_URL ?? process.env.DASHBOARD_URL ?? `http://localhost:${port}`;
+      const internalBaseUrl = `http://127.0.0.1:${port}`;
+      const publicDashboardUrl = process.env.NEXTAUTH_URL ?? process.env.DASHBOARD_URL ?? internalBaseUrl;
 
-      const quotaFetcher = async () => {
-        try {
-          const res = await fetch(`${baseUrl}/api/quota`, {
-            headers: { "X-Internal-Key": managementKey },
-            signal: AbortSignal.timeout(60_000),
-          });
-          if (!res.ok) return null;
-          return res.json();
-        } catch {
-          return null;
+      let quotaData: QuotaResponse | null = null;
+      try {
+        const res = await fetch(`${internalBaseUrl}/api/quota`, {
+          headers: { "X-Internal-Key": managementKey },
+          signal: AbortSignal.timeout(60_000),
+        });
+        if (!res.ok) {
+          logger.warn({ status: res.status }, "Quota scheduler: failed to fetch /api/quota");
+        } else {
+          quotaData = (await res.json()) as QuotaResponse;
         }
-      };
+      } catch (err) {
+        logger.warn({ err }, "Quota scheduler: error fetching /api/quota");
+      }
 
-      const result = await runAlertCheck(quotaFetcher, baseUrl);
+      if (quotaData?.accounts?.length) {
+        try {
+          await recordQuotaSnapshots(quotaData.accounts);
+        } catch (err) {
+          logger.error({ err }, "Quota scheduler: failed to record quota snapshots");
+        }
+        try {
+          await evaluateAutoResetsForAccounts(quotaData.accounts);
+        } catch (err) {
+          logger.error({ err }, "Quota scheduler: failed to evaluate auto-resets");
+        }
+        await pruneQuotaSnapshotsIfDue();
+      }
+
+      const result = await runAlertCheck(async () => quotaData, publicDashboardUrl);
 
       if (result.alertsSent && result.alertsSent > 0) {
         logger.info(

@@ -756,3 +756,99 @@ describe("peak-hour pricing", () => {
     expect(calculateTieredCost(offPeak, EMPTY_BUCKETS, price, peak)).toBeCloseTo(0.45, 10);
   });
 });
+
+describe("resolveModelPrice - dotted versions, routing suffixes, and live catalog", () => {
+  it("normalizes hyphenated minor versions to dotted versions", () => {
+    const custom: Record<string, ModelPrice> = {
+      "vendor-model-4.6": {
+        displayName: "Vendor Model 4.6",
+        inputPer1M: 1,
+        outputPer1M: 2,
+        provider: "Vendor",
+      },
+    };
+    expect(resolveModelPrice("vendor-model-4-6", custom)?.displayName).toBe("Vendor Model 4.6");
+    expect(resolveModelPrice("vendor-model-4-6-20260101", custom)?.displayName).toBe("Vendor Model 4.6");
+  });
+
+  it("strips routing suffixes such as -thinking and -high, but never -free or exactMatchOnly", () => {
+    const custom: Record<string, ModelPrice> = {
+      "acme-reasoner": {
+        displayName: "Acme Reasoner",
+        inputPer1M: 2,
+        outputPer1M: 6,
+        provider: "Acme",
+      },
+    };
+    expect(resolveModelPrice("acme-reasoner-thinking", custom)?.displayName).toBe("Acme Reasoner");
+    expect(resolveModelPrice("acme-reasoner-high", custom)?.displayName).toBe("Acme Reasoner");
+    expect(resolveModelPrice("provider/acme-reasoner-xhigh", custom)?.displayName).toBe("Acme Reasoner");
+    expect(resolveModelPrice("acme-reasoner-free", custom)).toBeNull();
+    expect(resolveModelPrice("claude-sonnet-4-5-free")).toBeNull();
+    expect(resolveModelPrice("gpt-5.6-thinking")).toBeNull();
+    expect(resolveModelPrice("glm-5.3-high")).toBeNull();
+  });
+
+  it("resolves in strict layers (custom -> built-in -> live) so built-in beats live dated IDs", () => {
+    const live: Record<string, ModelPrice> = {
+      "claude-haiku-4-5-20251001": {
+        displayName: "Live Haiku Override",
+        inputPer1M: 99,
+        outputPer1M: 99,
+        provider: "OpenRouter",
+      },
+      "claude-sonnet-4-20250514": {
+        displayName: "Live Sonnet Override",
+        inputPer1M: 99,
+        outputPer1M: 99,
+        provider: "OpenRouter",
+      },
+      "gpt-4": {
+        displayName: "GPT-4",
+        inputPer1M: 30,
+        outputPer1M: 60,
+        provider: "OpenAI",
+      },
+      "grok-4.1": {
+        displayName: "Grok 4.1",
+        inputPer1M: 3,
+        outputPer1M: 15,
+        provider: "xAI",
+      },
+      "live-only-model": {
+        displayName: "Live Only",
+        inputPer1M: 1,
+        outputPer1M: 2,
+        provider: "OpenAI",
+      },
+    };
+    const custom: Record<string, ModelPrice> = {
+      "claude-haiku-4-5-20251001": {
+        displayName: "Custom Haiku",
+        inputPer1M: 0.5,
+        outputPer1M: 1.5,
+        provider: "Custom",
+      },
+    };
+
+    // Built-in wins over live even for dated IDs
+    const haiku = resolveModelPrice("claude-haiku-4-5-20251001", undefined, live);
+    expect(haiku?.displayName).toBe("Claude Haiku 4.5");
+    expect(haiku?.inputPer1M).toBe(1);
+
+    const sonnet = resolveModelPrice("claude-sonnet-4-20250514", undefined, live);
+    expect(sonnet?.displayName).toBe("Claude Sonnet 4");
+    expect(sonnet?.inputPer1M).toBe(3);
+
+    // Custom wins over built-in and live
+    expect(resolveModelPrice("claude-haiku-4-5-20251001", custom, live)?.displayName).toBe("Custom Haiku");
+
+    // Live resolves models not in built-in
+    expect(resolveModelPrice("live-only-model", undefined, live)?.displayName).toBe("Live Only");
+
+    // Negative cases: unknown models and non-date hyphenated variants stay null
+    expect(resolveModelPrice("gpt-4-nonexistent")).toBeNull();
+    expect(resolveModelPrice("gpt-4-nonexistent", undefined, live)).toBeNull();
+    expect(resolveModelPrice("grok-4-1-fast", undefined, live)).toBeNull();
+  });
+});

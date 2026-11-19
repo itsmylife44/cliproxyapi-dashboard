@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -395,13 +394,10 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <Breadcrumbs items={[{ label: tc("dashboard"), href: "/dashboard" }, { label: tc("admin") }, { label: t("breadcrumbLabel") }]} />
-
-      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t("managementTitle")}</h1>
+            <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t("managementTitle")}</h1>
             <p className="mt-1 text-xs text-[var(--text-muted)]">{t("pageDescription")}</p>
           </div>
           <Button
@@ -414,29 +410,28 @@ export default function AdminUsersPage() {
             {t("createUserButton")}
           </Button>
         </div>
-      </section>
 
       {loading ? (
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
+        <div className="border-t border-[var(--surface-border)] py-10 text-center text-sm text-[var(--text-muted)]">
           {t("loadingText")}
         </div>
       ) : fetchError ? (
-        <div className="rounded-md border border-rose-500/20 bg-rose-500/100/10 p-4 text-center text-sm text-rose-700">
+        <div className="rounded-md border border-rose-500/20 bg-rose-500/10 p-4 text-center text-sm text-rose-700 dark:text-rose-400">
           {t("errorLoadingUsers")}
           <button
             type="button"
             onClick={() => void fetchUsers()}
-            className="ml-2 font-medium text-rose-800 underline underline-offset-2 hover:text-[var(--text-primary)]"
+            className="ml-2 font-medium underline underline-offset-2 hover:text-[var(--text-primary)]"
           >
             {t("retryButton")}
           </button>
         </div>
       ) : users.length === 0 ? (
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 text-sm text-[var(--text-muted)]">
+        <div className="border-t border-[var(--surface-border)] py-8 text-sm text-[var(--text-muted)]">
           {t("emptyState")}
         </div>
       ) : (
-        <section className="overflow-x-auto rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
+        <section className="overflow-x-auto border-t border-b border-[var(--surface-border)]">
           <table className="min-w-[760px] w-full text-sm">
             <thead>
               <tr className="sticky top-0 z-10 border-b border-[var(--surface-border)] bg-[var(--surface-base)]/95">

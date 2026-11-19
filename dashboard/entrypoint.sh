@@ -124,12 +124,18 @@ async function migrate() {
       "userId" TEXT NOT NULL,
       "key" TEXT NOT NULL,
       "name" TEXT NOT NULL DEFAULT 'Default',
+      "isActive" BOOLEAN NOT NULL DEFAULT true,
+      "expiresAt" TIMESTAMP(3),
+      "spendLimit" DOUBLE PRECISION,
       "lastUsedAt" TIMESTAMP(3),
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "user_api_keys_pkey" PRIMARY KEY ("id")
     );
     CREATE UNIQUE INDEX IF NOT EXISTS "user_api_keys_key_key" ON "user_api_keys"("key");
     CREATE INDEX IF NOT EXISTS "user_api_keys_userId_idx" ON "user_api_keys"("userId");
+    ALTER TABLE "user_api_keys" ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE "user_api_keys" ADD COLUMN IF NOT EXISTS "expiresAt" TIMESTAMP(3);
+    ALTER TABLE "user_api_keys" ADD COLUMN IF NOT EXISTS "spendLimit" DOUBLE PRECISION;
     DO $$ BEGIN
       ALTER TABLE "user_api_keys" ADD CONSTRAINT "user_api_keys_userId_fkey"
         FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
@@ -364,6 +370,7 @@ async function migrate() {
     );
     CREATE UNIQUE INDEX IF NOT EXISTS "usage_dedup_key" ON "usage_records"("authIndex", "model", "timestamp", "source", "totalTokens");
     CREATE INDEX IF NOT EXISTS "usage_records_userId_idx" ON "usage_records"("userId");
+    CREATE INDEX IF NOT EXISTS "usage_records_apiKeyId_idx" ON "usage_records"("apiKeyId");
     CREATE INDEX IF NOT EXISTS "usage_records_authIndex_idx" ON "usage_records"("authIndex");
     CREATE INDEX IF NOT EXISTS "usage_records_timestamp_idx" ON "usage_records"("timestamp");
     CREATE INDEX IF NOT EXISTS "usage_records_model_idx" ON "usage_records"("model");
@@ -382,6 +389,16 @@ async function migrate() {
     -- Add latencyMs column if missing (existing installs upgrading to 0.1.53+)
     DO $$ BEGIN
       ALTER TABLE "usage_records" ADD COLUMN "latencyMs" INTEGER NOT NULL DEFAULT 0;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    -- Add failure detail columns if missing (existing installs)
+    DO $$ BEGIN
+      ALTER TABLE "usage_records" ADD COLUMN "failureStatus" INTEGER;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE "usage_records" ADD COLUMN "failureCode" TEXT;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE "usage_records" ADD COLUMN "failureBody" TEXT;
     EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
     -- Perplexity cookies table (stores session cookies for Perplexity Pro sidecar)
@@ -454,6 +471,25 @@ async function migrate() {
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "backup_schedule_pkey" PRIMARY KEY ("id")
     );
+
+    ALTER TABLE "usage_records" ADD COLUMN IF NOT EXISTS "cacheWriteTokens" INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE "usage_records" ADD COLUMN IF NOT EXISTS "cacheWrite1hTokens" INTEGER NOT NULL DEFAULT 0;
+
+    -- Quota snapshots table (stores periodic account/model remaining quota history)
+    CREATE TABLE IF NOT EXISTS "quota_snapshots" (
+      "id" TEXT NOT NULL,
+      "authIndex" TEXT NOT NULL,
+      "provider" TEXT NOT NULL,
+      "groupId" TEXT NOT NULL,
+      "modelId" TEXT NOT NULL DEFAULT '',
+      "remaining" DOUBLE PRECISION NOT NULL,
+      "resetTime" TIMESTAMP(3),
+      "capturedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "quota_snapshots_pkey" PRIMARY KEY ("id")
+    );
+    CREATE INDEX IF NOT EXISTS "quota_snapshots_capturedAt_idx" ON "quota_snapshots"("capturedAt");
+    CREATE INDEX IF NOT EXISTS "quota_snapshots_authIndex_capturedAt_idx" ON "quota_snapshots"("authIndex", "capturedAt");
+    CREATE INDEX IF NOT EXISTS "quota_snapshots_authIndex_groupId_modelId_capturedAt_idx" ON "quota_snapshots"("authIndex", "groupId", "modelId", "capturedAt");
     `);
 
     console.log('[dashboard] Tables ready');

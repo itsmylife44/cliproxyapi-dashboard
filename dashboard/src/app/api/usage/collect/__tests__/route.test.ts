@@ -7,7 +7,10 @@ const prismaMock = vi.hoisted(() => ({
     upsert: vi.fn(() => Promise.resolve({})),
     updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
   },
-  userApiKey: { findMany: vi.fn(() => Promise.resolve([])) },
+  userApiKey: {
+    findMany: vi.fn(() => Promise.resolve([])),
+    updateMany: vi.fn(() => Promise.resolve({ count: 0 })),
+  },
   providerOAuthOwnership: { findMany: vi.fn(() => Promise.resolve([])) },
   user: { findMany: vi.fn(() => Promise.resolve([])), findUnique: vi.fn() },
   usageRecord: {
@@ -20,6 +23,7 @@ const prismaMock = vi.hoisted(() => ({
 vi.mock("@/lib/db", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth/session", () => ({ verifySession: vi.fn(() => null) }));
 vi.mock("@/lib/api-keys/sync", () => ({
+  invalidateApiKeyUsageCache: vi.fn(),
   syncKeysToCliProxyApi: vi.fn(() => Promise.resolve({ ok: true })),
 }));
 vi.mock("@/lib/logger", () => ({

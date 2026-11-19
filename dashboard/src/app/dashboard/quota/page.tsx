@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-import { Button } from "@/components/ui/button";
-import { HelpTooltip } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/toast";
 import { QuotaToolbar } from "@/components/quota/quota-toolbar";
+import { useQuota } from "@/hooks/use-quota";
+import { useAuth } from "@/hooks/use-auth";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { headlineQuotaWindows } from "@/lib/quota/headline";
-import { calcProviderSummary, type ProviderSummary } from "@/lib/quota/provider-summary";
+import { capacityQuotaGroups } from "@/lib/quota-window-classification";
+import { calcProviderSummary } from "@/lib/quota/provider-summary";
+import type { AutoResetCreditSummary, AutoResetRule } from "@/lib/quota/auto-reset-rules";
 import {
   enrichModelFirstGroup,
   isModelFirstAccount,
@@ -19,9 +22,7 @@ import {
   normalizeFraction,
   summarizeModelFirstProvider,
   type QuotaAccount,
-  type QuotaResponse,
 } from "@/lib/model-first-monitoring";
-import { formatRelativeTime } from "@/lib/format-relative-time";
 import { maskEmail } from "@/lib/mask-email";
 import {
   buildQuotaSearch,
@@ -36,10 +37,11 @@ import {
 
 const QuotaChart = dynamic(
   () => import("@/components/quota/quota-chart").then((mod) => ({ default: mod.QuotaChart })),
-  { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> }
+  { ssr: false, loading: () => <div className="h-28 animate-pulse rounded-lg bg-[var(--surface-muted)] motion-reduce:animate-none" /> }
 );
 import { QuotaDetails } from "@/components/quota/quota-details";
 import { QuotaAlerts } from "@/components/quota/quota-alerts";
+import { invalidateClientQuotaHistoryCache, prefetchBatchQuotaHistory } from "@/components/quota/account-quota-history";
 
 export const QUOTA_ACCOUNTS_PAGE_SIZE = 25;
 
@@ -58,7 +60,13 @@ function getQuotaAccountStatus(account: QuotaAccount): QuotaQueryStatus {
     if (isModelFirstAccountQuotaUnverified(account)) return "warning";
   }
 
-  const fractions = (account.groups ?? [])
+  const headlineGroups = isModelFirstAccount(account)
+    ? (account.groups ?? [])
+    : headlineQuotaWindows(capacityQuotaGroups(account.provider, account.groups ?? [])).filter(
+        (group) => group.id !== "extra-usage"
+      );
+
+  const fractions = headlineGroups
     .map((group) => {
       const normalizedGroup = isModelFirstAccount(account) ? enrichModelFirstGroup(group) : group;
       return normalizeFraction(normalizedGroup.minRemainingFraction ?? normalizedGroup.remainingFraction);
@@ -106,95 +114,190 @@ export function filterQuotaAccounts(accounts: QuotaAccount[], query: QuotaQueryS
   );
 }
 
-function calcOverallCapacity(
-  summaries: ProviderSummary[],
-  noDataLabel: string,
-  weightedLabel: string
-): { value: number; label: string; provider: string } {
-  if (summaries.length === 0) return { value: 0, label: noDataLabel, provider: "" };
-
-  let weightedCapacity = 0;
-  let weightedAccounts = 0;
-
-  for (const summary of summaries) {
-    if (summary.healthyAccounts === 0) continue;
-
-    if (summary.monitorMode === "model-first" && summary.modelFirstSummary) {
-      if (isModelFirstProviderQuotaUnverified(summary.modelFirstSummary)) continue;
-      const providerCapacity =
-        summary.modelFirstSummary.totalAccounts > 0
-          ? summary.modelFirstSummary.readyAccounts / summary.modelFirstSummary.totalAccounts
-          : 0;
-      weightedCapacity += providerCapacity * summary.healthyAccounts;
-      weightedAccounts += summary.healthyAccounts;
-      continue;
-    }
-
-    const headlineWindows = headlineQuotaWindows(summary.windowCapacities);
-    const longTerm = headlineWindows.filter((window) => !window.isShortTerm);
-    const shortTerm = headlineWindows.filter((window) => window.isShortTerm);
-    const relevantWindows = longTerm.length > 0 ? longTerm : shortTerm;
-
-    if (relevantWindows.length === 0) continue;
-
-    const providerCapacity = Math.min(...relevantWindows.map((window) => window.capacity));
-    weightedCapacity += providerCapacity * summary.healthyAccounts;
-    weightedAccounts += summary.healthyAccounts;
-  }
-
-  if (weightedAccounts === 0) {
-    return { value: 0, label: noDataLabel, provider: "" };
-  }
-
-  return {
-    value: weightedCapacity / weightedAccounts,
-    label: weightedLabel,
-    provider: "all",
-  };
-}
-
 export default function QuotaPage() {
   const t = useTranslations("quota");
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [quotaData, setQuotaData] = useState<QuotaResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
+  const { user } = useAuth();
+  const canManageResets = user?.isAdmin === true;
+  const { data: quotaData, isLoading: loading, refreshing, refresh } = useQuota();
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const [autoResetRules, setAutoResetRules] = useState<Record<string, AutoResetRule>>({});
+  const [autoResetCredits, setAutoResetCredits] = useState<Record<string, AutoResetCreditSummary>>({});
+  const [autoResetBusy, setAutoResetBusy] = useState<Record<string, "checking" | "resetting" | null>>({});
+  const [autoResetLoaded, setAutoResetLoaded] = useState(false);
+  const [refreshSeq, setRefreshSeq] = useState(0);
+  const resetSaveQueue = useRef<Record<string, Promise<void>>>({});
+  const lastGeneratedAtRef = useRef<string | undefined>(undefined);
+
+  const fetchAutoResetRules = useCallback(async () => {
+    const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, { cache: "no-store" });
+    if (!res.ok) throw new Error("Failed to load auto-reset rules");
+    const data = (await res.json()) as { rules: Record<string, AutoResetRule> };
+    setAutoResetRules(data.rules);
+    setAutoResetLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!canManageResets) return;
+    let active = true;
+    fetchAutoResetRules().catch(() => {
+      if (active) showToast(t("autoResetSaveFailed"), "error");
+    });
+    return () => {
+      active = false;
+    };
+  }, [canManageResets, fetchAutoResetRules, showToast, t]);
+
+  const handleFullRefresh = useCallback(async () => {
+    invalidateClientQuotaHistoryCache();
+    setAutoResetCredits({});
+    setRefreshSeq((prev) => prev + 1);
+    const tasks = [refresh()];
+    if (canManageResets) {
+      tasks.push(fetchAutoResetRules().catch(() => {
+        showToast(t("autoResetSaveFailed"), "error");
+      }));
+    }
+    await Promise.allSettled(tasks);
+  }, [canManageResets, fetchAutoResetRules, refresh, showToast, t]);
+
+  const handleUpdateAutoReset = useCallback(
+    async (
+      authIndex: string,
+      patch: { enabled: boolean; fiveHourThresholdPct: number; weeklyThresholdPct: number; minWeeklyDaysLeft: number }
+    ) => {
+      setAutoResetRules((prev) => ({
+        ...prev,
+        [authIndex]: { ...prev[authIndex], ...patch },
+      }));
+      const save = async () => {
+        try {
+          const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ authIndex, ...patch }),
+          });
+          if (!res.ok) throw new Error("Failed to save auto-reset rule");
+          const data = (await res.json()) as { rule: AutoResetRule };
+          if (resetSaveQueue.current[authIndex] === pending) {
+            setAutoResetRules((prev) => ({ ...prev, [authIndex]: data.rule }));
+          }
+        } catch {
+          showToast(t("autoResetSaveFailed"), "error");
+          if (resetSaveQueue.current[authIndex] === pending) {
+            try {
+              const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET);
+              if (!res.ok) throw new Error("Failed to load auto-reset rules");
+              const data = (await res.json()) as { rules: Record<string, AutoResetRule> };
+              if (resetSaveQueue.current[authIndex] === pending) {
+                setAutoResetRules((prev) => {
+                  const next = { ...prev };
+                  if (data.rules[authIndex]) next[authIndex] = data.rules[authIndex];
+                  else delete next[authIndex];
+                  return next;
+                });
+              }
+            } catch {
+              setAutoResetLoaded(false);
+            }
+          }
+        }
+      };
+      const pending = (resetSaveQueue.current[authIndex] ?? Promise.resolve()).then(save);
+      resetSaveQueue.current[authIndex] = pending;
+    },
+    [showToast, t]
+  );
+
+  const handleCheckResetCredits = useCallback(
+    async (authIndex: string) => {
+      setAutoResetBusy((prev) => ({ ...prev, [authIndex]: "checking" }));
+      try {
+        const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "check_credits", authIndex }),
+        });
+        if (!res.ok) throw new Error("Failed to check reset credits");
+        const data = (await res.json()) as AutoResetCreditSummary;
+        setAutoResetCredits((prev) => ({ ...prev, [authIndex]: data }));
+      } catch {
+        showToast(t("autoResetCheckFailed"), "error");
+      } finally {
+        setAutoResetBusy((prev) => ({ ...prev, [authIndex]: null }));
+      }
+    },
+    [showToast, t]
+  );
+
+  const handleManualReset = useCallback(
+    async (authIndex: string) => {
+      setAutoResetBusy((prev) => ({ ...prev, [authIndex]: "resetting" }));
+      try {
+        const res = await fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "reset_now", authIndex }),
+        });
+        const data = (await res.json()) as { ok?: boolean; message?: string; status?: string };
+        showToast(data.message ?? (res.ok ? t("autoResetApplied") : t("autoResetFailed")), res.ok && data.ok ? "success" : "error");
+        if (res.ok && data.ok) {
+          setAutoResetCredits((prev) => {
+            const current = prev[authIndex];
+            if (!current || typeof current.availableCount !== "number") return prev;
+            return {
+              ...prev,
+              [authIndex]: {
+                ...current,
+                availableCount: Math.max(0, current.availableCount - 1),
+              },
+            };
+          });
+          void refresh().catch(() => {});
+          void fetch(API_ENDPOINTS.QUOTA.AUTO_RESET, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "check_credits", authIndex }),
+          })
+            .then((r) => (r.ok ? (r.json() as Promise<AutoResetCreditSummary>) : null))
+            .then((updated) => {
+              if (updated && !updated.error) {
+                setAutoResetCredits((prev) => ({ ...prev, [authIndex]: updated }));
+              }
+            })
+            .catch(() => {});
+        }
+        await fetchAutoResetRules();
+      } catch {
+        showToast(t("autoResetFailed"), "error");
+      } finally {
+        setAutoResetBusy((prev) => ({ ...prev, [authIndex]: null }));
+      }
+    },
+    [fetchAutoResetRules, refresh, showToast, t]
+  );
 
   const query = useMemo(() => parseQuotaQueryState(searchParams), [searchParams]);
 
   const replaceQuery = (nextQuery: QuotaQueryState) => {
     const nextSearch = buildQuotaSearch(nextQuery);
-    router.replace(`${pathname}${nextSearch}`, { scroll: false });
-  };
-
-  const fetchQuota = async (signal?: AbortSignal, bust = false) => {
-    setLoading(true);
-    try {
-      const url = bust ? `${API_ENDPOINTS.QUOTA.BASE}?bust=${Date.now()}` : API_ENDPOINTS.QUOTA.BASE;
-      const response = await fetch(url, { signal });
-      if (response.ok) {
-        const data = (await response.json()) as QuotaResponse;
-        setQuotaData(data);
-      }
-    } catch {
-      if (signal?.aborted) return;
-    } finally {
-      if (!signal?.aborted) setLoading(false);
-    }
+    window.history.replaceState(null, "", `${pathname}${nextSearch}`);
   };
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetchQuota(controller.signal);
-    const interval = setInterval(() => fetchQuota(controller.signal), 120_000);
-    return () => {
-      controller.abort();
-      clearInterval(interval);
-    };
-  }, []);
-
+    if (!quotaData) return;
+    if (lastGeneratedAtRef.current !== undefined && lastGeneratedAtRef.current !== quotaData.generatedAt) {
+      invalidateClientQuotaHistoryCache();
+    }
+    lastGeneratedAtRef.current = quotaData.generatedAt;
+    void prefetchBatchQuotaHistory(
+      quotaData.accounts
+        .filter((account) => account.supported && !account.error && account.auth_index)
+        .map((account) => account.auth_index)
+    );
+  }, [quotaData]);
   const allAccounts = useMemo(() => quotaData?.accounts ?? [], [quotaData]);
   const filteredAccounts = useMemo(() => filterQuotaAccounts(allAccounts, query), [allAccounts, query]);
 
@@ -213,9 +316,9 @@ export default function QuotaPage() {
   useEffect(() => {
     if (!quotaData) return;
     if (currentSearch !== expectedSearch) {
-      router.replace(`${pathname}${normalizedSearch}`, { scroll: false });
+      window.history.replaceState(null, "", `${pathname}${normalizedSearch}`);
     }
-  }, [quotaData, currentSearch, expectedSearch, normalizedSearch, pathname, router]);
+  }, [quotaData, currentSearch, expectedSearch, normalizedSearch, pathname]);
 
   const activeAccounts = filteredAccounts.filter((account) => account.supported && !account.error).length;
 
@@ -234,11 +337,9 @@ export default function QuotaPage() {
     .map(([, accounts]) => calcProviderSummary(accounts))
     .sort((left, right) => right.healthyAccounts - left.healthyAccounts);
 
-  const overallCapacity = calcOverallCapacity(providerSummaries, t("noData"), t("weightedCapacity"));
   const isModelFirstOnlyView =
     filteredAccounts.length > 0 && filteredAccounts.every((account) => isModelFirstAccount(account));
   const modelFirstSummary = isModelFirstOnlyView ? summarizeModelFirstProvider(filteredAccounts) : null;
-  const modelFirstQuotaUnverified = isModelFirstProviderQuotaUnverified(modelFirstSummary);
   const modelFirstWarnings = providerSummaries
     .filter((summary) => summary.monitorMode === "model-first" && summary.modelFirstSummary)
     .map((summary) => ({
@@ -249,56 +350,83 @@ export default function QuotaPage() {
 
   const lowCapacityCount = providerSummaries.filter((summary) => {
     if (summary.monitorMode === "model-first") {
-      return (summary.modelFirstSummary?.minRemainingFraction ?? 1) < 0.2 && summary.totalAccounts > 0;
+      const fraction =
+        summary.modelFirstSummary?.avgRemainingFraction ??
+        summary.modelFirstSummary?.minRemainingFraction ??
+        1;
+      return fraction < 0.2 && summary.totalAccounts > 0;
     }
-    return headlineQuotaWindows(summary.windowCapacities).some((window) => window.capacity < 0.2) && summary.totalAccounts > 0;
+    return (
+      headlineQuotaWindows(summary.windowCapacities).some(
+        (window) => (window.averageCapacity ?? window.capacity) < 0.2
+      ) && summary.totalAccounts > 0
+    );
   }).length;
 
   const toggleCard = (accountId: string) => {
     setExpandedCards((previous) => ({ ...previous, [accountId]: !previous[accountId] }));
   };
 
-  const freshSnapshotCount = modelFirstSummary
-    ? Math.max(0, modelFirstSummary.totalAccounts - modelFirstSummary.staleAccounts)
-    : 0;
-
   const hasAnyAccounts = allAccounts.length > 0;
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t("pageTitle")}</h1>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              {isModelFirstOnlyView ? t("modelFirstDescription") : t("pageDescription")}
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <Button onClick={() => fetchQuota(undefined, true)} disabled={loading} className="px-2.5 py-1 text-xs">
-              {loading ? t("loadingText") : t("refreshButton")}
-            </Button>
-          </div>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <div>
+          <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t("pageTitle")}</h1>
+          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+            {t("pageDescription")} ·{" "}
+            <span className="tabular-nums text-[var(--text-secondary)]">
+              {activeAccounts} {t("activeAccountsLabel").toLowerCase()} · {providerSummaries.length} {t("providersLabel").toLowerCase()}
+            </span>
+            {lowCapacityCount > 0 && (
+              <span className="font-medium text-amber-600 dark:text-amber-400">
+                {" "}· {lowCapacityCount} {t("lowCapacityLabel").toLowerCase()}
+              </span>
+            )}
+          </p>
         </div>
-      </section>
 
-      <QuotaToolbar
-        query={query}
-        total={filteredAccounts.length}
-        onSearchChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { q: value }))}
-        onProviderChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { provider: value }))}
-        onStatusChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { status: value }))}
-        onClear={() => replaceQuery(clearQuotaToolbarQuery())}
-      />
+        <div className="flex w-full items-center gap-2 sm:w-auto sm:min-w-64 sm:flex-1 sm:max-w-sm">
+          <QuotaToolbar
+            query={query}
+            total={filteredAccounts.length}
+            onSearchChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { q: value }))}
+            onProviderChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { provider: value }))}
+            onStatusChange={(value) => replaceQuery(buildQuotaToolbarQuery(query, { status: value }))}
+            onClear={() => replaceQuery(clearQuotaToolbarQuery())}
+          />
+          <button
+            type="button"
+            onClick={() => void handleFullRefresh()}
+            disabled={loading || refreshing}
+            aria-label={t("refreshButton")}
+            title={t("refreshButton")}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-50"
+          >
+            <svg
+              className={`h-3.5 w-3.5 ${loading || refreshing ? "animate-spin" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+              <polyline points="21 3 21 9 15 9" />
+            </svg>
+          </button>
+        </div>
+      </div>
 
       {loading && !quotaData ? (
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">
+        <div className="border-t border-[var(--surface-border)] py-10 text-center text-sm text-[var(--text-muted)]">
           {t("loadingText")}
         </div>
       ) : (
-        <>
+        <div className="space-y-6">
           {modelFirstWarnings.length > 0 && (
-            <section className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+            <section className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-800 dark:text-amber-300">
               {modelFirstWarnings.map(({ provider, summary }) => (
                 <p key={provider}>
                   {t("modelFirstWarning", {
@@ -310,76 +438,14 @@ export default function QuotaPage() {
             </section>
           )}
 
-          <section className={`grid grid-cols-2 gap-2 ${isModelFirstOnlyView ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("activeAccountsLabel")}</p>
-              <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{activeAccounts}</p>
-            </div>
-            {isModelFirstOnlyView && modelFirstSummary ? (
-              <>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {modelFirstQuotaUnverified ? t("freshSnapshotsLabel") : t("readyAccountsLabel")}{" "}
-                    <HelpTooltip
-                      content={modelFirstQuotaUnverified ? t("freshSnapshotsTooltip") : t("readyAccountsTooltip")}
-                    />
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
-                    {modelFirstQuotaUnverified ? freshSnapshotCount : modelFirstSummary.readyAccounts}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("staleSnapshotsLabel")} <HelpTooltip content={t("staleSnapshotsTooltip")} />
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{modelFirstSummary.staleAccounts}</p>
-                </div>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("closestResetLabel")} <HelpTooltip content={t("closestResetTooltip")} />
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
-                    {formatRelativeTime(modelFirstSummary.nextWindowResetAt, t)}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("modelFamiliesLabel")} <HelpTooltip content={t("modelFamiliesTooltip")} />
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{modelFirstSummary.groups.length}</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("overallCapacityLabel")} <HelpTooltip content={t("overallCapacityTooltip")} />
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
-                    {overallCapacity.provider ? `${Math.round(overallCapacity.value * 100)}%` : t("noData")}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {t("lowCapacityLabel")} <HelpTooltip content={t("lowCapacityTooltip")} />
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{lowCapacityCount}</p>
-                </div>
-                <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t("providersLabel")}</p>
-                  <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{providerSummaries.length}</p>
-                </div>
-              </>
-            )}
-          </section>
-
-          <QuotaChart
-            overallCapacity={overallCapacity}
-            providerSummaries={providerSummaries}
-            modelFirstSummary={modelFirstSummary}
-            modelFirstOnlyView={isModelFirstOnlyView}
-          />
-
+          <div className="border-t border-[var(--surface-border)] pt-3">
+            <QuotaChart
+              key={refreshSeq}
+              providerSummaries={providerSummaries}
+              modelFirstSummary={modelFirstSummary}
+              modelFirstOnlyView={isModelFirstOnlyView}
+            />
+          </div>
           <QuotaDetails
             filteredAccounts={paginatedAccounts}
             hasAnyAccounts={hasAnyAccounts}
@@ -390,11 +456,18 @@ export default function QuotaPage() {
             onToggleCard={toggleCard}
             loading={loading}
             modelFirstOnlyView={isModelFirstOnlyView}
+            refreshKey={`${quotaData?.generatedAt ?? ""}:${refreshSeq}`}
+            autoResetRules={autoResetRules}
+            autoResetCredits={autoResetCredits}
+            autoResetBusy={autoResetBusy}
+            onUpdateAutoReset={canManageResets && autoResetLoaded ? handleUpdateAutoReset : undefined}
+            onCheckResetCredits={canManageResets ? handleCheckResetCredits : undefined}
+            onManualReset={canManageResets ? handleManualReset : undefined}
           />
-        </>
+        </div>
       )}
 
-      <QuotaAlerts />
+      <QuotaAlerts key={refreshSeq} />
     </div>
   );
 }

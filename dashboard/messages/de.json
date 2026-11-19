@@ -818,7 +818,7 @@
     "resetVerdictExpSoonTitle": "Guthaben läuft bald ab",
     "resetVerdictReasonSummary": "+{gain}% Woche · noch {resetsIn}",
     "resetVerdictReasonHighWeekly": "Woche noch bei {pct}% (+{gain}%)",
-    "resetVerdictReasonImminentReset": "Reset in {resetsIn}",
+    "resetVerdictReasonImminentReset": "Woche wird in {resetsIn} zurückgesetzt",
     "resetVerdictReasonExpiringSoon": "Läuft in {expiresIn} ab · +{gain}% Woche",
     "resetCreditExpiresLabel": "Läuft ab in {expiresIn}",
     "relativeTimeDaysHours": "{days}T {hours}Std",

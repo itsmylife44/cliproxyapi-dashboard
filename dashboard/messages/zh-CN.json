@@ -818,7 +818,7 @@
     "resetVerdictExpSoonTitle": "重置额度即将过期",
     "resetVerdictReasonSummary": "+{gain}% 周配额 · 剩余 {resetsIn}",
     "resetVerdictReasonHighWeekly": "周配额仍剩 {pct}% (+{gain}%)",
-    "resetVerdictReasonImminentReset": "{resetsIn} 后自动刷新",
+    "resetVerdictReasonImminentReset": "周配额将在 {resetsIn} 后重置",
     "resetVerdictReasonExpiringSoon": "{expiresIn} 后过期 · +{gain}% 周配额",
     "resetCreditExpiresLabel": "{expiresIn} 后过期",
     "relativeTimeDaysHours": "{days} 天 {hours} 小时",

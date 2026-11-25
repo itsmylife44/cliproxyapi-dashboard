@@ -300,16 +300,18 @@ export default function MonitoringPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t("pageTitle")}</h1>
-      </section>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t("pageTitle")}</h1>
+      </div>
 
-      <ServiceStatus
-        status={status}
-        restarting={restarting}
-        onConfirmRestart={() => setShowConfirm(true)}
-      />
+      <div className="border-t border-[var(--surface-border)] pt-5">
+        <ServiceStatus
+          status={status}
+          restarting={restarting}
+          onConfirmRestart={() => setShowConfirm(true)}
+        />
+      </div>
 
       <ConfirmDialog
         isOpen={showConfirm}
@@ -322,17 +324,21 @@ export default function MonitoringPage() {
         variant="warning"
       />
 
-      <UsageStats usage={usage} />
+      <div className="border-t border-[var(--surface-border)] pt-5">
+        <UsageStats usage={usage} />
+      </div>
 
-      <LiveLogs
-        logs={logs}
-        loggingState={loggingState}
-        loggingError={loggingError}
-        enablingLogging={enablingLogging}
-        onClearLogs={() => setLogs([])}
-        onEnableLogging={handleEnableLogging}
-        onRetryLogging={handleRetryLogging}
-      />
+      <div className="border-t border-[var(--surface-border)] pt-5">
+        <LiveLogs
+          logs={logs}
+          loggingState={loggingState}
+          loggingError={loggingError}
+          enablingLogging={enablingLogging}
+          onClearLogs={() => setLogs([])}
+          onEnableLogging={handleEnableLogging}
+          onRetryLogging={handleRetryLogging}
+        />
+      </div>
     </div>
   );
 }

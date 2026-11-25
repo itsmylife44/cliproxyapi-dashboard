@@ -366,43 +366,45 @@ export function SettingsPage({ dashboardVersion }: { dashboardVersion?: string }
 
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-4">
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">{t('pageDescription')}</p>
-      </section>
+      <div>
+        <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t('pageDescription')}</p>
+      </div>
 
       {/* Tab Bar: only admins have a second tab */}
       {isAdmin && (
-      <div className="flex gap-1 rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-1">
-        <button
-          type="button"
-          onClick={() => setActiveTab("general")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-            activeTab === "general"
-              ? "bg-[var(--surface-muted)] text-[var(--text-primary)]"
-              : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-          }`}
-        >
-          {tb('tabGeneral')}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("backup")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-            activeTab === "backup"
-              ? "bg-[var(--surface-muted)] text-[var(--text-primary)]"
-              : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-          }`}
-        >
-          {tb('tabBackup')}
-        </button>
+      <div className="border-b border-[var(--surface-border)]">
+        <div className="-mb-px flex gap-6">
+          <button
+            type="button"
+            onClick={() => setActiveTab("general")}
+            className={`cursor-pointer border-b-2 pb-2.5 text-xs font-medium transition-colors ${
+              activeTab === "general"
+                ? "border-[var(--text-primary)] text-[var(--text-primary)]"
+                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            {tb('tabGeneral')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("backup")}
+            className={`cursor-pointer border-b-2 pb-2.5 text-xs font-medium transition-colors ${
+              activeTab === "backup"
+                ? "border-[var(--text-primary)] text-[var(--text-primary)]"
+                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            {tb('tabBackup')}
+          </button>
+        </div>
       </div>
       )}
 
       {activeTab === "general" && (
-        <>
-          <div className="flex flex-col lg:flex-row gap-6">
-            <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6 flex flex-col gap-6 lg:flex-1 lg:min-w-0">
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <section className="flex flex-col gap-6 min-w-0">
               <TelegramSettings
             syncTokens={syncTokens}
             syncTokensLoading={syncTokensLoading}
@@ -419,7 +421,7 @@ export function SettingsPage({ dashboardVersion }: { dashboardVersion?: string }
           />
         </section>
 
-        <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6 flex flex-col gap-6 lg:flex-1 lg:min-w-0 lg:self-start lg:sticky lg:top-4">
+        <section className="flex flex-col gap-6 min-w-0 lg:self-start lg:sticky lg:top-4">
           <PasswordSettings
             cliProxyVersion={cliProxyVersion}
             cliProxyLoading={cliProxyLoading}
@@ -432,7 +434,7 @@ export function SettingsPage({ dashboardVersion }: { dashboardVersion?: string }
       </div>
 
       {isAdmin && (
-      <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6 flex flex-col gap-6">
+      <section className="flex flex-col gap-6 border-t border-[var(--surface-border)] pt-6">
         <ProviderSettings
           proxyUpdateInfo={proxyUpdateInfo}
           proxyUpdateLoading={proxyUpdateLoading}
@@ -446,13 +448,15 @@ export function SettingsPage({ dashboardVersion }: { dashboardVersion?: string }
           onRefreshDashboardUpdate={handleRefreshDashboardUpdate}
         />
 
-        <div className="border-t border-[var(--surface-border)]/70 pt-6">
+        <div className="border-t border-[var(--surface-border)] pt-6">
           <DeployDashboard />
         </div>
       </section>
       )}
 
-      <PluginSettings />
+      <div className="border-t border-[var(--surface-border)] pt-6">
+        <PluginSettings />
+      </div>
 
       <ConfirmDialog
         isOpen={showConfirmProxyUpdate}
@@ -503,7 +507,7 @@ export function SettingsPage({ dashboardVersion }: { dashboardVersion?: string }
         cancelLabel={tc('cancel')}
         variant="danger"
       />
-        </>
+        </div>
       )}
 
       {isAdmin && activeTab === "backup" && (

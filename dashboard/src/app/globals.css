@@ -66,7 +66,7 @@ html[data-theme="dark"] {
 body {
   margin: 0; padding: 0;
   font-family: "Inter", var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--surface-muted);
+  background: var(--surface-base);
   color: var(--text-primary);
   letter-spacing: 0.16px;
   -webkit-font-smoothing: antialiased;
@@ -95,10 +95,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 .glass-button-secondary:hover { background: var(--surface-muted); }
 .glass-button-ghost { background: transparent; border: none; color: var(--text-secondary); box-shadow: var(--shadow-outline); }
 .glass-button-ghost:hover { background: var(--surface-muted); color: var(--text-primary); }
-.glass-nav { background: var(--surface-base); border-right: 1px solid var(--surface-border); backdrop-filter: none; }
+.glass-nav { background: var(--surface-muted); border-right: 1px solid var(--surface-border); backdrop-filter: none; }
 .glass-nav-item { background: transparent; border: 1px solid transparent; }
-.glass-nav-item:hover { background: var(--surface-muted); }
-.glass-nav-item-active { background: var(--surface-muted); border-color: var(--surface-border); box-shadow: var(--shadow-inset); }
+.glass-nav-item:hover { background: var(--surface-hover); }
+.glass-nav-item-active { background: var(--surface-base); border-color: var(--surface-border); box-shadow: var(--shadow-inset); }
 
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }

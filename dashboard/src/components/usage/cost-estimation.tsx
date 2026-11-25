@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { ChartContainer, SERIES_PALETTE, useChartTheme, formatCompact } from "@/components/ui/chart-theme";
-import { loadCustomPricing, formatUSD } from "@/lib/model-pricing";
+import { CHART_COLORS, SERIES_PALETTE, formatCompact } from "@/components/ui/chart-theme";
+import { loadCustomPricing, formatUSD, type ModelPrice } from "@/lib/model-pricing";
 import {
   buildCostBreakdown,
   aggregateByProvider,
@@ -16,196 +15,423 @@ import {
 
 interface CostEstimationProps {
   keys: Record<string, UsageKey>;
+  livePricing?: Record<string, ModelPrice>;
 }
 
-/* ── Helpers ──────────────────────────────────────────────── */
-
-function truncateModelName(name: string, maxLen = 28): string {
-  // Strip common prefixes
-  const clean = name.replace(/^cliproxyapi\//, "");
-  return clean.length > maxLen ? clean.slice(0, maxLen - 1) + "\u2026" : clean;
-}
+type BreakdownTab = "models" | "providers";
 
 /* ── Component ────────────────────────────────────────────── */
 
-export function CostEstimation({ keys }: CostEstimationProps) {
-   const t = useTranslations('usage');
-   const { axisTickStyle, tooltipStyle } = useChartTheme();
-   const customPricing = useMemo(() => loadCustomPricing(), []);
-   const costBreakdown = useMemo(() => buildCostBreakdown(keys, customPricing), [keys, customPricing]);
-   const providerBreakdown = useMemo(() => aggregateByProvider(costBreakdown), [costBreakdown]);
-   const totalEstimatedCost = useMemo(() => costBreakdown.reduce((sum, e) => sum + e.estimatedCost, 0), [costBreakdown]);
-   const unpricedModels = useMemo(() => costBreakdown.filter(e => !e.priced), [costBreakdown]);
-   const pricedModels = useMemo(() => costBreakdown.filter(e => e.priced), [costBreakdown]);
+export function CostEstimation({
+  keys,
+  livePricing,
+}: CostEstimationProps) {
+  const t = useTranslations("usage");
+  const [activeTab, setActiveTab] = useState<BreakdownTab>("models");
+  const [unpricedExpanded, setUnpricedExpanded] = useState(false);
 
-  // Top models for bar chart (max 8)
-  const topModelChart = useMemo(() =>
-    pricedModels.slice(0, 8).map(e => ({
-      name: truncateModelName(e.model),
-      cost: Number(e.estimatedCost.toFixed(4)),
-      fullName: e.model,
-      provider: e.provider,
-    })),
-    [pricedModels]
+  const customPricing = useMemo(() => loadCustomPricing(), []);
+  const costBreakdown = useMemo(
+    () => buildCostBreakdown(keys, customPricing, livePricing),
+    [keys, customPricing, livePricing]
   );
 
-  if (costBreakdown.length === 0) return null;
+  const providerCostList = useMemo(
+    () => aggregateByProvider(costBreakdown),
+    [costBreakdown]
+  );
+
+  const totalEstimatedCost = useMemo(
+    () => costBreakdown.reduce((sum, e) => sum + e.estimatedCost, 0),
+    [costBreakdown]
+  );
+
+  const unpricedModels = useMemo(() => costBreakdown.filter((e) => !e.priced), [costBreakdown]);
+  const pricedModels = useMemo(() => costBreakdown.filter((e) => e.priced), [costBreakdown]);
+
+  if (costBreakdown.length === 0) {
+    return <p className="py-6 text-center text-sm text-[var(--text-muted)]">{t("noUsageData")}</p>;
+  }
+
+  const isUnpricedOpen = unpricedExpanded || pricedModels.length === 0;
+  const maxModelCost = Math.max(0, ...costBreakdown.map((m) => m.estimatedCost));
+  const maxProviderCost = Math.max(0, ...providerCostList.map((p) => p.estimatedCost));
+
+  const getTokenCells = (entry: (typeof costBreakdown)[number]) => [
+    { key: "input", label: t("input"), value: entry.inputTokens },
+    { key: "cached", label: t("cached"), value: entry.cachedTokens },
+    { key: "cacheWrite", label: t("cacheWrite"), value: entry.cacheWriteTokens },
+    { key: "output", label: t("output"), value: entry.outputTokens },
+  ];
 
   return (
-    <div className="space-y-3">
-      {/* ── Summary Cards ──────────────────────────────────── */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700/70">{t('estimatedCost')}</p>
-          <p className="mt-0.5 text-lg font-bold text-emerald-700">{formatUSD(totalEstimatedCost)}</p>
+    <section className="space-y-4">
+      <div>
+        {/* Toolbar: By Model / By Provider */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--surface-border)] pb-2.5">
+          <div
+            role="group"
+            aria-label={t("costBreakdownTitle")}
+            className="inline-flex rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 p-0.5"
+          >
+            <button
+              type="button"
+              aria-pressed={activeTab === "models"}
+              onClick={() => setActiveTab("models")}
+              className={`cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                activeTab === "models"
+                  ? "bg-[var(--accent)] text-[var(--surface-base)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              {t("byModelTab")}{" "}
+              <span className="ml-1 text-[10px] tabular-nums opacity-75">
+                {costBreakdown.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={activeTab === "providers"}
+              onClick={() => setActiveTab("providers")}
+              className={`cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                activeTab === "providers"
+                  ? "bg-[var(--accent)] text-[var(--surface-base)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              {t("byProviderTab")}{" "}
+              <span className="ml-1 text-[10px] tabular-nums opacity-75">
+                {providerCostList.length}
+              </span>
+            </button>
+          </div>
         </div>
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('pricedModels')}</p>
-          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{pricedModels.length} / {costBreakdown.length}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('providersLabel')}</p>
-          <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{providerBreakdown.length}</p>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {/* ── Cost by Model Bar Chart ──────────────────────── */}
-        {topModelChart.length > 0 && (
-          <ChartContainer title={t('costByModel')} subtitle={t('costByModelSubtitle')}>
-            <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={0} initialDimension={{ width: 320, height: 200 }}>
-              <BarChart data={topModelChart} margin={{ top: 4, right: 8, left: -8, bottom: 0 }} layout="vertical">
-               <XAxis
-                   type="number"
-                   tickFormatter={(v) => formatUSD(v)}
-                   tick={axisTickStyle}
-                   tickLine={false}
-                   axisLine={false}
-                 />
-                 <YAxis
-                   type="category"
-                   dataKey="name"
-                   width={110}
-                   tick={{ ...axisTickStyle, fontSize: 9 }}
-                   tickLine={false}
-                   axisLine={false}
-                 />
-                 <Tooltip
-                   {...tooltipStyle}
-                   formatter={(value) => [formatUSD(Number(value)), t('estCostHeader')]}
-                   labelFormatter={(_label, payload) => {
-                     const item = payload?.[0]?.payload as { fullName: string; provider: string } | undefined;
-                     return `${item?.fullName ?? _label} (${item?.provider ?? t('unknownProvider')})`;
-                   }}
-                 />
-                <Bar dataKey="cost" radius={[0, 4, 4, 0]} maxBarSize={20}>
-                  {topModelChart.map((entry) => (
-                    <Cell key={entry.fullName} fill={SERIES_PALETTE[topModelChart.indexOf(entry) % SERIES_PALETTE.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        )}
+        {/* Tab 1: Model Cost Breakdown */}
+        {activeTab === "models" && (() => {
+          const rows = pricedModels.map((entry, idx) => {
+            const relativeWidth =
+              maxModelCost > 0
+                ? Math.max((entry.estimatedCost / maxModelCost) * 100, entry.estimatedCost > 0 ? 2 : 0)
+                : 0;
+            const color = SERIES_PALETTE[idx % SERIES_PALETTE.length] ?? CHART_COLORS.primary;
+            const sharePct = totalEstimatedCost > 0 ? (entry.estimatedCost / totalEstimatedCost) * 100 : 0;
+            return { entry, color, relativeWidth, sharePct };
+          });
 
-        {/* ── Provider Breakdown ──────────────────────────── */}
-        {providerBreakdown.length > 0 && (
-          <ChartContainer title={t('costByProvider')} subtitle={t('costByProviderSubtitle')}>
-            <div className="flex h-[220px] flex-col justify-center gap-2 px-1">
-              {providerBreakdown.map((prov, index) => {
-                const pct = totalEstimatedCost > 0 ? (prov.estimatedCost / totalEstimatedCost) * 100 : 0;
-                const color = SERIES_PALETTE[index % SERIES_PALETTE.length];
-                return (
-                  <div key={prov.provider} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-[var(--text-secondary)]">{prov.provider}</span>
-                      <span className="font-semibold text-[var(--text-primary)]">{formatUSD(prov.estimatedCost)} <span className="font-normal text-[var(--text-muted)]">({pct.toFixed(1)}%)</span></span>
+          return (
+            <>
+              {/* Compact Vertical List (Mobile / Tablet) */}
+              <div className="divide-y divide-[var(--surface-border)]/60 lg:hidden">
+                {rows.map(({ entry, color, relativeWidth, sharePct }) => (
+                  <div key={entry.model} className="space-y-2 py-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-mono text-xs font-medium text-[var(--text-primary)]" title={entry.model}>
+                          {entry.model}
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+                          <span className="inline-block rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
+                            {entry.provider}
+                          </span>
+                          <span className="tabular-nums">{entry.requests.toLocaleString()} {t("requestsHeader").toLowerCase()}</span>
+                          <span aria-hidden="true">·</span>
+                          <span className="font-mono text-[10px] tabular-nums">
+                            {formatRate(entry)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right tabular-nums">
+                        <span className="block text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                          {formatUSD(entry.estimatedCost)}
+                        </span>
+                        {totalEstimatedCost > 0 && (
+                          <span className="block text-[10px] text-[var(--text-muted)]">
+                            {sharePct.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                      <div
-                        className="h-full rounded-full transition-[width] duration-700"
-                        style={{ width: `${Math.max(pct, 1)}%`, backgroundColor: color }}
-                      />
+
+                    {relativeWidth > 0 && (
+                      <div className="h-1 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${Math.min(100, relativeWidth)}%`, backgroundColor: color }}
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-4 gap-2 text-[11px] tabular-nums">
+                      {getTokenCells(entry).map((cell) => (
+                        <div key={cell.key} className="min-w-0" title={cell.value.toLocaleString()}>
+                          <span className="block truncate text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                            {cell.label}
+                          </span>
+                          <span className="block truncate font-medium text-[var(--text-secondary)]">
+                            {formatCompact(cell.value)}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-[10px] text-[var(--text-muted)]">{t('providerStats', { models: prov.models, requests: formatCompact(prov.requests) })}</p>
                   </div>
-                );
-              })}
-            </div>
-          </ChartContainer>
-        )}
-      </div>
+                ))}
 
-      {/* ── Detailed Model Table ────────────────────────────── */}
-      <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)]">
-        <div className="border-b border-[var(--surface-border)] px-4 py-2.5">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{t('modelCostDetails')}</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-[var(--surface-border)] bg-[var(--surface-muted)]">
-                <th className="px-3 py-2 text-left font-semibold text-[var(--text-muted)]">{t('modelHeader')}</th>
-                <th className="px-3 py-2 text-left font-semibold text-[var(--text-muted)]">{t('providerHeader')}</th>
-                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('requestsHeader')}</th>
-                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('inputTokensHeader')}</th>
-                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('cachedTokensHeader')}</th>
-                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('outputTokensHeader')}</th>
-                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('rateHeader')}</th>
-                <th className="px-3 py-2 text-right font-semibold text-[var(--text-muted)]">{t('estCostHeader')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#f0f0f0]">
-              {pricedModels.map((entry) => (
-                <tr key={entry.model} className="hover:bg-[var(--surface-muted)] transition-colors">
-                  <td className="px-3 py-2 font-medium text-[var(--text-primary)] max-w-[200px] truncate" title={entry.model}>{entry.model}</td>
-                  <td className="px-3 py-2 text-[var(--text-muted)]">{entry.provider}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">{entry.requests.toLocaleString()}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">{formatCompact(entry.inputTokens)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">{formatCompact(entry.cachedTokens)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">{formatCompact(entry.outputTokens)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[var(--text-muted)]">
-                    {entry.priced ? formatRate(entry) : "—"}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums font-semibold text-emerald-700">{formatUSD(entry.estimatedCost)}</td>
-                </tr>
-              ))}
-              {unpricedModels.length > 0 && (
-                <>
-                  <tr>
-                    <td colSpan={8} className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] bg-[var(--surface-muted)]">
-                      {t('unpricedModels')} ({unpricedModels.length})
-                    </td>
-                  </tr>
-                  {unpricedModels.map((entry) => (
-                    <tr key={entry.model} className="opacity-50">
-                      <td className="px-3 py-1.5 text-[var(--text-muted)] max-w-[200px] truncate" title={entry.model}>{entry.model}</td>
-                      <td className="px-3 py-1.5 text-[var(--text-muted)]">—</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]">{entry.requests.toLocaleString()}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]">{formatCompact(entry.inputTokens)}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]">{formatCompact(entry.cachedTokens)}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-muted)]">{formatCompact(entry.outputTokens)}</td>
-                      <td className="px-3 py-1.5 text-right text-[var(--text-muted)]">—</td>
-                      <td className="px-3 py-1.5 text-right text-[var(--text-muted)]">—</td>
+                {unpricedModels.length > 0 && (
+                  <div className="py-1">
+                    <button
+                      type="button"
+                      aria-expanded={isUnpricedOpen}
+                      onClick={() => setUnpricedExpanded((prev) => !prev)}
+                      className="flex w-full cursor-pointer items-center justify-between rounded bg-[var(--surface-muted)]/70 px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        <span aria-hidden="true" className="text-[9px]">{isUnpricedOpen ? "\u25BC" : "\u25B6"}</span>
+                        <span>{t("unpricedModels")} ({unpricedModels.length})</span>
+                      </span>
+                      <span className="tabular-nums font-normal">
+                        {unpricedModels.reduce((sum, m) => sum + m.requests, 0).toLocaleString()} {t("requestsHeader").toLowerCase()}
+                      </span>
+                    </button>
+                    {isUnpricedOpen && (
+                      <div className="divide-y divide-[var(--surface-border)]/40 px-1">
+                        {unpricedModels.map((entry) => (
+                          <div key={entry.model} className="space-y-1.5 py-2.5">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <span className="block truncate font-mono text-xs font-medium text-[var(--text-primary)]" title={entry.model}>
+                                  {entry.model}
+                                </span>
+                                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                  <span className="inline-block rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0 text-[10px] text-[var(--text-secondary)]">
+                                    {entry.provider}
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="shrink-0 text-[11px] tabular-nums text-[var(--text-secondary)]">
+                                {entry.requests.toLocaleString()} {t("requestsHeader").toLowerCase()}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2 text-[11px] tabular-nums">
+                              {getTokenCells(entry).map((cell) => (
+                                <div key={cell.key} className="min-w-0" title={cell.value.toLocaleString()}>
+                                  <span className="block truncate text-[10px] uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                                    {cell.label}
+                                  </span>
+                                  <span className="block truncate text-[var(--text-secondary)]">
+                                    {formatCompact(cell.value)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop Table */}
+              <div className="hidden overflow-x-auto lg:block">
+                <table className="w-full text-xs">
+                  <thead className="border-b border-[var(--surface-border)] bg-[var(--surface-base)]">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        {t("modelHeader")}
+                      </th>
+                      <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        {t("providerHeader")}
+                      </th>
+                      <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        {t("requestsHeader")}
+                      </th>
+                      <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        {t("input")}
+                      </th>
+                      <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        {t("cached")}
+                      </th>
+                      <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        {t("cacheWrite")}
+                      </th>
+                      <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        {t("output")}
+                      </th>
+                      <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        {t("rateHeader")}
+                      </th>
+                      <th className="px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        {t("estCostHeader")}
+                      </th>
                     </tr>
-                  ))}
-                </>
-              )}
-            </tbody>
-            <tfoot>
-              <tr className="border-t border-[var(--surface-border)] bg-[var(--surface-muted)]">
-                <td colSpan={7} className="px-3 py-2 font-semibold text-[var(--text-primary)]">{t('totalEstimatedCost')}</td>
-                <td className="px-3 py-2 text-right font-bold text-emerald-700 text-sm">{formatUSD(totalEstimatedCost)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        <div className="border-t border-[var(--surface-border)] px-4 py-2 text-[10px] text-[var(--text-muted)]">
-          💡 {t('costDisclaimerPart1')}{' '}
-          {t('costDisclaimerPart2')} <code className="bg-[var(--surface-muted)] px-1 rounded text-[9px]">cliproxy-custom-pricing</code>.{' '}
-          {t('costDisclaimerPart3')}
+                  </thead>
+                  <tbody className="divide-y divide-[var(--surface-border)]/60">
+                    {rows.map(({ entry, color, relativeWidth, sharePct }) => (
+                      <tr key={entry.model} className="transition-colors hover:bg-[var(--surface-muted)]/50">
+                        <td className="px-4 py-2">
+                          <div className="max-w-[240px] truncate font-mono text-[11px] font-medium text-[var(--text-primary)]" title={entry.model}>
+                            {entry.model}
+                          </div>
+                          {relativeWidth > 0 && (
+                            <div className="mt-1 h-1 w-full max-w-[180px] overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                              <div
+                                className="h-full rounded-full"
+                                style={{
+                                  width: `${Math.min(100, relativeWidth)}%`,
+                                  backgroundColor: color,
+                                }}
+                              />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="inline-block rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]">
+                            {entry.provider}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">
+                          {entry.requests.toLocaleString()}
+                        </td>
+                        {getTokenCells(entry).map((cell) => (
+                          <td
+                            key={cell.key}
+                            className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]"
+                            title={cell.value.toLocaleString()}
+                          >
+                            {formatCompact(cell.value)}
+                          </td>
+                        ))}
+                        <td className="px-3 py-2 text-right font-mono text-[11px] tabular-nums text-[var(--text-muted)]">
+                          {formatRate(entry)}
+                        </td>
+                        <td className="px-4 py-2 text-right tabular-nums">
+                          <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                            {formatUSD(entry.estimatedCost)}
+                          </span>
+                          {totalEstimatedCost > 0 && (
+                            <span className="ml-1.5 text-[10px] text-[var(--text-muted)]">
+                              {sharePct.toFixed(1)}%
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+
+                    {unpricedModels.length > 0 && (
+                      <>
+                        <tr>
+                          <td colSpan={9} className="p-0">
+                            <button
+                              type="button"
+                              aria-expanded={isUnpricedOpen}
+                              onClick={() => setUnpricedExpanded((prev) => !prev)}
+                              className="flex w-full cursor-pointer items-center justify-between bg-[var(--surface-muted)]/70 px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+                            >
+                              <span className="inline-flex items-center gap-1.5">
+                                <span aria-hidden="true" className="text-[9px]">{isUnpricedOpen ? "\u25BC" : "\u25B6"}</span>
+                                <span>{t("unpricedModels")} ({unpricedModels.length})</span>
+                              </span>
+                              <span className="tabular-nums font-normal">
+                                {unpricedModels.reduce((sum, m) => sum + m.requests, 0).toLocaleString()} {t("requestsHeader").toLowerCase()}
+                              </span>
+                            </button>
+                          </td>
+                        </tr>
+                        {isUnpricedOpen && unpricedModels.map((entry) => (
+                          <tr key={entry.model} className="transition-colors hover:bg-[var(--surface-muted)]/40">
+                            <td className="max-w-[240px] truncate px-4 py-2 font-mono text-[11px] text-[var(--text-secondary)]" title={entry.model}>
+                              {entry.model}
+                            </td>
+                            <td className="px-3 py-2">
+                              <span className="inline-block rounded border border-[var(--surface-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]">
+                                {entry.provider}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums text-[var(--text-secondary)]">
+                              {entry.requests.toLocaleString()}
+                            </td>
+                            {getTokenCells(entry).map((cell) => (
+                              <td key={cell.key} className="px-3 py-2 text-right tabular-nums text-[var(--text-muted)]" title={cell.value.toLocaleString()}>
+                                {formatCompact(cell.value)}
+                              </td>
+                            ))}
+                            <td className="px-3 py-2 text-right text-[var(--text-muted)]">{"\u2014"}</td>
+                            <td className="px-4 py-2 text-right text-[var(--text-muted)]">{"\u2014"}</td>
+                          </tr>
+                        ))}
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          );
+        })()}
+
+        {/* Tab 2: Provider Cost Breakdown */}
+        {activeTab === "providers" && (
+          <div className="divide-y divide-[var(--surface-border)]/60 px-1 sm:px-4">
+            {providerCostList.map((prov, index) => {
+              const pct = totalEstimatedCost > 0 ? (prov.estimatedCost / totalEstimatedCost) * 100 : 0;
+              const barWidth =
+                maxProviderCost > 0
+                  ? Math.max((prov.estimatedCost / maxProviderCost) * 100, prov.estimatedCost > 0 ? 2 : 0)
+                  : 0;
+              const color = SERIES_PALETTE[index % SERIES_PALETTE.length] ?? CHART_COLORS.primary;
+
+              return (
+                <div key={prov.provider} className="space-y-1.5 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span className="truncate font-medium text-[var(--text-primary)]">
+                        {prov.provider}
+                      </span>
+                      <span className="shrink-0 text-[11px] tabular-nums text-[var(--text-muted)]">
+                        {t("providerStats", {
+                          models: prov.models,
+                          requests: formatCompact(prov.requests),
+                        })}
+                      </span>
+                    </div>
+                    <div className="shrink-0 text-right tabular-nums">
+                      <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                        {formatUSD(prov.estimatedCost)}
+                      </span>
+                      {totalEstimatedCost > 0 && (
+                        <span className="ml-1.5 text-[11px] text-[var(--text-muted)]">
+                          ({pct.toFixed(1)}%)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                    <div
+                      className="h-full rounded-full transition-[width] duration-500"
+                      style={{
+                        width: `${Math.min(100, barWidth)}%`,
+                        backgroundColor: color,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Concise Disclaimer Footer */}
+        <div className="border-t border-[var(--surface-border)] pt-2 text-[10px] text-[var(--text-muted)]">
+          {t("costDisclaimerPart1")}{" "}
+          {t("costDisclaimerPart2")}{" "}
+          <code className="rounded bg-[var(--surface-muted)] px-1 text-[9px]">cliproxy-custom-pricing</code>.{" "}
+          {t("costDisclaimerPart3")}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

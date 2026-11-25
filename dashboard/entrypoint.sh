@@ -383,6 +383,16 @@ async function migrate() {
     DO $$ BEGIN
       ALTER TABLE "usage_records" ADD COLUMN "latencyMs" INTEGER NOT NULL DEFAULT 0;
     EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    -- Add failure detail columns if missing (existing installs)
+    DO $$ BEGIN
+      ALTER TABLE "usage_records" ADD COLUMN "failureStatus" INTEGER;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE "usage_records" ADD COLUMN "failureCode" TEXT;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE "usage_records" ADD COLUMN "failureBody" TEXT;
+    EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
     -- Perplexity cookies table (stores session cookies for Perplexity Pro sidecar)
     CREATE TABLE IF NOT EXISTS "perplexity_cookies" (
@@ -454,6 +464,25 @@ async function migrate() {
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "backup_schedule_pkey" PRIMARY KEY ("id")
     );
+
+    ALTER TABLE "usage_records" ADD COLUMN IF NOT EXISTS "cacheWriteTokens" INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE "usage_records" ADD COLUMN IF NOT EXISTS "cacheWrite1hTokens" INTEGER NOT NULL DEFAULT 0;
+
+    -- Quota snapshots table (stores periodic account/model remaining quota history)
+    CREATE TABLE IF NOT EXISTS "quota_snapshots" (
+      "id" TEXT NOT NULL,
+      "authIndex" TEXT NOT NULL,
+      "provider" TEXT NOT NULL,
+      "groupId" TEXT NOT NULL,
+      "modelId" TEXT NOT NULL DEFAULT '',
+      "remaining" DOUBLE PRECISION NOT NULL,
+      "resetTime" TIMESTAMP(3),
+      "capturedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "quota_snapshots_pkey" PRIMARY KEY ("id")
+    );
+    CREATE INDEX IF NOT EXISTS "quota_snapshots_capturedAt_idx" ON "quota_snapshots"("capturedAt");
+    CREATE INDEX IF NOT EXISTS "quota_snapshots_authIndex_capturedAt_idx" ON "quota_snapshots"("authIndex", "capturedAt");
+    CREATE INDEX IF NOT EXISTS "quota_snapshots_authIndex_groupId_modelId_capturedAt_idx" ON "quota_snapshots"("authIndex", "groupId", "modelId", "capturedAt");
     `);
 
     console.log('[dashboard] Tables ready');

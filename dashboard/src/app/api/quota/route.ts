@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { verifySession } from "@/lib/auth/session";
 import { getManagementUrl } from "@/lib/management-url";
 import { logger } from "@/lib/logger";
-import { quotaCache, CACHE_TTL } from "@/lib/cache";
+import { quotaCache, quotaAccountCache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
 import { Errors } from "@/lib/errors";
 import {
   ANTIGRAVITY_QUOTA_ENDPOINTS,
@@ -1057,6 +1057,7 @@ function buildClaudeLimitGroups(limits: ClaudeUsageLimit[] | undefined): QuotaGr
 
     let id: string;
     let label: string;
+    let scope: QuotaGroup["scope"];
 
     if (limit.kind === "session" || limit.group === "session") {
       id = "five-hour";
@@ -1065,12 +1066,18 @@ function buildClaudeLimitGroups(limits: ClaudeUsageLimit[] | undefined): QuotaGr
       id = "seven-day";
       label = "7d Weekly";
     } else if (scopedModelName) {
-      id = `seven-day-${slugifyLabel(scopedModelName)}`;
+      const slug = slugifyLabel(scopedModelName);
+      id = `seven-day-${slug}`;
       label = `7d ${scopedModelName}`;
+      scope = { id: slug, label: scopedModelName };
     } else {
       const fallbackKind = limit.kind ?? limit.group ?? "limit";
-      id = `limit-${slugifyLabel(fallbackKind)}`;
+      const slug = slugifyLabel(fallbackKind);
+      id = `limit-${slug}`;
       label = humanizeLimitKind(fallbackKind);
+      if (fallbackKind.toLowerCase().includes("scoped")) {
+        scope = { id: slug, label };
+      }
     }
 
     if (seenIds.has(id)) continue;
@@ -1079,6 +1086,7 @@ function buildClaudeLimitGroups(limits: ClaudeUsageLimit[] | undefined): QuotaGr
     groups.push({
       id,
       label,
+      ...(scope ? { scope } : {}),
       remainingFraction,
       resetTime,
       severity: typeof limit.severity === "string" ? limit.severity : undefined,
@@ -1108,7 +1116,8 @@ async function fetchClaudeQuota(
         const pushUsageGroup = (
           id: string,
           label: string,
-          window: ClaudeUsageWindow | undefined
+          window: ClaudeUsageWindow | undefined,
+          scope?: QuotaGroup["scope"]
         ) => {
           // `limits[]` entries take precedence for the windows they cover.
           if (usageGroups.some((group) => group.id === id)) return;
@@ -1124,6 +1133,7 @@ async function fetchClaudeQuota(
           usageGroups.push({
             id,
             label,
+            ...(scope ? { scope } : {}),
             remainingFraction,
             resetTime: window.resets_at ?? null,
             models: [
@@ -1143,8 +1153,8 @@ async function fetchClaudeQuota(
 
         pushUsageGroup("five-hour", "5h Session", usageData.five_hour);
         pushUsageGroup("seven-day", "7d Weekly", usageData.seven_day);
-        pushUsageGroup("seven-day-sonnet", "7d Sonnet", usageData.seven_day_sonnet);
-        pushUsageGroup("seven-day-opus", "7d Opus", usageData.seven_day_opus);
+        pushUsageGroup("seven-day-sonnet", "7d Sonnet", usageData.seven_day_sonnet, { id: "sonnet", label: "Sonnet" });
+        pushUsageGroup("seven-day-opus", "7d Opus", usageData.seven_day_opus, { id: "opus", label: "Opus" });
 
         if (
           usageData.extra_usage?.is_enabled &&
@@ -1262,7 +1272,8 @@ async function fetchClaudeQuota(
         label: string,
         utilization: string | null,
         resetEpoch: string | null,
-        status?: string | null
+        status?: string | null,
+        scope?: QuotaGroup["scope"]
       ) => {
         if (!utilization) return;
         const util = parseFloat(utilization);
@@ -1276,6 +1287,7 @@ async function fetchClaudeQuota(
         unifiedGroups.push({
           id,
           label,
+          ...(scope ? { scope } : {}),
           remainingFraction,
           resetTime,
           severity: severityFromUnifiedStatus(status),
@@ -1297,13 +1309,21 @@ async function fetchClaudeQuota(
         unified7dReset,
         getHeaderValue(headers, "anthropic-ratelimit-unified-7d-status")
       );
-      pushUnifiedGroup("seven-day-sonnet", "7d Sonnet", unified7dSonnetUtilization, unified7dSonnetReset);
+      pushUnifiedGroup(
+        "seven-day-sonnet",
+        "7d Sonnet",
+        unified7dSonnetUtilization,
+        unified7dSonnetReset,
+        undefined,
+        { id: "sonnet", label: "Sonnet" }
+      );
       pushUnifiedGroup(
         "seven-day-oi",
         "7d Fable",
         unified7dOiUtilization,
         unified7dOiReset,
-        getHeaderValue(headers, "anthropic-ratelimit-unified-7d_oi-status")
+        getHeaderValue(headers, "anthropic-ratelimit-unified-7d_oi-status"),
+        { id: "fable", label: "Fable" }
       );
 
       if (unifiedGroups.length > 0) {
@@ -1385,6 +1405,21 @@ async function fetchClaudeQuota(
   }
 }
 
+const inflightQuotaRefresh: Record<"normal" | "bust", Promise<NextResponse> | null> = {
+  normal: null,
+  bust: null,
+};
+
+function refreshQuota(bust: boolean): Promise<Response> {
+  const key = bust ? "bust" : "normal";
+  if (!inflightQuotaRefresh[key]) {
+    inflightQuotaRefresh[key] = loadQuota(bust).finally(() => {
+      inflightQuotaRefresh[key] = null;
+    });
+  }
+  return inflightQuotaRefresh[key]!.then((response) => response.clone());
+}
+
 export async function GET(request: NextRequest) {
   // Allow internal scheduler calls via management API key
   const internalKey = request.headers.get("x-internal-key");
@@ -1410,11 +1445,27 @@ export async function GET(request: NextRequest) {
     return Errors.internal("Server configuration error");
   }
 
+  const bust = request.nextUrl?.searchParams?.has("bust") ?? new URL(request.url).searchParams.has("bust");
   const CACHE_KEY = "quota:all";
-  const cached = quotaCache.get(CACHE_KEY);
-  if (cached) {
-    return NextResponse.json(cached);
+  if (!bust) {
+    const cached = quotaCache.get(CACHE_KEY);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+    if (!isInternalCall) {
+      const previous = quotaCache.get("quota:previous");
+      if (previous) {
+        after(async () => { await refreshQuota(false); });
+        return NextResponse.json(previous);
+      }
+    }
   }
+
+  return refreshQuota(bust);
+}
+
+async function loadQuota(bust: boolean): Promise<NextResponse> {
+  const CACHE_KEY = "quota:all";
 
   try {
     const authFilesResponse = await fetch(
@@ -1443,7 +1494,7 @@ export async function GET(request: NextRequest) {
       (file) => !file.disabled && file.status !== "disabled"
     );
 
-    const quotaPromises: Promise<QuotaAccount>[] = activeAccounts.map(async (account): Promise<QuotaAccount> => {
+    const fetchSingleAccountQuota = async (account: AuthFile): Promise<QuotaAccount> => {
       const authIndex = String(account.auth_index);
       const displayEmail =
         isMeaningfulDisplayValue(account.email)
@@ -1462,6 +1513,16 @@ export async function GET(request: NextRequest) {
       const providerNorm = inferredProvider ?? declaredProviderNorm;
       const providerForResponse = inferredProvider ?? account.provider;
 
+      const accountCacheKey = `${CACHE_KEYS.quotaAccount(authIndex)}:${providerNorm}:${displayEmail}`;
+      if (!bust) {
+        const cachedAccount = quotaAccountCache.get(accountCacheKey) as QuotaAccount | null;
+        if (cachedAccount) {
+          return cachedAccount;
+        }
+      }
+
+      let computed: QuotaAccount;
+
       if (providerNorm === "claude") {
         const result = await fetchClaudeQuota(authIndex);
 
@@ -1472,39 +1533,29 @@ export async function GET(request: NextRequest) {
             normalizedError.includes("invalid bearer token") ||
             normalizedError.includes("invalid authorization");
 
-          if (needsReauth) {
-            return {
-              auth_index: authIndex,
-              provider: providerForResponse,
-              email: displayEmail,
-              supported: true,
-              error: "Claude OAuth token needs re-authentication (provider returned 401)",
-            };
-          }
-
-          return {
+          computed = {
             auth_index: authIndex,
             provider: providerForResponse,
             email: displayEmail,
             supported: true,
-            error: result.error,
+            error: needsReauth
+              ? "Claude OAuth token needs re-authentication (provider returned 401)"
+              : result.error,
+          };
+        } else {
+          computed = {
+            auth_index: authIndex,
+            provider: providerForResponse,
+            email: displayEmail,
+            supported: true,
+            groups: result,
           };
         }
-
-        return {
-          auth_index: authIndex,
-          provider: providerForResponse,
-          email: displayEmail,
-          supported: true,
-          groups: result,
-        };
-      }
-
-      if (providerNorm === "antigravity") {
+      } else if (providerNorm === "antigravity") {
         const result = await fetchAntigravityQuota(authIndex);
 
         if ("error" in result) {
-          return {
+          computed = {
             auth_index: authIndex,
             provider: providerForResponse,
             email: displayEmail,
@@ -1512,120 +1563,118 @@ export async function GET(request: NextRequest) {
             monitorMode: "window-based",
             error: result.error,
           };
+        } else {
+          computed = {
+            auth_index: authIndex,
+            provider: providerForResponse,
+            email: displayEmail,
+            supported: true,
+            monitorMode: "window-based",
+            snapshotFetchedAt: result.snapshotFetchedAt,
+            snapshotSource: result.snapshotSource,
+            groups: result.groups,
+          };
         }
-
-        return {
-          auth_index: authIndex,
-          provider: providerForResponse,
-          email: displayEmail,
-          supported: true,
-          monitorMode: "window-based",
-          snapshotFetchedAt: result.snapshotFetchedAt,
-          snapshotSource: result.snapshotSource,
-          groups: result.groups,
-        };
-      }
-
-      if (isModelFirstProvider(providerNorm)) {
+      } else if (isModelFirstProvider(providerNorm)) {
         const projectId = await fetchAntigravityProjectId(authIndex);
         const result = await fetchAntigravityModels(authIndex, projectId);
-        
+
         if ("error" in result) {
-          return {
+          computed = {
             auth_index: authIndex,
             provider: providerForResponse,
             email: displayEmail,
             supported: true,
             error: result.error,
           };
+        } else {
+          computed = {
+            auth_index: authIndex,
+            provider: providerForResponse,
+            email: displayEmail,
+            supported: true,
+            monitorMode: "model-first",
+            snapshotFetchedAt: result.snapshotFetchedAt,
+            snapshotSource: result.snapshotSource,
+            groups: result.groups,
+          };
         }
-
-        return {
-          auth_index: authIndex,
-          provider: providerForResponse,
-          email: displayEmail,
-          supported: true,
-          monitorMode: "model-first",
-          snapshotFetchedAt: result.snapshotFetchedAt,
-          snapshotSource: result.snapshotSource,
-          groups: result.groups,
-        };
-      }
-
-      if (providerNorm === "codex") {
+      } else if (providerNorm === "codex") {
         const result = await fetchCodexQuota(authIndex, codexAccountId(account));
-        
+
         if ("error" in result) {
-          return {
+          computed = {
             auth_index: authIndex,
             provider: providerForResponse,
             email: displayEmail,
             supported: true,
             error: result.error,
           };
+        } else {
+          computed = {
+            auth_index: authIndex,
+            provider: providerForResponse,
+            email: displayEmail,
+            supported: true,
+            groups: result,
+          };
         }
-
-        return {
-          auth_index: authIndex,
-          provider: providerForResponse,
-          email: displayEmail,
-          supported: true,
-          groups: result,
-        };
-      }
-
-      if (providerNorm === "kimi") {
+      } else if (providerNorm === "kimi") {
         const result = await fetchKimiQuota(authIndex);
 
         if ("error" in result) {
-          return {
+          computed = {
             auth_index: authIndex,
             provider: providerForResponse,
             email: displayEmail,
             supported: true,
             error: result.error,
           };
+        } else {
+          computed = {
+            auth_index: authIndex,
+            provider: providerForResponse,
+            email: displayEmail,
+            supported: true,
+            groups: result,
+          };
         }
-
-        return {
-          auth_index: authIndex,
-          provider: providerForResponse,
-          email: displayEmail,
-          supported: true,
-          groups: result,
-        };
-      }
-
-
-      if (providerNorm === "github" || providerNorm === "github-copilot" || providerNorm === "copilot") {
+      } else if (providerNorm === "github" || providerNorm === "github-copilot" || providerNorm === "copilot") {
         const result = await fetchCopilotQuota(authIndex);
 
         if ("error" in result) {
-          return {
+          computed = {
             auth_index: authIndex,
             provider: providerForResponse,
             email: displayEmail,
             supported: true,
             error: result.error,
           };
+        } else {
+          computed = {
+            auth_index: authIndex,
+            provider: providerForResponse,
+            email: displayEmail,
+            supported: true,
+            groups: result,
+          };
         }
-
-        return {
+      } else {
+        computed = {
           auth_index: authIndex,
           provider: providerForResponse,
           email: displayEmail,
-          supported: true,
-          groups: result,
+          supported: false,
         };
       }
 
-      return {
-        auth_index: authIndex,
-        provider: providerForResponse,
-        email: displayEmail,
-        supported: false,
-      };
-    });
+      if (!computed.error) {
+        quotaAccountCache.set(accountCacheKey, computed, CACHE_TTL.QUOTA_ACCOUNT);
+      }
+      return computed;
+    };
+
+    const quotaPromises: Promise<QuotaAccount>[] = activeAccounts.map(fetchSingleAccountQuota);
 
     const results = await Promise.allSettled(quotaPromises);
 
@@ -1651,6 +1700,7 @@ export async function GET(request: NextRequest) {
     };
 
     quotaCache.set(CACHE_KEY, response, CACHE_TTL.QUOTA);
+    quotaCache.set("quota:previous", response, CACHE_TTL.QUOTA_PREVIOUS);
 
     return NextResponse.json(response);
   } catch (error) {

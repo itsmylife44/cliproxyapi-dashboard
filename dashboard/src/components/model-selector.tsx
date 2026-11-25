@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import { useState, useEffect, useRef } from "react";
 import {
-  MODEL_PROVIDER_ORDER,
   type ModelProviderName,
   groupModelsByProvider,
 } from "@/lib/providers/model-grouping";
@@ -46,9 +45,7 @@ export function ModelSelector({
   );
   const [isOpen, setIsOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>(SAVE_STATUS.IDLE);
-  const [expandedGroups, setExpandedGroups] = useState<Set<ModelProviderName>>(
-    () => new Set(MODEL_PROVIDER_ORDER)
-  );
+  const [expandedGroups, setExpandedGroups] = useState<Set<ModelProviderName>>(() => new Set());
   const isFirstRender = useRef(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -187,10 +184,9 @@ export function ModelSelector({
 
   return (
     <div
-      className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]"
       data-testid="model-selector"
     >
-      <div className="flex items-center justify-between gap-3 p-4">
+      <div className="flex items-center justify-between gap-3 py-1">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -261,37 +257,37 @@ export function ModelSelector({
       </div>
 
       {isOpen && (
-        <div className="space-y-4 px-4 pb-4">
+        <div className="space-y-3 pt-2">
           {isLocked && (
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <span className="text-lg">🔒</span>
-              <p className="text-sm text-amber-700">
+            <div className="flex items-start gap-3 rounded-md border border-amber-500/20 bg-amber-500/10 p-2.5">
+              <span className="text-sm">🔒</span>
+              <p className="text-xs text-amber-700">
                 {t("lockedMessage")}
               </p>
             </div>
           )}
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 text-xs">
             <button
               type="button"
               onClick={handleSelectAll}
-              className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
               disabled={isLocked}
             >
               {t("selectAll")}
             </button>
-            <span className="text-[var(--text-muted)]">|</span>
+            <span className="text-[var(--surface-border)]">|</span>
             <button
               type="button"
               onClick={handleDeselectAll}
-              className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
               disabled={isLocked}
             >
               {t("deselectAll")}
             </button>
           </div>
 
-          <div className="max-h-80 overflow-y-auto space-y-4">
+          <div className="max-h-72 divide-y divide-[var(--surface-border)] overflow-y-auto border-t border-b border-[var(--surface-border)]">
             {modelGroups.map((group) => {
               const groupSelectedCount = group.models.filter(
                 (model) => !excludedModels.has(model)
@@ -300,17 +296,17 @@ export function ModelSelector({
               const isExpanded = expandedGroups.has(group.provider);
 
               return (
-                <div key={group.provider} className="space-y-3">
-                  <div className="flex items-center justify-between">
+                <div key={group.provider} className="py-2">
+                  <div className="flex items-center justify-between gap-2">
                     <button
                       type="button"
                       onClick={() => toggleGroupExpansion(group.provider)}
                       aria-expanded={isExpanded}
-                      className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)] hover:text-[var(--text-primary)] transition-colors"
+                      className="flex items-center gap-2 text-xs font-semibold text-[var(--text-primary)] transition-colors hover:text-[var(--text-secondary)]"
                     >
                       <svg
-                        width="12"
-                        height="12"
+                        width="11"
+                        height="11"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -322,36 +318,34 @@ export function ModelSelector({
                       >
                         <polyline points="9 18 15 12 9 6" />
                       </svg>
-                      {group.provider}
-                      <span className="px-2 py-0.5 rounded-full bg-[var(--surface-hover)] text-xs font-normal text-[var(--text-muted)]">
+                      <span>{group.provider}</span>
+                      <span className="rounded-full bg-[var(--surface-muted)] px-1.5 py-0.5 text-[11px] font-normal tabular-nums text-[var(--text-muted)]">
                         {t("groupSelectedCount", { selected: groupSelectedCount, total: groupTotalCount })}
                       </span>
                     </button>
-                    {isExpanded && (
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => handleGroupSelectAll(group.models)}
-                          className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={isLocked}
-                        >
-                          {t("selectAllGroup")}
-                        </button>
-                        <span className="text-[var(--text-muted)]">|</span>
-                        <button
-                          type="button"
-                          onClick={() => handleGroupDeselectAll(group.models)}
-                          className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={isLocked}
-                        >
-                          {t("deselectAllGroup")}
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => handleGroupSelectAll(group.models)}
+                        className="font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={isLocked}
+                      >
+                        {t("selectAllGroup")}
+                      </button>
+                      <span className="text-[var(--surface-border)]">|</span>
+                      <button
+                        type="button"
+                        onClick={() => handleGroupDeselectAll(group.models)}
+                        className="font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={isLocked}
+                      >
+                        {t("deselectAllGroup")}
+                      </button>
+                    </div>
                   </div>
 
                   {isExpanded && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    <div className="mt-2 grid grid-cols-1 gap-1.5 pl-4 sm:grid-cols-2 md:grid-cols-3">
                       {group.models.map((modelId) => {
                         const isChecked = !excludedModels.has(modelId);
                         const providers = modelProvidersMap?.get(modelId) ?? [];
@@ -359,18 +353,18 @@ export function ModelSelector({
                         return (
                           <label
                             key={modelId}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--surface-border)] ${
+                            className={`flex items-center gap-2 rounded px-2 py-1 transition-colors ${
                               isLocked
                                 ? "cursor-not-allowed opacity-60"
-                                : "cursor-pointer group hover:bg-[var(--surface-muted)] hover:border-[var(--surface-border)]"
-                            } transition-colors`}
+                                : "cursor-pointer hover:bg-[var(--surface-hover)]"
+                            }`}
                           >
                             <input
                               type="checkbox"
                               checked={isChecked}
                               onChange={() => handleToggle(modelId)}
                               disabled={isLocked}
-                              className="size-4 shrink-0 rounded border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--text-primary)]/20 focus:ring-offset-0 cursor-pointer disabled:cursor-not-allowed"
+                              className="size-3.5 shrink-0 cursor-pointer rounded border-[var(--surface-border)] bg-[var(--surface-muted)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--text-primary)]/20 focus:ring-offset-0 disabled:cursor-not-allowed"
                             />
                             <div className="min-w-0 flex-1">
                               <span className={`font-mono text-xs ${

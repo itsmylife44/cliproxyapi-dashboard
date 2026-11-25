@@ -24,11 +24,14 @@ vi.mock("@/lib/db", () => ({
     usageRecord: { findMany: vi.fn().mockResolvedValue([]) },
     perplexityCookie: { findMany: vi.fn().mockResolvedValue([]) },
     collectorState: { findMany: vi.fn().mockResolvedValue([]) },
+    quotaSnapshot: { findMany: vi.fn().mockResolvedValue([]) },
+    backupRecord: { findMany: vi.fn().mockResolvedValue([]) },
     $transaction: vi.fn(),
   },
 }));
 
-import { parseBackupData, generateRestorePreview } from "../export-import";
+import { prisma } from "@/lib/db";
+import { exportDatabase, importDatabase, parseBackupData, generateRestorePreview } from "../export-import";
 import type { BackupData } from "../types";
 import { BACKUP_VERSION } from "../types";
 import { buildSlimConfigChecked } from "@/lib/__tests__/helpers/slim-schema-guard";
@@ -60,6 +63,7 @@ describe("parseBackupData", () => {
       usageRecords: [],
       perplexityCookies: [],
       collectorState: [],
+      quotaSnapshots: [],
     },
     metadata: {
       totalRecords: 0,
@@ -189,6 +193,7 @@ describe("parseBackupData", () => {
         usageRecords: [],
         perplexityCookies: [],
         collectorState: [],
+      quotaSnapshots: [],
       },
     };
     const jsonString = JSON.stringify(dataWithInvalidField);
@@ -308,6 +313,8 @@ describe("generateRestorePreview", () => {
           outputTokens: 200,
           reasoningTokens: 0,
           cachedTokens: 0,
+          cacheWriteTokens: 0,
+          cacheWrite1hTokens: 0,
           totalTokens: 300,
           failed: false,
           collectedAt: "2024-01-01T00:05:00.000Z",
@@ -315,6 +322,7 @@ describe("generateRestorePreview", () => {
       ],
       perplexityCookies: [],
       collectorState: [],
+      quotaSnapshots: [],
     },
     metadata: {
       totalRecords: 8,
@@ -408,6 +416,7 @@ describe("generateRestorePreview", () => {
         usageRecords: [],
         perplexityCookies: [],
         collectorState: [],
+      quotaSnapshots: [],
       },
       metadata: {
         totalRecords: 0,
@@ -443,6 +452,7 @@ describe("generateRestorePreview", () => {
         usageRecords: [],
         perplexityCookies: [],
         collectorState: [],
+      quotaSnapshots: [],
       },
     });
 
@@ -467,5 +477,163 @@ describe("generateRestorePreview", () => {
     const preview = generateRestorePreview(backupData as BackupData);
 
     expect(preview.dashboardVersion).toBe("unknown");
+  });
+});
+
+describe("quotaSnapshots backup export and restore", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("exports quotaSnapshots and records modelCounts.quotaSnapshots", async () => {
+    const capturedAt = new Date("2026-11-15T01:00:00.000Z");
+    const resetTime = new Date("2026-11-15T06:00:00.000Z");
+
+    vi.mocked(prisma.quotaSnapshot.findMany).mockResolvedValueOnce([
+      {
+        id: "qs-1",
+        authIndex: "auth-1",
+        provider: "claude",
+        groupId: "5h",
+        modelId: "",
+        remaining: 0.75,
+        resetTime,
+        capturedAt,
+      },
+      {
+        id: "qs-2",
+        authIndex: "auth-2",
+        provider: "antigravity",
+        groupId: "gemini-pro",
+        modelId: "gemini-2.5-pro",
+        remaining: 0.5,
+        resetTime: null,
+        capturedAt,
+      },
+    ]);
+
+    const backup = await exportDatabase("admin");
+
+    expect(backup.metadata.modelCounts.quotaSnapshots).toBe(2);
+    expect(backup.data.quotaSnapshots).toEqual([
+      {
+        id: "qs-1",
+        authIndex: "auth-1",
+        provider: "claude",
+        groupId: "5h",
+        modelId: "",
+        remaining: 0.75,
+        resetTime: resetTime.toISOString(),
+        capturedAt: capturedAt.toISOString(),
+      },
+      {
+        id: "qs-2",
+        authIndex: "auth-2",
+        provider: "antigravity",
+        groupId: "gemini-pro",
+        modelId: "gemini-2.5-pro",
+        remaining: 0.5,
+        resetTime: null,
+        capturedAt: capturedAt.toISOString(),
+      },
+    ]);
+  });
+
+  it("clears existing quotaSnapshots and restores backup quotaSnapshots inside transaction", async () => {
+    const deleteMany = vi.fn().mockResolvedValue({ count: 0 });
+    const createMany = vi.fn().mockResolvedValue({ count: 1 });
+    const noopTxModel = {
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
+    };
+
+    const tx = {
+      quotaSnapshot: { deleteMany, createMany },
+      usageRecord: noopTxModel,
+      auditLog: noopTxModel,
+      customProviderExcludedModel: noopTxModel,
+      customProviderModel: noopTxModel,
+      customProvider: noopTxModel,
+      providerGroup: noopTxModel,
+      perplexityCookie: noopTxModel,
+      collectorState: noopTxModel,
+      configSubscription: noopTxModel,
+      configTemplate: noopTxModel,
+      providerOAuthOwnership: noopTxModel,
+      providerKeyOwnership: noopTxModel,
+      syncToken: noopTxModel,
+      userApiKey: noopTxModel,
+      agentModelOverride: noopTxModel,
+      modelPreference: noopTxModel,
+      systemSetting: noopTxModel,
+      backupRecord: noopTxModel,
+      user: noopTxModel,
+    };
+
+    vi.mocked(prisma.$transaction).mockImplementationOnce(async (fn) =>
+      fn(tx as unknown as Parameters<Parameters<typeof prisma.$transaction>[0]>[0])
+    );
+
+    const backupData: BackupData = {
+      version: BACKUP_VERSION,
+      createdAt: "2026-11-15T01:00:00.000Z",
+      dashboard: { version: "1.0.0" },
+      data: {
+        users: [],
+        modelPreferences: [],
+        agentModelOverrides: [],
+        syncTokens: [],
+        userApiKeys: [],
+        configTemplates: [],
+        configSubscriptions: [],
+        providerKeyOwnerships: [],
+        providerOAuthOwnerships: [],
+        systemSettings: [],
+        customProviders: [],
+        providerGroups: [],
+        customProviderModels: [],
+        customProviderExcludedModels: [],
+        auditLogs: [],
+        usageRecords: [],
+        perplexityCookies: [],
+        collectorState: [],
+        quotaSnapshots: [
+          {
+            id: "qs-1",
+            authIndex: "auth-1",
+            provider: "claude",
+            groupId: "5h",
+            modelId: "",
+            remaining: 0.75,
+            resetTime: "2026-11-15T06:00:00.000Z",
+            capturedAt: "2026-11-15T01:00:00.000Z",
+          },
+        ],
+      },
+      metadata: {
+        totalRecords: 1,
+        modelCounts: { quotaSnapshots: 1 },
+        exportedAt: "2026-11-15T01:00:00.000Z",
+        exportedBy: "admin",
+      },
+    };
+
+    await importDatabase(backupData);
+
+    expect(deleteMany).toHaveBeenCalledTimes(1);
+    expect(createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          id: "qs-1",
+          authIndex: "auth-1",
+          provider: "claude",
+          groupId: "5h",
+          modelId: "",
+          remaining: 0.75,
+          resetTime: new Date("2026-11-15T06:00:00.000Z"),
+          capturedAt: new Date("2026-11-15T01:00:00.000Z"),
+        },
+      ],
+    });
   });
 });

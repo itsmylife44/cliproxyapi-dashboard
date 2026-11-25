@@ -85,10 +85,10 @@ export default function SetupWizardPage() {
       <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
+            <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
               {t("title")}
             </h1>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
+            <p className="mt-0.5 text-xs text-[var(--text-muted)]">
               {t("subtitle")}
             </p>
           </div>

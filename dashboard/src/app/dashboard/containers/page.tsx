@@ -197,21 +197,21 @@ export default function ContainersPage() {
   const selectedContainerInfo = containers.find((c) => c.name === selectedContainer);
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
-      </section>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{t('pageTitle')}</h1>
+      </div>
 
       {loading ? (
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-6 text-center text-sm text-[var(--text-muted)]">{t('loadingText')}</div>
+        <div className="border-t border-[var(--surface-border)] py-10 text-center text-sm text-[var(--text-muted)]">{t('loadingText')}</div>
       ) : (
         <>
           {fetchError && (
-            <div className="rounded-md border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-700">{fetchError}</div>
+            <div className="rounded-md border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-400">{fetchError}</div>
           )}
 
           {containers.length === 0 && !fetchError ? (
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-8">
+            <div className="border-t border-[var(--surface-border)] py-10">
               <div className="flex flex-col items-center justify-center gap-4 text-center">
                 <div className="flex size-14 items-center justify-center rounded-full border border-[var(--surface-border)] bg-[var(--surface-base)]">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--text-muted)]" aria-hidden="true">
@@ -227,7 +227,7 @@ export default function ContainersPage() {
             </div>
           ) : (
           <div className="overflow-x-auto">
-            <div className="min-w-[600px] divide-y divide-[var(--surface-border)] overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
+            <div className="min-w-[600px] divide-y divide-[var(--surface-border)] border-t border-b border-[var(--surface-border)]">
               <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1.2fr)_80px_100px_100px_minmax(140px,auto)] border-b border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                 <span>{t('tableHeaderContainer')}</span>
                 <span>{t('tableHeaderState')}</span>
@@ -282,7 +282,7 @@ export default function ContainersPage() {
           )}
 
           {selectedContainer && (
-            <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
+            <section className="border-t border-[var(--surface-border)] pt-5">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('logsTitle', { name: selectedContainerInfo?.displayName || selectedContainer })}</h2>
                 <div className="flex gap-2">

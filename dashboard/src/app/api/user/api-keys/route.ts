@@ -56,13 +56,39 @@ export async function GET() {
       },
     });
 
-    const response: ApiKeyResponse[] = apiKeys.map((apiKey) => ({
-      id: apiKey.id,
-      name: apiKey.name,
-      keyPreview: maskApiKey(apiKey.key),
-      createdAt: apiKey.createdAt.toISOString(),
-      lastUsedAt: apiKey.lastUsedAt?.toISOString() || null,
-    }));
+    const latestUsageByKey = new Map<string, Date>();
+    if (apiKeys.length > 0) {
+      const groupedUsage = await prisma.usageRecord.groupBy({
+        by: ["apiKeyId"],
+        where: {
+          apiKeyId: { in: apiKeys.map((apiKey) => apiKey.id) },
+        },
+        _max: { timestamp: true },
+      });
+      for (const row of groupedUsage) {
+        if (row.apiKeyId && row._max.timestamp) {
+          latestUsageByKey.set(row.apiKeyId, row._max.timestamp);
+        }
+      }
+    }
+
+    const response: ApiKeyResponse[] = apiKeys.map((apiKey) => {
+      const usageTs = latestUsageByKey.get(apiKey.id) ?? null;
+      const effectiveLastUsed =
+        apiKey.lastUsedAt && usageTs
+          ? usageTs > apiKey.lastUsedAt
+            ? usageTs
+            : apiKey.lastUsedAt
+          : usageTs ?? apiKey.lastUsedAt;
+
+      return {
+        id: apiKey.id,
+        name: apiKey.name,
+        keyPreview: maskApiKey(apiKey.key),
+        createdAt: apiKey.createdAt.toISOString(),
+        lastUsedAt: effectiveLastUsed?.toISOString() || null,
+      };
+    });
 
     return NextResponse.json({ apiKeys: response });
   } catch (error) {

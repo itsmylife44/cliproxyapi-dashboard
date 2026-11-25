@@ -208,7 +208,7 @@ export function PluginSettings() {
     settling.includes(row.id) ? t("statusApplying") : row.active ? t("statusActive") : row.installed ? (row.enabled ? t("statusNotLoaded") : t("statusDisabled")) : null;
 
   return (
-    <section className="rounded-lg border border-[var(--surface-border)]/70 bg-[var(--surface-base)] p-6 space-y-4">
+    <section className="space-y-4">
       <div>
         <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t("sectionTitle")}</h2>
         <p className="text-xs text-[var(--text-muted)]">{t("sectionDescription")}</p>

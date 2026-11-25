@@ -7,7 +7,10 @@ const prismaMock = vi.hoisted(() => ({
     upsert: vi.fn(() => Promise.resolve({})),
     updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
   },
-  userApiKey: { findMany: vi.fn(() => Promise.resolve([])) },
+  userApiKey: {
+    findMany: vi.fn(() => Promise.resolve([])),
+    updateMany: vi.fn(() => Promise.resolve({ count: 0 })),
+  },
   providerOAuthOwnership: { findMany: vi.fn(() => Promise.resolve([])) },
   user: { findMany: vi.fn(() => Promise.resolve([])), findUnique: vi.fn() },
   usageRecord: {

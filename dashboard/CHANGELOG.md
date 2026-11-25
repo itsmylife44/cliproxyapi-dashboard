@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Dashboard
+
+- Show provider capacity cards above per-account quotas, with consistent capacity meters and no placeholders for unsupported windows.
+- Match dashboard page headings and tabs to Usage, and show provider cost shares only in the By Provider ledger.
+- Keep quota search responsive and preserve filters in the URL without navigating away from the current view.
+- Consolidate Quick Start and provider actions, remove redundant labels, and generate client configs only when the required key and models are available.
+- Use inclusive usage date ranges and flag truncated results before totals and charts.
+
+### Fixes
+
+- Limit quota reset management to administrators and reserve the account cooldown before contacting a provider.
+- Filter non-admin usage history by API-key ownership rather than request source labels.
+
 ## [0.1.91](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.90...dashboard-v0.1.91) (2026-10-24)
 
 

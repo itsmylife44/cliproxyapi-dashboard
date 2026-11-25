@@ -191,6 +191,7 @@ export function DashboardNav() {
         role={isOpen ? "dialog" : undefined}
         aria-modal={isOpen ? "true" : undefined}
         aria-label={t("navigationAriaLabel")}
+        id="dashboard-navigation"
         className={cn(
           "glass-nav flex flex-col overflow-hidden",
           "lg:transition-[width] lg:duration-300 lg:ease-in-out",
@@ -198,7 +199,7 @@ export function DashboardNav() {
           "w-56 lg:block",
           "fixed lg:static inset-y-0 left-0 z-50",
           "transition-transform duration-300 ease-in-out",
-          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          isOpen ? "translate-x-0" : "invisible -translate-x-full lg:visible lg:translate-x-0"
         )}
       >
         {/* Header */}
@@ -211,9 +212,9 @@ export function DashboardNav() {
             className="shrink-0 rounded-md"
           />
           <div className={cn("min-w-0 transition-opacity duration-200", isCollapsed && "lg:opacity-0")}>
-            <h1 className="truncate text-base font-semibold tracking-tight text-[var(--text-primary)]">
+            <p className="truncate text-base font-semibold tracking-tight text-[var(--text-primary)]">
               CLIProxy
-            </h1>
+            </p>
             <p className="truncate text-xs text-[var(--text-muted)]">{t('appSubtitle')}</p>
           </div>
         </div>
@@ -243,6 +244,7 @@ export function DashboardNav() {
                           <Link
                             href={item.href}
                             onClick={handleNavClick}
+                            aria-current={isActive ? "page" : undefined}
                             className={cn(
                               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150",
                               isActive

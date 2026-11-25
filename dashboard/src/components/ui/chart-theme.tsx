@@ -118,6 +118,7 @@ export function useChartTheme() {
 
 
 export function formatCompact(value: number): string {
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
   return value.toLocaleString();
@@ -140,7 +141,7 @@ export function ChartContainer({
   className?: string;
 }) {
   return (
-    <div className={`w-full min-w-0 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] p-4 ${className}`}>
+    <div className={`w-full min-w-0 ${className}`}>
       {(title || subtitle) && (
         <div className="mb-3">
           {title && (

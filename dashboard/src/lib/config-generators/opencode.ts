@@ -58,7 +58,7 @@ const MODELS_DEV_URL = "https://models.dev/api.json";
  * Primary providers whose model data takes priority when the same model ID
  * appears across multiple providers in the models.dev registry.
  */
-const PRIORITY_PROVIDERS = [
+export const PRIORITY_PROVIDERS = [
   "anthropic", "openai", "google", "google-vertex",
   "xai", "deepseek", "mistral", "cohere", "amazon-bedrock",
 ];

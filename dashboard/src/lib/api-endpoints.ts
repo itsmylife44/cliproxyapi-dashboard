@@ -30,12 +30,15 @@ export const API_ENDPOINTS = {
   },
   QUOTA: {
     BASE: "/api/quota",
+    AUTO_RESET: "/api/quota/auto-reset",
     CHECK_ALERTS: "/api/quota/check-alerts",
+    HISTORY: "/api/quota/history",
   },
   USAGE: {
     COLLECT: "/api/usage/collect",
     COLLECTION_STATUS: "/api/usage/collection-status",
     HISTORY: "/api/usage/history",
+    PRICING: "/api/usage/pricing",
   },
   USER: {
     API_KEYS: "/api/user/api-keys",

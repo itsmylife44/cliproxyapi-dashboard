@@ -1,9 +1,8 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   QUOTA_PROVIDERS,
   QUOTA_STATUSES,
@@ -30,68 +29,131 @@ export function QuotaToolbar({
   onClear,
 }: QuotaToolbarProps) {
   const t = useTranslations("quota");
-  const hasFilters =
-    query.q !== "" || query.provider !== "all" || query.status !== "all" || query.page !== 1;
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+
+  const hasFacetFilter = query.provider !== "all" || query.status !== "all";
+  const hasFilters = query.q !== "" || hasFacetFilter || query.page !== 1;
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        filterButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   return (
-    <section className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1.5fr)_180px_180px] lg:flex-1">
-          <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)]">
-            <span>{t("searchLabel")}</span>
-            <Input
-              name="quota-search"
-              value={query.q}
-              onChange={onSearchChange}
-              placeholder={t("searchPlaceholder")}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)]">
-            <span>{t("providerFilterLabel")}</span>
-            <select
-              value={query.provider}
-              onChange={(event) => onProviderChange(event.target.value as QuotaQueryProvider)}
-              className="glass-input rounded-md px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none"
-            >
-              {QUOTA_PROVIDERS.map((provider) => (
-                <option key={provider} value={provider}>
-                  {t(`providerOption.${provider}`)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)]">
-            <span>{t("statusFilterLabel")}</span>
-            <select
-              value={query.status}
-              onChange={(event) => onStatusChange(event.target.value as QuotaQueryStatus)}
-              className="glass-input rounded-md px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none"
-            >
-              {QUOTA_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {t(`statusOption.${status}`)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:flex-shrink-0">
-          <div className="text-sm text-[var(--text-muted)]">
-            {t("resultsCount", { count: total })}
-          </div>
-          <Button
-            variant="ghost"
-            onClick={onClear}
-            disabled={!hasFilters}
-            className="px-2.5 py-1 text-xs"
-          >
-            {t("clearFiltersButton")}
-          </Button>
-        </div>
+    <div ref={containerRef} className="relative min-w-0 flex-1">
+      <div className="relative flex w-full items-center">
+        <svg
+          className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="text"
+          name="quota-search"
+          aria-label={t("searchLabel")}
+          value={query.q}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder={t("searchLabel")}
+          className="glass-input h-8 w-full rounded-md pl-8 pr-9 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none"
+        />
+        <button
+          type="button"
+          ref={filterButtonRef}
+          onClick={() => setOpen((prev) => !prev)}
+          aria-label={`${t("providerFilterLabel")} / ${t("statusFilterLabel")}`}
+          aria-expanded={open}
+          aria-controls="quota-filters"
+          title={`${t("providerFilterLabel")} / ${t("statusFilterLabel")}`}
+          className={`absolute right-1 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded transition-colors ${
+            hasFacetFilter || open
+              ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
+              : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+          </svg>
+          {hasFacetFilter && (
+            <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-blue-500" />
+          )}
+        </button>
       </div>
-    </section>
+
+      {open && (
+        <div id="quota-filters" className="glass-card absolute right-0 top-9 z-30 w-60 max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)] p-3 shadow-lg">
+          <div className="space-y-2.5">
+            <label className="block space-y-1 text-[11px] font-medium text-[var(--text-muted)]">
+              <span>{t("providerFilterLabel")}</span>
+              <select
+                value={query.provider}
+                onChange={(event) => onProviderChange(event.target.value as QuotaQueryProvider)}
+                className="glass-input h-8 w-full rounded-md px-2 text-xs text-[var(--text-primary)] focus:outline-none"
+              >
+                {QUOTA_PROVIDERS.map((provider) => (
+                  <option key={provider} value={provider}>
+                    {t(`providerOption.${provider}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block space-y-1 text-[11px] font-medium text-[var(--text-muted)]">
+              <span>{t("statusFilterLabel")}</span>
+              <select
+                value={query.status}
+                onChange={(event) => onStatusChange(event.target.value as QuotaQueryStatus)}
+                className="glass-input h-8 w-full rounded-md px-2 text-xs text-[var(--text-primary)] focus:outline-none"
+              >
+                {QUOTA_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {t(`statusOption.${status}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="flex items-center justify-between border-t border-[var(--surface-border)] pt-2 text-[11px] text-[var(--text-muted)]">
+              <span className="tabular-nums">{t("resultsCount", { count: total })}</span>
+              {hasFilters && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClear();
+                    setOpen(false);
+                  }}
+                  className="font-medium text-[var(--text-primary)] hover:underline"
+                >
+                  {t("clearFiltersButton")}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

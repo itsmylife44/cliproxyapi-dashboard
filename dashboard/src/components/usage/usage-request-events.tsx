@@ -140,31 +140,15 @@ function buildFeedItems(rows: PreparedRow[], isAdmin: boolean): FeedItem[] {
 
   while (i < rows.length) {
     const start = rows[i]!;
-    // Never group failed requests so every failure immediately stands out.
-    if (start.event.failed) {
-      items.push({
-        kind: "single",
-        key: start.rowKey,
-        rows: [start],
-        first: start,
-        last: start,
-        avgLatencyMs: start.event.latencyMs,
-        uncachedInput: start.shown.uncachedInput,
-        cached: start.shown.cached,
-        cacheWrite: start.event.cacheWriteTokens ?? 0,
-        output: start.event.outputTokens,
-        estCost: start.estCost,
-      });
-      i += 1;
-      continue;
-    }
+    // Consecutive requests batch only when they share model, key, user and status,
+    // so a failure never hides inside a success batch.
 
     const groupRows: PreparedRow[] = [start];
     let j = i + 1;
     while (j < rows.length) {
       const candidate = rows[j]!;
       if (
-        candidate.event.failed ||
+        candidate.statusLabel !== start.statusLabel ||
         candidate.event.model !== start.event.model ||
         candidate.event.keyName !== start.event.keyName ||
         (isAdmin && (candidate.event.username ?? "") !== (start.event.username ?? ""))
@@ -543,19 +527,34 @@ export function UsageRequestEvents({ events, isAdmin, livePricing }: UsageReques
               {isGroup && isExpanded ? (
                 <div className="divide-y divide-[var(--surface-border)]/50 rounded border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 px-2.5 py-1">
                   {item.rows.map((child) => (
-                    <div key={child.rowKey} className="flex flex-wrap items-center justify-between gap-2 py-1.5 text-[11px] tabular-nums">
-                      <span className="text-[var(--text-muted)]" title={formatTimestamp(child.event.timestamp)}>
-                        {formatTimestamp(child.event.timestamp)}
-                      </span>
-                      <div className="flex flex-wrap items-center gap-2 text-[var(--text-secondary)]">
-                        <span>{formatCompact(child.shown.uncachedInput)} / {formatCompact(child.shown.cached)} / {formatCompact(child.event.outputTokens)}</span>
-                        <span className={`rounded-full border px-1.5 py-0 text-[10px] font-semibold ${getLatencyClasses(child.event.latencyMs)}`}>
-                          {formatLatency(child.event.latencyMs)}
+                    <div key={child.rowKey} className="py-1.5 text-[11px] tabular-nums">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-[var(--text-muted)]" title={formatTimestamp(child.event.timestamp)}>
+                          {formatTimestamp(child.event.timestamp)}
                         </span>
-                        <span className="font-medium">
-                          {child.estCost !== null ? formatUSD(child.estCost) : "\u2014"}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-2 text-[var(--text-secondary)]">
+                          {renderStatusBadge(
+                            child.rowKey,
+                            child.isExpandable,
+                            expandedRows.has(child.rowKey),
+                            child.isCancelled,
+                            child.event.failed,
+                            child.statusLabel
+                          )}
+                          <span>{formatCompact(child.shown.uncachedInput)} / {formatCompact(child.shown.cached)} / {formatCompact(child.event.outputTokens)}</span>
+                          <span className={`rounded-full border px-1.5 py-0 text-[10px] font-semibold ${getLatencyClasses(child.event.latencyMs)}`}>
+                            {formatLatency(child.event.latencyMs)}
+                          </span>
+                          <span className="font-medium">
+                            {child.estCost !== null ? formatUSD(child.estCost) : "\u2014"}
+                          </span>
+                        </div>
                       </div>
+                      {expandedRows.has(child.rowKey) ? (
+                        <div className="mt-1.5 rounded border border-[var(--surface-border)] bg-[var(--surface-muted)]/60 px-3 py-2 text-xs">
+                          {renderFailureDetails(child.event, child.hasDetails)}
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -669,40 +668,54 @@ export function UsageRequestEvents({ events, isAdmin, livePricing }: UsageReques
                   ) : null}
 
                   {isGroup && isExpanded
-                    ? item.rows.map((child) => (
-                        <tr
-                          key={child.rowKey}
-                          className="border-b border-[var(--surface-border)]/50 bg-[var(--surface-muted)]/35 text-xs"
-                        >
-                          <td className="px-3 py-1.5 pl-6 text-[11px] text-[var(--text-muted)]">
-                            {formatTimestamp(child.event.timestamp)}
-                          </td>
-                          <td className="px-3 py-1.5 font-mono text-[11px] text-[var(--text-muted)]">{child.event.keyName}</td>
-                          {isAdmin ? (
-                            <td className="px-3 py-1.5 text-[11px] text-[var(--text-muted)]">{child.event.username ?? "\u2014"}</td>
-                          ) : null}
-                          <td className="px-3 py-1.5 font-mono text-[11px] text-[var(--text-muted)]">{child.event.model}</td>
-                          <td className="px-3 py-1.5">
-                            <span className={`inline-flex items-center rounded-full border px-2 py-0 text-[10px] font-medium uppercase tracking-[0.06em] ${getStatusBadgeClasses(false, false)}`}>
-                              {child.statusLabel}
-                            </span>
-                          </td>
-                          <td className="px-3 py-1.5 text-right">
-                            <span className={`inline-flex rounded-full border px-2 py-0 text-[10px] font-semibold tabular-nums ${getLatencyClasses(child.event.latencyMs)}`}>
-                              {formatLatency(child.event.latencyMs)}
-                            </span>
-                          </td>
-                          <td className="px-3 py-1.5 text-right text-[11px] tabular-nums text-[var(--text-muted)]">{child.shown.uncachedInput.toLocaleString()}</td>
-                          <td className="px-3 py-1.5 text-right text-[11px] tabular-nums text-[var(--text-muted)]">{child.shown.cached.toLocaleString()}</td>
-                          {hasCacheWrites ? (
-                            <td className="px-3 py-1.5 text-right text-[11px] tabular-nums text-[var(--text-muted)]">{(child.event.cacheWriteTokens ?? 0).toLocaleString()}</td>
-                          ) : null}
-                          <td className="px-3 py-1.5 text-right text-[11px] tabular-nums text-[var(--text-muted)]">{child.event.outputTokens.toLocaleString()}</td>
-                          <td className="px-3 py-1.5 text-right text-[11px] tabular-nums text-[var(--text-secondary)]">
-                            {child.estCost !== null ? formatUSD(child.estCost) : "\u2014"}
-                          </td>
-                        </tr>
-                      ))
+                    ? item.rows.map((child) => {
+                        const childExpanded = expandedRows.has(child.rowKey);
+                        return (
+                          <Fragment key={child.rowKey}>
+                            <tr className="border-b border-[var(--surface-border)]/50 bg-[var(--surface-muted)]/35 text-xs">
+                              <td className="px-3 py-1.5 pl-6 text-[11px] text-[var(--text-muted)]">
+                                {formatTimestamp(child.event.timestamp)}
+                              </td>
+                              <td className="px-3 py-1.5 font-mono text-[11px] text-[var(--text-muted)]">{child.event.keyName}</td>
+                              {isAdmin ? (
+                                <td className="px-3 py-1.5 text-[11px] text-[var(--text-muted)]">{child.event.username ?? "\u2014"}</td>
+                              ) : null}
+                              <td className="px-3 py-1.5 font-mono text-[11px] text-[var(--text-muted)]">{child.event.model}</td>
+                              <td className="px-3 py-1.5">
+                                {renderStatusBadge(
+                                  child.rowKey,
+                                  child.isExpandable,
+                                  childExpanded,
+                                  child.isCancelled,
+                                  child.event.failed,
+                                  child.statusLabel
+                                )}
+                              </td>
+                              <td className="px-3 py-1.5 text-right">
+                                <span className={`inline-flex rounded-full border px-2 py-0 text-[10px] font-semibold tabular-nums ${getLatencyClasses(child.event.latencyMs)}`}>
+                                  {formatLatency(child.event.latencyMs)}
+                                </span>
+                              </td>
+                              <td className="px-3 py-1.5 text-right text-[11px] tabular-nums text-[var(--text-muted)]">{child.shown.uncachedInput.toLocaleString()}</td>
+                              <td className="px-3 py-1.5 text-right text-[11px] tabular-nums text-[var(--text-muted)]">{child.shown.cached.toLocaleString()}</td>
+                              {hasCacheWrites ? (
+                                <td className="px-3 py-1.5 text-right text-[11px] tabular-nums text-[var(--text-muted)]">{(child.event.cacheWriteTokens ?? 0).toLocaleString()}</td>
+                              ) : null}
+                              <td className="px-3 py-1.5 text-right text-[11px] tabular-nums text-[var(--text-muted)]">{child.event.outputTokens.toLocaleString()}</td>
+                              <td className="px-3 py-1.5 text-right text-[11px] tabular-nums text-[var(--text-secondary)]">
+                                {child.estCost !== null ? formatUSD(child.estCost) : "\u2014"}
+                              </td>
+                            </tr>
+                            {childExpanded ? (
+                              <tr className="border-b border-[var(--surface-border)]/50 bg-[var(--surface-muted)]/60">
+                                <td colSpan={colCount} className="px-4 py-2.5 text-xs">
+                                  {renderFailureDetails(child.event, child.hasDetails)}
+                                </td>
+                              </tr>
+                            ) : null}
+                          </Fragment>
+                        );
+                      })
                     : null}
                 </Fragment>
               );

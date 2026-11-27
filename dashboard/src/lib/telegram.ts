@@ -1,5 +1,13 @@
 import "server-only";
 
+import { createFormatter, createTranslator } from "next-intl";
+import { defaultLocale } from "@/i18n/config";
+import messages from "../../messages/en.json";
+
+// Scheduled alerts have no request locale; use the dashboard's default locale.
+const t = createTranslator({ locale: defaultLocale, messages, namespace: "quota.autoResetNotification" });
+const format = createFormatter({ locale: defaultLocale, timeZone: "UTC" });
+
 const BOT_TOKEN_REGEX = /^\d+:[A-Za-z0-9_-]{35}$/;
 const CHAT_ID_REGEX = /^-?\d+$/;
 
@@ -148,6 +156,40 @@ export function formatQuotaAlertBatch(
     lines.push(`<a href="${escapeHtml(dashboardUrl)}/dashboard/quota">Open Dashboard</a>`);
   }
 
+  return lines.join("\n");
+}
+
+export function formatAutoResetNotice(
+  provider: string,
+  account: string,
+  remaining: number | null,
+  nextExpiresAt: string | null,
+  dashboardUrl?: string
+): string {
+  const expiresAt = nextExpiresAt ? Date.parse(nextExpiresAt) : NaN;
+  let expiry = t("unavailable");
+  if (Number.isFinite(expiresAt)) {
+    expiry = t("expiryTime", {
+      relative: format.relativeTime(expiresAt, Date.now()),
+      timestamp: format.dateTime(expiresAt, {
+        year: "numeric", month: "short", day: "numeric",
+        hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "short",
+      }),
+    });
+  } else if (remaining === 0) {
+    expiry = t("noCredit");
+  }
+
+  const lines = [
+    `<b>🔄 CLIProxyAPI — ${escapeHtml(t("title"))}</b>`,
+    "",
+    `<b>${escapeHtml(capitalizeFirst(provider))}</b> — ${escapeHtml(account)}`,
+    escapeHtml(t("remaining", { count: remaining === null ? t("unavailable") : format.number(remaining) })),
+    escapeHtml(t("expiry", { expiry })),
+  ];
+  if (dashboardUrl) {
+    lines.push(`<a href="${escapeHtml(dashboardUrl)}/dashboard/quota">${escapeHtml(t("openDashboard"))}</a>`);
+  }
   return lines.join("\n");
 }
 

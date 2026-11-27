@@ -243,26 +243,23 @@ interface AntigravityQuotaSummary {
   }>;
 }
 
-// Output order: shared Gemini, then the Pro-only Argon pool, then Claude/GPT.
+// Output order: shared Gemini, then Claude/GPT.
 const ANTIGRAVITY_FAMILY_LABELS = {
   gemini: "Gemini",
-  "gemini-argon": "Gemini 4 Argon",
   "claude-gpt": "Claude/GPT",
 } as const;
 type AntigravityFamily = keyof typeof ANTIGRAVITY_FAMILY_LABELS;
 
-// The bucketId decides the family: "Gemini 4 Argon" also contains "gemini" and must not
-// land in the shared Gemini windows. The display name is only used for buckets without one.
 function antigravityFamily(bucketId: string | undefined, displayName: string): AntigravityFamily | null {
   const id = bucketId?.toLowerCase();
   if (id) {
-    if (id.startsWith("gemini-argon")) return "gemini-argon";
+    if (id.startsWith("gemini-argon")) return null;
     if (id.startsWith("gemini")) return "gemini";
     if (id.startsWith("3p")) return "claude-gpt";
     return null;
   }
   const name = displayName.toLowerCase();
-  if (name.includes("argon")) return "gemini-argon";
+  if (name.includes("argon")) return null;
   if (name.includes("gemini")) return "gemini";
   if (name.includes("claude") || name.includes("gpt")) return "claude-gpt";
   return null;

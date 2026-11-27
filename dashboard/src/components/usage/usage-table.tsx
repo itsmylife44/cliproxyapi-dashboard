@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { formatUSD, loadCustomPricing, resolveModelPrice, splitCachedInput, type ModelPrice } from "@/lib/model-pricing";
-import { buildCostBreakdown, type UsageKey } from "@/lib/usage-cost-breakdown";
+import { calculateKeySpend, type UsageKey } from "@/lib/usage-cost-breakdown";
 
 interface KeyUsage extends UsageKey {
   username?: string;
@@ -32,10 +32,7 @@ export function UsageTable({ keys, isAdmin, livePricing }: UsageTableProps) {
         .map(([authIndex, keyUsage]) => ({
           authIndex,
           keyUsage,
-          keyCost: buildCostBreakdown({ [authIndex]: keyUsage }, customPricing, livePricing).reduce(
-            (sum, entry) => sum + entry.estimatedCost,
-            0
-          ),
+          keyCost: calculateKeySpend(keyUsage.models, customPricing, livePricing),
         })),
     [keys, customPricing, livePricing]
   );

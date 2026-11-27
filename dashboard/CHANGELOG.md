@@ -9,10 +9,14 @@
 - Keep quota search responsive and preserve filters in the URL without navigating away from the current view.
 - Consolidate Quick Start and provider actions, remove redundant labels, and generate client configs only when the required key and models are available.
 - Use inclusive usage date ranges and flag truncated results before totals and charts.
+- Notify the configured quota alert channel when an automatic reset succeeds, including the remaining reset credits and next expiry.
 
 ### Fixes
 
 - Limit quota reset management to administrators and reserve the account cooldown before contacting a provider.
+- Remove the discontinued Antigravity Gemini Argon quota bucket, including historical quota displays.
+- Remove five-hour model estimates after five subsequent observed resets without model usage.
+- Prevent unavailable quota accounts from opening empty details.
 - Filter non-admin usage history by API-key ownership rather than request source labels.
 
 ## [0.1.91](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.90...dashboard-v0.1.91) (2026-10-24)

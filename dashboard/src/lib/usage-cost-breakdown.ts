@@ -324,3 +324,25 @@ export function formatRate(entry: Pick<ModelCostEntry, "inputPer1M" | "outputPer
     ? `${entry.inputPer1M}/${entry.cacheReadPer1M}/${entry.outputPer1M}`
     : `${entry.inputPer1M}/${entry.outputPer1M}`;
 }
+
+export function calculateKeySpend(
+  models: Record<string, UsageModelTotals>,
+  customPricing: Record<string, ModelPrice> = {},
+  livePricing?: Record<string, ModelPrice>
+): number {
+  if (Object.keys(models).length === 0) return 0;
+  return buildCostBreakdown(
+    {
+      key: {
+        keyName: "",
+        totalRequests: 0,
+        totalTokens: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        models,
+      },
+    },
+    customPricing,
+    livePricing
+  ).reduce((sum, entry) => sum + entry.estimatedCost, 0);
+}

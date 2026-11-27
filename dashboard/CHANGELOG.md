@@ -19,6 +19,15 @@
 - Prevent unavailable quota accounts from opening empty details.
 - Filter non-admin usage history by API-key ownership rather than request source labels.
 
+## [0.1.92](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.91...dashboard-v0.1.92) (2026-11-27)
+
+
+### Features
+
+* **api-keys:** add key limits and improve quota management ([#362](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/362)) ([b62c345](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/b62c345916d8f370141dce1bae9eaa2e2e78a175))
+* **dashboard:** redesign Usage, Quota, and Quick Start ([#360](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/360)) ([53a8f1f](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/53a8f1f68cc439f56cb1755c7e4df3109fc66747))
+* **usage:** show cached tokens and cache-read rate in cost estimation table ([6a8eb29](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/6a8eb29d65c9af9c398d76f797a35db88a77ce92)), closes [#345](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/345)
+
 ## [0.1.91](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.90...dashboard-v0.1.91) (2026-10-24)
 
 

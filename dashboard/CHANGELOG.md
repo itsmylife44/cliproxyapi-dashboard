@@ -13,6 +13,9 @@
 ### Fixes
 
 - Limit quota reset management to administrators and reserve the account cooldown before contacting a provider.
+- Remove the discontinued Antigravity Gemini Argon quota bucket, including historical quota displays.
+- Remove five-hour model estimates after five subsequent observed resets without model usage.
+- Prevent unavailable quota accounts from opening empty details.
 - Filter non-admin usage history by API-key ownership rather than request source labels.
 
 ## [0.1.91](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.90...dashboard-v0.1.91) (2026-10-24)

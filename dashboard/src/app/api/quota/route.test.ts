@@ -370,14 +370,13 @@ describe("GET /api/quota - Antigravity client identity and Argon quota (issue #3
     expect(calls.map((call) => call.header["User-Agent"])).toEqual(calls.map(() => "antigravity/hub/2.23.1 darwin/arm64"));
   });
 
-  it("keeps Gemini 4 Argon in its own group instead of overwriting the shared Gemini weekly window", async () => {
+  it("ignores the removed Argon bucket without overwriting the shared Gemini window", async () => {
     mockAntigravity("antigravity", () => ({ groups: [claudeGroup, argonGroup, geminiGroup] }));
     const account = await fetchAccount();
 
     expect(account.groups.map((group: QuotaGroup) => [group.id, group.label, group.remainingFraction])).toEqual([
       ["gemini-weekly", "Gemini · Weekly", 0.31],
       ["gemini-5h", "Gemini · 5-hour", 0.82],
-      ["gemini-argon-weekly", "Gemini 4 Argon · Weekly", 0.05],
       ["claude-gpt-weekly", "Claude/GPT · Weekly", 0.48],
       ["claude-gpt-5h", "Claude/GPT · 5-hour", 0.9],
     ]);

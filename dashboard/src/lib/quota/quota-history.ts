@@ -170,9 +170,6 @@ function doesModelBelongToWindow(
   const { bare, isArgon, isGemini, isClaude, isOpenAICodex, isKimi, isXai } = classifyModelFamily(modelId, price);
 
   // Antigravity windows (see antigravityFamily / parseAntigravitySummary in /api/quota)
-  if (gid === "gemini-argon-weekly" || gid === "gemini-argon-5h" || gid.startsWith("gemini-argon-")) {
-    return isArgon;
-  }
   if (gid === "gemini-weekly" || gid === "gemini-5h") {
     return isGemini;
   }
@@ -536,14 +533,28 @@ function computeQuotaHistoryForAccount(
   const seriesCutoffMs = latestAccountCapturedMs - HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
   for (const [groupId, rawSeries] of windowSnapshotsByGroup) {
+    if (groupId.startsWith("gemini-argon-")) continue;
     if (rawSeries.length === 0) continue;
     const series = [...rawSeries].sort((a, b) => a.capturedAt.getTime() - b.capturedAt.getTime());
     const latest = series[series.length - 1]!;
     const windowProvider = groupProviderMap.get(groupId) ?? latest.provider;
     const skipUsdValuation = isRequestCountWindow(groupId);
 
+    // Retain the last appearance until five subsequent resets have been observed.
+    let calibrationStart = 0;
+    if (groupId.endsWith("-5h")) {
+      let resets = 0;
+      for (let i = series.length - 1; i > 0; i--) {
+        if (isWindowReset(series[i - 1]!, series[i]!) && ++resets === 6) {
+          calibrationStart = i;
+          break;
+        }
+      }
+    }
+    const calibrationSeries = calibrationStart ? series.slice(calibrationStart) : series;
+
     const { windowAcc, modelAccs } = calibrateSeries(
-      series,
+      calibrationSeries,
       precomputedUsage,
       (rec) => doesModelBelongToWindow(rec.model, groupId, windowProvider, rec.price),
       skipUsdValuation
@@ -594,6 +605,7 @@ function computeQuotaHistoryForAccount(
     if (rawSeries.length === 0) continue;
     const series = [...rawSeries].sort((a, b) => a.capturedAt.getTime() - b.capturedAt.getTime());
     const latest = series[series.length - 1]!;
+    if (latest.groupId.startsWith("gemini-argon-")) continue;
     const groupId = latest.groupId;
     const skipUsdValuation = isRequestCountWindow(groupId);
 

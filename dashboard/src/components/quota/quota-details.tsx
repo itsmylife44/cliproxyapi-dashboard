@@ -409,7 +409,8 @@ export function QuotaDetails({
             )}
             <div className="divide-y divide-[var(--surface-border)] rounded-lg border border-[var(--surface-border)] bg-[var(--surface-base)]">
                 {section.accounts.map((account) => {
-                  const isRowExpanded = expandedCards[account.auth_index];
+                  const canExpand = account.supported;
+                  const isRowExpanded = canExpand && expandedCards[account.auth_index];
                   const scores = account.groups
                     ? Object.values(calcAccountWindowScores(headlineQuotaWindows(capacityQuotaGroups(account.provider, account.groups))))
                     : [];
@@ -455,6 +456,7 @@ export function QuotaDetails({
                     <div key={account.auth_index}>
                       <button
                         type="button"
+                        disabled={!canExpand}
                         onMouseEnter={() => {
                           if (account.supported && !account.error) {
                             void prefetchAccountQuotaHistory(account.auth_index);
@@ -465,11 +467,12 @@ export function QuotaDetails({
                             void prefetchAccountQuotaHistory(account.auth_index);
                           }
                         }}
-                        aria-expanded={Boolean(isRowExpanded)}
-                        aria-labelledby={`quota-account-${account.auth_index} quota-toggle-${account.auth_index}`}
+                        aria-expanded={canExpand ? Boolean(isRowExpanded) : undefined}
+                        aria-labelledby={canExpand ? `quota-account-${account.auth_index} quota-toggle-${account.auth_index}` : `quota-account-${account.auth_index}`}
                         onClick={() => onToggleCard(account.auth_index)}
                         className={cn(
-                          "grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--accent)] sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:gap-x-6",
+                          "grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-lg px-3 py-2.5 text-left transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--accent)] sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:gap-x-6",
+                          canExpand && "cursor-pointer hover:bg-[var(--surface-hover)]",
                           isRowExpanded && "rounded-b-none bg-[var(--surface-muted)]"
                         )}
                       >
@@ -525,12 +528,12 @@ export function QuotaDetails({
                             )}
                           </span>
                         )}
-                        <span className="col-start-2 row-start-1 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-primary)] sm:col-start-3">
+                        {canExpand && <span className="col-start-2 row-start-1 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-primary)] sm:col-start-3">
                           <span id={`quota-toggle-${account.auth_index}`}>{isRowExpanded ? tCommon("close") : t("accountDetailsButton")}</span>
                           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={cn("size-4 shrink-0 motion-safe:transition-transform", isRowExpanded && "rotate-180")}>
                             <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
-                        </span>
+                        </span>}
                       </button>
 
                       {isRowExpanded && (

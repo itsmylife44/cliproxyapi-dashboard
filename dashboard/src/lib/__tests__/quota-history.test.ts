@@ -294,6 +294,26 @@ describe("quota history multi-account batching and valuation", () => {
     expect(history.models.find((m) => m.modelId === "gemini-3-flash")).toBeUndefined();
   });
 
+  it("drops a model after five later five-hour windows without usage", async () => {
+    const start = Date.parse("2026-11-10T00:00:00Z");
+    const hour = 60 * 60 * 1000;
+    const snapshots = Array.from({ length: 7 }, (_, index) => ({
+      authIndex: "rolling", provider: "antigravity", groupId: "claude-gpt-5h", modelId: "",
+      remaining: index === 0 ? 0.9 : 1,
+      resetTime: new Date(start + (index + 1) * 5 * hour),
+      capturedAt: new Date(start + index * 5 * hour),
+    }));
+    snapshots.splice(1, 0, { ...snapshots[0]!, remaining: 0.8, capturedAt: new Date(start + hour) });
+    const usage = [{ authIndex: "rolling", model: "gpt-6.1-sol", inputTokens: 1_000, outputTokens: 0, cachedTokens: 0, timestamp: new Date(start + hour / 2) }];
+    snapshotFindMany.mockResolvedValueOnce(snapshots.slice(0, -1));
+    usageFindMany.mockResolvedValueOnce(usage);
+    expect((await getAccountQuotaHistory("rolling", TEST_PRICING)).models.some((model) => model.modelId === "gpt-6.1-sol")).toBe(true);
+    quotaHistoryCache.invalidateAll();
+    snapshotFindMany.mockResolvedValueOnce(snapshots);
+    usageFindMany.mockResolvedValueOnce(usage);
+    expect((await getAccountQuotaHistory("rolling", TEST_PRICING)).models.some((model) => model.modelId === "gpt-6.1-sol")).toBe(false);
+  });
+
   it("ignores external quota drops that have no logged CLIProxyAPI usage", async () => {
     const reset = new Date("2026-11-20T16:39:53Z");
     snapshotFindMany.mockResolvedValueOnce([

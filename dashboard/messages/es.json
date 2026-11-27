@@ -871,6 +871,15 @@
     "autoResetCheckFailed": "Error al consultar créditos de reinicio",
     "autoResetApplied": "Reinicio de cuota aplicado",
     "autoResetFailed": "Reinicio no disponible o fallido",
+    "autoResetNotification": {
+      "title": "Reinicio automático de cuota aplicado",
+      "remaining": "Reinicios restantes: {count}",
+      "expiry": "Caducidad del próximo crédito de reinicio: {expiry}",
+      "expiryTime": "{relative} ({timestamp})",
+      "noCredit": "No quedan créditos",
+      "unavailable": "No disponible",
+      "openDashboard": "Abrir el panel"
+    },
     "autoResetDaysLeftLabel": "Reset >="
   },
   "usage": {

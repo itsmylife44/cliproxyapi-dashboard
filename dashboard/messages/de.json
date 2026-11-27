@@ -871,6 +871,15 @@
     "autoResetCheckFailed": "Reset-Credits konnten nicht geprüft werden",
     "autoResetApplied": "Nutzungslimit zurückgesetzt",
     "autoResetFailed": "Reset nicht verfügbar oder fehlgeschlagen",
+    "autoResetNotification": {
+      "title": "Automatische Kontingent-Rücksetzung durchgeführt",
+      "remaining": "Verbleibende Rücksetzungen: {count}",
+      "expiry": "Nächstes Reset-Guthaben verfällt: {expiry}",
+      "expiryTime": "{relative} ({timestamp})",
+      "noCredit": "Kein Guthaben mehr",
+      "unavailable": "Nicht verfügbar",
+      "openDashboard": "Dashboard öffnen"
+    },
     "autoResetDaysLeftLabel": "Reset >="
   },
   "usage": {

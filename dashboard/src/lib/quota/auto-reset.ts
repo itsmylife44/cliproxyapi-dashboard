@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { CACHE_KEYS, quotaCache, quotaAccountCache } from "@/lib/cache";
 import { getManagementUrl } from "@/lib/management-url";
 import type { QuotaAccount } from "@/lib/model-first-monitoring";
+import { notifyAutoResetUsed } from "@/lib/quota-alerts";
 import {
   AUTO_RESET_COOLDOWN_MS,
   extractAccountWindowPercentages,
@@ -166,6 +167,12 @@ function parseExpiryIso(obj: Record<string, unknown>): string | null {
   return null;
 }
 
+function isAvailableCodexCredit(item: unknown): item is Record<string, unknown> {
+  if (!item || typeof item !== "object") return false;
+  const { status } = item as Record<string, unknown>;
+  return status == null || status === "available";
+}
+
 function extractCodexCreditExpiry(body: unknown): string | null {
   if (!body || typeof body !== "object") return null;
   const record = body as Record<string, unknown>;
@@ -174,12 +181,9 @@ function extractCodexCreditExpiry(body: unknown): string | null {
 
   const nested = record.reset_credits ?? record.credits;
   if (Array.isArray(nested)) {
-    const dates = nested
-      .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
-      .map(parseExpiryIso)
-      .filter((v): v is string => v !== null);
-    return earliestIso(dates);
+    return earliestIso(nested.filter(isAvailableCodexCredit).map(parseExpiryIso));
   }
+
   if (nested && typeof nested === "object") {
     return parseExpiryIso(nested as Record<string, unknown>);
   }
@@ -200,16 +204,16 @@ function earliestIso(dates: Array<string | null | undefined>): string | null {
   return bestIso;
 }
 
-function extractCodexCreditCount(body: unknown): number {
-  if (!body || typeof body !== "object") return 0;
+function extractCodexCreditCount(body: unknown): number | null {
+  if (!body || typeof body !== "object") return null;
   const record = body as Record<string, unknown>;
-  for (const key of ["available_credits", "credit_count", "remaining_credits", "count", "credits_remaining"]) {
+  for (const key of ["available_count", "available_credits", "credit_count", "remaining_credits", "count", "credits_remaining"]) {
     const val = record[key];
     if (typeof val === "number" && Number.isFinite(val)) return Math.max(0, Math.floor(val));
   }
   const nested = record.reset_credits ?? record.credits;
   if (typeof nested === "number" && Number.isFinite(nested)) return Math.max(0, Math.floor(nested));
-  if (Array.isArray(nested)) return nested.length;
+  if (Array.isArray(nested)) return nested.filter(isAvailableCodexCredit).length;
   if (nested && typeof nested === "object") {
     const n = nested as Record<string, unknown>;
     if (typeof n.count === "number" && Number.isFinite(n.count)) return Math.max(0, Math.floor(n.count));
@@ -218,7 +222,7 @@ function extractCodexCreditCount(body: unknown): number {
   if (typeof record.credit_balance === "number" && Number.isFinite(record.credit_balance)) {
     return Math.max(0, Math.floor(record.credit_balance));
   }
-  return 0;
+  return null;
 }
 
 function codexHeaders(accountId?: string): Record<string, string> {
@@ -330,14 +334,14 @@ export async function inspectAccountResetCredits(params: {
       };
     }
     const count = extractCodexCreditCount(res.body);
-    const nearestExpiresAt = extractCodexCreditExpiry(res.body);
+    const nearestExpiresAt = count === 0 ? null : extractCodexCreditExpiry(res.body);
     return {
       supported: true,
       provider: "codex",
       availableCount: count,
       nearestExpiresAt,
       grants:
-        count > 0
+        count !== null && count > 0
           ? [
               {
                 id: "codex_banked",
@@ -424,14 +428,18 @@ async function redeemAccountReset(params: ResetAccount): Promise<ExecuteResetRes
       };
     }
 
-    bustQuotaCaches(params.auth_index);
     const body = consumeRes.body as Record<string, unknown> | null;
-    const remaining =
-      body && typeof body.available_credits === "number"
-        ? body.available_credits
-        : body && typeof body.remaining_credits === "number"
-          ? body.remaining_credits
-          : null;
+    if (body?.code !== "reset") {
+      return {
+        ok: false,
+        provider: "codex",
+        status: typeof body?.code === "string" ? body.code : "unknown",
+        message: "Codex did not confirm that a reset credit was redeemed",
+      };
+    }
+
+    bustQuotaCaches(params.auth_index);
+    const remaining = extractCodexCreditCount(body);
 
     return {
       ok: true,
@@ -553,7 +561,7 @@ export async function resolveAuthMetaByIndex(authIndex: string): Promise<AuthFil
   return files.find((f) => String(f.auth_index) === authIndex) ?? null;
 }
 
-export async function evaluateAutoResetsForAccounts(accounts: QuotaAccount[]): Promise<number> {
+export async function evaluateAutoResetsForAccounts(accounts: QuotaAccount[], dashboardUrl?: string): Promise<number> {
   const rules = await loadAutoResetRules();
   if (!Object.values(rules).some((rule) => rule.enabled)) return 0;
 
@@ -574,16 +582,22 @@ export async function evaluateAutoResetsForAccounts(accounts: QuotaAccount[]): P
 
     const meta = authMetaMap.get(account.auth_index);
     if (!meta || meta.disabled || normalizeAutoResetProvider(meta.provider) !== normalizeAutoResetProvider(account.provider)) continue;
-    const result = await executeAccountReset({
+    const target = {
       auth_index: account.auth_index,
       provider: account.provider,
       accountId: meta.id_token?.chatgpt_account_id,
-    }, windows);
+    };
+    const result = await executeAccountReset(target, windows);
     if (!result) continue;
 
-    if (result.ok) {
+    if (result.ok && result.status === "reset") {
       triggered++;
       logger.info({ authIndex: account.auth_index, provider: account.provider }, "Auto-reset executed");
+      try {
+        await notifyAutoResetUsed(account, () => inspectAccountResetCredits(target), dashboardUrl);
+      } catch (error) {
+        logger.warn({ error, authIndex: account.auth_index }, "Failed to send auto-reset notification");
+      }
     } else {
       logger.info(
         { authIndex: account.auth_index, provider: account.provider, status: result.status },

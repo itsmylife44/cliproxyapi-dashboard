@@ -110,6 +110,8 @@ Get notified on Telegram when your OAuth provider quota is running low.
 
 Use the **Send Test** button to verify your configuration before enabling, and **Check Now** to run a check immediately.
 
+Successful automatic quota resets also send a separate notification through the configured quota alert channel (Telegram or Discord), with the remaining reset credits and the next credit's expiry when available. Manual resets and unsuccessful attempts do not send this notification.
+
 ## Oh-My-Open-Agent Integration
 
 The dashboard supports two OpenCode orchestration variants. Toggle between them in the **Using with OpenCode** section:

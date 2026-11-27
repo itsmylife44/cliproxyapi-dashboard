@@ -129,7 +129,7 @@ function startQuotaAlertScheduler() {
           logger.error({ err }, "Quota scheduler: failed to record quota snapshots");
         }
         try {
-          await evaluateAutoResetsForAccounts(quotaData.accounts);
+          await evaluateAutoResetsForAccounts(quotaData.accounts, publicDashboardUrl);
         } catch (err) {
           logger.error({ err }, "Quota scheduler: failed to evaluate auto-resets");
         }

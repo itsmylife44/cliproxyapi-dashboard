@@ -871,6 +871,15 @@
     "autoResetCheckFailed": "Failed to check reset credits",
     "autoResetApplied": "Usage reset applied",
     "autoResetFailed": "Usage reset unavailable or failed",
+    "autoResetNotification": {
+      "title": "Quota auto-reset used",
+      "remaining": "Resets remaining: {count}",
+      "expiry": "Next reset credit expires: {expiry}",
+      "expiryTime": "{relative} ({timestamp})",
+      "noCredit": "No credits remaining",
+      "unavailable": "Unavailable",
+      "openDashboard": "Open Dashboard"
+    },
     "autoResetDaysLeftLabel": "Reset >="
   },
   "usage": {

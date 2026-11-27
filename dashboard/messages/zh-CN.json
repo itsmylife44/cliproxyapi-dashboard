@@ -871,6 +871,15 @@
     "autoResetCheckFailed": "检查重置次数失败",
     "autoResetApplied": "已执行额度重置",
     "autoResetFailed": "重置不可用或执行失败",
+    "autoResetNotification": {
+      "title": "已使用自动额度重置",
+      "remaining": "剩余重置次数：{count}",
+      "expiry": "下一次重置的有效期：{expiry}",
+      "expiryTime": "{relative}（{timestamp}）",
+      "noCredit": "没有剩余重置次数",
+      "unavailable": "无法获取",
+      "openDashboard": "打开仪表盘"
+    },
     "autoResetDaysLeftLabel": "距重置 >="
   },
   "usage": {

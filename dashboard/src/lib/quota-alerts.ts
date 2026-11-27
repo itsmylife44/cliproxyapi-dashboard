@@ -4,7 +4,8 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import type { QuotaGroupScope } from "@/lib/model-first-monitoring";
 import { capacityQuotaGroups } from "@/lib/quota-window-classification";
-import { sendTelegramMessage, formatQuotaAlertBatch } from "@/lib/telegram";
+import { sendTelegramMessage, formatQuotaAlertBatch, formatAutoResetNotice } from "@/lib/telegram";
+import type { AutoResetCreditSummary } from "@/lib/quota/auto-reset-rules";
 
 export const QUOTA_ALERT_SETTING_KEYS = {
   BOT_TOKEN: "telegram_bot_token",
@@ -127,6 +128,69 @@ export async function sendDiscordAlert(
   }
 }
 
+const DESTINATION_KEYS = [
+  SETTING_KEYS.ENABLED,
+  SETTING_KEYS.CHANNEL,
+  SETTING_KEYS.WEBHOOK,
+  SETTING_KEYS.BOT_TOKEN,
+  SETTING_KEYS.CHAT_ID,
+];
+
+type AlertDestination =
+  | { channel: "discord"; webhook: string }
+  | { channel: "telegram"; botToken: string; chatId: string };
+
+function getAlertDestination(settings: Map<string, string>): { destination: AlertDestination } | { reason: string } {
+  const enabled = settings.get(SETTING_KEYS.ENABLED) === "true";
+  const channel = settings.get(SETTING_KEYS.CHANNEL) ?? (enabled ? "telegram" : "disabled");
+  if (channel === "disabled") return { reason: "alerts disabled" };
+  if (channel === "discord") {
+    const webhook = settings.get(SETTING_KEYS.WEBHOOK) ?? "";
+    return validDiscordWebhook(webhook)
+      ? { destination: { channel, webhook } }
+      : { reason: "Discord webhook not configured" };
+  }
+  const botToken = settings.get(SETTING_KEYS.BOT_TOKEN);
+  const chatId = settings.get(SETTING_KEYS.CHAT_ID);
+  return botToken && chatId
+    ? { destination: { channel: "telegram", botToken, chatId } }
+    : { reason: "bot token or chat ID not configured" };
+}
+
+function sendAlertMessage(destination: AlertDestination, html: string) {
+  return destination.channel === "discord"
+    ? sendDiscordAlert(destination.webhook, formatDiscordAlertContent(html))
+    : sendTelegramMessage(destination.botToken, destination.chatId, html, "HTML");
+}
+
+export async function notifyAutoResetUsed(
+  account: Pick<QuotaAccount, "auth_index" | "provider" | "email">,
+  loadCredits: () => Promise<AutoResetCreditSummary>,
+  dashboardUrl?: string
+): Promise<void> {
+  const settings = await prisma.systemSetting.findMany({ where: { key: { in: DESTINATION_KEYS } } });
+  const configuration = getAlertDestination(new Map(settings.map((s) => [s.key, s.value])));
+  if ("reason" in configuration) return;
+  const { destination } = configuration;
+
+  // The post-reset balance is independent of the redemption response (Claude may return only one grant).
+  const credits = await loadCredits().catch((error) => {
+    logger.warn({ error, authIndex: account.auth_index }, "Failed to refresh reset credits after auto-reset");
+    return null;
+  });
+  const message = formatAutoResetNotice(
+    account.provider,
+    account.email ?? account.auth_index,
+    credits?.availableCount ?? null,
+    credits?.nearestExpiresAt ?? null,
+    dashboardUrl
+  );
+  const result = await sendAlertMessage(destination, message);
+  if (!result.ok) {
+    logger.warn({ channel: destination.channel, error: result.error, authIndex: account.auth_index }, "Failed to send auto-reset notification");
+  }
+}
+
 const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
 const DEFAULT_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -228,26 +292,18 @@ export async function runAlertCheck(
     where: {
       key: {
         in: [
-          SETTING_KEYS.BOT_TOKEN,
-          SETTING_KEYS.CHAT_ID,
+          ...DESTINATION_KEYS,
           SETTING_KEYS.THRESHOLD,
-          SETTING_KEYS.ENABLED,
           SETTING_KEYS.LAST_ALERT_TIME,
           SETTING_KEYS.PROVIDERS,
           SETTING_KEYS.COOLDOWN,
-          SETTING_KEYS.WEBHOOK,
-          SETTING_KEYS.CHANNEL,
         ],
       },
     },
   });
 
   const settingMap = new Map(settings.map((s) => [s.key, s.value]));
-  const enabled = settingMap.get(SETTING_KEYS.ENABLED) === "true";
-  const botToken = settingMap.get(SETTING_KEYS.BOT_TOKEN) ?? "";
-  const chatId = settingMap.get(SETTING_KEYS.CHAT_ID) ?? "";
-  const channel = settingMap.get(SETTING_KEYS.CHANNEL) ?? (enabled ? "telegram" : "disabled");
-  const webhook = settingMap.get(SETTING_KEYS.WEBHOOK) ?? "";
+  const configuration = getAlertDestination(settingMap);
   const thresholdRaw = parseInt(
     settingMap.get(SETTING_KEYS.THRESHOLD) ?? "20",
     10
@@ -263,17 +319,8 @@ export async function runAlertCheck(
   const cooldownMs = !Number.isNaN(cooldownRaw) && cooldownRaw >= 1 ? cooldownRaw * 60 * 1000 : DEFAULT_COOLDOWN_MS;
 
   // 2. Check if alerts are enabled and configured
-  if (channel === "disabled") {
-    return { skipped: true, reason: "alerts disabled" };
-  }
-
-  if (channel === "discord") {
-    if (!validDiscordWebhook(webhook)) {
-      return { skipped: true, reason: "Discord webhook not configured" };
-    }
-  } else if (!botToken || !chatId) {
-    return { skipped: true, reason: "bot token or chat ID not configured" };
-  }
+  if ("reason" in configuration) return { skipped: true, reason: configuration.reason };
+  const { destination } = configuration;
 
   // 3. Check cooldown
   const lastAlertTimeStr = settingMap.get(SETTING_KEYS.LAST_ALERT_TIME);
@@ -330,16 +377,13 @@ export async function runAlertCheck(
     dashboardUrl
   );
 
-  const result =
-    channel === "discord"
-      ? await sendDiscordAlert(webhook, formatDiscordAlertContent(message))
-      : await sendTelegramMessage(botToken, chatId, message, "HTML");
+  const result = await sendAlertMessage(destination, message);
   const messageSent = result.ok ? 1 : 0;
   const breachedCount = result.ok ? breached.length : 0;
 
   if (!result.ok) {
     logger.warn(
-      { channel, error: result.error, breachedCount: breached.length },
+      { channel: destination.channel, error: result.error, breachedCount: breached.length },
       "Failed to send quota alert batch"
     );
   }

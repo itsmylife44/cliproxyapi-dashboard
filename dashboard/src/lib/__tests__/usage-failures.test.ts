@@ -4,6 +4,7 @@ import {
   isCancelledFailure,
   MAX_FAILURE_BODY_LENGTH,
   MAX_FAILURE_CODE_LENGTH,
+  summarizeFailureReason,
 } from "../usage-failures";
 
 describe("extractFailureDetails", () => {
@@ -85,5 +86,14 @@ describe("isCancelledFailure", () => {
 
   it("returns false for non-cancellation failures", () => {
     expect(isCancelledFailure(true, 500, "internal_error", "upstream timeout")).toBe(false);
+  });
+});
+
+describe("summarizeFailureReason", () => {
+  it.each([
+    ['{"error":"invalid API key"}', "invalid API key"],
+    ['{"reason":"Upstream unavailable"}', '{"reason":"Upstream unavailable"}'],
+  ])("retains a useful reason from %s", (body, message) => {
+    expect(summarizeFailureReason(502, null, body).message).toBe(message);
   });
 });

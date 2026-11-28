@@ -4,7 +4,11 @@ import type { QuotaAccount } from "@/lib/model-first-monitoring";
 const db = vi.hoisted(() => {
   const systemSetting = { findUnique: vi.fn(), upsert: vi.fn(), findMany: vi.fn() };
   const tx = { systemSetting, $queryRaw: vi.fn() };
-  return { systemSetting, $transaction: vi.fn((run: (input: typeof tx) => unknown) => run(tx)) };
+  return {
+    systemSetting,
+    quotaResetEvent: { create: vi.fn() },
+    $transaction: vi.fn((run: (input: typeof tx) => unknown) => run(tx)),
+  };
 });
 
 vi.mock("server-only", () => ({}));
@@ -15,6 +19,7 @@ vi.mock("@/lib/cache", () => ({
   CACHE_KEYS: { quotaAccount: (authIndex: string) => `quota:${authIndex}` },
   quotaCache: { invalidate: vi.fn() },
   quotaAccountCache: { invalidatePattern: vi.fn() },
+  invalidateQuotaHistoryCaches: vi.fn(),
 }));
 
 import { evaluateAutoResetsForAccounts, executeAccountReset } from "../auto-reset";
@@ -25,12 +30,12 @@ const account: QuotaAccount = {
   email: "team<&>@example.test",
   supported: true,
   groups: [
-    { id: "five-hour", label: "5-hour", remainingFraction: 0, resetTime: null, models: [] },
-    { id: "weekly", label: "Weekly", remainingFraction: 0, resetTime: null, models: [] },
+    { id: "five-hour", label: "5-hour", windowSeconds: 18000, remainingFraction: 0, resetTime: null, models: [] },
+    { id: "weekly", label: "Weekly", windowSeconds: 604800, remainingFraction: 0, resetTime: null, models: [] },
   ],
 };
 const telegramSettings = [
-  { key: "telegram_alerts_enabled", value: "true" },
+  { key: "quota_alert_channel", value: "telegram" },
   { key: "telegram_bot_token", value: "token" },
   { key: "telegram_chat_id", value: "chat" },
 ];

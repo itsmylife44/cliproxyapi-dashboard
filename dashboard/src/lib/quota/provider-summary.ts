@@ -1,4 +1,4 @@
-import { capacityQuotaGroups, isShortTermQuotaWindow } from "@/lib/quota-window-classification";
+import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
 import { headlineQuotaWindows } from "@/lib/quota/headline";
 import {
   isModelFirstAccount,
@@ -45,9 +45,7 @@ function poolKey(group: QuotaGroup): string {
 
 export function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
   const totalAccounts = accounts.length;
-  const healthy = accounts
-    .filter((account) => account.supported && !account.error && account.groups && account.groups.length > 0)
-    .map((account) => ({ ...account, groups: capacityQuotaGroups(account.provider, account.groups ?? []) }));
+  const healthy = accounts.filter((account) => account.supported && !account.error && account.groups && account.groups.length > 0);
   const errorAccounts = totalAccounts - healthy.length;
   const modelFirst = healthy.length > 0 && healthy.every((account) => isModelFirstAccount(account));
 
@@ -63,23 +61,23 @@ export function calcProviderSummary(accounts: QuotaAccount[]): ProviderSummary {
     };
   }
 
-  const pools = new Map<string, { entries: Array<{ group: QuotaGroup; siblings: QuotaGroup[] }>; first: QuotaGroup; firstSiblings: QuotaGroup[] }>();
+  const pools = new Map<string, QuotaGroup[]>();
   for (const account of healthy) {
-    for (const group of account.groups) {
-      if (group.id === "extra-usage") continue;
+    for (const group of account.groups ?? []) {
       const key = poolKey(group);
       const pool = pools.get(key);
-      if (pool) pool.entries.push({ group, siblings: account.groups });
-      else pools.set(key, { entries: [{ group, siblings: account.groups }], first: group, firstSiblings: account.groups });
+      if (pool) pool.push(group);
+      else pools.set(key, [group]);
     }
   }
 
   const windowCapacities: WindowCapacity[] = [];
 
-  for (const [poolKey, { entries, first, firstSiblings }] of pools) {
-    const isShortTerm = isShortTermQuotaWindow(first, firstSiblings);
+  for (const [poolKey, entries] of pools) {
+    const first = entries[0]!;
+    const isShortTerm = isShortTermQuotaWindow(first);
     const scored = entries
-      .map(({ group }) => {
+      .map((group) => {
         const score = normalizeFraction(group.remainingFraction);
         return score === null ? null : { score, group };
       })

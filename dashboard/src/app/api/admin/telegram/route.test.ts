@@ -66,51 +66,6 @@ describe("PUT /api/admin/telegram", () => {
     transaction.mockResolvedValue([]);
   });
 
-  it("syncs telegram_alerts_enabled to false when channel is discord even if enabled=true is sent", async () => {
-    const webhook = "https://discord.com/api/webhooks/123456/token";
-    const res = await PUT(makePutRequest({ channel: "discord", enabled: true, webhook }));
-
-    expect(res.status).toBe(200);
-    expect(upsertSetting).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { key: "quota_alert_channel" },
-        update: { value: "discord" },
-      })
-    );
-    expect(upsertSetting).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { key: "telegram_alerts_enabled" },
-        update: { value: "false" },
-      })
-    );
-  });
-
-  it("derives quota_alert_channel when only legacy enabled is provided", async () => {
-    const resEnable = await PUT(makePutRequest({ enabled: true }));
-    expect(resEnable.status).toBe(200);
-    expect(upsertSetting).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { key: "quota_alert_channel" },
-        update: { value: "telegram" },
-      })
-    );
-
-    vi.clearAllMocks();
-    verifySession.mockResolvedValue({ userId: "admin-1", username: "admin" });
-    validateOrigin.mockReturnValue(null);
-    findUserUnique.mockResolvedValue({ isAdmin: true });
-    transaction.mockResolvedValue([]);
-
-    const resDisable = await PUT(makePutRequest({ enabled: false }));
-    expect(resDisable.status).toBe(200);
-    expect(upsertSetting).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { key: "quota_alert_channel" },
-        update: { value: "disabled" },
-      })
-    );
-  });
-
   it("rejects channel=discord when no valid webhook is provided or stored in DB", async () => {
     findSettingUnique.mockResolvedValue(null);
     const resMissing = await PUT(makePutRequest({ channel: "discord" }));

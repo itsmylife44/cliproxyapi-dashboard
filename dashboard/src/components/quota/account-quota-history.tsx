@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { CHART_COLORS, useChartTheme } from "@/components/ui/chart-theme";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
@@ -424,6 +424,19 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
                   dot={false}
                 />
               ) : null}
+              {data.events.map((event) => {
+                const time = Date.parse(event.at);
+                return time >= cutoff && time <= now ? (
+                  <ReferenceLine
+                    key={`${event.kind}:${event.at}`}
+                    yAxisId="pct"
+                    x={time}
+                    stroke={event.kind === "reset" ? CHART_COLORS.success : tokens.border}
+                    strokeDasharray="2 2"
+                    label={{ value: t(event.kind === "reset" ? "resetPin" : "primePin"), position: "top", fontSize: 9, fill: axisTickStyle.fill }}
+                  />
+                ) : null;
+              })}
             </AreaChart>
           </ResponsiveContainer>
         </div>

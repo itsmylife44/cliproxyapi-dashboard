@@ -20,7 +20,6 @@ export function QuickStartHero({
   const { showToast } = useToast();
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-
   const copyEndpoint = async () => {
     try {
       await navigator.clipboard.writeText(proxyUrl);

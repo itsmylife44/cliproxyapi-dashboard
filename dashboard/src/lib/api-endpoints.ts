@@ -67,6 +67,7 @@ export const API_ENDPOINTS = {
     LOGS: "/api/management/logs",
     LATEST_VERSION: "/api/management/latest-version",
     OAUTH_CALLBACK: "/api/management/oauth-callback",
+    OAUTH_STATUS: "/api/management/get-auth-status",
     PLUGINS: "/api/management/plugins",
     PLUGIN_STORE: "/api/management/plugin-store",
 

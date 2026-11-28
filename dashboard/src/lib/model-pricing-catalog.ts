@@ -10,6 +10,7 @@ const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const FAILURE_BACKOFF_MS = 60 * 1000;
 const FETCH_TIMEOUT_MS = 10_000;
 const COLD_START_WAIT_MS = 120;
+const EMPTY_PRICING_CATALOG: Record<string, ModelPrice> = {};
 
 /**
  * First-party provider order for `models.dev` and OpenRouter bare-ID selection.
@@ -326,7 +327,7 @@ async function refreshPricingCatalog(): Promise<Record<string, ModelPrice>> {
  */
 export async function getLiveModelPricing(): Promise<Record<string, ModelPrice>> {
   if (isLivePricingDisabled()) {
-    return {};
+    return EMPTY_PRICING_CATALOG;
   }
 
   const now = Date.now();
@@ -350,7 +351,7 @@ export async function getLiveModelPricing(): Promise<Record<string, ModelPrice>>
   const fallback = new Promise<Record<string, ModelPrice>>((resolve) => {
     timer = setTimeout(() => {
       void readPersistedCatalog().then((persisted) => {
-        resolve(persisted ?? {});
+        resolve(persisted ?? EMPTY_PRICING_CATALOG);
       });
     }, COLD_START_WAIT_MS);
   });

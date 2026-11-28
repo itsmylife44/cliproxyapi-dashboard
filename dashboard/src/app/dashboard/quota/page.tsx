@@ -11,7 +11,6 @@ import { useQuota } from "@/hooks/use-quota";
 import { useAuth } from "@/hooks/use-auth";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { headlineQuotaWindows } from "@/lib/quota/headline";
-import { capacityQuotaGroups } from "@/lib/quota-window-classification";
 import { calcProviderSummary } from "@/lib/quota/provider-summary";
 import type { AutoResetCreditSummary, AutoResetRule } from "@/lib/quota/auto-reset-rules";
 import {
@@ -62,9 +61,7 @@ function getQuotaAccountStatus(account: QuotaAccount): QuotaQueryStatus {
 
   const headlineGroups = isModelFirstAccount(account)
     ? (account.groups ?? [])
-    : headlineQuotaWindows(capacityQuotaGroups(account.provider, account.groups ?? [])).filter(
-        (group) => group.id !== "extra-usage"
-      );
+    : headlineQuotaWindows(account.groups ?? []);
 
   const fractions = headlineGroups
     .map((group) => {
@@ -166,7 +163,7 @@ export default function QuotaPage() {
   const handleUpdateAutoReset = useCallback(
     async (
       authIndex: string,
-      patch: { enabled: boolean; fiveHourThresholdPct: number; weeklyThresholdPct: number; minWeeklyDaysLeft: number }
+      patch: Pick<AutoResetRule, "enabled" | "prime" | "fiveHourThresholdPct" | "weeklyThresholdPct" | "minWeeklyDaysLeft">
     ) => {
       setAutoResetRules((prev) => ({
         ...prev,

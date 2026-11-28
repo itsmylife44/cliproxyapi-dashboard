@@ -13,10 +13,10 @@ const account: QuotaAccount = {
   supported: true,
   monitorMode: "window-based",
   groups: [
-    { id: "gemini-weekly", label: "Gemini · Weekly", remainingFraction: 0.31, resetTime: "2026-10-07T12:00:00Z", models: [] },
-    { id: "gemini-5h", label: "Gemini · 5-hour", remainingFraction: 0.82, resetTime: "2026-09-30T12:00:00Z", models: [] },
-    { id: "claude-gpt-weekly", label: "Claude/GPT · Weekly", remainingFraction: 0.48, resetTime: "2026-10-07T18:00:00Z", models: [] },
-    { id: "claude-gpt-5h", label: "Claude/GPT · 5-hour", remainingFraction: 0.9, resetTime: "2026-09-30T18:00:00Z", models: [] },
+    { id: "gemini-weekly", label: "Gemini · Weekly", windowSeconds: 604800, remainingFraction: 0.31, resetTime: "2026-10-07T12:00:00Z", models: [] },
+    { id: "gemini-5h", label: "Gemini · 5-hour", windowSeconds: 18000, remainingFraction: 0.82, resetTime: "2026-09-30T12:00:00Z", models: [] },
+    { id: "claude-gpt-weekly", label: "Claude/GPT · Weekly", windowSeconds: 604800, scope: { id: "claude-gpt", label: "Claude/GPT" }, remainingFraction: 0.48, resetTime: "2026-10-07T18:00:00Z", models: [] },
+    { id: "claude-gpt-5h", label: "Claude/GPT · 5-hour", windowSeconds: 18000, scope: { id: "claude-gpt", label: "Claude/GPT" }, remainingFraction: 0.9, resetTime: "2026-09-30T18:00:00Z", models: [] },
   ],
 };
 
@@ -135,35 +135,5 @@ describe("Codex quota details with scoped limits (issue #309)", () => {
     ]);
 
     expect(accountRow(html)).toContain(">37%<");
-  });
-
-  it("shows window reset times in the collapsed account row without expanding", () => {
-    const futureLong = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000 + 5 * 60 * 1000 + 30_000).toISOString();
-    const futureShort = new Date(Date.now() + 4 * 60 * 60 * 1000 + 12 * 60 * 1000 + 30_000).toISOString();
-    const html = renderToStaticMarkup(
-      <NextIntlClientProvider locale="en" timeZone="UTC" messages={messages}>
-        <QuotaDetails
-          filteredAccounts={[
-            codexAccount([
-              { ...codexWindow("primary-window", "5h Window", 5 * HOUR, 0.4), resetTime: futureShort },
-              { ...codexWindow("secondary-window", "168h Window", 168 * HOUR, 0.25), resetTime: futureLong },
-            ]),
-          ]}
-          hasAnyAccounts
-          currentPage={1}
-          totalPages={1}
-          onPageChange={() => {}}
-          expandedCards={{}}
-          onToggleCard={() => {}}
-          loading={false}
-          modelFirstOnlyView={false}
-        />
-      </NextIntlClientProvider>
-    );
-
-    const row = accountRow(html);
-    expect(row).toContain("2d 3h · ");
-    expect(row).toContain("4h 12m · ");
-    expect(row).toMatch(/\d{1,2}:\d{2}(am|pm)/);
   });
 });

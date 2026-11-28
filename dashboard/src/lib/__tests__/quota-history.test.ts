@@ -10,10 +10,13 @@ const { snapshotFindMany, snapshotCreateMany, snapshotDeleteMany, usageFindMany 
 vi.mock("@/lib/db", () => ({
   prisma: {
     quotaSnapshot: {
-      findMany: snapshotFindMany,
+      // Fixtures omit columns whose database default is an empty array.
+      findMany: async (...args: unknown[]) =>
+        (((await snapshotFindMany(...args)) ?? []) as object[]).map((row) => ({ usageModels: [], ...row })),
       createMany: snapshotCreateMany,
       deleteMany: snapshotDeleteMany,
     },
+    quotaResetEvent: { findMany: async () => [] },
     usageRecord: {
       // Fixtures omit token columns whose database default is 0.
       findMany: async (...args: unknown[]) =>
@@ -118,27 +121,6 @@ describe("quota history multi-account batching and valuation", () => {
     expect(history.windows["five-hour"]?.estimatedFullWindowUsd).toBeCloseTo(20);
   });
 
-  it("skips token-based USD valuation for request-count windows while keeping quota % series", async () => {
-    const reset = new Date("2026-11-10T15:00:00Z");
-    snapshotFindMany.mockResolvedValueOnce([
-      { authIndex: "gh", provider: "copilot", groupId: "premium-requests", modelId: "", remaining: 1.0, resetTime: reset, capturedAt: new Date("2026-11-10T10:00:00Z") },
-      { authIndex: "gh", provider: "copilot", groupId: "premium-requests", modelId: "", remaining: 0.9, resetTime: reset, capturedAt: new Date("2026-11-10T10:15:00Z") },
-    ]);
-    usageFindMany.mockResolvedValueOnce([
-      { authIndex: "gh", model: "claude-opus-5-5-high", inputTokens: 1_000_000, outputTokens: 0, cachedTokens: 0, timestamp: new Date("2026-11-10T10:05:00Z") },
-    ]);
-
-    const history = await getAccountQuotaHistory("gh");
-    expect(history.windows["premium-requests"]).toEqual({
-      estimatedFullWindowUsd: null,
-      previousEstimatedFullWindowUsd: null,
-      estimatedRemainingUsd: null,
-    });
-    expect(history.models.length).toBeGreaterThan(0);
-    expect(history.models[0]?.estimatedFullWindowUsd).toBeNull();
-    expect(history.models[0]?.series).toHaveLength(2);
-  });
-
   it("renders quota % series even when an account has snapshots with no attributable usage", async () => {
     const reset = new Date("2026-11-10T15:00:00Z");
     snapshotFindMany.mockResolvedValueOnce([
@@ -214,7 +196,6 @@ describe("quota history multi-account batching and valuation", () => {
     expect(snapshotFindMany).toHaveBeenCalledTimes(1);
 
     snapshotFindMany.mockResolvedValueOnce([]);
-    usageFindMany.mockResolvedValueOnce([]);
     const mixedBatch = await getAccountsQuotaHistory(["acc-1", "acc-2", "acc-3"]);
     expect(snapshotFindMany).toHaveBeenCalledTimes(2);
     expect(snapshotFindMany.mock.calls[1]?.[0]).toMatchObject({
@@ -236,7 +217,6 @@ describe("quota history multi-account batching and valuation", () => {
     ]);
 
     snapshotFindMany.mockResolvedValueOnce([]);
-    usageFindMany.mockResolvedValueOnce([]);
     await getAccountsQuotaHistory(["acc-1", "acc-2"]);
     expect(snapshotFindMany).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -294,24 +274,33 @@ describe("quota history multi-account batching and valuation", () => {
     expect(history.models.find((m) => m.modelId === "gemini-3-flash")).toBeUndefined();
   });
 
-  it("drops a model after five later five-hour windows without usage", async () => {
+  it.each([
+    { provider: "antigravity", groupId: "claude-gpt-5h", hours: 5 },
+    { provider: "codex", groupId: "primary-window", hours: 5 },
+    { provider: "codex", groupId: "secondary-window", hours: 168 },
+    { provider: "codex", groupId: "primary-window", hours: 720 },
+  ])("drops stale estimates for $provider $groupId ($hours hours)", async ({ provider, groupId, hours }) => {
     const start = Date.parse("2026-11-10T00:00:00Z");
     const hour = 60 * 60 * 1000;
     const snapshots = Array.from({ length: 7 }, (_, index) => ({
-      authIndex: "rolling", provider: "antigravity", groupId: "claude-gpt-5h", modelId: "",
+      authIndex: "rolling", provider, groupId, modelId: "",
       remaining: index === 0 ? 0.9 : 1,
-      resetTime: new Date(start + (index + 1) * 5 * hour),
-      capturedAt: new Date(start + index * 5 * hour),
+      resetTime: new Date(start + (index + 1) * hours * hour),
+      capturedAt: new Date(start + index * hours * hour),
     }));
     snapshots.splice(1, 0, { ...snapshots[0]!, remaining: 0.8, capturedAt: new Date(start + hour) });
     const usage = [{ authIndex: "rolling", model: "gpt-6.1-sol", inputTokens: 1_000, outputTokens: 0, cachedTokens: 0, timestamp: new Date(start + hour / 2) }];
     snapshotFindMany.mockResolvedValueOnce(snapshots.slice(0, -1));
     usageFindMany.mockResolvedValueOnce(usage);
-    expect((await getAccountQuotaHistory("rolling", TEST_PRICING)).models.some((model) => model.modelId === "gpt-6.1-sol")).toBe(true);
+    const retained = await getAccountQuotaHistory("rolling", TEST_PRICING);
+    expect(retained.models.some((model) => model.modelId === "gpt-6.1-sol")).toBe(true);
+    expect(retained.windows[groupId]?.estimatedFullWindowUsd).not.toBeNull();
     quotaHistoryCache.invalidateAll();
     snapshotFindMany.mockResolvedValueOnce(snapshots);
     usageFindMany.mockResolvedValueOnce(usage);
-    expect((await getAccountQuotaHistory("rolling", TEST_PRICING)).models.some((model) => model.modelId === "gpt-6.1-sol")).toBe(false);
+    const history = await getAccountQuotaHistory("rolling", TEST_PRICING);
+    expect(history.models.some((model) => model.modelId === "gpt-6.1-sol")).toBe(false);
+    expect(history.windows[groupId]?.estimatedFullWindowUsd).toBeNull();
   });
 
   it("ignores external quota drops that have no logged CLIProxyAPI usage", async () => {

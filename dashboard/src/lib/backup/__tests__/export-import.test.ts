@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock server-only before importing modules
 vi.mock("server-only", () => ({}));
+vi.mock("@/lib/api-keys/sync", () => ({ invalidateApiKeyUsageCache: vi.fn() }));
 
 // Mock Prisma
 vi.mock("@/lib/db", () => ({
@@ -498,6 +499,8 @@ describe("quotaSnapshots backup export and restore", () => {
         modelId: "",
         remaining: 0.75,
         resetTime,
+        windowSeconds: 18000,
+        usageModels: [],
         capturedAt,
       },
       {
@@ -508,6 +511,8 @@ describe("quotaSnapshots backup export and restore", () => {
         modelId: "gemini-2.5-pro",
         remaining: 0.5,
         resetTime: null,
+        windowSeconds: null,
+        usageModels: ["gemini"],
         capturedAt,
       },
     ]);
@@ -524,6 +529,8 @@ describe("quotaSnapshots backup export and restore", () => {
         modelId: "",
         remaining: 0.75,
         resetTime: resetTime.toISOString(),
+        windowSeconds: 18000,
+        usageModels: [],
         capturedAt: capturedAt.toISOString(),
       },
       {
@@ -534,14 +541,17 @@ describe("quotaSnapshots backup export and restore", () => {
         modelId: "gemini-2.5-pro",
         remaining: 0.5,
         resetTime: null,
+        windowSeconds: null,
+        usageModels: ["gemini"],
         capturedAt: capturedAt.toISOString(),
       },
     ]);
   });
 
-  it("clears existing quotaSnapshots and restores backup quotaSnapshots inside transaction", async () => {
+  it("restores quota snapshots and API key restrictions", async () => {
     const deleteMany = vi.fn().mockResolvedValue({ count: 0 });
     const createMany = vi.fn().mockResolvedValue({ count: 1 });
+    const restoreKeys = vi.fn().mockResolvedValue({ count: 1 });
     const noopTxModel = {
       deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
       createMany: vi.fn().mockResolvedValue({ count: 0 }),
@@ -562,7 +572,7 @@ describe("quotaSnapshots backup export and restore", () => {
       providerOAuthOwnership: noopTxModel,
       providerKeyOwnership: noopTxModel,
       syncToken: noopTxModel,
-      userApiKey: noopTxModel,
+      userApiKey: { ...noopTxModel, createMany: restoreKeys },
       agentModelOverride: noopTxModel,
       modelPreference: noopTxModel,
       systemSetting: noopTxModel,
@@ -583,7 +593,11 @@ describe("quotaSnapshots backup export and restore", () => {
         modelPreferences: [],
         agentModelOverrides: [],
         syncTokens: [],
-        userApiKeys: [],
+        userApiKeys: [{
+          id: "key-1", userId: "user-1", key: "example-key", name: "Restricted",
+          isActive: false, expiresAt: "2026-11-29T23:59:59.999Z", spendLimit: 5,
+          lastUsedAt: null, createdAt: "2026-11-15T01:00:00.000Z",
+        }],
         configTemplates: [],
         configSubscriptions: [],
         providerKeyOwnerships: [],
@@ -620,6 +634,10 @@ describe("quotaSnapshots backup export and restore", () => {
 
     await importDatabase(backupData);
 
+    expect(restoreKeys).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ isActive: false, expiresAt: new Date("2026-11-29T23:59:59.999Z"), spendLimit: 5 })],
+    });
+
     expect(deleteMany).toHaveBeenCalledTimes(1);
     expect(createMany).toHaveBeenCalledWith({
       data: [
@@ -631,6 +649,8 @@ describe("quotaSnapshots backup export and restore", () => {
           modelId: "",
           remaining: 0.75,
           resetTime: new Date("2026-11-15T06:00:00.000Z"),
+          windowSeconds: null,
+          usageModels: [],
           capturedAt: new Date("2026-11-15T01:00:00.000Z"),
         },
       ],

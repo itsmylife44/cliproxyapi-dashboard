@@ -1,5 +1,5 @@
 import { normalizeFraction, type QuotaAccount } from "@/lib/model-first-monitoring";
-import { capacityQuotaGroups, isShortTermQuotaWindow } from "@/lib/quota-window-classification";
+import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
 import { headlineQuotaWindows } from "@/lib/quota/headline";
 
 export const AUTO_RESET_COOLDOWN_MS = 10 * 60_000;
@@ -7,6 +7,8 @@ const DAY_MS = 86_400_000;
 
 export interface AutoResetRule {
   enabled: boolean;
+  /** Start each window as soon as it resets, so it never idles unused. */
+  prime: boolean;
   fiveHourThresholdPct: number;
   weeklyThresholdPct: number;
   minWeeklyDaysLeft: number;
@@ -51,6 +53,7 @@ function clampInt(value: unknown, min: number, max: number, fallback: number): n
 export function normalizeAutoResetRule(input: Partial<AutoResetRule> | null | undefined): AutoResetRule {
   return {
     enabled: input?.enabled === true,
+    prime: input?.prime === true,
     fiveHourThresholdPct: clampInt(input?.fiveHourThresholdPct, 0, 100, 0),
     weeklyThresholdPct: clampInt(input?.weeklyThresholdPct, 0, 100, 0),
     minWeeklyDaysLeft: clampInt(input?.minWeeklyDaysLeft, 0, 7, 0),
@@ -83,17 +86,16 @@ export function extractAccountWindowPercentages(
   if (!account.groups?.length) {
     return { fiveHourPct: null, weeklyPct: null, weeklyDaysLeft: null };
   }
-  const groups = headlineQuotaWindows(capacityQuotaGroups(account.provider, account.groups));
+  const groups = headlineQuotaWindows(account.groups);
   let fiveHour: number | null = null;
   let weekly: number | null = null;
   let weeklyDaysLeft: number | null = null;
 
   for (const group of groups) {
-    if (group.id === "extra-usage") continue;
     const score = normalizeFraction(group.remainingFraction);
     if (score === null) continue;
     const pct = Math.round(score * 100);
-    if (isShortTermQuotaWindow(group, groups)) {
+    if (isShortTermQuotaWindow(group)) {
       fiveHour = fiveHour === null ? pct : Math.min(fiveHour, pct);
     } else {
       weekly = weekly === null ? pct : Math.min(weekly, pct);

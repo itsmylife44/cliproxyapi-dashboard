@@ -15,9 +15,15 @@
 
 - Limit quota reset management to administrators and reserve the account cooldown before contacting a provider.
 - Remove the discontinued Antigravity Gemini Argon quota bucket, including historical quota displays.
-- Remove five-hour model estimates after five subsequent observed resets without model usage.
+- Limit dollar quota estimates to the five most recent completed windows plus the active one, regardless of provider or window length. Retain enough snapshots to cover monthly windows.
 - Prevent unavailable quota accounts from opening empty details.
 - Filter non-admin usage history by API-key ownership rather than request source labels.
+- Let users recheck reset credits without reloading; distinguish an unknown balance from zero.
+- Keep request batches separate for same-named API keys and preserve expansion when a batch grows. Retain upstream failure details even when the response uses an unfamiliar JSON shape.
+- Apply per-request pricing tiers to API key spend limits, keep proxy authentication enabled with no active keys, and report when a key change has not reached the proxy.
+- Use UTC consistently for API key expiration dates and check for expired keys even when the usage queue is unavailable.
+- Preserve API key restrictions when exporting and restoring backups.
+- Honor the selected model list in generated Oh My Pi and Claude Code configurations.
 
 ## [0.1.92](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.91...dashboard-v0.1.92) (2026-11-27)
 

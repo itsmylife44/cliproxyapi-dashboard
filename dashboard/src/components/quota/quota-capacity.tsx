@@ -30,19 +30,8 @@ export function QuotaCapacity({ label, percent, resetLabel, resetTitle, isResett
             isResetting ? "font-medium text-emerald-600 dark:text-emerald-400" : "text-[var(--text-muted)]"
           }`}
         >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            className="size-3 shrink-0 opacity-75"
-          >
-            <path
-              d="M13.5 8a5.5 5.5 0 1 1-1.4-3.67M13.5 2.5v2.75h-2.75"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+          <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" className="size-3 shrink-0 opacity-75">
+            <path d="M13.5 8a5.5 5.5 0 1 1-1.4-3.67M13.5 2.5v2.75h-2.75" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <span className="truncate" suppressHydrationWarning>{resetLabel}</span>
         </span>

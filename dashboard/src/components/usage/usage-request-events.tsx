@@ -4,10 +4,8 @@ import { Fragment, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { formatCompact } from "@/components/ui/chart-theme";
 import {
-  calculateTieredCost,
+  calculateRequestCost,
   formatUSD,
-  isLongContextPrompt,
-  isPeakRequest,
   loadCustomPricing,
   resolveModelPrice,
   splitCachedInput,
@@ -15,7 +13,8 @@ import {
 } from "@/lib/model-pricing";
 
 export interface RequestEvent {
-  id?: string;
+  id: string;
+  apiKeyId: string | null;
   timestamp: string;
   keyName: string;
   username?: string;
@@ -117,41 +116,33 @@ function estimateEventCost(
   price: ModelPrice | null,
 ): number | null {
   if (!price) return null;
-  const bucket = {
+  return calculateRequestCost({
     inputTokens: event.inputTokens,
     outputTokens: event.outputTokens,
     cachedTokens: event.cachedTokens ?? 0,
-    cacheWriteTokens: event.cacheWriteTokens ?? 0,
-    cacheWrite1hTokens: event.cacheWrite1hTokens ?? 0,
-  };
-  const empty = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
-  if (isLongContextPrompt(event.inputTokens, price)) {
-    return calculateTieredCost(empty, bucket, price);
-  }
-  if (isPeakRequest(new Date(event.timestamp), price)) {
-    return calculateTieredCost(empty, empty, price, bucket);
-  }
-  return calculateTieredCost(bucket, empty, price);
+    cacheWriteTokens: event.cacheWriteTokens,
+    cacheWrite1hTokens: event.cacheWrite1hTokens,
+  }, new Date(event.timestamp), price);
 }
 
-function buildFeedItems(rows: PreparedRow[], isAdmin: boolean): FeedItem[] {
+function buildFeedItems(rows: PreparedRow[]): FeedItem[] {
   const items: FeedItem[] = [];
   let i = 0;
 
   while (i < rows.length) {
     const start = rows[i]!;
-    // Consecutive requests batch only when they share model, key, user and status,
-    // so a failure never hides inside a success batch.
-
+    // Compare request identity and outcome, not display labels.
     const groupRows: PreparedRow[] = [start];
     let j = i + 1;
     while (j < rows.length) {
       const candidate = rows[j]!;
       if (
-        candidate.statusLabel !== start.statusLabel ||
+        candidate.event.failed !== start.event.failed ||
+        candidate.isCancelled !== start.isCancelled ||
+        candidate.event.failureStatus !== start.event.failureStatus ||
         candidate.event.model !== start.event.model ||
-        candidate.event.keyName !== start.event.keyName ||
-        (isAdmin && (candidate.event.username ?? "") !== (start.event.username ?? ""))
+        start.event.apiKeyId === null ||
+        candidate.event.apiKeyId !== start.event.apiKeyId
       ) {
         break;
       }
@@ -201,7 +192,7 @@ function buildFeedItems(rows: PreparedRow[], isAdmin: boolean): FeedItem[] {
       const last = groupRows[groupRows.length - 1]!;
       items.push({
         kind: "group",
-        key: `group-${start.rowKey}-${groupRows.length}`,
+        key: `group-${last.rowKey}`,
         rows: groupRows,
         first: start,
         last,
@@ -236,8 +227,8 @@ export function UsageRequestEvents({ events, isAdmin, livePricing }: UsageReques
 
   const rows = useMemo<PreparedRow[]>(
     () =>
-      safeEvents.map((event, idx) => {
-        const rowKey = event.id ?? `${event.timestamp}-${event.keyName}-${event.model}-${idx}`;
+      safeEvents.map((event) => {
+        const rowKey = event.id;
         const isCancelled = Boolean(event.cancelled);
         const statusSuffix = event.failureStatus ? ` \u00B7 ${event.failureStatus}` : "";
         const statusLabel = isCancelled
@@ -263,7 +254,7 @@ export function UsageRequestEvents({ events, isAdmin, livePricing }: UsageReques
     [safeEvents, customPricing, livePricing, t]
   );
 
-  const feedItems = useMemo(() => buildFeedItems(rows, isAdmin), [rows, isAdmin]);
+  const feedItems = useMemo(() => buildFeedItems(rows), [rows]);
 
   const totalPages = Math.max(1, Math.ceil(feedItems.length / ITEMS_PER_PAGE));
   const activePage = Math.min(currentPage, totalPages);

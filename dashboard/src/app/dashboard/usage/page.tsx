@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { CHART_COLORS, formatCompact } from "@/components/ui/chart-theme";
 import { useToast } from "@/components/ui/toast";
-import { TimeFilter } from "@/components/usage/time-filter";
+import { TimeFilter, getDateRange, type DateFilter } from "@/components/usage/time-filter";
 import { CostEstimation } from "@/components/usage/cost-estimation";
 const UsageCharts = dynamic(
   () => import("@/components/usage/usage-charts").then(mod => ({ default: mod.UsageCharts })),
@@ -95,38 +95,10 @@ interface CollectionStatus {
   consecutiveFailures: number;
 }
 
-type DateFilter = "today" | "7d" | "30d" | "all" | "custom";
 type UsageSectionTab = "cost" | "latency" | "failures" | "events";
 
 function shouldPollDashboard(): boolean {
-  if (typeof document === "undefined") return true;
-  return document.visibilityState === "visible";
-}
-
-function toLocalDateString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function getDateRange(period: DateFilter, customFrom?: string, customTo?: string): { from: string; to: string } {
-  const now = new Date();
-  const to = toLocalDateString(now);
-  switch (period) {
-    case "today": return { from: to, to };
-    case "7d": {
-      const d = new Date(now); d.setDate(d.getDate() - 6);
-      return { from: toLocalDateString(d), to };
-    }
-    case "30d": {
-      const d = new Date(now); d.setDate(d.getDate() - 29);
-      return { from: toLocalDateString(d), to };
-    }
-    case "all": return { from: "2020-01-01", to: "2099-12-31" };
-    case "custom": return { from: customFrom || to, to: customTo || to };
-    default: return { from: "2020-01-01", to: "2099-12-31" };
-  }
+  return typeof document === "undefined" || document.visibilityState === "visible";
 }
 
 export default function UsagePage() {
@@ -137,10 +109,8 @@ export default function UsagePage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<DateFilter>("7d");
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
-  const [appliedCustomRange, setAppliedCustomRange] = useState({ from: "", to: "" });
+  const [activeFilter, setActiveFilter] = useState<DateFilter>("sevenDays");
+  const [reloadKey, setReloadKey] = useState(0);
   const [activeTab, setActiveTab] = useState<UsageSectionTab>("cost");
   const { showToast } = useToast();
   const isFirstLoadRef = useRef(true);
@@ -196,17 +166,16 @@ export default function UsagePage() {
       }
 
       try {
-        const { from, to } = getDateRange(activeFilter, appliedCustomRange.from, appliedCustomRange.to);
+        const { from, to } = getDateRange(activeFilter);
         
         // Fetch both usage data and collection status in parallel
         const [usageRes] = await Promise.all([
-          fetch(`/api/usage/history?from=${from}&to=${to}`, { signal: abortController.signal }),
+          fetch(`${API_ENDPOINTS.USAGE.HISTORY}?from=${from}&to=${to}`, { signal: abortController.signal }),
           fetchCollectionStatus(),
         ]);
 
         if (!usageRes.ok) {
           showToast(t("toastLoadFailed"), "error");
-          setLoading(false);
           return;
         }
 
@@ -214,11 +183,12 @@ export default function UsagePage() {
         if (abortController.signal.aborted) return;
         setUsageData(json.data);
         setIsAdmin(json.isAdmin);
-        setLoading(false);
       } catch {
         if (abortController.signal.aborted) return;
         showToast(t("toastNetworkError"), "error");
+      } finally {
         setLoading(false);
+        setRefreshing(false);
       }
     }
 
@@ -228,7 +198,6 @@ export default function UsagePage() {
     }
 
     // Poll every 60 seconds for fresh usage data
-    // This is much more responsive than the previous 5-minute interval
     intervalRef.current = setInterval(() => {
       if (!shouldPollDashboard()) return;
       void collectAndFetch(false);
@@ -240,52 +209,17 @@ export default function UsagePage() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [activeFilter, appliedCustomRange, showToast, t]);
+  }, [activeFilter, reloadKey, showToast, t]);
 
   const handleFilterChange = (filter: DateFilter) => {
-    if (filter !== activeFilter) {
-      isFirstLoadRef.current = true;
-      setActiveFilter(filter);
-    }
-  };
-
-  const handleCustomDateChange = () => {
-    if (customFrom && customTo && customFrom <= customTo) {
-      if (activeFilter !== "custom" || customFrom !== appliedCustomRange.from || customTo !== appliedCustomRange.to) {
-        isFirstLoadRef.current = true;
-        setAppliedCustomRange({ from: customFrom, to: customTo });
-        setActiveFilter("custom");
-      }
-    }
+    isFirstLoadRef.current = true;
+    setActiveFilter(filter);
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-
-    try {
-      if (isAdmin) {
-        try {
-          await fetch(API_ENDPOINTS.USAGE.COLLECT, { method: "POST" });
-        } catch {
-        }
-      }
-
-      const { from, to } = getDateRange(activeFilter, appliedCustomRange.from, appliedCustomRange.to);
-      const res = await fetch(`/api/usage/history?from=${from}&to=${to}`);
-
-      if (!res.ok) {
-        showToast(t("toastLoadFailed"), "error");
-        return;
-      }
-
-      const json: UsageResponse = await res.json();
-      setUsageData(json.data);
-      setIsAdmin(json.isAdmin);
-    } catch {
-      showToast(t("toastNetworkError"), "error");
-    } finally {
-      setRefreshing(false);
-    }
+    if (isAdmin) await fetch(API_ENDPOINTS.USAGE.COLLECT, { method: "POST" }).catch(() => {});
+    setReloadKey((key) => key + 1);
   };
 
   function getCollectionStatusColor(status: CollectionStatus | null): string {
@@ -366,15 +300,7 @@ export default function UsagePage() {
         </div>
       </div>
 
-      <TimeFilter
-        activeFilter={activeFilter}
-        customFrom={customFrom}
-        customTo={customTo}
-        onFilterChange={handleFilterChange}
-        onCustomFromChange={setCustomFrom}
-        onCustomToChange={setCustomTo}
-        onCustomDateApply={handleCustomDateChange}
-      />
+      <TimeFilter activeFilter={activeFilter} onFilterChange={handleFilterChange} />
 
       {loading ? (
         <div className="border-t border-[var(--surface-border)] py-10 text-center text-sm text-[var(--text-muted)]">

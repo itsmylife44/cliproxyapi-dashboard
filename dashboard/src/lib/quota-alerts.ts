@@ -3,7 +3,6 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import type { QuotaGroupScope } from "@/lib/model-first-monitoring";
-import { capacityQuotaGroups } from "@/lib/quota-window-classification";
 import { sendTelegramMessage, formatQuotaAlertBatch, formatAutoResetNotice } from "@/lib/telegram";
 import type { AutoResetCreditSummary } from "@/lib/quota/auto-reset-rules";
 
@@ -11,7 +10,6 @@ export const QUOTA_ALERT_SETTING_KEYS = {
   BOT_TOKEN: "telegram_bot_token",
   CHAT_ID: "telegram_chat_id",
   THRESHOLD: "telegram_quota_threshold",
-  ENABLED: "telegram_alerts_enabled",
   LAST_ALERT_TIME: "telegram_last_alert_time",
   PROVIDERS: "telegram_alert_providers",
   CHECK_INTERVAL: "telegram_check_interval",
@@ -129,7 +127,6 @@ export async function sendDiscordAlert(
 }
 
 const DESTINATION_KEYS = [
-  SETTING_KEYS.ENABLED,
   SETTING_KEYS.CHANNEL,
   SETTING_KEYS.WEBHOOK,
   SETTING_KEYS.BOT_TOKEN,
@@ -141,8 +138,7 @@ type AlertDestination =
   | { channel: "telegram"; botToken: string; chatId: string };
 
 function getAlertDestination(settings: Map<string, string>): { destination: AlertDestination } | { reason: string } {
-  const enabled = settings.get(SETTING_KEYS.ENABLED) === "true";
-  const channel = settings.get(SETTING_KEYS.CHANNEL) ?? (enabled ? "telegram" : "disabled");
+  const channel = settings.get(SETTING_KEYS.CHANNEL) ?? "disabled";
   if (channel === "disabled") return { reason: "alerts disabled" };
   if (channel === "discord") {
     const webhook = settings.get(SETTING_KEYS.WEBHOOK) ?? "";
@@ -247,8 +243,7 @@ function calcPooledCapacity(accounts: QuotaAccount[]): CapacityEntry[] {
   for (const account of accounts) {
     if (!account.supported || account.error || !account.groups) continue;
 
-    for (const group of capacityQuotaGroups(account.provider, account.groups)) {
-      if (group.id === "extra-usage") continue;
+    for (const group of account.groups) {
       // Scoped limits (e.g. Codex per-model or code review) are informational;
       // alerts track the account's main quota only.
       if (group.scope) continue;

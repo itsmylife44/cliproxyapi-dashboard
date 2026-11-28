@@ -105,6 +105,9 @@ export interface BackupUserApiKey {
   userId: string;
   key: string;
   name: string;
+  isActive: boolean;
+  expiresAt: string | null;
+  spendLimit: number | null;
   lastUsedAt: string | null;
   createdAt: string;
 }
@@ -254,6 +257,8 @@ export interface BackupQuotaSnapshot {
   modelId: string;
   remaining: number;
   resetTime: string | null;
+  windowSeconds?: number | null;
+  usageModels?: string[];
   capturedAt: string;
 }
 

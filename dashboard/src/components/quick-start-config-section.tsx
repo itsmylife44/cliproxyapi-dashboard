@@ -34,7 +34,8 @@ export function QuickStartConfigSection({
   isSubscribed = false,
   proxyUrl,
 }: QuickStartConfigSectionProps) {
-  const [excludedModels, setExcludedModels] = useState<string[]>(initialExcludedModels);
+  const [selection, setSelection] = useState({ source: initialExcludedModels, excludedModels: initialExcludedModels });
+  const excludedModels = selection.source === initialExcludedModels ? selection.excludedModels : initialExcludedModels;
 
   return (
     <>
@@ -45,8 +46,8 @@ export function QuickStartConfigSection({
               availableModels={availableModels}
               modelSourceMap={modelSourceMap}
               modelProvidersMap={modelProvidersMap}
-              initialExcludedModels={initialExcludedModels}
-              onSelectionChange={setExcludedModels}
+              excludedModels={excludedModels}
+              onSelectionChange={(next) => setSelection({ source: initialExcludedModels, excludedModels: next })}
               isLocked={isSubscribed}
             />
           </section>

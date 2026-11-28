@@ -394,11 +394,6 @@ export async function POST(request: NextRequest) {
       lastBatchSize = nextEntries.length;
     }
 
-    const syncResult = await syncKeysToCliProxyApi();
-    if (!syncResult.ok) {
-      logger.warn({ error: syncResult.error }, "API key sync failed before collection, continuing anyway");
-    }
-
     const [apiKeys, oauthOwnerships, users] = await Promise.all([
       prisma.userApiKey.findMany({
         select: { id: true, key: true, userId: true },
@@ -551,10 +546,6 @@ export async function POST(request: NextRequest) {
         )
       );
       invalidateApiKeyUsageCache(latestKeyUsage.keys());
-      const postCollectSync = await syncKeysToCliProxyApi();
-      if (!postCollectSync.ok) {
-        logger.warn({ error: postCollectSync.error }, "API key sync failed after usage collection");
-      }
     }
 
     let latencyBackfilled = 0;
@@ -644,5 +635,8 @@ export async function POST(request: NextRequest) {
     }
 
     return Errors.internal("Collection failed");
+  } finally {
+    const keySync = await syncKeysToCliProxyApi();
+    if (!keySync.ok) logger.warn({ error: keySync.error }, "API key sync failed during usage collection");
   }
 }

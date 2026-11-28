@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { Fragment, useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { AccountQuotaHistory, prefetchAccountQuotaHistory } from "@/components/quota/account-quota-history";
 import { QuotaCapacity } from "@/components/quota/quota-capacity";
 import { formatRelativeTime, parseRelativeTime } from "@/lib/format-relative-time";
-import { capacityQuotaGroups, isShortTermQuotaWindow } from "@/lib/quota-window-classification";
+import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
 import { headlineQuotaWindows } from "@/lib/quota/headline";
 import { canonicalizeQuotaProvider } from "@/lib/quota/query-state";
 import { maskEmail } from "@/lib/mask-email";
-import type { AutoResetCreditSummary, AutoResetRule } from "@/lib/quota/auto-reset-rules";
+import { isAutoResetSupportedProvider, normalizeAutoResetRule, type AutoResetCreditSummary, type AutoResetRule } from "@/lib/quota/auto-reset-rules";
 import {
   enrichModelFirstGroup,
   isModelFirstAccount,
@@ -23,93 +23,57 @@ import {
   type QuotaGroup,
 } from "@/lib/model-first-monitoring";
 
-interface WindowScore {
-  score: number;
-  label: string;
-  isShortTerm: boolean;
-  resetTime?: string | null;
-}
+type QuotaTranslations = ReturnType<typeof useTranslations<"quota">>;
+type CapacityWindow = { group: QuotaGroup; percent: number };
+const DEFAULT_RESET_RULE = normalizeAutoResetRule(null);
+const RESET_RULE_FIELDS = [
+  { key: "fiveHourThresholdPct", label: "autoReset5hLabel", max: 100, unit: "%" },
+  { key: "weeklyThresholdPct", label: "autoResetWeeklyLabel", max: 100, unit: "%" },
+  { key: "minWeeklyDaysLeft", label: "autoResetDaysLeftLabel", max: 7, unit: "d" },
+] as const;
+const HOURS_PER_DAY = 24;
+const SECONDS_PER_HOUR = 3600;
+const WEEK_DAYS = 7;
 
-function calcAccountWindowScores(groups: QuotaGroup[]): Record<string, WindowScore> {
-  const result: Record<string, WindowScore> = {};
+function getCapacityWindows(account: QuotaAccount) {
+  const groups = headlineQuotaWindows(account.groups ?? []);
+  const windows: Record<"long" | "short", CapacityWindow | null> = { long: null, short: null };
   for (const group of groups) {
-    if (group.id === "extra-usage") continue;
-    const score = normalizeFraction(group.remainingFraction);
-    if (score === null) continue;
-    result[group.id] = {
-      score,
-      label: group.label,
-      isShortTerm: isShortTermQuotaWindow(group, groups),
-      resetTime: group.resetTime,
-    };
-  }
-  return result;
-}
-
-function formatCompactResetAt(isoDate: string, locale: string): string {
-  const date = new Date(isoDate);
-  const now = new Date();
-  const timeStr = new Intl.DateTimeFormat(locale, {
-    hour: "numeric",
-    minute: "2-digit",
-  })
-    .format(date)
-    .replace(/\s+([AP]M)$/i, (_, meridiem: string) => meridiem.toLowerCase());
-
-  const sameDay =
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate();
-
-  if (sameDay) return timeStr;
-
-  const dateStr = new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-  }).format(date);
-
-  return `${dateStr} ${timeStr}`;
-}
-
-function summarizeWindowCapacity(
-  scores: WindowScore[],
-  locale: string,
-  t: (key: string, values?: Record<string, string | number>) => string
-): { percent: number; resetLabel: string | null; resetTitle?: string; isResetting: boolean } | null {
-  let bottleneck: WindowScore | null = null;
-  for (const candidate of scores) {
-    if (
-      !bottleneck ||
-      candidate.score < bottleneck.score ||
-      (candidate.score === bottleneck.score && !bottleneck.resetTime && Boolean(candidate.resetTime))
-    ) {
-      bottleneck = candidate;
+    const remaining = normalizeFraction(group.remainingFraction);
+    if (remaining === null) continue;
+    const term = isShortTermQuotaWindow(group) ? "short" : "long";
+    const current = windows[term];
+    if (!current || remaining < current.group.remainingFraction!) {
+      windows[term] = { group, percent: Math.round(remaining * 100) };
     }
   }
-  if (!bottleneck) return null;
-  const parsed = parseRelativeTime(bottleneck.resetTime);
-  const hasKnownReset = parsed.type !== "unknown";
+  return windows;
+}
+
+function capacityProps(window: CapacityWindow, t: QuotaTranslations, format: ReturnType<typeof useFormatter>) {
+  const { resetTime } = window.group;
+  const parsed = parseRelativeTime(resetTime);
+  if (!resetTime || parsed.type === "unknown") return { percent: window.percent };
+  const date = new Date(resetTime);
+  const { days = 0, hours = 0, minutes = 0 } = parsed;
   const isResetting = parsed.type === "resetting";
-  const relative = hasKnownReset ? formatRelativeTime(bottleneck.resetTime, t) : null;
-  const resetLabel =
-    relative && !isResetting && bottleneck.resetTime
-      ? `${relative} · ${formatCompactResetAt(bottleneck.resetTime, locale)}`
-      : relative;
-  const resetTitle =
-    hasKnownReset && bottleneck.resetTime
-      ? `${t("resetColumnLabel")}: ${new Date(bottleneck.resetTime).toLocaleString()}`
-      : undefined;
+  const relative = isResetting ? t("resettingStatus") : formatCountdown(days, hours, minutes, t);
   return {
-    percent: Math.round(bottleneck.score * 100),
-    resetLabel,
-    resetTitle,
+    percent: window.percent,
+    resetLabel: isResetting ? relative : `${relative} · ${format.dateTime(date, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`,
+    resetTitle: format.dateTime(date, { dateStyle: "medium", timeStyle: "long" }),
     isResetting,
   };
 }
 
-function isResettableProvider(provider: string): boolean {
-  const canonical = canonicalizeQuotaProvider(provider);
-  return canonical === "codex" || canonical === "claude";
+function formatCountdown(days: number, hours: number, minutes: number, t: QuotaTranslations) {
+  if (days > 0) return t("relativeTimeDaysHours", { days, hours });
+  if (hours > 0) return t("relativeTimeHoursMinutes", { hours, minutes });
+  return t("relativeTimeMinutes", { minutes });
+}
+
+function getAvailableCredits(credits?: AutoResetCreditSummary) {
+  return credits?.error ? null : credits?.availableCount ?? null;
 }
 
 interface ResetWindowPreview {
@@ -132,145 +96,51 @@ interface ResetAdvice {
   summary: string;
 }
 
-function formatCountdown(isoDate: string | null | undefined): string {
-  const res = parseRelativeTime(isoDate);
-  if (res.type === "resetting") return "now";
-  if (res.type !== "time") return "—";
-  const { days = 0, hours = 0, minutes = 0 } = res;
-  if (days > 0) return `${days}d${hours}h`;
-  if (hours > 0) return minutes > 0 ? `${hours}h${minutes}m` : `${hours}h`;
-  return `${minutes}m`;
-}
-
 function calcDaysLeft(isoDate: string | null | undefined): number | null {
-  if (!isoDate) return null;
-  const ms = Date.parse(isoDate);
-  if (!Number.isFinite(ms)) return null;
-  return Math.max(0, (ms - Date.now()) / 86_400_000);
+  const ms = isoDate ? Date.parse(isoDate) : NaN;
+  return Number.isFinite(ms) ? Math.max(0, (ms - Date.now()) / (HOURS_PER_DAY * SECONDS_PER_HOUR * 1000)) : null;
 }
 
-function formatWindowTarget(group: QuotaGroup, isShortTerm: boolean): string {
-  const sec = group.windowSeconds;
-  if (typeof sec === "number" && sec > 0) {
-    const totalHours = Math.round(sec / 3600);
-    if (totalHours >= 24) {
-      const days = Math.floor(totalHours / 24);
-      const remHours = totalHours % 24;
-      return `${days}d${remHours}h`;
-    }
-    return `${totalHours}h`;
-  }
-  return isShortTerm ? "5h" : "7d0h";
-}
-
-function buildManualResetPreview(account: QuotaAccount, label: string): PendingManualReset {
-  const groups = account.groups
-    ? headlineQuotaWindows(capacityQuotaGroups(account.provider, account.groups)).filter(
-        (g) => g.id !== "extra-usage"
-      )
-    : [];
-
-  let longGroup: QuotaGroup | null = null;
-  let shortGroup: QuotaGroup | null = null;
-  for (const group of groups) {
-    const score = normalizeFraction(group.remainingFraction);
-    if (score === null) continue;
-    const isShort = isShortTermQuotaWindow(group, groups);
-    if (isShort) {
-      const currentScore = shortGroup ? (normalizeFraction(shortGroup.remainingFraction) ?? Infinity) : Infinity;
-      if (score < currentScore) shortGroup = group;
-    } else {
-      const currentScore = longGroup ? (normalizeFraction(longGroup.remainingFraction) ?? Infinity) : Infinity;
-      if (score < currentScore) longGroup = group;
-    }
-  }
-
-  const toPreview = (group: QuotaGroup | null, isShort: boolean): ResetWindowPreview | null => {
-    if (!group) return null;
-    const score = normalizeFraction(group.remainingFraction);
-    if (score === null) return null;
+function buildManualResetPreview(
+  authIndex: string,
+  label: string,
+  windows: ReturnType<typeof getCapacityWindows>,
+  t: QuotaTranslations
+): PendingManualReset {
+  const toPreview = (window: CapacityWindow | null): ResetWindowPreview | null => {
+    if (!window) return null;
+    const { resetTime, windowSeconds } = window.group;
+    const hours = windowSeconds ? Math.round(windowSeconds / SECONDS_PER_HOUR) : null;
     return {
-      currentPct: Math.round(score * 100),
-      resetsIn: formatCountdown(group.resetTime),
-      resetDuration: formatWindowTarget(group, isShort),
-      daysLeft: calcDaysLeft(group.resetTime),
+      currentPct: window.percent,
+      resetsIn: formatRelativeTime(resetTime, t),
+      resetDuration: hours === null ? t("unknown") : formatCountdown(Math.floor(hours / HOURS_PER_DAY), hours % HOURS_PER_DAY, 0, t),
+      daysLeft: calcDaysLeft(resetTime),
     };
   };
-
-  return {
-    authIndex: account.auth_index,
-    label,
-    longWindow: toPreview(longGroup, false),
-    shortWindow: toPreview(shortGroup, true),
-  };
+  return { authIndex, label, longWindow: toPreview(windows.long), shortWindow: toPreview(windows.short) };
 }
 
 function evaluateResetAdvice(
   preview: PendingManualReset,
   creditSummary: AutoResetCreditSummary | undefined,
-  t: (key: string, values?: Record<string, string | number>) => string
+  t: QuotaTranslations
 ): ResetAdvice {
-  const longPct = preview.longWindow?.currentPct ?? 0;
-  const longGain = Math.max(0, 100 - longPct);
-  const longResetsIn = preview.longWindow?.resetsIn ?? "—";
-  const longDays = preview.longWindow?.daysLeft ?? null;
-  const shortPct = preview.shortWindow?.currentPct ?? 0;
-  const expiresAt = creditSummary?.nearestExpiresAt;
-  const creditDaysLeft = calcDaysLeft(expiresAt);
-
-  if (creditSummary && !creditSummary.error && creditSummary.availableCount === 0) {
-    return {
-      tone: "bad",
-      badge: t("resetVerdictNoCreditsBadge"),
-      summary: t("resetVerdictNoCreditsTitle"),
-    };
+  if (getAvailableCredits(creditSummary) === 0) {
+    return { tone: "bad", badge: t("resetVerdictNoCreditsBadge"), summary: t("resetVerdictNoCreditsTitle") };
   }
 
-  if (creditDaysLeft !== null && creditDaysLeft <= 3 && longPct < 80) {
-    return {
-      tone: "good",
-      badge: t("resetVerdictExpSoonBadge"),
-      summary: t("resetVerdictReasonExpiringSoon", {
-        expiresIn: formatCountdown(expiresAt),
-        gain: longGain,
-      }),
-    };
-  }
-
-  const hoursUntilReset = Math.max(0, Math.min(168, (longDays ?? 7) * 24));
-  const weeklyRemaining = Math.max(0, Math.min(1, longPct / 100));
-  const fiveHourRemaining = preview.shortWindow ? Math.max(0, Math.min(1, shortPct / 100)) : 1;
-  const timeFactor = 1 - Math.pow(1 - hoursUntilReset / 168, 3);
-  const quotaFactor = (1 - weeklyRemaining) + 0.2 * weeklyRemaining * (1 - fiveHourRemaining);
+  const longPct = preview.longWindow?.currentPct ?? 100;
+  const shortPct = preview.shortWindow?.currentPct ?? 100;
+  const resetFraction = Math.min(1, (preview.longWindow?.daysLeft ?? WEEK_DAYS) / WEEK_DAYS);
+  const timeFactor = 1 - (1 - resetFraction) ** 3;
+  const quotaFactor = (1 - longPct / 100) + 0.2 * (longPct / 100) * (1 - shortPct / 100);
   const score = timeFactor * quotaFactor;
-
-  if (score >= 0.7) {
-    return {
-      tone: "good",
-      badge: t("resetVerdictGoodBadge"),
-      summary: t("resetVerdictReasonSummary", { gain: longGain, resetsIn: longResetsIn }),
-    };
-  }
-
-  if (score >= 0.4) {
-    return {
-      tone: "borderline",
-      badge: t("resetVerdictBorderlineBadge"),
-      summary: t("resetVerdictReasonSummary", { gain: longGain, resetsIn: longResetsIn }),
-    };
-  }
-
-  const badSummary =
-    longPct >= 70
-      ? t("resetVerdictReasonHighWeekly", { pct: longPct, gain: longGain })
-      : longDays !== null && longDays < 1
-        ? t("resetVerdictReasonImminentReset", { resetsIn: longResetsIn })
-        : t("resetVerdictReasonSummary", { gain: longGain, resetsIn: longResetsIn });
-
+  const verdict = score >= 0.7 ? "Good" : score >= 0.4 ? "Borderline" : "Bad";
   return {
-    tone: "bad",
-    badge: t("resetVerdictBadBadge"),
-    summary: badSummary,
+    tone: verdict === "Good" ? "good" : verdict === "Borderline" ? "borderline" : "bad",
+    badge: t(`resetVerdict${verdict}Badge`),
+    summary: t("resetVerdictReasonSummary", { gain: 100 - longPct, resetsIn: preview.longWindow?.resetsIn ?? t("unknown") }),
   };
 }
 
@@ -290,7 +160,7 @@ interface QuotaDetailsProps {
   autoResetBusy?: Record<string, "checking" | "resetting" | null>;
   onUpdateAutoReset?: (
     authIndex: string,
-    patch: { enabled: boolean; fiveHourThresholdPct: number; weeklyThresholdPct: number; minWeeklyDaysLeft: number }
+    patch: Pick<AutoResetRule, "enabled" | "prime" | "fiveHourThresholdPct" | "weeklyThresholdPct" | "minWeeklyDaysLeft">
   ) => void;
   onCheckResetCredits?: (authIndex: string) => void;
   onManualReset?: (authIndex: string) => void;
@@ -315,23 +185,9 @@ export function QuotaDetails({
   onManualReset,
 }: QuotaDetailsProps) {
   const tCommon = useTranslations("common");
-  const locale = useLocale();
+  const format = useFormatter();
   const t = useTranslations("quota");
   const [pendingManualReset, setPendingManualReset] = useState<PendingManualReset | null>(null);
-  const autoFetchedCreditsRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (!onCheckResetCredits) return;
-    for (const account of filteredAccounts) {
-      if (!expandedCards[account.auth_index]) continue;
-      if (!isResettableProvider(account.provider)) continue;
-      if (autoResetCredits?.[account.auth_index] !== undefined) continue;
-      if (autoResetBusy?.[account.auth_index]) continue;
-      if (autoFetchedCreditsRef.current.has(account.auth_index)) continue;
-      autoFetchedCreditsRef.current.add(account.auth_index);
-      onCheckResetCredits(account.auth_index);
-    }
-  }, [filteredAccounts, expandedCards, autoResetCredits, autoResetBusy, onCheckResetCredits]);
 
   const maskedAccountCounts = new Map<string, number>();
   for (const account of filteredAccounts) {
@@ -372,13 +228,8 @@ export function QuotaDetails({
     const buckets = new Map<string, { key: string; title: string; accounts: QuotaAccount[]; modelFirstView: boolean }>();
     for (const account of filteredAccounts) {
       const sectionModelFirstView = isModelFirstAccount(account);
-      // Key on the canonical provider so aliased raw values (e.g. `gemini` and
-      // `gemini-cli`) land in the same section, matching the toolbar filter.
       const canonicalProvider = canonicalizeQuotaProvider(account.provider) ?? account.provider;
-      const providerTitle =
-        canonicalProvider === "github-copilot"
-          ? "Copilot"
-          : canonicalProvider.charAt(0).toUpperCase() + canonicalProvider.slice(1);
+      const providerTitle = canonicalProvider.charAt(0).toUpperCase() + canonicalProvider.slice(1);
       const key = `${sectionModelFirstView ? "model-first" : "window-based"}:${canonicalProvider}`;
       const bucket = buckets.get(key) ?? {
         key,
@@ -411,11 +262,7 @@ export function QuotaDetails({
                 {section.accounts.map((account) => {
                   const canExpand = account.supported;
                   const isRowExpanded = canExpand && expandedCards[account.auth_index];
-                  const scores = account.groups
-                    ? Object.values(calcAccountWindowScores(headlineQuotaWindows(capacityQuotaGroups(account.provider, account.groups))))
-                    : [];
-                  const longWindow = summarizeWindowCapacity(scores.filter((score) => !score.isShortTerm), locale, t);
-                  const shortWindow = summarizeWindowCapacity(scores.filter((score) => score.isShortTerm), locale, t);
+                  const windows = canExpand && !account.error && !section.modelFirstView ? getCapacityWindows(account) : null;
                   const statusLabel = account.supported ? (account.error ? t("errorStatus") : t("activeStatus")) : t("unsupportedStatus");
                   const accountSummary = isModelFirstAccount(account) ? summarizeModelFirstAccount(account) : null;
                   const accountQuotaUnverified =
@@ -439,37 +286,33 @@ export function QuotaDetails({
                       : "text-[var(--text-secondary)]";
                   const displayStatus = section.modelFirstView ? modelFirstStatus : statusLabel;
 
-                  const resetSupported = !section.modelFirstView && isResettableProvider(account.provider);
-                  const rule = autoResetRules?.[account.auth_index] ?? {
-                    enabled: false,
-                    fiveHourThresholdPct: 0,
-                    weeklyThresholdPct: 0,
-                    minWeeklyDaysLeft: 0,
-                  };
+                  const resetSupported = !section.modelFirstView && isAutoResetSupportedProvider(account.provider);
+                  const rule = autoResetRules?.[account.auth_index] ?? DEFAULT_RESET_RULE;
                   const creditSummary = autoResetCredits?.[account.auth_index];
                   const busyAction = autoResetBusy?.[account.auth_index] ?? null;
                   const isCheckingCredits = busyAction === "checking";
                   const isResettingNow = busyAction === "resetting";
                   const isBusy = busyAction !== null;
+                  const availableCredits = getAvailableCredits(creditSummary);
+                  const prefetchHistory = canExpand && !account.error
+                    ? () => void prefetchAccountQuotaHistory(account.auth_index)
+                    : undefined;
 
                   return (
                     <div key={account.auth_index}>
                       <button
                         type="button"
                         disabled={!canExpand}
-                        onMouseEnter={() => {
-                          if (account.supported && !account.error) {
-                            void prefetchAccountQuotaHistory(account.auth_index);
-                          }
-                        }}
-                        onFocus={() => {
-                          if (account.supported && !account.error) {
-                            void prefetchAccountQuotaHistory(account.auth_index);
-                          }
-                        }}
+                        onMouseEnter={prefetchHistory}
+                        onFocus={prefetchHistory}
                         aria-expanded={canExpand ? Boolean(isRowExpanded) : undefined}
                         aria-labelledby={canExpand ? `quota-account-${account.auth_index} quota-toggle-${account.auth_index}` : `quota-account-${account.auth_index}`}
-                        onClick={() => onToggleCard(account.auth_index)}
+                        onClick={() => {
+                          onToggleCard(account.auth_index);
+                          if (!isRowExpanded && resetSupported && !isBusy && !creditSummary) {
+                            onCheckResetCredits?.(account.auth_index);
+                          }
+                        }}
                         className={cn(
                           "grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-lg px-3 py-2.5 text-left transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--accent)] sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:gap-x-6",
                           canExpand && "cursor-pointer hover:bg-[var(--surface-hover)]",
@@ -487,7 +330,7 @@ export function QuotaDetails({
                             <span className={cn("inline-flex items-center gap-1 before:size-1.5 before:rounded-full before:bg-current", statusColorClass)}>{displayStatus}</span>
                           </span>
                         </span>
-                        {account.supported && !account.error && (section.modelFirstView || longWindow !== null || shortWindow !== null) && (
+                        {canExpand && !account.error && (section.modelFirstView || windows?.long || windows?.short) && (
                           <span className="col-span-2 row-start-2 grid min-w-0 auto-cols-fr grid-flow-col items-start gap-3 sm:col-span-1 sm:col-start-2 sm:row-start-1 lg:gap-5">
                             {section.modelFirstView ? (
                               <>
@@ -506,24 +349,8 @@ export function QuotaDetails({
                               </>
                             ) : (
                               <>
-                                {longWindow !== null && (
-                                  <QuotaCapacity
-                                    label={t("longTermLabel")}
-                                    percent={longWindow.percent}
-                                    resetLabel={longWindow.resetLabel}
-                                    resetTitle={longWindow.resetTitle}
-                                    isResetting={longWindow.isResetting}
-                                  />
-                                )}
-                                {shortWindow !== null && (
-                                  <QuotaCapacity
-                                    label={t("shortTermLabel")}
-                                    percent={shortWindow.percent}
-                                    resetLabel={shortWindow.resetLabel}
-                                    resetTitle={shortWindow.resetTitle}
-                                    isResetting={shortWindow.isResetting}
-                                  />
-                                )}
+                                {windows?.long && <QuotaCapacity label={t("longTermLabel")} {...capacityProps(windows.long, t, format)} />}
+                                {windows?.short && <QuotaCapacity label={t("shortTermLabel")} {...capacityProps(windows.short, t, format)} />}
                               </>
                             )}
                           </span>
@@ -538,6 +365,18 @@ export function QuotaDetails({
 
                       {isRowExpanded && (
                         <div className="space-y-3 border-t border-[var(--surface-border)] bg-[var(--surface-base)] px-4 py-3">
+                          {!section.modelFirstView && onUpdateAutoReset && (
+                            <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-[var(--text-primary)]">
+                              <input
+                                type="checkbox"
+                                checked={rule.prime}
+                                disabled={isBusy}
+                                onChange={(e) => onUpdateAutoReset(account.auth_index, { ...rule, prime: e.target.checked })}
+                                className="h-3.5 w-3.5 rounded border-[var(--surface-border)] accent-[var(--accent)]"
+                              />
+                              <span>{t("autoPrimeToggle")}</span>
+                            </label>
+                          )}
                           {resetSupported && onUpdateAutoReset && (
                             <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 px-3 py-2 text-xs">
                               <div className="flex flex-wrap items-center gap-3 text-[var(--text-secondary)]">
@@ -546,14 +385,7 @@ export function QuotaDetails({
                                     type="checkbox"
                                     checked={rule.enabled}
                                     disabled={isBusy}
-                                    onChange={(e) =>
-                                      onUpdateAutoReset(account.auth_index, {
-                                        enabled: e.target.checked,
-                                        fiveHourThresholdPct: rule.fiveHourThresholdPct,
-                                        weeklyThresholdPct: rule.weeklyThresholdPct,
-                                        minWeeklyDaysLeft: rule.minWeeklyDaysLeft,
-                                      })
-                                    }
+                                    onChange={(e) => onUpdateAutoReset(account.auth_index, { ...rule, enabled: e.target.checked })}
                                     className="h-3.5 w-3.5 rounded border-[var(--surface-border)] accent-[var(--accent)]"
                                   />
                                   <span>{t("autoResetToggle")}</span>
@@ -562,68 +394,26 @@ export function QuotaDetails({
                                 {rule.enabled && (
                                   <div className="flex flex-wrap items-center gap-2">
                                     <span className="text-[var(--text-muted)]">{t("autoResetWhenLabel")}</span>
-                                    <label className="inline-flex items-center gap-1">
-                                      <span>{t("autoReset5hLabel")}</span>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        max={100}
-                                        disabled={isBusy}
-                                        value={rule.fiveHourThresholdPct}
-                                        onChange={(e) =>
-                                          onUpdateAutoReset(account.auth_index, {
-                                            enabled: true,
-                                            fiveHourThresholdPct: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
-                                            weeklyThresholdPct: rule.weeklyThresholdPct,
-                                            minWeeklyDaysLeft: rule.minWeeklyDaysLeft,
-                                          })
-                                        }
-                                        className="glass-input w-12 rounded px-1 py-0.5 text-center text-xs tabular-nums"
-                                      />
-                                      <span>%</span>
-                                    </label>
-                                    <span className="text-[var(--text-muted)]">&amp;</span>
-                                    <label className="inline-flex items-center gap-1">
-                                      <span>{t("autoResetWeeklyLabel")}</span>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        max={100}
-                                        disabled={isBusy}
-                                        value={rule.weeklyThresholdPct}
-                                        onChange={(e) =>
-                                          onUpdateAutoReset(account.auth_index, {
-                                            enabled: true,
-                                            fiveHourThresholdPct: rule.fiveHourThresholdPct,
-                                            weeklyThresholdPct: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
-                                            minWeeklyDaysLeft: rule.minWeeklyDaysLeft,
-                                          })
-                                        }
-                                        className="glass-input w-12 rounded px-1 py-0.5 text-center text-xs tabular-nums"
-                                      />
-                                      <span>%</span>
-                                    </label>
-                                    <span className="text-[var(--text-muted)]">&amp;</span>
-                                    <label className="inline-flex items-center gap-1">
-                                      <span>{t("autoResetDaysLeftLabel")}</span>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        max={7}
-                                        disabled={isBusy}
-                                        value={rule.minWeeklyDaysLeft}
-                                        onChange={(e) =>
-                                          onUpdateAutoReset(account.auth_index, {
-                                            enabled: true,
-                                            fiveHourThresholdPct: rule.fiveHourThresholdPct,
-                                            weeklyThresholdPct: rule.weeklyThresholdPct,
-                                            minWeeklyDaysLeft: Math.max(0, Math.min(7, Number(e.target.value) || 0)),
-                                          })
-                                        }
-                                        className="glass-input w-11 rounded px-1 py-0.5 text-center text-xs tabular-nums"
-                                      />
-                                      <span>d</span>
-                                    </label>
+                                    {RESET_RULE_FIELDS.map(({ key, label, max, unit }, index) => (
+                                      <Fragment key={key}>
+                                        {index > 0 && <span className="text-[var(--text-muted)]">&amp;</span>}
+                                        <label className="inline-flex items-center gap-1">
+                                          <span>{t(label)}</span>
+                                          <input
+                                            type="number"
+                                            min={0}
+                                            max={max}
+                                            disabled={isBusy}
+                                            value={rule[key]}
+                                            onChange={(e) => onUpdateAutoReset(account.auth_index,
+                                              normalizeAutoResetRule({ ...rule, [key]: Number(e.target.value) })
+                                            )}
+                                            className="glass-input w-12 rounded px-1 py-0.5 text-center text-xs tabular-nums"
+                                          />
+                                          <span>{unit}</span>
+                                        </label>
+                                      </Fragment>
+                                    ))}
                                   </div>
                                 )}
                               </div>
@@ -635,43 +425,35 @@ export function QuotaDetails({
                                   </span>
                                 ) : creditSummary ? (
                                   <span className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-0.5 text-[11px] tabular-nums text-[var(--text-secondary)]">
-                                    {creditSummary.error
-                                      ? creditSummary.error
-                                      : t("autoResetCreditsCount", { count: creditSummary.availableCount ?? 0 })}
+                                    {creditSummary.error ?? (availableCredits === null ? t("unknown") : t("autoResetCreditsCount", { count: availableCredits }))}
                                   </span>
                                 ) : null}
-                                {onManualReset && (() => {
-                                  const hasNoCredits = Boolean(
-                                    creditSummary && !creditSummary.error && creditSummary.availableCount === 0
-                                  );
-                                  return (
-                                    <button
-                                      type="button"
-                                      disabled={isBusy || hasNoCredits}
-                                      onClick={() => {
-                                        if (!creditSummary && onCheckResetCredits) {
-                                          onCheckResetCredits(account.auth_index);
-                                        }
-                                        setPendingManualReset(
-                                          buildManualResetPreview(
-                                            account,
-                                            accountLabels.get(account.auth_index) ?? account.provider
-                                          )
-                                        );
-                                      }}
-                                      className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-45 dark:text-emerald-400"
-                                    >
-                                      {isResettingNow ? t("resettingStatus") : t("autoResetNowButton")}
-                                    </button>
-                                  );
-                                })()}
+                                {onCheckResetCredits && (
+                                  <button
+                                    type="button"
+                                    disabled={isBusy}
+                                    onClick={() => onCheckResetCredits(account.auth_index)}
+                                    className="rounded border border-[var(--surface-border)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] disabled:opacity-45"
+                                  >
+                                    {t("refreshButton")}
+                                  </button>
+                                )}
+                                {onManualReset && windows && (
+                                  <button
+                                    type="button"
+                                    disabled={isBusy || availableCredits === 0}
+                                    onClick={() => setPendingManualReset(buildManualResetPreview(
+                                      account.auth_index, accountLabels.get(account.auth_index) ?? account.provider, windows, t
+                                    ))}
+                                    className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-45 dark:text-emerald-400"
+                                  >
+                                    {isResettingNow ? t("resettingStatus") : t("autoResetNowButton")}
+                                  </button>
+                                )}
                               </div>
                             </div>
                           )}
                           {account.error && <p className="mb-2 break-all text-xs text-rose-600">{account.error}</p>}
-                          {!account.supported && !account.error && (
-                            <p className="mb-2 text-xs text-amber-700">{t("quotaNotAvailable")}</p>
-                          )}
                           {section.modelFirstView && accountSummary && (
                             <div className="mb-2 flex flex-wrap gap-3 text-[11px] text-[var(--text-muted)]">
                               <span>{t("snapshotStatusLabel")}: {accountSummary.staleSnapshot ? t("staleLabel") : t("freshLabel")}</span>
@@ -764,14 +546,11 @@ export function QuotaDetails({
 
       {onManualReset && (() => {
         const liveCreditSummary = pendingManualReset ? autoResetCredits?.[pendingManualReset.authIndex] : undefined;
-        const hasNoModalCredits = Boolean(
-          liveCreditSummary && !liveCreditSummary.error && liveCreditSummary.availableCount === 0
-        );
+        const availableCredits = getAvailableCredits(liveCreditSummary);
         const isCheckingModalCredits = pendingManualReset ? autoResetBusy?.[pendingManualReset.authIndex] === "checking" : false;
         const advice = pendingManualReset ? evaluateResetAdvice(pendingManualReset, liveCreditSummary, t) : null;
         const dialogVariant = advice?.tone === "bad" ? "danger" : advice?.tone === "good" ? "info" : "warning";
         const nearestExpiresAt = liveCreditSummary?.nearestExpiresAt;
-        const creditDaysLeft = calcDaysLeft(nearestExpiresAt);
 
         return (
           <ConfirmDialog
@@ -787,7 +566,6 @@ export function QuotaDetails({
             message={
               pendingManualReset && advice ? (
                 <div className="space-y-3 text-left text-xs">
-                  {/* Blunt Visual Recommendation Banner */}
                   <div
                     className={cn(
                       "rounded-lg border p-3",
@@ -811,18 +589,17 @@ export function QuotaDetails({
                     </div>
                   </div>
 
-                  {/* Before -> After Quota & Timer Breakdown */}
                   {(pendingManualReset.longWindow || pendingManualReset.shortWindow) && (
                     <div className="space-y-2.5 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)]/40 p-3 tabular-nums">
                       {[
-                        { label: t("longTermLabel"), window: pendingManualReset.longWindow },
-                        { label: t("shortTermLabel"), window: pendingManualReset.shortWindow },
+                        { key: "longTermLabel", window: pendingManualReset.longWindow },
+                        { key: "shortTermLabel", window: pendingManualReset.shortWindow },
                       ].map(
-                        ({ label, window }) =>
+                        ({ key, window }) =>
                           window && (
-                            <div key={label} className="space-y-1">
+                            <div key={key} className="space-y-1">
                               <div className="flex flex-wrap items-center justify-between gap-2">
-                                <span className="font-semibold text-[var(--text-primary)]">{label}</span>
+                                <span className="font-semibold text-[var(--text-primary)]">{t(key)}</span>
                                 <span className="text-[11px] text-[var(--text-secondary)]">
                                   <span className="font-semibold text-[var(--text-primary)]">{window.currentPct}%</span>{" "}
                                   → <span className="font-semibold text-emerald-600 dark:text-emerald-400">100%</span>
@@ -850,38 +627,22 @@ export function QuotaDetails({
                     </div>
                   )}
 
-                  {/* Credits & Expiry Footer */}
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--text-muted)] tabular-nums">
                     {isCheckingModalCredits ? (
                       <span>{t("checkingCreditsStatus")}</span>
                     ) : liveCreditSummary?.error ? (
                       <span className="text-rose-600 dark:text-rose-400">{liveCreditSummary.error}</span>
-                    ) : typeof liveCreditSummary?.availableCount === "number" ? (
-                      <span
-                        className={cn(
-                          "font-medium",
-                          liveCreditSummary.availableCount === 0
-                            ? "text-rose-600 dark:text-rose-400"
-                            : "text-[var(--text-secondary)]"
-                        )}
-                      >
-                        {t("autoResetCreditsCount", { count: liveCreditSummary.availableCount })}
+                    ) : availableCredits !== null ? (
+                      <span className={cn("font-medium", availableCredits === 0 ? "text-rose-600 dark:text-rose-400" : "text-[var(--text-secondary)]")}>
+                        {t("autoResetCreditsCount", { count: availableCredits })}
                       </span>
                     ) : (
                       <span>{t("manualResetConfirmMessage", { account: pendingManualReset.label })}</span>
                     )}
 
                     {nearestExpiresAt && (
-                      <span
-                        className={cn(
-                          "font-medium",
-                          creditDaysLeft !== null && creditDaysLeft <= 3
-                            ? "text-amber-600 dark:text-amber-400"
-                            : "text-[var(--text-secondary)]"
-                        )}
-                        title={new Date(nearestExpiresAt).toLocaleString()}
-                      >
-                        {t("resetCreditExpiresLabel", { expiresIn: formatCountdown(nearestExpiresAt) })}
+                      <span className="font-medium text-[var(--text-secondary)]" title={format.dateTime(new Date(nearestExpiresAt), { dateStyle: "medium", timeStyle: "long" })}>
+                        {t("resetCreditExpiresLabel", { expiresIn: formatRelativeTime(nearestExpiresAt, t) })}
                       </span>
                     )}
                   </div>
@@ -891,7 +652,7 @@ export function QuotaDetails({
               )
             }
             confirmLabel={t("autoResetNowButton")}
-            confirmDisabled={hasNoModalCredits}
+            confirmDisabled={isCheckingModalCredits || availableCredits === 0}
             variant={dialogVariant}
           />
         );

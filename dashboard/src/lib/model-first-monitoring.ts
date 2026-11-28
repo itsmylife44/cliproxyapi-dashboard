@@ -46,6 +46,11 @@ export interface QuotaGroup {
   /** Set on secondary limits; absent for the account's main quota windows. */
   scope?: QuotaGroupScope;
   windowSeconds?: number;
+  /**
+   * Slug fragments of the models whose usage draws this window down. Absent: the
+   * scope id for scoped limits, otherwise all of the account's usage.
+   */
+  usageModels?: string[];
   remainingFraction?: number | null;
   resetTime: string | null;
   models: QuotaModel[];

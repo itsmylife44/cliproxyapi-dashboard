@@ -16,6 +16,7 @@ import { isAutoResetSupportedProvider } from "@/lib/quota/auto-reset-rules";
 const UpdateRuleSchema = z.object({
   authIndex: z.string().min(1).max(128),
   enabled: z.boolean(),
+  prime: z.boolean().default(false),
   fiveHourThresholdPct: z.number().min(0).max(100).default(0),
   weeklyThresholdPct: z.number().min(0).max(100).default(0),
   minWeeklyDaysLeft: z.number().min(0).max(7).default(0),

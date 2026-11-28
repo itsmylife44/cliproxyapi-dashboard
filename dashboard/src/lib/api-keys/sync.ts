@@ -4,9 +4,12 @@ import { prisma } from "@/lib/db";
 import { getManagementUrl } from "@/lib/management-url";
 import { logger } from "@/lib/logger";
 import { getLiveModelPricing } from "@/lib/model-pricing-catalog";
-import { calculateKeySpend, type UsageModelTotals } from "@/lib/usage-cost-breakdown";
+import { calculateRequestCost, resolveModelPrice, type ModelPrice } from "@/lib/model-pricing";
+import { AsyncMutex, FETCH_TIMEOUT_MS } from "@/lib/providers/management-api";
 
 const MANAGEMENT_BASE_URL = getManagementUrl();
+const keySync = new AsyncMutex();
+const NO_ACTIVE_KEY = `sk-revoked-${randomUUID()}`;
 
 export interface ApiKeyUsageSummary {
   totalSpend: number;
@@ -14,8 +17,11 @@ export interface ApiKeyUsageSummary {
 }
 
 const apiKeyUsageCache = new Map<string, ApiKeyUsageSummary>();
+let usageGeneration = 0;
+let cachedPricing: Record<string, ModelPrice> | undefined;
 
 export function invalidateApiKeyUsageCache(apiKeyIds?: Iterable<string>): void {
+  usageGeneration++;
   if (!apiKeyIds) {
     apiKeyUsageCache.clear();
     return;
@@ -31,84 +37,41 @@ export async function getApiKeyUsageSummaries(
   const summaries = new Map<string, ApiKeyUsageSummary>();
   if (apiKeyIds.length === 0) return summaries;
 
-  const missingKeyIds = apiKeyIds.filter((id) => !apiKeyUsageCache.has(id));
+  const livePricing = await getLiveModelPricing();
+  if (cachedPricing !== livePricing) {
+    cachedPricing = livePricing;
+    invalidateApiKeyUsageCache();
+  }
+  const generation = usageGeneration;
+  const missingKeyIds: string[] = [];
+  for (const id of apiKeyIds) {
+    const cached = apiKeyUsageCache.get(id);
+    if (cached) summaries.set(id, cached);
+    else missingKeyIds.push(id);
+  }
+  if (missingKeyIds.length === 0) return summaries;
 
-  if (missingKeyIds.length > 0) {
-    const [groupedRows, livePricing] = await Promise.all([
-      prisma.usageRecord.groupBy({
-        by: ["apiKeyId", "model"],
-        where: {
-          apiKeyId: { in: missingKeyIds },
-        },
-        _max: { timestamp: true },
-        _count: { _all: true },
-        _sum: {
-          totalTokens: true,
-          inputTokens: true,
-          outputTokens: true,
-          cachedTokens: true,
-          cacheWriteTokens: true,
-          cacheWrite1hTokens: true,
-        },
-      }),
-      getLiveModelPricing(),
-    ]);
+  const requests = await prisma.usageRecord.findMany({
+    where: { apiKeyId: { in: missingKeyIds } },
+    select: {
+      apiKeyId: true, timestamp: true, model: true, inputTokens: true, outputTokens: true,
+      cachedTokens: true, cacheWriteTokens: true, cacheWrite1hTokens: true,
+    },
+  });
+  for (const id of missingKeyIds) summaries.set(id, { totalSpend: 0, lastUsedAt: null });
 
-    const modelsByKey = new Map<string, Record<string, UsageModelTotals>>();
-    const lastUsedByKey = new Map<string, Date>();
-
-    for (const row of groupedRows) {
-      if (!row.apiKeyId) continue;
-      if (row._max.timestamp) {
-        const prevTs = lastUsedByKey.get(row.apiKeyId);
-        if (!prevTs || row._max.timestamp > prevTs) {
-          lastUsedByKey.set(row.apiKeyId, row._max.timestamp);
-        }
-      }
-
-      let keyModels = modelsByKey.get(row.apiKeyId);
-      if (!keyModels) {
-        keyModels = {};
-        modelsByKey.set(row.apiKeyId, keyModels);
-      }
-
-      keyModels[row.model] = {
-        totalRequests: row._count._all,
-        totalTokens: row._sum.totalTokens ?? 0,
-        inputTokens: row._sum.inputTokens ?? 0,
-        outputTokens: row._sum.outputTokens ?? 0,
-        cachedTokens: row._sum.cachedTokens ?? 0,
-        cacheWriteTokens: row._sum.cacheWriteTokens ?? 0,
-        cacheWrite1hTokens: row._sum.cacheWrite1hTokens ?? 0,
-        longContextInputTokens: 0,
-        longContextOutputTokens: 0,
-        longContextCachedTokens: 0,
-        longContextCacheWriteTokens: 0,
-        longContextCacheWrite1hTokens: 0,
-        peakInputTokens: 0,
-        peakOutputTokens: 0,
-        peakCachedTokens: 0,
-        peakCacheWriteTokens: 0,
-        peakCacheWrite1hTokens: 0,
-      };
-    }
-
-    for (const keyId of missingKeyIds) {
-      const models = modelsByKey.get(keyId);
-      apiKeyUsageCache.set(keyId, {
-        totalSpend: models ? calculateKeySpend(models, {}, livePricing) : 0,
-        lastUsedAt: lastUsedByKey.get(keyId) ?? null,
-      });
-    }
+  const prices = new Map<string, ModelPrice | null>();
+  for (const request of requests) {
+    const summary = summaries.get(request.apiKeyId!)!;
+    if (!summary.lastUsedAt || request.timestamp > summary.lastUsedAt) summary.lastUsedAt = request.timestamp;
+    if (!prices.has(request.model)) prices.set(request.model, resolveModelPrice(request.model, undefined, livePricing));
+    const price = prices.get(request.model);
+    if (price) summary.totalSpend += calculateRequestCost(request, request.timestamp, price);
   }
 
-  for (const keyId of apiKeyIds) {
-    summaries.set(
-      keyId,
-      apiKeyUsageCache.get(keyId) ?? { totalSpend: 0, lastUsedAt: null }
-    );
+  if (generation === usageGeneration) {
+    for (const id of missingKeyIds) apiKeyUsageCache.set(id, summaries.get(id)!);
   }
-
   return summaries;
 }
 
@@ -181,6 +144,7 @@ export async function syncKeysToCliProxyApi(): Promise<SyncResult> {
       error: "Management API key not configured",
     };
   }
+  const release = await keySync.acquire("api-keys");
 
   try {
     const now = new Date();
@@ -215,12 +179,8 @@ export async function syncKeysToCliProxyApi(): Promise<SyncResult> {
 
     const keyList = activeKeys.map((uk) => uk.key);
 
-    // Keep config-api-key registered in CLIProxyAPI when all keys are expired/exhausted
-    // so CLIProxyAPI returns 401 instead of falling back to unauthenticated legacy mode.
-    const payload =
-      keyList.length === 0 && allKeys.length > 0
-        ? [`sk-revoked-${randomUUID().replace(/-/g, "")}`]
-        : keyList;
+    // An empty list would disable the proxy's API-key authentication.
+    const payload = keyList.length === 0 ? [NO_ACTIVE_KEY] : keyList;
 
     let lastError: Error | null = null;
     const delays = [1000, 2000, 4000] as const;
@@ -235,6 +195,7 @@ export async function syncKeysToCliProxyApi(): Promise<SyncResult> {
             Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         });
 
         if (!response.ok) {
@@ -271,6 +232,8 @@ export async function syncKeysToCliProxyApi(): Promise<SyncResult> {
       ok: false,
       error: message,
     };
+  } finally {
+    release();
   }
 }
 

@@ -5,8 +5,9 @@
  */
 
 import { runAlertCheck, getCheckIntervalMs } from "@/lib/quota-alerts";
-import { recordQuotaSnapshots, pruneQuotaSnapshotsIfDue } from "@/lib/quota/quota-snapshots";
+import { recordQuotaSnapshots, pruneQuotaSnapshotsIfDue, type PreviousSnapshots } from "@/lib/quota/quota-snapshots";
 import { evaluateAutoResetsForAccounts } from "@/lib/quota/auto-reset";
+import { primeIdleWindows } from "@/lib/quota/auto-prime";
 import { resyncCustomProviders } from "@/lib/providers/resync";
 import { logger } from "@/lib/logger";
 import type { QuotaResponse } from "@/lib/model-first-monitoring";
@@ -123,8 +124,9 @@ function startQuotaAlertScheduler() {
       }
 
       if (quotaData?.accounts?.length) {
+        let previous: PreviousSnapshots = new Map();
         try {
-          await recordQuotaSnapshots(quotaData.accounts);
+          previous = await recordQuotaSnapshots(quotaData.accounts);
         } catch (err) {
           logger.error({ err }, "Quota scheduler: failed to record quota snapshots");
         }
@@ -132,6 +134,11 @@ function startQuotaAlertScheduler() {
           await evaluateAutoResetsForAccounts(quotaData.accounts, publicDashboardUrl);
         } catch (err) {
           logger.error({ err }, "Quota scheduler: failed to evaluate auto-resets");
+        }
+        try {
+          await primeIdleWindows(quotaData.accounts, previous);
+        } catch (err) {
+          logger.error({ err }, "Quota scheduler: failed to prime idle windows");
         }
         await pruneQuotaSnapshotsIfDue();
       }

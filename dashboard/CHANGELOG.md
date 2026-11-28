@@ -10,6 +10,8 @@
 - Consolidate Quick Start and provider actions, remove redundant labels, and generate client configs only when the required key and models are available.
 - Use inclusive usage date ranges and flag truncated results before totals and charts.
 - Notify the configured quota alert channel when an automatic reset succeeds, including the remaining reset credits and next expiry.
+- Mark credit resets and window starts on each account's quota history chart.
+- Optionally start an idle quota window as soon as it resets, with one minimal request per account.
 
 ### Fixes
 

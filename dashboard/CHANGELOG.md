@@ -19,6 +19,13 @@
 - Prevent unavailable quota accounts from opening empty details.
 - Filter non-admin usage history by API-key ownership rather than request source labels.
 
+## [0.1.93](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.92...dashboard-v0.1.93) (2026-11-28)
+
+
+### Bug Fixes
+
+* **i18n:** clarify Simplified Chinese quota, spending and usage labels ([#364](https://github.com/itsmylife44/cliproxyapi-dashboard/issues/364)) ([a18a708](https://github.com/itsmylife44/cliproxyapi-dashboard/commit/a18a70874f25a59d1bb546d597c9e3c23255c3a6))
+
 ## [0.1.92](https://github.com/itsmylife44/cliproxyapi-dashboard/compare/dashboard-v0.1.91...dashboard-v0.1.92) (2026-11-27)
 
 

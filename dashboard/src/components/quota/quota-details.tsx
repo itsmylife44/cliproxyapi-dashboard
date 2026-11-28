@@ -5,7 +5,9 @@ import { useFormatter, useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { HelpTooltip } from "@/components/ui/tooltip";
 import { AccountQuotaHistory, prefetchAccountQuotaHistory } from "@/components/quota/account-quota-history";
+import { AutoPrimeHelp } from "@/components/quota/auto-prime-help";
 import { QuotaCapacity } from "@/components/quota/quota-capacity";
 import { formatRelativeTime, parseRelativeTime } from "@/lib/format-relative-time";
 import { isShortTermQuotaWindow } from "@/lib/quota-window-classification";
@@ -188,6 +190,7 @@ export function QuotaDetails({
   const format = useFormatter();
   const t = useTranslations("quota");
   const [pendingManualReset, setPendingManualReset] = useState<PendingManualReset | null>(null);
+  const [primeHelpOpen, setPrimeHelpOpen] = useState(false);
 
   const maskedAccountCounts = new Map<string, number>();
   for (const account of filteredAccounts) {
@@ -366,16 +369,22 @@ export function QuotaDetails({
                       {isRowExpanded && (
                         <div className="space-y-3 border-t border-[var(--surface-border)] bg-[var(--surface-base)] px-4 py-3">
                           {!section.modelFirstView && onUpdateAutoReset && (
-                            <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-[var(--text-primary)]">
-                              <input
-                                type="checkbox"
-                                checked={rule.prime}
-                                disabled={isBusy}
-                                onChange={(e) => onUpdateAutoReset(account.auth_index, { ...rule, prime: e.target.checked })}
-                                className="h-3.5 w-3.5 rounded border-[var(--surface-border)] accent-[var(--accent)]"
-                              />
-                              <span>{t("autoPrimeToggle")}</span>
-                            </label>
+                            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 px-3 py-2 text-xs">
+                              <span className="inline-flex items-center">
+                                <label className="inline-flex cursor-pointer items-center gap-1.5 font-medium text-[var(--text-primary)]">
+                                  <input
+                                    type="checkbox"
+                                    checked={rule.prime}
+                                    disabled={isBusy}
+                                    onChange={(e) => onUpdateAutoReset(account.auth_index, { ...rule, prime: e.target.checked })}
+                                    className="h-3.5 w-3.5 rounded border-[var(--surface-border)] accent-[var(--accent)]"
+                                  />
+                                  <span>{t("autoPrimeToggle")}</span>
+                                </label>
+                                <HelpTooltip content={t("autoPrimeHelp")} onClick={() => setPrimeHelpOpen(true)} />
+                              </span>
+                              <span className="text-[var(--text-muted)]">{t("autoPrimeSummary")}</span>
+                            </div>
                           )}
                           {resetSupported && onUpdateAutoReset && (
                             <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 px-3 py-2 text-xs">
@@ -543,6 +552,8 @@ export function QuotaDetails({
           </div>
         </div>
       )}
+
+      <AutoPrimeHelp isOpen={primeHelpOpen} onClose={() => setPrimeHelpOpen(false)} />
 
       {onManualReset && (() => {
         const liveCreditSummary = pendingManualReset ? autoResetCredits?.[pendingManualReset.authIndex] : undefined;

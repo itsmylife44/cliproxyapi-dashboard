@@ -864,7 +864,23 @@
     "autoRefreshBadge": "Auto · 60s",
     "resetPin": "R",
     "primePin": "P",
-    "autoPrimeToggle": "Iniciar ventanas al restablecer",
+    "autoPrimeToggle": "Auto-prime",
+    "autoPrimeSummary": "Adelanta la próxima recarga cuando esta cuenta está inactiva.",
+    "autoPrimeHelp": "La cuenta atrás de un límite hasta su próxima recarga solo empieza cuando se usa la cuenta. Esta opción la inicia justo después de cada recarga. Haz clic para ver detalles.",
+    "autoPrimeDetails": {
+      "why": { "title": "Por qué ayuda", "body": "Límites como el de 5 horas y el semanal solo empiezan la cuenta atrás hasta la próxima recarga cuando se usa la cuenta. Si la cuenta queda inactiva tras una recarga, ese tiempo se suma y la próxima recarga llega más tarde de lo necesario." },
+      "what": { "title": "Qué hace", "body": "Cada 5 minutos el panel revisa esta cuenta. Cuando un límite se ha recargado y sigue sin usarse, envía una solicitud mínima (el modelo disponible más barato, pocos tokens de salida) que inicia la cuenta atrás de inmediato." },
+      "quiet": { "title": "Cuándo no hace nada", "body": "Solo envía cuando un límite marca 100 % y ya pasó su última hora de recarga conocida. Si ya usaste la cuenta, la cuenta atrás ya está en marcha y no se envía nada. Cada inicio aparece como una marca P en el historial de cuota." },
+      "cost": { "title": "Coste", "body": "Una solicitud con pocos tokens de salida por recarga, con el modelo más barato de la cuenta. Nunca usa créditos de restablecimiento." }
+    },
+    "autoPrimeDiagram": {
+      "refill": "Recarga",
+      "without": "No",
+      "with": "Sí",
+      "idle": "inactiva",
+      "nextRefill": "próxima recarga",
+      "caption": "Si la cuenta atrás empieza en la recarga, la próxima recarga llega lo antes posible."
+    },
     "autoResetToggle": "Auto-reset",
     "autoResetWhenLabel": "Activar cuando",
     "autoReset5hLabel": "5h <=",

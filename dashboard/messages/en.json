@@ -864,7 +864,23 @@
     "autoRefreshBadge": "Auto · 60s",
     "resetPin": "R",
     "primePin": "P",
-    "autoPrimeToggle": "Start windows on reset",
+    "autoPrimeToggle": "Auto-prime",
+    "autoPrimeSummary": "Gets the next refill sooner when this account sits idle.",
+    "autoPrimeHelp": "A limit's countdown to its next refill only starts once the account is used. This starts it right after each refill. Click for details.",
+    "autoPrimeDetails": {
+      "why": { "title": "Why it helps", "body": "Limits like the 5-hour and weekly ones only start their countdown to the next refill when the account is used. If the account sits idle after a refill, that idle time is added on top, so the next refill comes later than it needs to." },
+      "what": { "title": "What it does", "body": "Every 5 minutes the dashboard checks this account. When a limit has refilled and is still unused, it sends one tiny request (the cheapest available model, a few output tokens), which starts the countdown right away." },
+      "quiet": { "title": "When it stays quiet", "body": "It only sends when a limit reads 100% and its last known refill time has passed. If you have already used the account, the countdown is already running and nothing is sent. Each start appears as a P pin on the quota history chart." },
+      "cost": { "title": "Cost", "body": "One request with a few output tokens per refill, on the cheapest model the account offers. It never uses reset credits." }
+    },
+    "autoPrimeDiagram": {
+      "refill": "Refill",
+      "without": "Off",
+      "with": "On",
+      "idle": "idle",
+      "nextRefill": "next refill",
+      "caption": "With the countdown started at the refill, the next refill comes as soon as possible."
+    },
     "autoResetToggle": "Auto-reset",
     "autoResetWhenLabel": "Trigger when",
     "autoReset5hLabel": "5h <=",

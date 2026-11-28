@@ -55,14 +55,20 @@ export function Tooltip({
 
 interface HelpTooltipProps {
   content: string;
+  /** Opens a fuller explanation; the tooltip stays as the hover summary. */
+  onClick?: () => void;
 }
 
-export function HelpTooltip({ content }: HelpTooltipProps) {
+export function HelpTooltip({ content, onClick }: HelpTooltipProps) {
   return (
     <Tooltip content={content} side="bottom">
       <button
         type="button"
-        className="inline-flex items-center justify-center size-5 rounded-full bg-[var(--surface-muted)] text-[var(--text-muted)] text-[9px] cursor-help hover:bg-[var(--surface-hover)] hover:text-[var(--text-secondary)] transition-colors duration-150 select-none ml-1 align-middle"
+        onClick={onClick}
+        className={cn(
+          "inline-flex items-center justify-center size-5 rounded-full bg-[var(--surface-muted)] text-[var(--text-muted)] text-[9px] hover:bg-[var(--surface-hover)] hover:text-[var(--text-secondary)] transition-colors duration-150 select-none ml-1 align-middle focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--accent)]",
+          onClick ? "cursor-pointer" : "cursor-help"
+        )}
         aria-label={content}
       >
         ?

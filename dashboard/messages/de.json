@@ -864,7 +864,23 @@
     "autoRefreshBadge": "Auto · 60s",
     "resetPin": "R",
     "primePin": "P",
-    "autoPrimeToggle": "Fenster nach Reset starten",
+    "autoPrimeToggle": "Auto-Prime",
+    "autoPrimeSummary": "Holt die nächste Auffüllung früher, wenn dieses Konto ungenutzt ist.",
+    "autoPrimeHelp": "Der Countdown eines Limits bis zur nächsten Auffüllung startet erst, wenn das Konto genutzt wird. Diese Option startet ihn direkt nach jeder Auffüllung. Für Details klicken.",
+    "autoPrimeDetails": {
+      "why": { "title": "Warum es hilft", "body": "Limits wie das 5-Stunden- und das Wochenlimit starten ihren Countdown bis zur nächsten Auffüllung erst, wenn das Konto genutzt wird. Bleibt das Konto nach einer Auffüllung ungenutzt, kommt diese Zeit obendrauf und die nächste Auffüllung verzögert sich unnötig." },
+      "what": { "title": "Was es tut", "body": "Alle 5 Minuten prüft das Dashboard dieses Konto. Ist ein Limit aufgefüllt und noch unbenutzt, sendet es eine winzige Anfrage (das günstigste verfügbare Modell, wenige Ausgabetokens), die den Countdown sofort startet." },
+      "quiet": { "title": "Wann es nichts tut", "body": "Es sendet nur, wenn ein Limit 100 % anzeigt und die zuletzt bekannte Auffüllzeit vorbei ist. Wurde das Konto bereits genutzt, läuft der Countdown schon und es wird nichts gesendet. Jeder Start erscheint als P-Markierung im Kontingentverlauf." },
+      "cost": { "title": "Kosten", "body": "Eine Anfrage mit wenigen Ausgabetokens pro Auffüllung, mit dem günstigsten Modell des Kontos. Reset-Guthaben wird nie verwendet." }
+    },
+    "autoPrimeDiagram": {
+      "refill": "Auffüllung",
+      "without": "Aus",
+      "with": "An",
+      "idle": "ungenutzt",
+      "nextRefill": "nächste Auffüllung",
+      "caption": "Startet der Countdown direkt bei der Auffüllung, kommt die nächste Auffüllung so früh wie möglich."
+    },
     "autoResetToggle": "Auto-Reset",
     "autoResetWhenLabel": "Auslösen bei",
     "autoReset5hLabel": "5h <=",

@@ -48,8 +48,12 @@ async function primeAccount(authIndex: string, model: string | undefined): Promi
     body: JSON.stringify({ auth_index: authIndex, ...(model ? { model } : {}) }),
     signal: AbortSignal.timeout(60_000),
   });
-  await res.body?.cancel().catch(() => undefined);
-  return res.ok;
+  if (res.ok) {
+    await res.body?.cancel().catch(() => undefined);
+    return true;
+  }
+  logger.warn({ authIndex, model, status: res.status, body: (await res.text()).slice(0, 300) }, "Quota window prime rejected by proxy");
+  return false;
 }
 
 export async function primeIdleWindows(

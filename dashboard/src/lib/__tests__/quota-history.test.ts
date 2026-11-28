@@ -91,10 +91,10 @@ describe("quota history multi-account batching and valuation", () => {
     const history = await getAccountQuotaHistory("probe", TEST_PRICING);
     expect(history.windows["gemini-5h"]?.estimatedFullWindowUsd).toBeCloseTo(300);
     expect(history.windows["gemini-5h"]?.estimatedRemainingUsd).toBeCloseTo(294);
-    const model = history.models.find((m) => m.modelId === "gemini-2.5-pro");
-    expect(model?.estimatedFullWindowUsd).toBeCloseTo(300);
-    expect(model?.observedUsageUsd).toBeCloseTo(6);
-    expect(model?.observedDelta).toBeCloseTo(0.02);
+    const window = history.models.find((m) => m.groupId === "gemini-5h" && !m.modelId);
+    expect(window?.estimatedFullWindowUsd).toBeCloseTo(300);
+    expect(window?.observedUsageUsd).toBeCloseTo(6);
+    expect(window?.observedDelta).toBeCloseTo(0.02);
   });
 
   it("clamps 5m cache-write tokens to >= 0 when cacheWrite1hTokens exceeds cacheWriteTokens", async () => {
@@ -240,8 +240,6 @@ describe("quota history multi-account batching and valuation", () => {
 
     const history = await getAccountQuotaHistory("ag-jitter", TEST_PRICING);
     expect(history.windows["gemini-5h"]?.estimatedFullWindowUsd).toBeCloseTo(1.5 / 0.021);
-    expect(history.models.map((m) => m.modelId)).toContain("gemini-2.5-pro");
-    expect(history.models.find((m) => m.modelId === "gemini-2.5-pro")?.observedUsageUsd).toBeCloseTo(1.5);
   });
 
   it("does not let an idle unpriced/other-model ping poison window valuation", async () => {
@@ -268,10 +266,6 @@ describe("quota history multi-account batching and valuation", () => {
     });
     expect(history.windows["gemini-weekly"]?.estimatedFullWindowUsd).toBeCloseTo(7.5);
     expect(history.windows["gemini-weekly"]?.estimatedRemainingUsd).toBeCloseTo(6.75);
-    const flash = history.models.find((m) => m.modelId === "gemini-3.8-flash-high");
-    expect(flash?.estimatedFullWindowUsd).toBeCloseTo(7.5);
-    expect(flash?.estimatedRemainingUsd).toBeCloseTo(6.75);
-    expect(history.models.find((m) => m.modelId === "gemini-3-flash")).toBeUndefined();
   });
 
   it.each([
@@ -293,14 +287,18 @@ describe("quota history multi-account batching and valuation", () => {
     snapshotFindMany.mockResolvedValueOnce(snapshots.slice(0, -1));
     usageFindMany.mockResolvedValueOnce(usage);
     const retained = await getAccountQuotaHistory("rolling", TEST_PRICING);
-    expect(retained.models.some((model) => model.modelId === "gpt-6.1-sol")).toBe(true);
+    expect(retained.models.find((model) => model.groupId === groupId)?.estimatedFullWindowUsd).not.toBeNull();
     expect(retained.windows[groupId]?.estimatedFullWindowUsd).not.toBeNull();
+    expect(retained.windows[groupId]?.modelCostContributions).toEqual([
+      { modelId: "gpt-6.1-sol", projectedUsd: expect.closeTo(10) },
+    ]);
     quotaHistoryCache.invalidateAll();
     snapshotFindMany.mockResolvedValueOnce(snapshots);
     usageFindMany.mockResolvedValueOnce(usage);
     const history = await getAccountQuotaHistory("rolling", TEST_PRICING);
-    expect(history.models.some((model) => model.modelId === "gpt-6.1-sol")).toBe(false);
+    expect(history.models.find((model) => model.groupId === groupId)?.estimatedFullWindowUsd).toBeNull();
     expect(history.windows[groupId]?.estimatedFullWindowUsd).toBeNull();
+    expect(history.windows[groupId]?.modelCostContributions).toEqual([]);
   });
 
   it("ignores external quota drops that have no logged CLIProxyAPI usage", async () => {
@@ -321,7 +319,7 @@ describe("quota history multi-account batching and valuation", () => {
     expect(history.windows["gemini-5h"]?.estimatedRemainingUsd).toBeCloseTo(5);
   });
 
-  it("calibrates a model from drops it dominates even when another model adds negligible spend", async () => {
+  it("extrapolates the shared window from the whole usage mix without assigning its quota to a model", async () => {
     const reset = new Date("2026-11-20T15:00:00Z");
     const at = (minute: number) => new Date(Date.UTC(2026, 10, 20, 10, minute));
     snapshotFindMany.mockResolvedValueOnce([
@@ -338,8 +336,12 @@ describe("quota history multi-account batching and valuation", () => {
     ]);
 
     const history = await getAccountQuotaHistory("mix", TEST_PRICING);
-    const pro = history.models.find((m) => m.modelId === "gemini-2.5-pro");
-    expect(pro?.estimatedFullWindowUsd).toBeCloseTo(2.002 / 0.2);
-    expect(history.models.find((m) => m.modelId === "gpt-6.1-terra")).toBeUndefined();
+    expect(history.windows["primary-window"]?.estimatedFullWindowUsd).toBeCloseTo(2.002 / 0.2);
+    expect(history.windows["primary-window"]?.modelCostContributions).toEqual([
+      { modelId: "gemini-2.5-pro", projectedUsd: expect.closeTo(2 / 0.2) },
+      { modelId: "gpt-6.1-terra", projectedUsd: expect.closeTo(0.002 / 0.2, 6) },
+    ]);
+    expect(history.models.map((row) => row.modelId)).toEqual([""]);
+    expect(history.models[0]?.series.at(-1)?.estimatedFullWindowUsd).toBeCloseTo(2.002 / 0.2);
   });
 });

@@ -282,6 +282,7 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
   );
 
   const hasUsdSeries = selectedModel.estimatedFullWindowUsd !== null;
+  const modelCostContributions = data.windows[activeGroupId]?.modelCostContributions;
 
   return (
     <>
@@ -444,7 +445,26 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
           </ResponsiveContainer>
         </div>
 
-        <div className="overflow-x-auto rounded-sm border border-[var(--surface-border)]">
+        {modelCostContributions?.length ? (
+          <table className="w-full text-xs break-all">
+            <thead>
+              <tr className="border-b border-[var(--surface-border)] text-[var(--text-muted)]">
+                <th scope="col" className="px-2.5 py-1.5 text-left">{t("modelColumnLabel")}</th>
+                <th scope="col" className="px-2.5 py-1.5 text-right">{t("projectedModelCostLabel")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {modelCostContributions.map(({ modelId, projectedUsd }) => (
+                <tr key={modelId} className="border-b border-[var(--surface-border)] last:border-b-0">
+                  <th scope="row" className="px-2.5 py-1.5 text-left font-mono font-normal">{modelId}</th>
+                  <td className="px-2.5 py-1.5 text-right tabular-nums">{formatUSD(projectedUsd)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
+
+        {visibleModels.some((model) => model.modelId) ? <div className="overflow-x-auto rounded-sm border border-[var(--surface-border)]">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[var(--surface-border)] bg-[var(--surface-muted)]/60 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
@@ -503,7 +523,7 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
               })}
             </tbody>
           </table>
-        </div>
+        </div> : null}
       </div>
     </>
   );

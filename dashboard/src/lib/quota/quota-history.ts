@@ -12,8 +12,6 @@ import { COMPLETED_QUOTA_WINDOWS_FOR_ESTIMATES, HISTORY_WINDOW_DAYS, RESET_TIME_
 
 const MIN_OBSERVED_DELTA = 0.02;
 const DELTA_EPSILON = 1e-9;
-/** Share of an interval's spend a model needs before that interval's quota drop counts toward its own rate. */
-const DOMINANT_MODEL_SPEND_SHARE = 0.95;
 
 export interface QuotaHistoryPoint {
   timestamp: string;
@@ -44,6 +42,7 @@ export interface AccountQuotaHistoryResponse {
       estimatedFullWindowUsd: number | null;
       previousEstimatedFullWindowUsd: number | null;
       estimatedRemainingUsd: number | null;
+      modelCostContributions: Array<{ modelId: string; projectedUsd: number }>;
     }
   >;
   /** Credit resets and primes the dashboard performed, oldest first. */
@@ -168,14 +167,16 @@ function isQualifyingDepletion(delta: number, usageUsd: number): boolean {
 interface CalibrationAccumulator {
   currentDelta: number;
   currentUsd: number;
-  lastQualifying: { fullUsd: number; delta: number; usageUsd: number } | null;
+  currentModelUsd: Map<string, number> | null;
+  lastQualifying: { fullUsd: number; delta: number; usageUsd: number; modelUsd: ReadonlyMap<string, number> | null } | null;
   priorQualifyingFullUsd: number | null;
 }
 
-function createAccumulator(): CalibrationAccumulator {
+function createAccumulator(includeModelCosts: boolean): CalibrationAccumulator {
   return {
     currentDelta: 0,
     currentUsd: 0,
+    currentModelUsd: includeModelCosts ? new Map() : null,
     lastQualifying: null,
     priorQualifyingFullUsd: null,
   };
@@ -188,10 +189,13 @@ function finalizeAccumulatorWindow(acc: CalibrationAccumulator): void {
       fullUsd: acc.currentUsd / acc.currentDelta,
       delta: acc.currentDelta,
       usageUsd: acc.currentUsd,
+      modelUsd: acc.currentModelUsd,
     };
+    if (acc.currentModelUsd) acc.currentModelUsd = new Map();
   }
   acc.currentDelta = 0;
   acc.currentUsd = 0;
+  acc.currentModelUsd?.clear();
 }
 
 function readAccumulatorEstimate(acc: CalibrationAccumulator) {
@@ -212,6 +216,15 @@ function readAccumulatorEstimate(acc: CalibrationAccumulator) {
   };
 }
 
+function readModelCostContributions(acc: CalibrationAccumulator): AccountQuotaHistoryResponse["windows"][string]["modelCostContributions"] {
+  const currentQualifies = isQualifyingDepletion(acc.currentDelta, acc.currentUsd);
+  const modelUsd = currentQualifies ? acc.currentModelUsd : acc.lastQualifying?.modelUsd;
+  const delta = currentQualifies ? acc.currentDelta : acc.lastQualifying?.delta;
+  if (!modelUsd || !delta) return [];
+  return Array.from(modelUsd, ([modelId, usd]) => ({ modelId, projectedUsd: usd / delta }))
+    .sort((a, b) => b.projectedUsd - a.projectedUsd || a.modelId.localeCompare(b.modelId));
+}
+
 /**
  * The full-window estimate at each window boundary and at the latest snapshot, null elsewhere.
  * Sampling at boundaries hides the swings of a partly used window, so a pricing change reads as one step.
@@ -221,28 +234,25 @@ type EstimateTimeline = Array<number | null>;
 function calibrateSeries(
   series: SnapshotRow[],
   precomputedUsage: PrecomputedUsage[],
-  matchesUsage: (rec: PrecomputedUsage) => boolean
+  matchesUsage: (rec: PrecomputedUsage) => boolean,
+  includeModelCosts = false
 ): {
   windowAcc: CalibrationAccumulator;
   windowTimeline: EstimateTimeline;
-  modelAccs: Map<string, CalibrationAccumulator>;
-  modelTimelines: Map<string, EstimateTimeline>;
 } {
   const start = estimateWindowStart(series);
-  const windowAcc = createAccumulator();
+  const windowAcc = createAccumulator(includeModelCosts);
   const windowTimeline: EstimateTimeline = new Array(series.length).fill(null);
-  const modelAccs = new Map<string, CalibrationAccumulator>();
-  const modelTimelines = new Map<string, EstimateTimeline>();
   let pendingUsd = 0;
+  const pendingModelUsd = includeModelCosts ? new Map<string, number>() : null;
   let pendingHasUnpriced = false;
-  let pendingModels = new Map<string, number>();
   let usageIndex = 0;
   let lowestRemaining = series[start]!.remaining;
 
   const resetPending = () => {
     pendingUsd = 0;
     pendingHasUnpriced = false;
-    pendingModels = new Map<string, number>();
+    pendingModelUsd?.clear();
   };
 
   for (let i = start + 1; i < series.length; i++) {
@@ -264,16 +274,15 @@ function calibrateSeries(
         pendingHasUnpriced = true;
       } else {
         pendingUsd += record.usd;
-        pendingModels.set(record.model, (pendingModels.get(record.model) ?? 0) + record.usd);
+        if (pendingModelUsd && record.usd > 0) {
+          pendingModelUsd.set(record.model, (pendingModelUsd.get(record.model) ?? 0) + record.usd);
+        }
       }
     }
 
     const isReset = isWindowReset(previous, current);
     if (isReset) {
       finalizeAccumulatorWindow(windowAcc);
-      for (const acc of modelAccs.values()) {
-        finalizeAccumulatorWindow(acc);
-      }
       resetPending();
       lowestRemaining = current.remaining;
     } else {
@@ -286,18 +295,10 @@ function calibrateSeries(
         if (!pendingHasUnpriced && pendingUsd > 0) {
           windowAcc.currentDelta += drop;
           windowAcc.currentUsd += pendingUsd;
-          // A model calibrates its own rate only from drops it clearly caused; a share threshold
-          // rather than "sole model" keeps negligible co-traffic from discarding most intervals.
-          for (const [model, modelUsd] of pendingModels) {
-            if (modelUsd / pendingUsd < DOMINANT_MODEL_SPEND_SHARE) continue;
-            let modelAcc = modelAccs.get(model);
-            if (!modelAcc) {
-              modelAcc = createAccumulator();
-              modelAccs.set(model, modelAcc);
-              modelTimelines.set(model, new Array(series.length).fill(null));
+          if (pendingModelUsd && windowAcc.currentModelUsd) {
+            for (const [modelId, usd] of pendingModelUsd) {
+              windowAcc.currentModelUsd.set(modelId, (windowAcc.currentModelUsd.get(modelId) ?? 0) + usd);
             }
-            modelAcc.currentDelta += drop;
-            modelAcc.currentUsd += pendingUsd;
           }
         }
         resetPending();
@@ -308,13 +309,10 @@ function calibrateSeries(
 
     if (isReset || i === series.length - 1) {
       windowTimeline[i] = readAccumulatorEstimate(windowAcc).estimatedFullWindowUsd;
-      for (const [model, acc] of modelAccs) {
-        modelTimelines.get(model)![i] = readAccumulatorEstimate(acc).estimatedFullWindowUsd;
-      }
     }
   }
 
-  return { windowAcc, windowTimeline, modelAccs, modelTimelines };
+  return { windowAcc, windowTimeline };
 }
 
 function buildModelSeriesPoints(
@@ -341,7 +339,6 @@ function buildQuotaModelValuation(params: {
   timeline: EstimateTimeline;
   estimatedFullWindowUsd: number | null;
   previousEstimatedFullWindowUsd: number | null;
-  estimatedRemainingUsd?: number | null;
   observedDelta: number;
   observedUsageUsd: number;
 }): QuotaModelValuation {
@@ -353,12 +350,9 @@ function buildQuotaModelValuation(params: {
     resetTime: latest.resetTime ? latest.resetTime.toISOString() : null,
     estimatedFullWindowUsd: params.estimatedFullWindowUsd,
     previousEstimatedFullWindowUsd: params.previousEstimatedFullWindowUsd,
-    estimatedRemainingUsd:
-      params.estimatedRemainingUsd !== undefined
-        ? params.estimatedRemainingUsd
-        : params.estimatedFullWindowUsd !== null
-          ? params.estimatedFullWindowUsd * latest.remaining
-          : null,
+    estimatedRemainingUsd: params.estimatedFullWindowUsd === null
+      ? null
+      : params.estimatedFullWindowUsd * latest.remaining,
     observedDelta: params.observedDelta,
     observedUsageUsd: params.observedUsageUsd,
     series: buildModelSeriesPoints(params.series, params.seriesCutoffMs, params.timeline),
@@ -436,15 +430,15 @@ function computeQuotaHistoryForAccount(
 
   const windows: AccountQuotaHistoryResponse["windows"] = {};
   const models: QuotaModelValuation[] = [];
-  const representedGroups = new Set<string>();
   const seriesCutoffMs = latestAccountCapturedMs - HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
   for (const [groupId, series] of windowSnapshotsByGroup) {
     const latest = series[series.length - 1]!;
-    const { windowAcc, windowTimeline, modelAccs, modelTimelines } = calibrateSeries(
+    const { windowAcc, windowTimeline } = calibrateSeries(
       series,
       precomputedUsage,
-      (rec) => usageMatchesWindow(rec.model, latest.usageModels)
+      (rec) => usageMatchesWindow(rec.model, latest.usageModels),
+      true
     );
     const windowEst = readAccumulatorEstimate(windowAcc);
     const windowRemainingUsd =
@@ -454,40 +448,19 @@ function computeQuotaHistoryForAccount(
       estimatedFullWindowUsd: windowEst.estimatedFullWindowUsd,
       previousEstimatedFullWindowUsd: windowEst.previousEstimatedFullWindowUsd,
       estimatedRemainingUsd: windowRemainingUsd,
+      modelCostContributions: readModelCostContributions(windowAcc),
     };
 
-    for (const [modelId, modelAcc] of modelAccs) {
-      const modelEst = readAccumulatorEstimate(modelAcc);
-      if (modelEst.observedUsageUsd <= 0 && modelEst.estimatedFullWindowUsd === null) continue;
-      representedGroups.add(groupId);
-      models.push(
-        buildQuotaModelValuation({
-          modelId,
-          groupId,
-          series,
-          seriesCutoffMs,
-          timeline: modelTimelines.get(modelId)!,
-          ...modelEst,
-        })
-      );
-    }
-
-    if (!representedGroups.has(groupId)) {
-      models.push(
-        buildQuotaModelValuation({
-          modelId: "",
-          groupId,
-          series,
-          seriesCutoffMs,
-          timeline: windowTimeline,
-          estimatedFullWindowUsd: windowEst.estimatedFullWindowUsd,
-          previousEstimatedFullWindowUsd: windowEst.previousEstimatedFullWindowUsd,
-          estimatedRemainingUsd: windowRemainingUsd,
-          observedDelta: 0,
-          observedUsageUsd: 0,
-        })
-      );
-    }
+    models.push(
+      buildQuotaModelValuation({
+        modelId: "",
+        groupId,
+        series,
+        seriesCutoffMs,
+        timeline: windowTimeline,
+        ...windowEst,
+      })
+    );
   }
 
   for (const [groupId, seriesByModel] of snapshotsByGroupAndModel) {
@@ -531,6 +504,7 @@ export function redactQuotaHistoryValuation(
       estimatedFullWindowUsd: null,
       previousEstimatedFullWindowUsd: null,
       estimatedRemainingUsd: null,
+      modelCostContributions: [],
     };
   }
 

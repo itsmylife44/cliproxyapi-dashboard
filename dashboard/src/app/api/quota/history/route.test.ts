@@ -45,6 +45,7 @@ const SAMPLE_HISTORY = {
       estimatedFullWindowUsd: 300,
       previousEstimatedFullWindowUsd: 250,
       estimatedRemainingUsd: 294,
+      modelCostContributions: [{ modelId: "gemini-2.5-pro", projectedUsd: 300 }],
     },
   },
   models: [
@@ -94,6 +95,7 @@ describe("GET /api/quota/history", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.windows["gemini-5h"].estimatedFullWindowUsd).toBe(300);
+    expect(body.windows["gemini-5h"].modelCostContributions).toEqual(SAMPLE_HISTORY.windows["gemini-5h"].modelCostContributions);
     expect(body.models[0].estimatedFullWindowUsd).toBe(300);
     expect(body.models[0].series[0].estimatedFullWindowUsd).toBe(300);
   });
@@ -110,6 +112,7 @@ describe("GET /api/quota/history", () => {
       estimatedFullWindowUsd: null,
       previousEstimatedFullWindowUsd: null,
       estimatedRemainingUsd: null,
+      modelCostContributions: [],
     });
     expect(body.models[0].estimatedFullWindowUsd).toBeNull();
     expect(body.models[0].previousEstimatedFullWindowUsd).toBeNull();
@@ -128,6 +131,7 @@ describe("GET /api/quota/history", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.histories["acc-1"].windows["gemini-5h"].estimatedFullWindowUsd).toBeNull();
+    expect(body.histories["acc-1"].windows["gemini-5h"].modelCostContributions).toEqual([]);
     expect(body.histories["acc-1"].models[0].estimatedFullWindowUsd).toBeNull();
   });
 });

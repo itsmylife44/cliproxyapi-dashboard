@@ -13,7 +13,6 @@ interface TelegramSettings {
   botToken: string;
   chatId: string;
   threshold: number;
-  enabled: boolean;
   channel: "disabled" | "telegram" | "discord";
   webhook: string;
   providers: string[];
@@ -65,7 +64,6 @@ export function QuotaAlerts() {
     botToken: "",
     chatId: "",
     threshold: 20,
-    enabled: false,
     channel: "disabled",
     webhook: "",
     providers: ALERT_PROVIDERS.map((p) => p.key),
@@ -102,7 +100,6 @@ export function QuotaAlerts() {
             botToken: data.botToken ?? "",
             chatId: data.chatId ?? "",
             threshold: data.threshold ?? 20,
-            enabled: data.enabled ?? false,
             channel: data.channel ?? "disabled",
             webhook: data.webhook ?? "",
             providers: Array.isArray(data.providers) ? data.providers : ALERT_PROVIDERS.map((p) => p.key),
@@ -133,7 +130,6 @@ export function QuotaAlerts() {
       const body: Record<string, unknown> = {
         chatId: settings.chatId,
         threshold: settings.threshold,
-        enabled: settings.channel === "telegram",
         channel: settings.channel,
         webhook: settings.webhook,
         providers: settings.providers,
@@ -157,7 +153,6 @@ export function QuotaAlerts() {
             botToken: refreshData.botToken ?? "",
             chatId: refreshData.chatId ?? "",
             threshold: refreshData.threshold ?? 20,
-            enabled: refreshData.enabled ?? false,
             channel: refreshData.channel ?? "disabled",
             webhook: refreshData.webhook ?? "",
             providers: Array.isArray(refreshData.providers) ? refreshData.providers : ALERT_PROVIDERS.map((p) => p.key),

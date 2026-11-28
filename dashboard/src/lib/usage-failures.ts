@@ -167,13 +167,14 @@ function extractFromJsonPayload(raw: string): {
     const messageCandidate =
       (typeof errObj?.message === "string" && errObj.message) ||
       (typeof parsed.detail === "string" && parsed.detail) ||
+      (typeof parsed.error === "string" && parsed.error) ||
       (typeof parsed.message === "string" && parsed.message) ||
       null;
 
     return {
       status,
       code,
-      message: normalizeReasonMessage(messageCandidate),
+      message: normalizeReasonMessage(messageCandidate) ?? normalizeReasonMessage(raw),
     };
   } catch {
     // Failure bodies are truncated at MAX_FAILURE_BODY_LENGTH (500 chars), so JSON payloads

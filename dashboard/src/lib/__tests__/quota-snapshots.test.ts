@@ -7,6 +7,7 @@ vi.mock("@/lib/db", () => ({
       createMany: vi.fn().mockResolvedValue({ count: 0 }),
       deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
+    $executeRaw: vi.fn().mockResolvedValue(0),
   },
 }));
 
@@ -23,9 +24,7 @@ import { logger } from "@/lib/logger";
 import type { QuotaAccount } from "@/lib/model-first-monitoring";
 import {
   PRUNE_INTERVAL_MS,
-  QUOTA_SNAPSHOT_RETENTION_DAYS,
   SNAPSHOT_HEARTBEAT_MS,
-  pruneOldQuotaSnapshots,
   pruneQuotaSnapshotsIfDue,
   recordQuotaSnapshots,
 } from "@/lib/quota/quota-snapshots";
@@ -37,7 +36,7 @@ describe("quota-snapshots", () => {
 
   const baseNow = new Date("2026-11-15T12:00:00.000Z");
 
-  it("records snapshots for healthy accounts and skips extra-usage, unsupported, and errored accounts", async () => {
+  it("records snapshots for healthy accounts and skips unsupported and errored accounts", async () => {
     vi.mocked(prisma.quotaSnapshot.findMany).mockResolvedValueOnce([]);
     vi.mocked(prisma.quotaSnapshot.createMany).mockResolvedValueOnce({ count: 2 });
 
@@ -53,13 +52,6 @@ describe("quota-snapshots", () => {
             label: "5h",
             remainingFraction: 0.8,
             resetTime: "2026-11-15T17:00:00.000Z",
-            models: [],
-          },
-          {
-            id: "extra-usage",
-            label: "Extra Usage",
-            remainingFraction: 0.5,
-            resetTime: null,
             models: [],
           },
         ],
@@ -110,9 +102,8 @@ describe("quota-snapshots", () => {
       },
     ];
 
-    const count = await recordQuotaSnapshots(accounts, baseNow);
+    await recordQuotaSnapshots(accounts, baseNow);
 
-    expect(count).toBe(2);
     expect(prisma.quotaSnapshot.createMany).toHaveBeenCalledWith({
       data: [
         {
@@ -122,6 +113,8 @@ describe("quota-snapshots", () => {
           modelId: "",
           remaining: 0.8,
           resetTime: new Date("2026-11-15T17:00:00.000Z"),
+          windowSeconds: null,
+          usageModels: [],
           capturedAt: baseNow,
         },
         {
@@ -131,6 +124,8 @@ describe("quota-snapshots", () => {
           modelId: "gemini-2.5-pro",
           remaining: 0.9,
           resetTime: new Date("2026-11-16T00:00:00.000Z"),
+          windowSeconds: null,
+          usageModels: [],
           capturedAt: baseNow,
         },
       ],
@@ -168,7 +163,7 @@ describe("quota-snapshots", () => {
       },
     ] as never);
 
-    expect(await recordQuotaSnapshots(accounts, baseNow)).toBe(0);
+    await recordQuotaSnapshots(accounts, baseNow);
     expect(prisma.quotaSnapshot.createMany).not.toHaveBeenCalled();
 
     // Heartbeat elapsed (>= 15m) -> written
@@ -184,44 +179,30 @@ describe("quota-snapshots", () => {
     ] as never);
     vi.mocked(prisma.quotaSnapshot.createMany).mockResolvedValueOnce({ count: 1 });
 
-    expect(await recordQuotaSnapshots(accounts, baseNow)).toBe(1);
+    const previous = await recordQuotaSnapshots(accounts, baseNow);
+    expect(previous.get("auth-1|5h|")?.remaining).toBe(0.8);
     expect(prisma.quotaSnapshot.createMany).toHaveBeenCalledTimes(1);
-  });
-
-  it("prunes snapshots older than the retention window", async () => {
-    vi.mocked(prisma.quotaSnapshot.deleteMany).mockResolvedValueOnce({ count: 42 });
-
-    const deleted = await pruneOldQuotaSnapshots(QUOTA_SNAPSHOT_RETENTION_DAYS, baseNow);
-
-    expect(deleted).toBe(42);
-    expect(prisma.quotaSnapshot.deleteMany).toHaveBeenCalledWith({
-      where: {
-        capturedAt: {
-          lt: new Date(baseNow.getTime() - QUOTA_SNAPSHOT_RETENTION_DAYS * 24 * 60 * 60 * 1000),
-        },
-      },
-    });
   });
 
   it("deterministically prunes on schedule, logs failures, and retries on next call", async () => {
     const t0 = new Date("2026-11-15T12:00:00.000Z");
 
     // First call fails -> logs warning and does not advance lastPrunedAtMs
-    vi.mocked(prisma.quotaSnapshot.deleteMany).mockRejectedValueOnce(new Error("db down"));
+    vi.mocked(prisma.$executeRaw).mockRejectedValueOnce(new Error("db down"));
     expect(await pruneQuotaSnapshotsIfDue(t0)).toBe(0);
     expect(logger.warn).toHaveBeenCalledTimes(1);
 
     // Immediate retry succeeds because failed run did not mark pruned
-    vi.mocked(prisma.quotaSnapshot.deleteMany).mockResolvedValueOnce({ count: 5 });
+    vi.mocked(prisma.$executeRaw).mockResolvedValueOnce(5).mockResolvedValueOnce(0);
     expect(await pruneQuotaSnapshotsIfDue(new Date(t0.getTime() + 1000))).toBe(5);
 
     // Call within PRUNE_INTERVAL_MS is skipped
     expect(await pruneQuotaSnapshotsIfDue(new Date(t0.getTime() + 60_000))).toBe(0);
-    expect(prisma.quotaSnapshot.deleteMany).toHaveBeenCalledTimes(2);
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(3);
 
     // Call after PRUNE_INTERVAL_MS runs again
-    vi.mocked(prisma.quotaSnapshot.deleteMany).mockResolvedValueOnce({ count: 3 });
+    vi.mocked(prisma.$executeRaw).mockResolvedValueOnce(3).mockResolvedValueOnce(0);
     expect(await pruneQuotaSnapshotsIfDue(new Date(t0.getTime() + 1000 + PRUNE_INTERVAL_MS))).toBe(3);
-    expect(prisma.quotaSnapshot.deleteMany).toHaveBeenCalledTimes(3);
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(5);
   });
 });

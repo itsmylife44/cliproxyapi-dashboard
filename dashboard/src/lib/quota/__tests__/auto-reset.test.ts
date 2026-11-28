@@ -10,6 +10,7 @@ import {
 describe("quota auto-reset threshold logic", () => {
   const baseRule: AutoResetRule = {
     enabled: true,
+    prime: false,
     fiveHourThresholdPct: 0,
     weeklyThresholdPct: 0,
     minWeeklyDaysLeft: 0,
@@ -31,8 +32,8 @@ describe("quota auto-reset threshold logic", () => {
       provider: "codex",
       supported: true,
       groups: [
-        { id: "five-hour", label: "5-hour", remainingFraction: 0.14, resetTime: "2026-11-18T12:00:00Z", models: [] },
-        { id: "weekly", label: "Weekly", remainingFraction: 0.0, resetTime: resetInFourDays, models: [] },
+        { id: "five-hour", label: "5-hour", windowSeconds: 18000, remainingFraction: 0.14, resetTime: "2026-11-18T12:00:00Z", models: [] },
+        { id: "weekly", label: "Weekly", windowSeconds: 604800, remainingFraction: 0.0, resetTime: resetInFourDays, models: [] },
       ],
     };
     expect(extractAccountWindowPercentages(account, now)).toEqual({

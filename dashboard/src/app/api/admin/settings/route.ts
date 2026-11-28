@@ -5,7 +5,6 @@ import { prisma } from "@/lib/db";
 import { AUDIT_ACTION, extractIpAddress, logAuditAsync } from "@/lib/audit";
 import { Errors, apiSuccess } from "@/lib/errors";
 import { AdminSettingSchema } from "@/lib/validation/schemas";
-import { QUOTA_ALERT_SETTING_KEYS } from "@/lib/quota-alerts";
 
 async function requireAdmin(): Promise<{ userId: string; username: string } | NextResponse> {
   const session = await verifySession();
@@ -67,28 +66,11 @@ export async function PUT(request: NextRequest) {
 
     const { key, value } = result.data;
 
-    let setting;
-    if (key === QUOTA_ALERT_SETTING_KEYS.ENABLED) {
-      const derivedChannel = value === "true" ? "telegram" : "disabled";
-      [setting] = await prisma.$transaction([
-        prisma.systemSetting.upsert({
-          where: { key },
-          create: { key, value },
-          update: { value },
-        }),
-        prisma.systemSetting.upsert({
-          where: { key: QUOTA_ALERT_SETTING_KEYS.CHANNEL },
-          create: { key: QUOTA_ALERT_SETTING_KEYS.CHANNEL, value: derivedChannel },
-          update: { value: derivedChannel },
-        }),
-      ]);
-    } else {
-      setting = await prisma.systemSetting.upsert({
-        where: { key },
-        create: { key, value },
-        update: { value },
-      });
-    }
+    const setting = await prisma.systemSetting.upsert({
+      where: { key },
+      create: { key, value },
+      update: { value },
+    });
 
     logAuditAsync({
       userId: authResult.userId,

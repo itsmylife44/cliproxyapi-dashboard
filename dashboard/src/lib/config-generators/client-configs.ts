@@ -53,7 +53,8 @@ export function buildClientConfigFiles({
         },
       };
 
-      const configDoc = { modelRoles: { default: `cliproxyapi/${availableModels[0]}` } };
+      const enabledModels = availableModels.map((id) => `cliproxyapi/${id}`);
+      const configDoc = { enabledModels, modelRoles: { default: enabledModels[0] } };
 
       return [
         {
@@ -107,6 +108,7 @@ export function buildClientConfigFiles({
 
     case "claude": {
       const settingsDoc = {
+        model: availableModels[0],
         env: {
           ANTHROPIC_BASE_URL: baseUrl,
           ANTHROPIC_AUTH_TOKEN: apiKey,

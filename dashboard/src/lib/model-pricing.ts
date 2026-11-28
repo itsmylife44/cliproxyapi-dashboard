@@ -1008,6 +1008,16 @@ export function calculateTieredCost(
   );
 }
 
+export function calculateRequestCost(tokens: TokenBuckets, timestamp: Date, price: ModelPrice): number {
+  const tier = isLongContextPrompt(tokens.inputTokens, price)
+    ? price.longContext
+    : price.peak && isPeakRequest(timestamp, price) ? price.peak : undefined;
+  return calculateCost(
+    tokens.inputTokens, tokens.outputTokens, withTierRates(price, tier),
+    tokens.cachedTokens, tokens.cacheWriteTokens, tokens.cacheWrite1hTokens,
+  );
+}
+
 /**
  * Load user-customized pricing from localStorage.
  */

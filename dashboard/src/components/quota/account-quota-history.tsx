@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { CHART_COLORS, useChartTheme } from "@/components/ui/chart-theme";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
@@ -263,7 +263,7 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
           {
             time,
             remainingPct: pt.remainingPct,
-            estimatedRemainingUsd: pt.estimatedRemainingUsd,
+            estimatedFullWindowUsd: pt.estimatedFullWindowUsd,
           },
         ]
       : [];
@@ -282,6 +282,7 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
   );
 
   const hasUsdSeries = selectedModel.estimatedFullWindowUsd !== null;
+  const modelCostContributions = data.windows[activeGroupId]?.modelCostContributions;
 
   return (
     <>
@@ -363,7 +364,7 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
             minHeight={0}
             initialDimension={{ width: 320, height: 144 }}
           >
-            <AreaChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -12 }}>
+            <AreaChart data={chartData} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
               <XAxis
                 dataKey="time"
                 type="number"
@@ -377,6 +378,7 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
               <YAxis
                 yAxisId="pct"
                 domain={[0, 100]}
+                width="auto"
                 tick={axisTickStyle}
                 tickLine={false}
                 axisLine={false}
@@ -386,18 +388,20 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
                 <YAxis
                   yAxisId="usd"
                   orientation="right"
+                  domain={[0, "auto"]}
+                  width="auto"
                   tick={axisTickStyle}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(v) => formatUSD(Number(v))}
+                  tickFormatter={(v) => (Number(v) === 0 ? "$0" : formatUSD(Number(v)))}
                 />
               ) : null}
               <Tooltip
                 {...tooltipStyle}
                 labelFormatter={(value) => formatShortTime(Number(value))}
                 formatter={(value, name) => {
-                  if (name === "estimatedRemainingUsd") {
-                    return [value !== null && value !== undefined ? formatUSD(Number(value)) : "\u2014", t("estRemainingLabel")];
+                  if (name === "estimatedFullWindowUsd") {
+                    return [value !== null && value !== undefined ? formatUSD(Number(value)) : "\u2014", t("estFullWindowLabel")];
                   }
                   return [`${value}%`, t("remainingColumnLabel")];
                 }}
@@ -415,20 +419,52 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
               {hasUsdSeries ? (
                 <Area
                   yAxisId="usd"
-                  type="monotone"
-                  dataKey="estimatedRemainingUsd"
+                  type="stepAfter"
+                  dataKey="estimatedFullWindowUsd"
                   stroke={CHART_COLORS.success}
                   fill="none"
                   strokeWidth={1.5}
-                  strokeDasharray="3 3"
                   dot={false}
+                  connectNulls
                 />
               ) : null}
+              {data.events.map((event) => {
+                const time = Date.parse(event.at);
+                return time >= cutoff && time <= now ? (
+                  <ReferenceLine
+                    key={`${event.kind}:${event.at}`}
+                    yAxisId="pct"
+                    x={time}
+                    stroke={event.kind === "reset" ? CHART_COLORS.success : tokens.border}
+                    strokeDasharray="2 2"
+                    label={{ value: t(event.kind === "reset" ? "resetPin" : "primePin"), position: "top", fontSize: 9, fill: axisTickStyle.fill }}
+                  />
+                ) : null;
+              })}
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="overflow-x-auto rounded-sm border border-[var(--surface-border)]">
+        {modelCostContributions?.length ? (
+          <table className="w-full text-xs break-all">
+            <thead>
+              <tr className="border-b border-[var(--surface-border)] text-[var(--text-muted)]">
+                <th scope="col" className="px-2.5 py-1.5 text-left">{t("modelColumnLabel")}</th>
+                <th scope="col" className="px-2.5 py-1.5 text-right">{t("projectedModelCostLabel")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {modelCostContributions.map(({ modelId, projectedUsd }) => (
+                <tr key={modelId} className="border-b border-[var(--surface-border)] last:border-b-0">
+                  <th scope="row" className="px-2.5 py-1.5 text-left font-mono font-normal">{modelId}</th>
+                  <td className="px-2.5 py-1.5 text-right tabular-nums">{formatUSD(projectedUsd)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
+
+        {visibleModels.some((model) => model.modelId) ? <div className="overflow-x-auto rounded-sm border border-[var(--surface-border)]">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[var(--surface-border)] bg-[var(--surface-muted)]/60 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
@@ -487,7 +523,7 @@ export function AccountQuotaHistory({ authIndex, groups, refreshKey }: AccountQu
               })}
             </tbody>
           </table>
-        </div>
+        </div> : null}
       </div>
     </>
   );

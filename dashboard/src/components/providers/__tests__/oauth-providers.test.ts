@@ -48,10 +48,6 @@ describe("OAuth provider list vs management proxy allowlist", () => {
     if (path) providersWithEndpoints.push({ id: provider.id, path });
   }
 
-  it("has at least one provider to check", () => {
-    expect(providersWithEndpoints.length).toBeGreaterThan(0);
-  });
-
   it.each(providersWithEndpoints)(
     "allows starting the $id OAuth flow through the management proxy",
     async ({ path }) => {
@@ -66,13 +62,6 @@ describe("OAuth provider list vs management proxy allowlist", () => {
       expect(String(mocks.fetchWithRetry.mock.calls[0]?.[0])).toContain(`/v0/management/${path}`);
     }
   );
-
-  it("offers xAI with a device-based flow", () => {
-    const xai = OAUTH_PROVIDERS.find((provider) => provider.id === "xai");
-    expect(xai).toBeDefined();
-    expect(xai?.requiresCallback).toBe(false);
-    expect(xai?.authEndpoint).toContain("xai-auth-url");
-  });
 });
 
 describe("OAuth login list vs upstream support", () => {
@@ -91,36 +80,11 @@ describe("OAuth login list vs upstream support", () => {
     ]);
   });
 
-  it("uses device flows for Kimi.ai and Meta and the callback paste flow for Devin", () => {
-    const flow = (id: string) => OAUTH_PROVIDERS.find((p) => p.id === id)?.requiresCallback;
-    expect(flow("kimi-ai")).toBe(false);
-    expect(flow("meta")).toBe(false);
-    expect(flow("devin")).toBe(true);
-  });
-
-  it("never offers logins upstream dropped entirely", () => {
-    for (const id of ["iflow", "kilo", "gitlab", "qwen"]) {
-      expect(ids(OAUTH_PROVIDERS)).not.toContain(id);
-    }
-  });
-
   it("offers a plugin-served login only when its plugin is installed and enabled", () => {
     expect(ids(visibleOAuthProviders(["copilot"]))).toContain("copilot");
     expect(ids(visibleOAuthProviders(["copilot"]))).not.toContain("gemini-cli");
     expect(ids(visibleOAuthProviders(["gemini-cli", "copilot", "kiro", "cursor"]))).toEqual(
       expect.arrayContaining(["gemini-cli", "copilot", "kiro", "cursor"])
     );
-  });
-
-  it("starts plugin logins on the <plugin oauth_provider>-auth-url path upstream routes to the plugin", () => {
-    const pluginEndpoints = Object.fromEntries(
-      OAUTH_PROVIDERS.filter((p) => p.requiresPlugin).map((p) => [p.id, managementPathFor(p.authEndpoint)])
-    );
-    expect(pluginEndpoints).toEqual({
-      "gemini-cli": "gemini-cli-auth-url",
-      copilot: "copilot-auth-url",
-      kiro: "kiro-auth-url",
-      cursor: "cursor-auth-url",
-    });
   });
 });

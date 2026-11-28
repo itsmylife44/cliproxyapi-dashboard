@@ -17,8 +17,8 @@ import {
   type QuotaResponse,
 } from "@/lib/model-first-monitoring";
 import { parseCodexQuota, type CodexWhamUsageResponse } from "@/lib/quota/codex";
-import { slugifyLabel } from "@/lib/quota/labels";
-import { capacityQuotaGroups } from "@/lib/quota-window-classification";
+import { formatWindowLabel, slugifyLabel } from "@/lib/quota/labels";
+import { WINDOW_SECONDS } from "@/lib/quota-window-classification";
 
 const CLIPROXYAPI_MANAGEMENT_URL = getManagementUrl();
 const MANAGEMENT_API_KEY = process.env.MANAGEMENT_API_KEY;
@@ -249,6 +249,10 @@ const ANTIGRAVITY_FAMILY_LABELS = {
   "claude-gpt": "Claude/GPT",
 } as const;
 type AntigravityFamily = keyof typeof ANTIGRAVITY_FAMILY_LABELS;
+const ANTIGRAVITY_FAMILY_MODELS: Record<AntigravityFamily, string[]> = {
+  gemini: ["gemini"],
+  "claude-gpt": ["claude", "gpt"],
+};
 
 function antigravityFamily(bucketId: string | undefined, displayName: string): AntigravityFamily | null {
   const id = bucketId?.toLowerCase();
@@ -288,6 +292,10 @@ function parseAntigravitySummary(payload: unknown): QuotaGroup[] | null {
       groups.set(groupId, {
         id: groupId,
         label: `${ANTIGRAVITY_FAMILY_LABELS[familyId]} · ${period === "weekly" ? "Weekly" : "5-hour"}`,
+        // Only the shared Gemini windows count toward headline capacity.
+        ...(familyId === "gemini" ? {} : { scope: { id: familyId, label: ANTIGRAVITY_FAMILY_LABELS[familyId] } }),
+        usageModels: ANTIGRAVITY_FAMILY_MODELS[familyId],
+        windowSeconds: period === "weekly" ? WINDOW_SECONDS.week : WINDOW_SECONDS.fiveHours,
         remainingFraction: typeof remaining === "number" && Number.isFinite(remaining) && remaining >= 0 && remaining <= 1
           ? remaining : null,
         resetTime,
@@ -497,7 +505,7 @@ async function fetchAntigravityQuota(authIndex: string): Promise<AntigravityQuot
   const projectId = await fetchAntigravityProjectId(authIndex);
   // Some endpoints answer with only the Claude/GPT group; keep looking for the shared Gemini windows.
   const summary = await fetchAntigravityPayload(authIndex, projectId, ANTIGRAVITY_SUMMARY_ENDPOINTS, parseAntigravitySummary,
-    undefined, (groups) => capacityQuotaGroups("antigravity", groups).length > 0);
+    undefined, (groups) => groups.some((group) => !group.scope));
   if ("error" in summary) return summary;
 
   return {
@@ -630,14 +638,12 @@ interface KimiUsagesResponse {
   }>;
 }
 
-function formatKimiWindowLabel(duration: number, timeUnit: string): string {
-  if (timeUnit.includes("MINUTE")) {
-    if (duration >= 60 && duration % 60 === 0) return `${duration / 60}h Rate Limit`;
-    return `${duration}m Rate Limit`;
-  }
-  if (timeUnit.includes("HOUR")) return `${duration}h Rate Limit`;
-  if (timeUnit.includes("DAY")) return `${duration}d Rate Limit`;
-  return `${duration}s Rate Limit`;
+const KIMI_UNIT_SECONDS = { MINUTE: 60, HOUR: 3600, DAY: 86_400 } as const;
+
+/** Kimi reports window length as `{duration, timeUnit: "TIME_UNIT_MINUTE" | ...}`. */
+function kimiWindowSeconds(duration: number, timeUnit: string): number | undefined {
+  const unit = (Object.keys(KIMI_UNIT_SECONDS) as Array<keyof typeof KIMI_UNIT_SECONDS>).find((key) => timeUnit.endsWith(key));
+  return duration > 0 && unit ? duration * KIMI_UNIT_SECONDS[unit] : undefined;
 }
 
 function parseKimiUsageDetail(detail: KimiUsageDetail): {
@@ -717,6 +723,7 @@ async function fetchKimiQuota(
       groups.push({
         id: "kimi-weekly",
         label: `Weekly Quota (${used}/${limit})`,
+        windowSeconds: WINDOW_SECONDS.week,
         remainingFraction,
         resetTime,
         models: [
@@ -739,9 +746,8 @@ async function fetchKimiQuota(
         const { remainingFraction, resetTime } = parseKimiUsageDetail(detail);
         const duration = entry.window?.duration ?? 0;
         const timeUnit = entry.window?.timeUnit ?? "";
-        const label = duration > 0
-          ? formatKimiWindowLabel(duration, timeUnit)
-          : "Rate Limit";
+        const windowSeconds = kimiWindowSeconds(duration, timeUnit);
+        const label = windowSeconds ? formatWindowLabel(windowSeconds) : "Rate Limit";
         const used = Number(detail.used ?? 0);
         const limit = Number(detail.limit ?? 0);
         const displayLabel = `${label} (${used}/${limit})`;
@@ -750,6 +756,7 @@ async function fetchKimiQuota(
         groups.push({
           id,
           label: displayLabel,
+          windowSeconds,
           remainingFraction,
           resetTime,
           models: [
@@ -893,6 +900,7 @@ async function fetchCopilotQuota(
       {
         id: "premium-requests",
         label,
+        windowSeconds: WINDOW_SECONDS.month,
         remainingFraction,
         resetTime,
         models: [
@@ -1056,9 +1064,11 @@ function buildClaudeLimitGroups(limits: ClaudeUsageLimit[] | undefined): QuotaGr
     let label: string;
     let scope: QuotaGroup["scope"];
 
+    let windowSeconds: number | undefined = WINDOW_SECONDS.week;
     if (limit.kind === "session" || limit.group === "session") {
       id = "five-hour";
       label = "5h Session";
+      windowSeconds = WINDOW_SECONDS.fiveHours;
     } else if (limit.kind === "weekly_all") {
       id = "seven-day";
       label = "7d Weekly";
@@ -1072,6 +1082,7 @@ function buildClaudeLimitGroups(limits: ClaudeUsageLimit[] | undefined): QuotaGr
       const slug = slugifyLabel(fallbackKind);
       id = `limit-${slug}`;
       label = humanizeLimitKind(fallbackKind);
+      windowSeconds = undefined;
       if (fallbackKind.toLowerCase().includes("scoped")) {
         scope = { id: slug, label };
       }
@@ -1084,6 +1095,7 @@ function buildClaudeLimitGroups(limits: ClaudeUsageLimit[] | undefined): QuotaGr
       id,
       label,
       ...(scope ? { scope } : {}),
+      windowSeconds,
       remainingFraction,
       resetTime,
       severity: typeof limit.severity === "string" ? limit.severity : undefined,
@@ -1113,6 +1125,7 @@ async function fetchClaudeQuota(
         const pushUsageGroup = (
           id: string,
           label: string,
+          windowSeconds: number,
           window: ClaudeUsageWindow | undefined,
           scope?: QuotaGroup["scope"]
         ) => {
@@ -1131,6 +1144,7 @@ async function fetchClaudeQuota(
             id,
             label,
             ...(scope ? { scope } : {}),
+            windowSeconds,
             remainingFraction,
             resetTime: window.resets_at ?? null,
             models: [
@@ -1148,10 +1162,10 @@ async function fetchClaudeQuota(
         // shared windows for responses that omit them.
         usageGroups.push(...buildClaudeLimitGroups(usageData.limits));
 
-        pushUsageGroup("five-hour", "5h Session", usageData.five_hour);
-        pushUsageGroup("seven-day", "7d Weekly", usageData.seven_day);
-        pushUsageGroup("seven-day-sonnet", "7d Sonnet", usageData.seven_day_sonnet, { id: "sonnet", label: "Sonnet" });
-        pushUsageGroup("seven-day-opus", "7d Opus", usageData.seven_day_opus, { id: "opus", label: "Opus" });
+        pushUsageGroup("five-hour", "5h Session", WINDOW_SECONDS.fiveHours, usageData.five_hour);
+        pushUsageGroup("seven-day", "7d Weekly", WINDOW_SECONDS.week, usageData.seven_day);
+        pushUsageGroup("seven-day-sonnet", "7d Sonnet", WINDOW_SECONDS.week, usageData.seven_day_sonnet, { id: "sonnet", label: "Sonnet" });
+        pushUsageGroup("seven-day-opus", "7d Opus", WINDOW_SECONDS.week, usageData.seven_day_opus, { id: "opus", label: "Opus" });
 
         if (
           usageData.extra_usage?.is_enabled &&
@@ -1163,9 +1177,11 @@ async function fetchClaudeQuota(
             Math.min(1, 1 - usageData.extra_usage.utilization / 100)
           );
 
+          // Paid overage, not a rate window: scoped so it never counts toward capacity.
           usageGroups.push({
             id: "extra-usage",
             label: "Extra Usage",
+            scope: { id: "extra-usage", label: "Extra Usage" },
             remainingFraction,
             resetTime: null,
             models: [
@@ -1269,6 +1285,7 @@ async function fetchClaudeQuota(
         label: string,
         utilization: string | null,
         resetEpoch: string | null,
+        windowSeconds: number,
         status?: string | null,
         scope?: QuotaGroup["scope"]
       ) => {
@@ -1285,6 +1302,7 @@ async function fetchClaudeQuota(
           id,
           label,
           ...(scope ? { scope } : {}),
+          windowSeconds,
           remainingFraction,
           resetTime,
           severity: severityFromUnifiedStatus(status),
@@ -1297,6 +1315,7 @@ async function fetchClaudeQuota(
         "5h Session",
         unified5hUtilization,
         unified5hReset,
+        WINDOW_SECONDS.fiveHours,
         getHeaderValue(headers, "anthropic-ratelimit-unified-5h-status")
       );
       pushUnifiedGroup(
@@ -1304,6 +1323,7 @@ async function fetchClaudeQuota(
         "7d Weekly",
         unified7dUtilization,
         unified7dReset,
+        WINDOW_SECONDS.week,
         getHeaderValue(headers, "anthropic-ratelimit-unified-7d-status")
       );
       pushUnifiedGroup(
@@ -1311,6 +1331,7 @@ async function fetchClaudeQuota(
         "7d Sonnet",
         unified7dSonnetUtilization,
         unified7dSonnetReset,
+        WINDOW_SECONDS.week,
         undefined,
         { id: "sonnet", label: "Sonnet" }
       );
@@ -1319,6 +1340,7 @@ async function fetchClaudeQuota(
         "7d Fable",
         unified7dOiUtilization,
         unified7dOiReset,
+        WINDOW_SECONDS.week,
         getHeaderValue(headers, "anthropic-ratelimit-unified-7d_oi-status"),
         { id: "fable", label: "Fable" }
       );

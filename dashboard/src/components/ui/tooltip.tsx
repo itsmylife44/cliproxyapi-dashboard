@@ -53,20 +53,33 @@ export function Tooltip({
   );
 }
 
-interface HelpTooltipProps {
-  content: string;
+interface HelpButtonProps {
+  /** Accessible name; also the hover text when used inside a tooltip. */
+  label: string;
+  onClick?: () => void;
 }
 
-export function HelpTooltip({ content }: HelpTooltipProps) {
+/** The round "?" help control; opens an explanation when given onClick. */
+export function HelpButton({ label, onClick }: HelpButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center justify-center size-5 rounded-full bg-[var(--surface-muted)] text-[var(--text-muted)] text-[9px] hover:bg-[var(--surface-hover)] hover:text-[var(--text-secondary)] transition-colors duration-150 select-none ml-1 align-middle focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--accent)]",
+        onClick ? "cursor-pointer" : "cursor-help"
+      )}
+      aria-label={label}
+    >
+      ?
+    </button>
+  );
+}
+
+export function HelpTooltip({ content }: { content: string }) {
   return (
     <Tooltip content={content} side="bottom">
-      <button
-        type="button"
-        className="inline-flex items-center justify-center size-5 rounded-full bg-[var(--surface-muted)] text-[var(--text-muted)] text-[9px] cursor-help hover:bg-[var(--surface-hover)] hover:text-[var(--text-secondary)] transition-colors duration-150 select-none ml-1 align-middle"
-        aria-label={content}
-      >
-        ?
-      </button>
+      <HelpButton label={content} />
     </Tooltip>
   );
 }

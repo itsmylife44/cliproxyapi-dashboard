@@ -324,19 +324,34 @@ model CollectorState {
 }
 
 model QuotaSnapshot {
-  id         String    @id @default(cuid())
-  authIndex  String
-  provider   String
-  groupId    String
-  modelId    String    @default("")
-  remaining  Float
-  resetTime  DateTime?
-  capturedAt DateTime  @default(now())
+  id            String    @id @default(cuid())
+  authIndex     String
+  provider      String
+  groupId       String
+  modelId       String    @default("")
+  remaining     Float
+  resetTime     DateTime?
+  /// Window length; drives per-row retention.
+  windowSeconds Int?
+  /// Slug fragments of the models this window's limit covers; empty = all of the account's usage.
+  usageModels   String[]  @default([])
+  capturedAt    DateTime  @default(now())
 
   @@index([capturedAt])
   @@index([authIndex, capturedAt])
   @@index([authIndex, groupId, modelId, capturedAt])
   @@map("quota_snapshots")
+}
+
+/// Credit resets redeemed and windows primed by the dashboard, drawn as chart pins.
+model QuotaResetEvent {
+  id        String   @id @default(cuid())
+  authIndex String
+  kind      String
+  at        DateTime @default(now())
+
+  @@index([authIndex, at])
+  @@map("quota_reset_events")
 }
 
 // ============================================================================

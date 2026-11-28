@@ -27,19 +27,13 @@ function toDateInputValue(isoString: string | null): string {
   if (!isoString) return "";
   const dt = new Date(isoString);
   if (Number.isNaN(dt.getTime())) return "";
-  const year = dt.getFullYear();
-  const month = String(dt.getMonth() + 1).padStart(2, "0");
-  const day = String(dt.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return dt.toISOString().slice(0, 10);
 }
 
 function addDaysDateInput(days: number): string {
   const dt = new Date();
-  dt.setDate(dt.getDate() + days);
-  const year = dt.getFullYear();
-  const month = String(dt.getMonth() + 1).padStart(2, "0");
-  const day = String(dt.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
 }
 
 function isKeyExpired(expiresAt: string | null): boolean {
@@ -234,7 +228,7 @@ export default function ApiKeysPage() {
           id: editingKey.id,
           name: editNameInput.trim() || tc("default"),
           isActive: editIsActive,
-          expiresAt: editExpiryInput.trim() || null,
+          ...(editExpiryInput !== toDateInputValue(editingKey.expiresAt) && { expiresAt: editExpiryInput || null }),
           spendLimit: parsedLimit.value,
         }),
       });
@@ -245,7 +239,9 @@ export default function ApiKeysPage() {
         return;
       }
 
-      showToast(t("toastUpdateSuccess"), "success");
+      const result = await res.json();
+      if (result.syncStatus === "failed") showToast(t("toastSyncFailed"), "error");
+      else showToast(t("toastUpdateSuccess"), "success");
       setEditingKey(null);
       setSavingEdit(false);
       await fetchApiKeys();
@@ -280,7 +276,10 @@ export default function ApiKeysPage() {
           prev.map((item) => (item.id === apiKey.id ? { ...item, isActive: !nextActive } : item))
         );
         showToast(t("toastUpdateFailed"), "error");
+        return;
       }
+      const result = await res.json();
+      if (result.syncStatus === "failed") showToast(t("toastSyncFailed"), "error");
     } catch {
       setApiKeys((prev) =>
         prev.map((item) => (item.id === apiKey.id ? { ...item, isActive: !nextActive } : item))
@@ -317,7 +316,9 @@ export default function ApiKeysPage() {
         return;
       }
 
-      showToast(t("toastDeleteSuccess"), "success");
+      const result = await res.json();
+      if (result.syncStatus === "failed") showToast(t("toastSyncFailed"), "error");
+      else showToast(t("toastDeleteSuccess"), "success");
       setApiKeys((prev) => prev.filter((item) => item.id !== id));
     } catch {
       showToast(t("toastNetworkError"), "error");
@@ -432,7 +433,7 @@ export default function ApiKeysPage() {
                     <span aria-hidden="true">·</span>
                     <span>
                       {apiKey.expiresAt
-                        ? t("expiresOn", { date: new Date(apiKey.expiresAt).toLocaleDateString() })
+                        ? t("expiresOn", { date: new Date(apiKey.expiresAt).toLocaleDateString(undefined, { timeZone: "UTC" }) })
                         : t("noExpiry")}
                     </span>
                     <span aria-hidden="true">·</span>
@@ -475,7 +476,7 @@ export default function ApiKeysPage() {
                     expired ? "font-medium text-rose-600 dark:text-rose-400" : "text-[var(--text-muted)]"
                   }`}
                 >
-                  {apiKey.expiresAt ? new Date(apiKey.expiresAt).toLocaleDateString() : t("noExpiry")}
+                  {apiKey.expiresAt ? new Date(apiKey.expiresAt).toLocaleDateString(undefined, { timeZone: "UTC" }) : t("noExpiry")}
                 </span>
 
                 <span className="hidden text-xs text-[var(--text-muted)] md:block">{new Date(apiKey.createdAt).toLocaleDateString()}</span>

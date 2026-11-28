@@ -55,7 +55,6 @@ export async function GET() {
             SETTING_KEYS.BOT_TOKEN,
             SETTING_KEYS.CHAT_ID,
             SETTING_KEYS.THRESHOLD,
-            SETTING_KEYS.ENABLED,
             SETTING_KEYS.PROVIDERS,
             SETTING_KEYS.CHECK_INTERVAL,
             SETTING_KEYS.COOLDOWN,
@@ -74,7 +73,6 @@ export async function GET() {
       settingMap.get(SETTING_KEYS.THRESHOLD) ?? "20",
       10
     );
-    const enabled = settingMap.get(SETTING_KEYS.ENABLED) === "true";
 
     const providersRaw = settingMap.get(SETTING_KEYS.PROVIDERS) ?? "";
     const providers = providersRaw ? providersRaw.split(",").filter(Boolean) : [];
@@ -86,8 +84,7 @@ export async function GET() {
       botToken: rawToken ? maskToken(rawToken) : "",
       chatId,
       threshold: Number.isNaN(threshold) ? 20 : threshold,
-      enabled,
-      channel: settingMap.get(SETTING_KEYS.CHANNEL) ?? (enabled ? "telegram" : "disabled"),
+      channel: settingMap.get(SETTING_KEYS.CHANNEL) ?? "disabled",
       webhook: settingMap.get(SETTING_KEYS.WEBHOOK) ? WEBHOOK_MASK : "",
       providers,
       checkInterval: !Number.isNaN(checkIntervalRaw) ? checkIntervalRaw : 5,
@@ -111,7 +108,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = (await request.json()) as Record<string, unknown>;
-    const { botToken, chatId, threshold, enabled } = body;
+    const { botToken, chatId, threshold } = body;
     const { channel, webhook } = body;
     if (
       channel !== undefined &&
@@ -228,19 +225,6 @@ export async function PUT(request: NextRequest) {
 
     if (typeof channel === "string") {
       updates.push({ key: SETTING_KEYS.CHANNEL, value: channel });
-      updates.push({
-        key: SETTING_KEYS.ENABLED,
-        value: channel === "telegram" ? "true" : "false",
-      });
-    } else if (enabled !== undefined && typeof enabled === "boolean") {
-      updates.push({
-        key: SETTING_KEYS.ENABLED,
-        value: String(enabled),
-      });
-      updates.push({
-        key: SETTING_KEYS.CHANNEL,
-        value: enabled ? "telegram" : "disabled",
-      });
     }
 
     // Save providers if provided
@@ -315,7 +299,7 @@ export async function POST(request: NextRequest) {
     const settings = await prisma.systemSetting.findMany({
       where: {
         key: {
-          in: [SETTING_KEYS.BOT_TOKEN, SETTING_KEYS.CHAT_ID, SETTING_KEYS.CHANNEL, SETTING_KEYS.WEBHOOK, SETTING_KEYS.ENABLED],
+          in: [SETTING_KEYS.BOT_TOKEN, SETTING_KEYS.CHAT_ID, SETTING_KEYS.CHANNEL, SETTING_KEYS.WEBHOOK],
         },
       },
     });
@@ -323,7 +307,7 @@ export async function POST(request: NextRequest) {
     const settingMap = new Map(settings.map((s) => [s.key, s.value]));
     const botToken = settingMap.get(SETTING_KEYS.BOT_TOKEN);
     const chatId = settingMap.get(SETTING_KEYS.CHAT_ID);
-    const channel = settingMap.get(SETTING_KEYS.CHANNEL) ?? (settingMap.get(SETTING_KEYS.ENABLED) === "true" ? "telegram" : "disabled");
+    const channel = settingMap.get(SETTING_KEYS.CHANNEL) ?? "disabled";
     if (channel === "discord") {
       const result = await sendDiscordAlert(settingMap.get(SETTING_KEYS.WEBHOOK) ?? "", "CLIProxyAPI Dashboard: Discord alerts are working.");
       return result.ok ? NextResponse.json({ success: true }) : Errors.validation(result.error ?? "Discord test failed");

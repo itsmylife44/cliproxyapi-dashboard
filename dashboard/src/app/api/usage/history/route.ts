@@ -60,7 +60,8 @@ interface KeyUsage {
 }
 
 interface RequestEvent {
-  id?: string;
+  id: string;
+  apiKeyId: string | null;
   timestamp: string;
   keyName: string;
   username?: string;
@@ -162,7 +163,7 @@ export async function GET(request: NextRequest) {
       select: { isAdmin: true },
     });
     const isAdmin = user?.isAdmin ?? false;
-    const cacheKey = `usage-history:v3:${session.userId}:${isAdmin ? "admin" : "user"}:${fromParam}:${toParam}`;
+    const cacheKey = `usage-history:v4:${session.userId}:${isAdmin ? "admin" : "user"}:${fromParam}:${toParam}`;
     const cached = usageCache.get(cacheKey) as { data: unknown; isAdmin: boolean } | null;
     if (cached) {
       logger.debug({ userId: session.userId, from: fromParam, to: toParam }, "Usage history cache hit");
@@ -475,7 +476,8 @@ export async function GET(request: NextRequest) {
       }
 
       const event: RequestEvent = {
-        ...(record.id ? { id: record.id } : {}),
+        id: record.id,
+        apiKeyId: record.apiKeyId,
         timestamp: timestampIso,
         keyName: keyUsage.keyName,
         ...(isAdmin && username ? { username } : {}),

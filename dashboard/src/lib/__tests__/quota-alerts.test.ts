@@ -28,7 +28,7 @@ import {
 } from "@/lib/quota-alerts";
 
 const enabledSettings = [
-  { key: "telegram_alerts_enabled", value: "true" },
+  { key: "quota_alert_channel", value: "telegram" },
   { key: "telegram_bot_token", value: "token" },
   { key: "telegram_chat_id", value: "chat" },
   { key: "telegram_quota_threshold", value: "20" },

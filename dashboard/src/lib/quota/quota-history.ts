@@ -1,29 +1,23 @@
 import { prisma } from "@/lib/db";
 import { CACHE_KEYS, CACHE_TTL, quotaHistoryCache } from "@/lib/cache";
 import {
-  calculateTieredCost,
-  isLongContextPrompt,
-  isPeakRequest,
+  calculateRequestCost,
   resolveModelPrice,
   type ModelPrice,
 } from "@/lib/model-pricing";
 import { getLiveModelPricing } from "@/lib/model-pricing-catalog";
 import { canonicalizeOAuthProvider } from "@/lib/providers/constants";
-import { detectModelProvider } from "@/lib/providers/model-grouping";
 import { slugifyLabel } from "@/lib/quota/labels";
-import { RESET_TIME_TOLERANCE_MS } from "@/lib/quota/quota-snapshots";
+import { COMPLETED_QUOTA_WINDOWS_FOR_ESTIMATES, HISTORY_WINDOW_DAYS, RESET_TIME_TOLERANCE_MS } from "@/lib/quota/quota-snapshots";
 
-const HISTORY_WINDOW_DAYS = 14;
-const CALIBRATION_LOOKBACK_DAYS = 30;
 const MIN_OBSERVED_DELTA = 0.02;
 const DELTA_EPSILON = 1e-9;
-
-const REQUEST_COUNT_WINDOWS = new Set(["premium-requests", "requests"]);
 
 export interface QuotaHistoryPoint {
   timestamp: string;
   remainingPct: number;
-  estimatedRemainingUsd: number | null;
+  /** The full-window estimate as it stood at this point, so pricing changes stay visible as steps. */
+  estimatedFullWindowUsd: number | null;
 }
 
 export interface QuotaModelValuation {
@@ -48,13 +42,12 @@ export interface AccountQuotaHistoryResponse {
       estimatedFullWindowUsd: number | null;
       previousEstimatedFullWindowUsd: number | null;
       estimatedRemainingUsd: number | null;
+      modelCostContributions: Array<{ modelId: string; projectedUsd: number }>;
     }
   >;
+  /** Credit resets and primes the dashboard performed, oldest first. */
+  events: Array<{ kind: string; at: string }>;
   hasAnySnapshots: boolean;
-}
-
-function isRequestCountWindow(groupId: string): boolean {
-  return REQUEST_COUNT_WINDOWS.has(groupId.trim().toLowerCase());
 }
 
 function estimateUsageRecordUsd(
@@ -77,21 +70,13 @@ function estimateUsageRecordUsd(
     record.totalTokens === record.inputTokens + record.outputTokens + record.reasoningTokens
       ? record.reasoningTokens
       : 0;
-  const bucket = {
+  return calculateRequestCost({
     inputTokens: record.inputTokens,
     outputTokens: record.outputTokens + separateReasoning,
     cachedTokens: record.cachedTokens,
     cacheWriteTokens: record.cacheWriteTokens,
     cacheWrite1hTokens: record.cacheWrite1hTokens,
-  };
-  const empty = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
-  if (isLongContextPrompt(record.inputTokens, price)) {
-    return calculateTieredCost(empty, bucket, price);
-  }
-  if (isPeakRequest(record.timestamp, price)) {
-    return calculateTieredCost(empty, empty, price, bucket);
-  }
-  return calculateTieredCost(bucket, empty, price);
+  }, record.timestamp, price);
 }
 
 type SnapshotRow = {
@@ -101,6 +86,7 @@ type SnapshotRow = {
   modelId: string;
   remaining: number;
   resetTime: Date | null;
+  usageModels: string[];
   capturedAt: Date;
 };
 
@@ -124,117 +110,13 @@ type PrecomputedUsage = {
   timestampMs: number;
   priced: boolean;
   usd: number;
-  price: ModelPrice | null;
 };
 
-function normalizeBareModelId(modelId: string): string {
-  const lower = modelId.trim().toLowerCase();
-  const slashIdx = lower.lastIndexOf("/");
-  return slashIdx >= 0 ? lower.slice(slashIdx + 1) : lower;
-}
-
-function classifyModelFamily(modelId: string, price: ModelPrice | null) {
-  const bare = normalizeBareModelId(modelId);
-  const groupedProvider = detectModelProvider(bare);
-  const priceProvider = price?.provider?.trim().toLowerCase() ?? "";
-
-  const isArgon = bare.includes("argon");
-  const isGemini = !isArgon && (groupedProvider === "Gemini" || priceProvider === "google" || bare.includes("gemini"));
-  const isClaude = groupedProvider === "Claude" || priceProvider === "anthropic" || bare.includes("claude");
-  const isOpenAICodex =
-    groupedProvider === "OpenAI/Codex" ||
-    priceProvider === "openai" ||
-    /^(gpt-|o1|o3|o4)/.test(bare) ||
-    bare.includes("codex");
-  const isKimi =
-    groupedProvider === "Kimi" ||
-    priceProvider === "moonshot ai" ||
-    bare.includes("kimi") ||
-    bare.includes("moonshot");
-  const isXai = groupedProvider === "xAI" || priceProvider === "xai" || bare.startsWith("grok");
-
-  return { bare, isArgon, isGemini, isClaude, isOpenAICodex, isKimi, isXai };
-}
-
-/**
- * Authoritative mapping between usage models and quota window group IDs.
- * Mirrors the window definitions in `/api/quota` and `lib/quota/codex.ts`.
- */
-function doesModelBelongToWindow(
-  modelId: string,
-  groupId: string,
-  windowProvider: string | undefined,
-  price: ModelPrice | null
-): boolean {
-  const gid = groupId.trim().toLowerCase();
-  const { bare, isArgon, isGemini, isClaude, isOpenAICodex, isKimi, isXai } = classifyModelFamily(modelId, price);
-
-  // Antigravity windows (see antigravityFamily / parseAntigravitySummary in /api/quota)
-  if (gid === "gemini-weekly" || gid === "gemini-5h") {
-    return isGemini;
-  }
-  if (gid === "claude-gpt-weekly" || gid === "claude-gpt-5h") {
-    return isClaude || isOpenAICodex;
-  }
-
-  // Claude windows (see fetchClaudeQuota / buildClaudeLimitGroups in /api/quota)
-  if (
-    gid === "five-hour" ||
-    gid === "seven-day" ||
-    gid === "requests" ||
-    gid === "input-tokens" ||
-    gid === "output-tokens"
-  ) {
-    return isClaude;
-  }
-  const claudeScope = gid.startsWith("seven-day-")
-    ? gid.slice("seven-day-".length)
-    : gid.startsWith("limit-")
-      ? gid.slice("limit-".length)
-      : null;
-  if (claudeScope !== null) {
-    const normalizedScope = claudeScope === "oi" ? "fable" : claudeScope;
-    return isClaude && Boolean(normalizedScope) && slugifyLabel(bare).includes(normalizedScope);
-  }
-
-  // Codex windows (see parseCodexQuota in lib/quota/codex.ts)
-  if (gid === "primary-window" || gid === "secondary-window") {
-    return isOpenAICodex;
-  }
-  if (gid.endsWith("-primary-window") || gid.endsWith("-secondary-window")) {
-    const scopeSlug = gid.replace(/-(primary|secondary)-window$/, "");
-    if (scopeSlug === "code-review") {
-      return bare.includes("code-review");
-    }
-    if (scopeSlug === "codex-bengalfox" || scopeSlug === "spark") {
-      return isOpenAICodex && (bare.includes("spark") || bare.includes("bengalfox"));
-    }
-    return isOpenAICodex && Boolean(scopeSlug) && slugifyLabel(bare).includes(scopeSlug);
-  }
-
-  // Kimi windows (see fetchKimiQuota in /api/quota)
-  if (gid === "kimi-weekly" || gid.startsWith("kimi-limit-")) {
-    return isKimi;
-  }
-
-  // Grok shared usage pool (see parseXaiQuota in lib/quota/xai.ts)
-  if (gid === "xai-usage-pool" || gid.startsWith("xai-product-")) {
-    return isXai;
-  }
-
-  // GitHub Copilot shares a single premium-requests window across routed models
-  if (gid === "premium-requests") {
-    return true;
-  }
-
-  // Fallback for unrecognized/generic window IDs: constrain by canonical provider when known
-  const canonicalProvider = canonicalizeOAuthProvider(windowProvider);
-  if (canonicalProvider === "claude") return isClaude;
-  if (canonicalProvider === "codex") return isOpenAICodex;
-  if (canonicalProvider === "kimi" || canonicalProvider === "kimi-ai") return isKimi;
-  if (canonicalProvider === "gemini-cli") return isGemini || isArgon;
-
-  return true;
+/** Whether a usage record counts against a window covering `usageModels` (empty = all). */
+function usageMatchesWindow(modelId: string, usageModels: readonly string[]): boolean {
+  if (usageModels.length === 0) return true;
+  const slug = slugifyLabel(modelId.slice(modelId.lastIndexOf("/") + 1));
+  return usageModels.some((fragment) => slug.includes(fragment));
 }
 
 function isWindowReset(previous: SnapshotRow, current: SnapshotRow): boolean {
@@ -255,7 +137,7 @@ function isWindowReset(previous: SnapshotRow, current: SnapshotRow): boolean {
   ) {
     return true;
   }
-  // Within the same reset window, small upward fluctuations (e.g. Antigravity jitter) are not resets;
+  // Within the same reset window, small upward fluctuations are not resets;
   // only treat a jump back to full capacity (>=5% increase) or an increase without resetTime as a reset.
   if (previous.resetTime && current.resetTime) {
     return (
@@ -267,6 +149,17 @@ function isWindowReset(previous: SnapshotRow, current: SnapshotRow): boolean {
   return current.remaining - previous.remaining > 0.02;
 }
 
+function estimateWindowStart(series: readonly SnapshotRow[]): number {
+  // Walking back across the active window and five completed ones lands at the oldest retained start.
+  let completed = 0;
+  for (let i = series.length - 1; i > 0; i--) {
+    if (isWindowReset(series[i - 1]!, series[i]!) && completed++ === COMPLETED_QUOTA_WINDOWS_FOR_ESTIMATES) {
+      return i;
+    }
+  }
+  return 0;
+}
+
 function isQualifyingDepletion(delta: number, usageUsd: number): boolean {
   return delta + DELTA_EPSILON >= MIN_OBSERVED_DELTA && usageUsd > 0;
 }
@@ -274,50 +167,47 @@ function isQualifyingDepletion(delta: number, usageUsd: number): boolean {
 interface CalibrationAccumulator {
   currentDelta: number;
   currentUsd: number;
-  lastQualifying: { fullUsd: number; delta: number; usageUsd: number } | null;
+  currentModelUsd: Map<string, number> | null;
+  lastQualifying: { fullUsd: number; delta: number; usageUsd: number; modelUsd: ReadonlyMap<string, number> | null } | null;
   priorQualifyingFullUsd: number | null;
 }
 
-function createAccumulator(): CalibrationAccumulator {
+function createAccumulator(includeModelCosts: boolean): CalibrationAccumulator {
   return {
     currentDelta: 0,
     currentUsd: 0,
+    currentModelUsd: includeModelCosts ? new Map() : null,
     lastQualifying: null,
     priorQualifyingFullUsd: null,
   };
 }
 
-function finalizeAccumulatorWindow(acc: CalibrationAccumulator, skipUsdValuation: boolean): void {
-  if (!skipUsdValuation && isQualifyingDepletion(acc.currentDelta, acc.currentUsd)) {
+function finalizeAccumulatorWindow(acc: CalibrationAccumulator): void {
+  if (isQualifyingDepletion(acc.currentDelta, acc.currentUsd)) {
     acc.priorQualifyingFullUsd = acc.lastQualifying?.fullUsd ?? null;
     acc.lastQualifying = {
       fullUsd: acc.currentUsd / acc.currentDelta,
       delta: acc.currentDelta,
       usageUsd: acc.currentUsd,
+      modelUsd: acc.currentModelUsd,
     };
+    if (acc.currentModelUsd) acc.currentModelUsd = new Map();
   }
   acc.currentDelta = 0;
   acc.currentUsd = 0;
+  acc.currentModelUsd?.clear();
 }
 
-function readAccumulatorEstimate(acc: CalibrationAccumulator, skipUsdValuation: boolean) {
-  const currentQualifies = !skipUsdValuation && isQualifyingDepletion(acc.currentDelta, acc.currentUsd);
-  const estimatedFullWindowUsd = skipUsdValuation
-    ? null
-    : currentQualifies
-      ? acc.currentUsd / acc.currentDelta
-      : (acc.lastQualifying?.fullUsd ?? null);
-  const previousEstimatedFullWindowUsd = skipUsdValuation
-    ? null
-    : currentQualifies
-      ? (acc.lastQualifying?.fullUsd ?? null)
-      : acc.priorQualifyingFullUsd;
+function readAccumulatorEstimate(acc: CalibrationAccumulator) {
+  const currentQualifies = isQualifyingDepletion(acc.currentDelta, acc.currentUsd);
+  const estimatedFullWindowUsd = currentQualifies
+    ? acc.currentUsd / acc.currentDelta
+    : (acc.lastQualifying?.fullUsd ?? null);
+  const previousEstimatedFullWindowUsd = currentQualifies
+    ? (acc.lastQualifying?.fullUsd ?? null)
+    : acc.priorQualifyingFullUsd;
   const observedDelta = currentQualifies ? acc.currentDelta : (acc.lastQualifying?.delta ?? acc.currentDelta);
-  const observedUsageUsd = skipUsdValuation
-    ? 0
-    : currentQualifies
-      ? acc.currentUsd
-      : (acc.lastQualifying?.usageUsd ?? acc.currentUsd);
+  const observedUsageUsd = currentQualifies ? acc.currentUsd : (acc.lastQualifying?.usageUsd ?? acc.currentUsd);
   return {
     estimatedFullWindowUsd,
     previousEstimatedFullWindowUsd,
@@ -326,30 +216,46 @@ function readAccumulatorEstimate(acc: CalibrationAccumulator, skipUsdValuation: 
   };
 }
 
+function readModelCostContributions(acc: CalibrationAccumulator): AccountQuotaHistoryResponse["windows"][string]["modelCostContributions"] {
+  const currentQualifies = isQualifyingDepletion(acc.currentDelta, acc.currentUsd);
+  const modelUsd = currentQualifies ? acc.currentModelUsd : acc.lastQualifying?.modelUsd;
+  const delta = currentQualifies ? acc.currentDelta : acc.lastQualifying?.delta;
+  if (!modelUsd || !delta) return [];
+  return Array.from(modelUsd, ([modelId, usd]) => ({ modelId, projectedUsd: usd / delta }))
+    .sort((a, b) => b.projectedUsd - a.projectedUsd || a.modelId.localeCompare(b.modelId));
+}
+
+/**
+ * The full-window estimate at each window boundary and at the latest snapshot, null elsewhere.
+ * Sampling at boundaries hides the swings of a partly used window, so a pricing change reads as one step.
+ */
+type EstimateTimeline = Array<number | null>;
+
 function calibrateSeries(
   series: SnapshotRow[],
   precomputedUsage: PrecomputedUsage[],
   matchesUsage: (rec: PrecomputedUsage) => boolean,
-  skipUsdValuation: boolean
+  includeModelCosts = false
 ): {
   windowAcc: CalibrationAccumulator;
-  modelAccs: Map<string, CalibrationAccumulator>;
+  windowTimeline: EstimateTimeline;
 } {
-  const windowAcc = createAccumulator();
-  const modelAccs = new Map<string, CalibrationAccumulator>();
+  const start = estimateWindowStart(series);
+  const windowAcc = createAccumulator(includeModelCosts);
+  const windowTimeline: EstimateTimeline = new Array(series.length).fill(null);
   let pendingUsd = 0;
+  const pendingModelUsd = includeModelCosts ? new Map<string, number>() : null;
   let pendingHasUnpriced = false;
-  let pendingModels = new Map<string, number>();
   let usageIndex = 0;
-  let lowestRemaining = series[0]!.remaining;
+  let lowestRemaining = series[start]!.remaining;
 
   const resetPending = () => {
     pendingUsd = 0;
     pendingHasUnpriced = false;
-    pendingModels = new Map<string, number>();
+    pendingModelUsd?.clear();
   };
 
-  for (let i = 1; i < series.length; i++) {
+  for (let i = start + 1; i < series.length; i++) {
     const previous = series[i - 1]!;
     const current = series[i]!;
     const prevMs = previous.capturedAt.getTime();
@@ -368,64 +274,61 @@ function calibrateSeries(
         pendingHasUnpriced = true;
       } else {
         pendingUsd += record.usd;
-        pendingModels.set(record.model, (pendingModels.get(record.model) ?? 0) + record.usd);
-      }
-    }
-
-    if (isWindowReset(previous, current)) {
-      finalizeAccumulatorWindow(windowAcc, skipUsdValuation);
-      for (const acc of modelAccs.values()) {
-        finalizeAccumulatorWindow(acc, skipUsdValuation);
-      }
-      resetPending();
-      lowestRemaining = current.remaining;
-      continue;
-    }
-
-    const drop = Math.max(0, lowestRemaining - current.remaining);
-    lowestRemaining = Math.min(lowestRemaining, current.remaining);
-
-    if (drop > 0) {
-      // Drops with no logged CLIProxyAPI usage (e.g. subscription used externally)
-      // leave calibrated $/window unchanged.
-      if (!pendingHasUnpriced && pendingUsd > 0) {
-        windowAcc.currentDelta += drop;
-        windowAcc.currentUsd += pendingUsd;
-        if (pendingModels.size === 1) {
-          const [soleModel, soleUsd] = pendingModels.entries().next().value!;
-          if (soleUsd > 0) {
-            let modelAcc = modelAccs.get(soleModel);
-            if (!modelAcc) {
-              modelAcc = createAccumulator();
-              modelAccs.set(soleModel, modelAcc);
-            }
-            modelAcc.currentDelta += drop;
-            modelAcc.currentUsd += soleUsd;
-          }
+        if (pendingModelUsd && record.usd > 0) {
+          pendingModelUsd.set(record.model, (pendingModelUsd.get(record.model) ?? 0) + record.usd);
         }
       }
+    }
+
+    const isReset = isWindowReset(previous, current);
+    if (isReset) {
+      finalizeAccumulatorWindow(windowAcc);
       resetPending();
-    } else if (pendingHasUnpriced && (current.remaining < previous.remaining || intervalCount === 0)) {
-      resetPending();
+      lowestRemaining = current.remaining;
+    } else {
+      const drop = Math.max(0, lowestRemaining - current.remaining);
+      lowestRemaining = Math.min(lowestRemaining, current.remaining);
+
+      if (drop > 0) {
+        // Drops with no logged CLIProxyAPI usage (e.g. subscription used externally)
+        // leave calibrated $/window unchanged.
+        if (!pendingHasUnpriced && pendingUsd > 0) {
+          windowAcc.currentDelta += drop;
+          windowAcc.currentUsd += pendingUsd;
+          if (pendingModelUsd && windowAcc.currentModelUsd) {
+            for (const [modelId, usd] of pendingModelUsd) {
+              windowAcc.currentModelUsd.set(modelId, (windowAcc.currentModelUsd.get(modelId) ?? 0) + usd);
+            }
+          }
+        }
+        resetPending();
+      } else if (pendingHasUnpriced && (current.remaining < previous.remaining || intervalCount === 0)) {
+        resetPending();
+      }
+    }
+
+    if (isReset || i === series.length - 1) {
+      windowTimeline[i] = readAccumulatorEstimate(windowAcc).estimatedFullWindowUsd;
     }
   }
 
-  return { windowAcc, modelAccs };
+  return { windowAcc, windowTimeline };
 }
 
 function buildModelSeriesPoints(
   series: SnapshotRow[],
   cutoffMs: number,
-  estimatedFullWindowUsd: number | null
+  timeline: EstimateTimeline
 ): QuotaHistoryPoint[] {
-  return series
-    .filter((snap) => snap.capturedAt.getTime() >= cutoffMs)
-    .map((snap) => ({
-      timestamp: snap.capturedAt.toISOString(),
-      remainingPct: Math.round(snap.remaining * 1000) / 10,
-      estimatedRemainingUsd:
-        estimatedFullWindowUsd !== null ? estimatedFullWindowUsd * snap.remaining : null,
-    }));
+  return series.flatMap((snap, i) =>
+    snap.capturedAt.getTime() >= cutoffMs
+      ? [{
+          timestamp: snap.capturedAt.toISOString(),
+          remainingPct: Math.round(snap.remaining * 1000) / 10,
+          estimatedFullWindowUsd: timeline[i] ?? null,
+        }]
+      : []
+  );
 }
 
 function buildQuotaModelValuation(params: {
@@ -433,9 +336,9 @@ function buildQuotaModelValuation(params: {
   groupId: string;
   series: SnapshotRow[];
   seriesCutoffMs: number;
+  timeline: EstimateTimeline;
   estimatedFullWindowUsd: number | null;
   previousEstimatedFullWindowUsd: number | null;
-  estimatedRemainingUsd?: number | null;
   observedDelta: number;
   observedUsageUsd: number;
 }): QuotaModelValuation {
@@ -447,15 +350,12 @@ function buildQuotaModelValuation(params: {
     resetTime: latest.resetTime ? latest.resetTime.toISOString() : null,
     estimatedFullWindowUsd: params.estimatedFullWindowUsd,
     previousEstimatedFullWindowUsd: params.previousEstimatedFullWindowUsd,
-    estimatedRemainingUsd:
-      params.estimatedRemainingUsd !== undefined
-        ? params.estimatedRemainingUsd
-        : params.estimatedFullWindowUsd !== null
-          ? params.estimatedFullWindowUsd * latest.remaining
-          : null,
+    estimatedRemainingUsd: params.estimatedFullWindowUsd === null
+      ? null
+      : params.estimatedFullWindowUsd * latest.remaining,
     observedDelta: params.observedDelta,
     observedUsageUsd: params.observedUsageUsd,
-    series: buildModelSeriesPoints(params.series, params.seriesCutoffMs, params.estimatedFullWindowUsd),
+    series: buildModelSeriesPoints(params.series, params.seriesCutoffMs, params.timeline),
   };
 }
 
@@ -463,16 +363,16 @@ function computeQuotaHistoryForAccount(
   authIndex: string,
   snapshots: SnapshotRow[],
   usageRecords: UsageRow[],
+  events: AccountQuotaHistoryResponse["events"],
   customPricing?: Record<string, ModelPrice>,
   livePricing?: Record<string, ModelPrice>
 ): AccountQuotaHistoryResponse {
   if (snapshots.length === 0) {
-    return { authIndex, models: [], windows: {}, hasAnySnapshots: false };
+    return { authIndex, models: [], windows: {}, events, hasAnySnapshots: false };
   }
 
-  const snapshotsByModel = new Map<string, SnapshotRow[]>();
+  const snapshotsByGroupAndModel = new Map<string, Map<string, SnapshotRow[]>>();
   const windowSnapshotsByGroup = new Map<string, SnapshotRow[]>();
-  const groupProviderMap = new Map<string, string>();
   let latestAccountCapturedMs = 0;
 
   for (const snap of snapshots) {
@@ -480,14 +380,16 @@ function computeQuotaHistoryForAccount(
     if (capturedMs > latestAccountCapturedMs) {
       latestAccountCapturedMs = capturedMs;
     }
-    if (snap.provider && !groupProviderMap.has(snap.groupId)) {
-      groupProviderMap.set(snap.groupId, snap.provider);
-    }
     const isWindowLevel = !snap.modelId || snap.modelId === snap.groupId;
     if (!isWindowLevel) {
-      const list = snapshotsByModel.get(snap.modelId) ?? [];
+      let seriesByModel = snapshotsByGroupAndModel.get(snap.groupId);
+      if (!seriesByModel) {
+        seriesByModel = new Map();
+        snapshotsByGroupAndModel.set(snap.groupId, seriesByModel);
+      }
+      const list = seriesByModel.get(snap.modelId) ?? [];
       list.push(snap);
-      snapshotsByModel.set(snap.modelId, list);
+      seriesByModel.set(snap.modelId, list);
     } else {
       const list = windowSnapshotsByGroup.get(snap.groupId) ?? [];
       list.push(snap);
@@ -504,9 +406,9 @@ function computeQuotaHistoryForAccount(
     }
   }
   // Antigravity reports cached tokens inside input even for Claude models.
-  const accountProvider = snapshots.find((snap) => snap.provider)?.provider;
-  const provider = canonicalizeOAuthProvider(accountProvider);
-  const cacheAccounting = provider === "antigravity" ? "included" : undefined;
+  const cacheAccounting = canonicalizeOAuthProvider(snapshots.find((snap) => snap.provider)?.provider) === "antigravity"
+    ? "included"
+    : undefined;
   const resolveCachedPrice = (model: string): ModelPrice | null => {
     if (!modelPrices.has(model)) {
       modelPrices.set(model, resolveModelPrice(model, customPricing, livePricing));
@@ -522,44 +424,23 @@ function computeQuotaHistoryForAccount(
         timestampMs: record.timestamp.getTime(),
         priced: price !== null,
         usd: price ? estimateUsageRecordUsd(record, price) : 0,
-        price,
       };
     })
     .sort((a, b) => a.timestampMs - b.timestampMs);
 
   const windows: AccountQuotaHistoryResponse["windows"] = {};
   const models: QuotaModelValuation[] = [];
-  const representedGroups = new Set<string>();
   const seriesCutoffMs = latestAccountCapturedMs - HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
-  for (const [groupId, rawSeries] of windowSnapshotsByGroup) {
-    if (groupId.startsWith("gemini-argon-")) continue;
-    if (rawSeries.length === 0) continue;
-    const series = [...rawSeries].sort((a, b) => a.capturedAt.getTime() - b.capturedAt.getTime());
+  for (const [groupId, series] of windowSnapshotsByGroup) {
     const latest = series[series.length - 1]!;
-    const windowProvider = groupProviderMap.get(groupId) ?? latest.provider;
-    const skipUsdValuation = isRequestCountWindow(groupId);
-
-    // Retain the last appearance until five subsequent resets have been observed.
-    let calibrationStart = 0;
-    if (groupId.endsWith("-5h")) {
-      let resets = 0;
-      for (let i = series.length - 1; i > 0; i--) {
-        if (isWindowReset(series[i - 1]!, series[i]!) && ++resets === 6) {
-          calibrationStart = i;
-          break;
-        }
-      }
-    }
-    const calibrationSeries = calibrationStart ? series.slice(calibrationStart) : series;
-
-    const { windowAcc, modelAccs } = calibrateSeries(
-      calibrationSeries,
+    const { windowAcc, windowTimeline } = calibrateSeries(
+      series,
       precomputedUsage,
-      (rec) => doesModelBelongToWindow(rec.model, groupId, windowProvider, rec.price),
-      skipUsdValuation
+      (rec) => usageMatchesWindow(rec.model, latest.usageModels),
+      true
     );
-    const windowEst = readAccumulatorEstimate(windowAcc, skipUsdValuation);
+    const windowEst = readAccumulatorEstimate(windowAcc);
     const windowRemainingUsd =
       windowEst.estimatedFullWindowUsd !== null ? windowEst.estimatedFullWindowUsd * latest.remaining : null;
 
@@ -567,64 +448,35 @@ function computeQuotaHistoryForAccount(
       estimatedFullWindowUsd: windowEst.estimatedFullWindowUsd,
       previousEstimatedFullWindowUsd: windowEst.previousEstimatedFullWindowUsd,
       estimatedRemainingUsd: windowRemainingUsd,
+      modelCostContributions: readModelCostContributions(windowAcc),
     };
 
-    for (const [modelId, modelAcc] of modelAccs) {
-      const modelEst = readAccumulatorEstimate(modelAcc, skipUsdValuation);
-      if (modelEst.observedUsageUsd <= 0 && modelEst.estimatedFullWindowUsd === null) continue;
-      representedGroups.add(groupId);
+    models.push(
+      buildQuotaModelValuation({
+        modelId: "",
+        groupId,
+        series,
+        seriesCutoffMs,
+        timeline: windowTimeline,
+        ...windowEst,
+      })
+    );
+  }
+
+  for (const [groupId, seriesByModel] of snapshotsByGroupAndModel) {
+    for (const [modelId, series] of seriesByModel) {
+      const { windowAcc, windowTimeline } = calibrateSeries(series, precomputedUsage, (rec) => rec.model === modelId);
       models.push(
         buildQuotaModelValuation({
           modelId,
           groupId,
           series,
           seriesCutoffMs,
-          ...modelEst,
+          timeline: windowTimeline,
+          ...readAccumulatorEstimate(windowAcc),
         })
       );
     }
-
-    if (!representedGroups.has(groupId)) {
-      models.push(
-        buildQuotaModelValuation({
-          modelId: "",
-          groupId,
-          series,
-          seriesCutoffMs,
-          estimatedFullWindowUsd: windowEst.estimatedFullWindowUsd,
-          previousEstimatedFullWindowUsd: windowEst.previousEstimatedFullWindowUsd,
-          estimatedRemainingUsd: windowRemainingUsd,
-          observedDelta: 0,
-          observedUsageUsd: 0,
-        })
-      );
-    }
-  }
-
-  for (const [modelId, rawSeries] of snapshotsByModel) {
-    if (rawSeries.length === 0) continue;
-    const series = [...rawSeries].sort((a, b) => a.capturedAt.getTime() - b.capturedAt.getTime());
-    const latest = series[series.length - 1]!;
-    if (latest.groupId.startsWith("gemini-argon-")) continue;
-    const groupId = latest.groupId;
-    const skipUsdValuation = isRequestCountWindow(groupId);
-
-    const { windowAcc } = calibrateSeries(
-      series,
-      precomputedUsage,
-      (rec) => rec.model === modelId,
-      skipUsdValuation
-    );
-    const est = readAccumulatorEstimate(windowAcc, skipUsdValuation);
-    models.push(
-      buildQuotaModelValuation({
-        modelId,
-        groupId,
-        series,
-        seriesCutoffMs,
-        ...est,
-      })
-    );
   }
 
   models.sort(
@@ -638,6 +490,7 @@ function computeQuotaHistoryForAccount(
     authIndex,
     windows,
     models,
+    events,
     hasAnySnapshots: true,
   };
 }
@@ -651,6 +504,7 @@ export function redactQuotaHistoryValuation(
       estimatedFullWindowUsd: null,
       previousEstimatedFullWindowUsd: null,
       estimatedRemainingUsd: null,
+      modelCostContributions: [],
     };
   }
 
@@ -665,7 +519,7 @@ export function redactQuotaHistoryValuation(
       observedUsageUsd: 0,
       series: model.series.map((pt) => ({
         ...pt,
-        estimatedRemainingUsd: null,
+        estimatedFullWindowUsd: null,
       })),
     })),
   };
@@ -692,10 +546,10 @@ export async function getAccountsQuotaHistory(
     return result;
   }
 
-  const since = new Date(Date.now() - CALIBRATION_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
-  const [snapshots, usageRecords, livePricing] = await Promise.all([
+  // Retention bounds the stored rows, so every remaining snapshot is in range.
+  const [snapshots, events, livePricing] = await Promise.all([
     prisma.quotaSnapshot.findMany({
-      where: { authIndex: { in: missing }, capturedAt: { gte: since } },
+      where: { authIndex: { in: missing } },
       orderBy: { capturedAt: "asc" },
       select: {
         authIndex: true,
@@ -704,15 +558,34 @@ export async function getAccountsQuotaHistory(
         modelId: true,
         remaining: true,
         resetTime: true,
+        usageModels: true,
         capturedAt: true,
       },
     }),
+    prisma.quotaResetEvent.findMany({
+      where: { authIndex: { in: missing } },
+      orderBy: { at: "asc" },
+      select: { authIndex: true, kind: true, at: true },
+    }),
+    getLiveModelPricing(),
+  ]);
+
+  const snapsByAccount = new Map<string, SnapshotRow[]>();
+  for (const snap of snapshots) {
+    const list = snapsByAccount.get(snap.authIndex) ?? [];
+    list.push(snap);
+    snapsByAccount.set(snap.authIndex, list);
+  }
+
+  const usageRecords = snapshots.length === 0 ? [] : await
     prisma.usageRecord.findMany({
       where: {
-        authIndex: { in: missing },
+        OR: Array.from(snapsByAccount, ([authIndex, series]) => ({
+          authIndex,
+          timestamp: { gt: series[0]!.capturedAt, lte: series[series.length - 1]!.capturedAt },
+        })),
         failed: false,
         totalTokens: { gt: 0 },
-        timestamp: { gte: since },
       },
       orderBy: { timestamp: "asc" },
       select: {
@@ -727,16 +600,7 @@ export async function getAccountsQuotaHistory(
         totalTokens: true,
         timestamp: true,
       },
-    }),
-    getLiveModelPricing(),
-  ]);
-
-  const snapsByAccount = new Map<string, SnapshotRow[]>();
-  for (const snap of snapshots) {
-    const list = snapsByAccount.get(snap.authIndex) ?? [];
-    list.push(snap);
-    snapsByAccount.set(snap.authIndex, list);
-  }
+    });
 
   const usageByAccount = new Map<string, UsageRow[]>();
   for (const rec of usageRecords) {
@@ -750,6 +614,7 @@ export async function getAccountsQuotaHistory(
       id,
       snapsByAccount.get(id) ?? [],
       usageByAccount.get(id) ?? [],
+      events.filter((event) => event.authIndex === id).map((event) => ({ kind: event.kind, at: event.at.toISOString() })),
       customPricing,
       livePricing
     );
@@ -765,5 +630,5 @@ export async function getAccountQuotaHistory(
   customPricing?: Record<string, ModelPrice>
 ): Promise<AccountQuotaHistoryResponse> {
   const histories = await getAccountsQuotaHistory([authIndex], customPricing);
-  return histories[authIndex] ?? { authIndex, models: [], windows: {}, hasAnySnapshots: false };
+  return histories[authIndex] ?? { authIndex, models: [], windows: {}, events: [], hasAnySnapshots: false };
 }

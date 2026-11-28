@@ -89,6 +89,7 @@ describe("GET /api/usage/history - failureBody scoping and projection", () => {
 
     expect(body.data.requestEvents[0]).toMatchObject({
       id: "rec-own-fail",
+      apiKeyId: "key-1",
       failureBody: "own failure body",
       cancelled: false,
     });

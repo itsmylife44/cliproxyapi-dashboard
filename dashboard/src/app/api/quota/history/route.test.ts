@@ -45,6 +45,7 @@ const SAMPLE_HISTORY = {
       estimatedFullWindowUsd: 300,
       previousEstimatedFullWindowUsd: 250,
       estimatedRemainingUsd: 294,
+      modelCostContributions: [{ modelId: "gemini-2.5-pro", projectedUsd: 300 }],
     },
   },
   models: [
@@ -62,12 +63,12 @@ const SAMPLE_HISTORY = {
         {
           timestamp: "2026-11-10T10:00:00.000Z",
           remainingPct: 100,
-          estimatedRemainingUsd: 300,
+          estimatedFullWindowUsd: 300,
         },
         {
           timestamp: "2026-11-10T11:30:00.000Z",
           remainingPct: 98,
-          estimatedRemainingUsd: 294,
+          estimatedFullWindowUsd: 300,
         },
       ],
     },
@@ -94,8 +95,9 @@ describe("GET /api/quota/history", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.windows["gemini-5h"].estimatedFullWindowUsd).toBe(300);
+    expect(body.windows["gemini-5h"].modelCostContributions).toEqual(SAMPLE_HISTORY.windows["gemini-5h"].modelCostContributions);
     expect(body.models[0].estimatedFullWindowUsd).toBe(300);
-    expect(body.models[0].series[0].estimatedRemainingUsd).toBe(300);
+    expect(body.models[0].series[0].estimatedFullWindowUsd).toBe(300);
   });
 
   it("redacts usage-derived USD valuations for non-admin users while keeping quota % history", async () => {
@@ -110,13 +112,14 @@ describe("GET /api/quota/history", () => {
       estimatedFullWindowUsd: null,
       previousEstimatedFullWindowUsd: null,
       estimatedRemainingUsd: null,
+      modelCostContributions: [],
     });
     expect(body.models[0].estimatedFullWindowUsd).toBeNull();
     expect(body.models[0].previousEstimatedFullWindowUsd).toBeNull();
     expect(body.models[0].estimatedRemainingUsd).toBeNull();
     expect(body.models[0].observedUsageUsd).toBe(0);
     expect(body.models[0].series.map((p: { remainingPct: number }) => p.remainingPct)).toEqual([100, 98]);
-    expect(body.models[0].series.every((p: { estimatedRemainingUsd: number | null }) => p.estimatedRemainingUsd === null)).toBe(true);
+    expect(body.models[0].series.every((p: { estimatedFullWindowUsd: number | null }) => p.estimatedFullWindowUsd === null)).toBe(true);
   });
 
   it("redacts batch histories for non-admin users", async () => {
@@ -128,6 +131,7 @@ describe("GET /api/quota/history", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.histories["acc-1"].windows["gemini-5h"].estimatedFullWindowUsd).toBeNull();
+    expect(body.histories["acc-1"].windows["gemini-5h"].modelCostContributions).toEqual([]);
     expect(body.histories["acc-1"].models[0].estimatedFullWindowUsd).toBeNull();
   });
 });

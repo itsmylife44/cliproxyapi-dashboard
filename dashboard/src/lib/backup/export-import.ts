@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { invalidateApiKeyUsageCache } from "@/lib/api-keys/sync";
 import fs from "fs/promises";
 import path from "path";
 import type {
@@ -106,6 +107,9 @@ export async function exportDatabase(exportedBy: string): Promise<BackupData> {
     userId: ak.userId,
     key: ak.key,
     name: ak.name,
+    isActive: ak.isActive,
+    expiresAt: ak.expiresAt?.toISOString() ?? null,
+    spendLimit: ak.spendLimit,
     lastUsedAt: ak.lastUsedAt?.toISOString() ?? null,
     createdAt: ak.createdAt.toISOString(),
   }));
@@ -340,6 +344,8 @@ export async function exportDatabase(exportedBy: string): Promise<BackupData> {
         modelId: qs.modelId,
         remaining: qs.remaining,
         resetTime: qs.resetTime?.toISOString() ?? null,
+        windowSeconds: qs.windowSeconds,
+        usageModels: qs.usageModels,
         capturedAt: qs.capturedAt.toISOString(),
       });
     }
@@ -576,6 +582,9 @@ export async function importDatabase(backup: BackupData): Promise<void> {
           userId: ak.userId,
           key: ak.key,
           name: ak.name,
+          isActive: ak.isActive ?? true,
+          expiresAt: ak.expiresAt ? new Date(ak.expiresAt) : null,
+          spendLimit: ak.spendLimit ?? null,
           lastUsedAt: ak.lastUsedAt ? new Date(ak.lastUsedAt) : null,
           createdAt: new Date(ak.createdAt),
         })),
@@ -787,6 +796,8 @@ export async function importDatabase(backup: BackupData): Promise<void> {
           modelId: qs.modelId,
           remaining: qs.remaining,
           resetTime: qs.resetTime ? new Date(qs.resetTime) : null,
+          windowSeconds: qs.windowSeconds ?? null,
+          usageModels: qs.usageModels ?? [],
           capturedAt: new Date(qs.capturedAt),
         })),
       });
@@ -794,6 +805,7 @@ export async function importDatabase(backup: BackupData): Promise<void> {
   }, {
     timeout: 300000, // 5 minute timeout for large restores
   });
+  invalidateApiKeyUsageCache();
 
   // Transaction succeeded - now safely delete orphaned backup files
   // These files are no longer referenced by any DB record

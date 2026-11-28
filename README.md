@@ -69,6 +69,7 @@ Open **http://localhost:3000** → create admin account → done.
 - **User Management** — Admins create, edit, and delete users and grant admin rights
 - **Real-time Monitoring** — Live log streaming, container health, and service management
 - **Quota Tracking** — Rate limits and usage per provider (Claude, Codex incl. per-model and code review limits, Kimi, GitHub Copilot, Antigravity and Gemini per model)
+  Shared quota windows estimate full-window value from the combined usage mix. Each model's projected cost is its contribution at that same mix, not a separate quota estimate.
 - **Telegram Quota Alerts** — Automatic notifications when OAuth quota drops below threshold (configurable providers, check interval, and cooldown)
 - **Usage Analytics** — Request counts, provider breakdown, model stats, error rates, estimated cost per model and provider
 - **Oh-My-Open-Agent Variant Toggle** — Choose between [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (11 agents + 9 categories) and [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (7 agents, lower tokens, fallback chains) with per-agent model/skills configuration

@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/lib/logger";
-import { CACHE_KEYS, quotaCache, quotaAccountCache } from "@/lib/cache";
+import { CACHE_KEYS, invalidateQuotaHistoryCaches, quotaCache, quotaAccountCache } from "@/lib/cache";
 import { getManagementUrl } from "@/lib/management-url";
 import type { QuotaAccount } from "@/lib/model-first-monitoring";
 import { notifyAutoResetUsed } from "@/lib/quota-alerts";
@@ -88,9 +88,15 @@ async function updateAutoResetRule(
 }
 
 export async function upsertAutoResetRule(authIndex: string, patch: Pick<AutoResetRule,
-  "enabled" | "fiveHourThresholdPct" | "weeklyThresholdPct" | "minWeeklyDaysLeft"
+  "enabled" | "prime" | "fiveHourThresholdPct" | "weeklyThresholdPct" | "minWeeklyDaysLeft"
 >) {
   return updateAutoResetRule(authIndex, (rule) => normalizeAutoResetRule({ ...rule, ...patch }));
+}
+
+/** Pins a credit reset or prime on the account's quota history chart. */
+export async function recordQuotaResetEvent(authIndex: string, kind: "reset" | "prime"): Promise<void> {
+  await prisma.quotaResetEvent.create({ data: { authIndex, kind } });
+  invalidateQuotaHistoryCaches([authIndex]);
 }
 
 function parseJsonBody(raw: unknown): unknown {
@@ -104,7 +110,7 @@ function parseJsonBody(raw: unknown): unknown {
   return raw ?? null;
 }
 
-async function callUpstreamViaManagement(payload: {
+export async function callUpstreamViaManagement(payload: {
   auth_index: string;
   method: "GET" | "POST";
   url: string;
@@ -383,7 +389,7 @@ export async function inspectAccountResetCredits(params: {
   };
 }
 
-function bustQuotaCaches(authIndex: string): void {
+export function bustQuotaCaches(authIndex: string): void {
   quotaCache.invalidate("quota:all");
   quotaCache.invalidate("quota:previous");
   const escapedPrefix = CACHE_KEYS.quotaAccount(authIndex).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -541,10 +547,11 @@ export async function executeAccountReset(target: ResetAccount, windows?: AutoRe
   await updateAutoResetRule(target.auth_index, (rule) =>
     rule.lastResetAt === reservation.lastResetAt ? { ...rule, lastStatus: result.status } : null
   );
+  if (result.ok && result.status === "reset") await recordQuotaResetEvent(target.auth_index, "reset");
   return result;
 }
 
-async function fetchAuthFilesMeta(): Promise<AuthFileMeta[]> {
+export async function fetchAuthFilesMeta(): Promise<AuthFileMeta[]> {
   const managementKey = process.env.MANAGEMENT_API_KEY;
   if (!managementKey) return [];
   const res = await fetch(`${getManagementUrl()}/auth-files`, {

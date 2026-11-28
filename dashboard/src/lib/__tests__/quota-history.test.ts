@@ -10,10 +10,13 @@ const { snapshotFindMany, snapshotCreateMany, snapshotDeleteMany, usageFindMany 
 vi.mock("@/lib/db", () => ({
   prisma: {
     quotaSnapshot: {
-      findMany: snapshotFindMany,
+      // Fixtures omit columns whose database default is an empty array.
+      findMany: async (...args: unknown[]) =>
+        (((await snapshotFindMany(...args)) ?? []) as object[]).map((row) => ({ usageModels: [], ...row })),
       createMany: snapshotCreateMany,
       deleteMany: snapshotDeleteMany,
     },
+    quotaResetEvent: { findMany: async () => [] },
     usageRecord: {
       // Fixtures omit token columns whose database default is 0.
       findMany: async (...args: unknown[]) =>
@@ -88,10 +91,10 @@ describe("quota history multi-account batching and valuation", () => {
     const history = await getAccountQuotaHistory("probe", TEST_PRICING);
     expect(history.windows["gemini-5h"]?.estimatedFullWindowUsd).toBeCloseTo(300);
     expect(history.windows["gemini-5h"]?.estimatedRemainingUsd).toBeCloseTo(294);
-    const model = history.models.find((m) => m.modelId === "gemini-2.5-pro");
-    expect(model?.estimatedFullWindowUsd).toBeCloseTo(300);
-    expect(model?.observedUsageUsd).toBeCloseTo(6);
-    expect(model?.observedDelta).toBeCloseTo(0.02);
+    const window = history.models.find((m) => m.groupId === "gemini-5h" && !m.modelId);
+    expect(window?.estimatedFullWindowUsd).toBeCloseTo(300);
+    expect(window?.observedUsageUsd).toBeCloseTo(6);
+    expect(window?.observedDelta).toBeCloseTo(0.02);
   });
 
   it("clamps 5m cache-write tokens to >= 0 when cacheWrite1hTokens exceeds cacheWriteTokens", async () => {
@@ -116,27 +119,6 @@ describe("quota history multi-account batching and valuation", () => {
     const history = await getAccountQuotaHistory("cw", TEST_PRICING);
     // 0 base + (0 * 1.25 + 1000 * 2) * 1000 / 1M = $2.00 over 10% -> $20.00 full window
     expect(history.windows["five-hour"]?.estimatedFullWindowUsd).toBeCloseTo(20);
-  });
-
-  it("skips token-based USD valuation for request-count windows while keeping quota % series", async () => {
-    const reset = new Date("2026-11-10T15:00:00Z");
-    snapshotFindMany.mockResolvedValueOnce([
-      { authIndex: "gh", provider: "copilot", groupId: "premium-requests", modelId: "", remaining: 1.0, resetTime: reset, capturedAt: new Date("2026-11-10T10:00:00Z") },
-      { authIndex: "gh", provider: "copilot", groupId: "premium-requests", modelId: "", remaining: 0.9, resetTime: reset, capturedAt: new Date("2026-11-10T10:15:00Z") },
-    ]);
-    usageFindMany.mockResolvedValueOnce([
-      { authIndex: "gh", model: "claude-opus-5-5-high", inputTokens: 1_000_000, outputTokens: 0, cachedTokens: 0, timestamp: new Date("2026-11-10T10:05:00Z") },
-    ]);
-
-    const history = await getAccountQuotaHistory("gh");
-    expect(history.windows["premium-requests"]).toEqual({
-      estimatedFullWindowUsd: null,
-      previousEstimatedFullWindowUsd: null,
-      estimatedRemainingUsd: null,
-    });
-    expect(history.models.length).toBeGreaterThan(0);
-    expect(history.models[0]?.estimatedFullWindowUsd).toBeNull();
-    expect(history.models[0]?.series).toHaveLength(2);
   });
 
   it("renders quota % series even when an account has snapshots with no attributable usage", async () => {
@@ -214,7 +196,6 @@ describe("quota history multi-account batching and valuation", () => {
     expect(snapshotFindMany).toHaveBeenCalledTimes(1);
 
     snapshotFindMany.mockResolvedValueOnce([]);
-    usageFindMany.mockResolvedValueOnce([]);
     const mixedBatch = await getAccountsQuotaHistory(["acc-1", "acc-2", "acc-3"]);
     expect(snapshotFindMany).toHaveBeenCalledTimes(2);
     expect(snapshotFindMany.mock.calls[1]?.[0]).toMatchObject({
@@ -236,7 +217,6 @@ describe("quota history multi-account batching and valuation", () => {
     ]);
 
     snapshotFindMany.mockResolvedValueOnce([]);
-    usageFindMany.mockResolvedValueOnce([]);
     await getAccountsQuotaHistory(["acc-1", "acc-2"]);
     expect(snapshotFindMany).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -260,8 +240,6 @@ describe("quota history multi-account batching and valuation", () => {
 
     const history = await getAccountQuotaHistory("ag-jitter", TEST_PRICING);
     expect(history.windows["gemini-5h"]?.estimatedFullWindowUsd).toBeCloseTo(1.5 / 0.021);
-    expect(history.models.map((m) => m.modelId)).toContain("gemini-2.5-pro");
-    expect(history.models.find((m) => m.modelId === "gemini-2.5-pro")?.observedUsageUsd).toBeCloseTo(1.5);
   });
 
   it("does not let an idle unpriced/other-model ping poison window valuation", async () => {
@@ -288,30 +266,39 @@ describe("quota history multi-account batching and valuation", () => {
     });
     expect(history.windows["gemini-weekly"]?.estimatedFullWindowUsd).toBeCloseTo(7.5);
     expect(history.windows["gemini-weekly"]?.estimatedRemainingUsd).toBeCloseTo(6.75);
-    const flash = history.models.find((m) => m.modelId === "gemini-3.8-flash-high");
-    expect(flash?.estimatedFullWindowUsd).toBeCloseTo(7.5);
-    expect(flash?.estimatedRemainingUsd).toBeCloseTo(6.75);
-    expect(history.models.find((m) => m.modelId === "gemini-3-flash")).toBeUndefined();
   });
 
-  it("drops a model after five later five-hour windows without usage", async () => {
+  it.each([
+    { provider: "antigravity", groupId: "claude-gpt-5h", hours: 5 },
+    { provider: "codex", groupId: "primary-window", hours: 5 },
+    { provider: "codex", groupId: "secondary-window", hours: 168 },
+    { provider: "codex", groupId: "primary-window", hours: 720 },
+  ])("drops stale estimates for $provider $groupId ($hours hours)", async ({ provider, groupId, hours }) => {
     const start = Date.parse("2026-11-10T00:00:00Z");
     const hour = 60 * 60 * 1000;
     const snapshots = Array.from({ length: 7 }, (_, index) => ({
-      authIndex: "rolling", provider: "antigravity", groupId: "claude-gpt-5h", modelId: "",
+      authIndex: "rolling", provider, groupId, modelId: "",
       remaining: index === 0 ? 0.9 : 1,
-      resetTime: new Date(start + (index + 1) * 5 * hour),
-      capturedAt: new Date(start + index * 5 * hour),
+      resetTime: new Date(start + (index + 1) * hours * hour),
+      capturedAt: new Date(start + index * hours * hour),
     }));
     snapshots.splice(1, 0, { ...snapshots[0]!, remaining: 0.8, capturedAt: new Date(start + hour) });
     const usage = [{ authIndex: "rolling", model: "gpt-6.1-sol", inputTokens: 1_000, outputTokens: 0, cachedTokens: 0, timestamp: new Date(start + hour / 2) }];
     snapshotFindMany.mockResolvedValueOnce(snapshots.slice(0, -1));
     usageFindMany.mockResolvedValueOnce(usage);
-    expect((await getAccountQuotaHistory("rolling", TEST_PRICING)).models.some((model) => model.modelId === "gpt-6.1-sol")).toBe(true);
+    const retained = await getAccountQuotaHistory("rolling", TEST_PRICING);
+    expect(retained.models.find((model) => model.groupId === groupId)?.estimatedFullWindowUsd).not.toBeNull();
+    expect(retained.windows[groupId]?.estimatedFullWindowUsd).not.toBeNull();
+    expect(retained.windows[groupId]?.modelCostContributions).toEqual([
+      { modelId: "gpt-6.1-sol", projectedUsd: expect.closeTo(10) },
+    ]);
     quotaHistoryCache.invalidateAll();
     snapshotFindMany.mockResolvedValueOnce(snapshots);
     usageFindMany.mockResolvedValueOnce(usage);
-    expect((await getAccountQuotaHistory("rolling", TEST_PRICING)).models.some((model) => model.modelId === "gpt-6.1-sol")).toBe(false);
+    const history = await getAccountQuotaHistory("rolling", TEST_PRICING);
+    expect(history.models.find((model) => model.groupId === groupId)?.estimatedFullWindowUsd).toBeNull();
+    expect(history.windows[groupId]?.estimatedFullWindowUsd).toBeNull();
+    expect(history.windows[groupId]?.modelCostContributions).toEqual([]);
   });
 
   it("ignores external quota drops that have no logged CLIProxyAPI usage", async () => {
@@ -330,5 +317,31 @@ describe("quota history multi-account batching and valuation", () => {
     // Calibrated rate stays $1 / 0.10 = $10 full window ($5 remaining at 50%), unaffected by the unlogged 40% drop.
     expect(history.windows["gemini-5h"]?.estimatedFullWindowUsd).toBeCloseTo(10);
     expect(history.windows["gemini-5h"]?.estimatedRemainingUsd).toBeCloseTo(5);
+  });
+
+  it("extrapolates the shared window from the whole usage mix without assigning its quota to a model", async () => {
+    const reset = new Date("2026-11-20T15:00:00Z");
+    const at = (minute: number) => new Date(Date.UTC(2026, 10, 20, 10, minute));
+    snapshotFindMany.mockResolvedValueOnce([
+      { authIndex: "mix", provider: "codex", groupId: "primary-window", modelId: "", remaining: 1.0, resetTime: reset, capturedAt: at(0) },
+      { authIndex: "mix", provider: "codex", groupId: "primary-window", modelId: "", remaining: 0.9, resetTime: reset, capturedAt: at(10) },
+      { authIndex: "mix", provider: "codex", groupId: "primary-window", modelId: "", remaining: 0.8, resetTime: reset, capturedAt: at(20) },
+    ]);
+    // $1 of gemini-2.5-pro per interval, plus a $0.001 request on another model in each.
+    usageFindMany.mockResolvedValueOnce([
+      { authIndex: "mix", model: "gemini-2.5-pro", inputTokens: 1_000, outputTokens: 0, cachedTokens: 0, timestamp: at(5) },
+      { authIndex: "mix", model: "gpt-6.1-terra", inputTokens: 1, outputTokens: 0, cachedTokens: 0, timestamp: at(6) },
+      { authIndex: "mix", model: "gemini-2.5-pro", inputTokens: 1_000, outputTokens: 0, cachedTokens: 0, timestamp: at(15) },
+      { authIndex: "mix", model: "gpt-6.1-terra", inputTokens: 1, outputTokens: 0, cachedTokens: 0, timestamp: at(16) },
+    ]);
+
+    const history = await getAccountQuotaHistory("mix", TEST_PRICING);
+    expect(history.windows["primary-window"]?.estimatedFullWindowUsd).toBeCloseTo(2.002 / 0.2);
+    expect(history.windows["primary-window"]?.modelCostContributions).toEqual([
+      { modelId: "gemini-2.5-pro", projectedUsd: expect.closeTo(2 / 0.2) },
+      { modelId: "gpt-6.1-terra", projectedUsd: expect.closeTo(0.002 / 0.2, 6) },
+    ]);
+    expect(history.models.map((row) => row.modelId)).toEqual([""]);
+    expect(history.models[0]?.series.at(-1)?.estimatedFullWindowUsd).toBeCloseTo(2.002 / 0.2);
   });
 });

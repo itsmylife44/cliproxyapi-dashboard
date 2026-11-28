@@ -31,10 +31,9 @@ const NullableExpirySchema = z
   .transform((val, ctx) => {
     if (val === undefined) return undefined;
     if (val === null || val === "") return null;
-    const parsed = new Date(
-      /^\d{4}-\d{2}-\d{2}$/.test(val) ? `${val}T23:59:59.999` : val
-    );
-    if (Number.isNaN(parsed.getTime())) {
+    const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(val);
+    const parsed = new Date(dateOnly ? `${val}T23:59:59.999Z` : val);
+    if (Number.isNaN(parsed.getTime()) || (dateOnly && parsed.toISOString().slice(0, 10) !== val)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid expiry date" });
       return z.NEVER;
     }
@@ -303,7 +302,6 @@ export async function DELETE(request: NextRequest) {
 
     return apiSuccess({
       syncStatus: syncResult.ok ? "ok" : ("failed" as const),
-      syncMessage: syncResult.ok ? undefined : "Backend sync pending - key deleted but may still work temporarily",
     });
   } catch (error) {
     return Errors.internal("Failed to delete API key", error);

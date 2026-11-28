@@ -344,7 +344,6 @@ const SETTINGS_ALLOWLIST = new Set([
   "max_provider_keys_per_user",
   "telegram_bot_token",
   "telegram_chat_id",
-  "telegram_alerts_enabled",
   "telegram_alert_providers",
 ]);
 

@@ -34,7 +34,8 @@ export interface CodexWhamUsageResponse {
  */
 function parseCodexRateLimit(
   rateLimit: CodexRateLimitDetails | null | undefined,
-  scope?: QuotaGroupScope
+  scope?: QuotaGroupScope,
+  usageModels?: string[]
 ): QuotaGroup[] {
   const groups: QuotaGroup[] = [];
   const idPrefix = scope ? `${scope.id}-` : "";
@@ -66,6 +67,7 @@ function parseCodexRateLimit(
       id,
       label,
       ...(scope ? { scope } : {}),
+      ...(usageModels ? { usageModels } : {}),
       windowSeconds,
       remainingFraction,
       resetTime,
@@ -112,7 +114,10 @@ export function parseCodexQuota(data: CodexWhamUsageResponse): QuotaGroup[] {
 
   (data.additional_rate_limits ?? []).forEach((limit, index) => {
     if (!limit) return;
-    groups.push(...parseCodexRateLimit(limit.rate_limit, additionalLimitScope(limit, index + 1, usedScopeIds)));
+    const scope = additionalLimitScope(limit, index + 1, usedScopeIds);
+    // The limit name is the model it covers (e.g. `GPT-5.3-Codex-Spark`); the scope id may be a codename.
+    const modelSlug = slugifyLabel(limit.limit_name?.trim() ?? "");
+    groups.push(...parseCodexRateLimit(limit.rate_limit, scope, modelSlug ? [modelSlug] : undefined));
   });
 
   groups.push(...parseCodexRateLimit(data.code_review_rate_limit, CODE_REVIEW_SCOPE));

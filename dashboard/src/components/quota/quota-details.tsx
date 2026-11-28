@@ -5,7 +5,7 @@ import { useFormatter, useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { HelpTooltip } from "@/components/ui/tooltip";
+import { HelpButton } from "@/components/ui/tooltip";
 import { AccountQuotaHistory, prefetchAccountQuotaHistory } from "@/components/quota/account-quota-history";
 import { AutoPrimeHelp } from "@/components/quota/auto-prime-help";
 import { QuotaCapacity } from "@/components/quota/quota-capacity";
@@ -381,7 +381,7 @@ export function QuotaDetails({
                                   />
                                   <span>{t("autoPrimeToggle")}</span>
                                 </label>
-                                <HelpTooltip content={t("autoPrimeHelp")} onClick={() => setPrimeHelpOpen(true)} />
+                                <HelpButton label={t("autoPrimeToggle")} onClick={() => setPrimeHelpOpen(true)} />
                               </span>
                               <span className="text-[var(--text-muted)]">{t("autoPrimeSummary")}</span>
                             </div>

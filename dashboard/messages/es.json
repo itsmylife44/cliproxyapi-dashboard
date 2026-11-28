@@ -866,20 +866,17 @@
     "primePin": "P",
     "autoPrimeToggle": "Auto-prime",
     "autoPrimeSummary": "Adelanta la próxima recarga cuando esta cuenta está inactiva.",
-    "autoPrimeHelp": "La cuenta atrás de un límite hasta su próxima recarga solo empieza cuando se usa la cuenta. Esta opción la inicia justo después de cada recarga. Haz clic para ver detalles.",
-    "autoPrimeDetails": {
-      "why": { "title": "Por qué ayuda", "body": "Límites como el de 5 horas y el semanal solo empiezan la cuenta atrás hasta la próxima recarga cuando se usa la cuenta. Si la cuenta queda inactiva tras una recarga, ese tiempo se suma y la próxima recarga llega más tarde de lo necesario." },
-      "what": { "title": "Qué hace", "body": "Cada 5 minutos el panel revisa esta cuenta. Cuando un límite se ha recargado y sigue sin usarse, envía una solicitud mínima (el modelo disponible más barato, pocos tokens de salida) que inicia la cuenta atrás de inmediato." },
-      "quiet": { "title": "Cuándo no hace nada", "body": "Solo envía cuando un límite marca 100 % y ya pasó su última hora de recarga conocida. Si ya usaste la cuenta, la cuenta atrás ya está en marcha y no se envía nada. Cada inicio aparece como una marca P en el historial de cuota." },
-      "cost": { "title": "Coste", "body": "Una solicitud con pocos tokens de salida por recarga, con el modelo más barato de la cuenta. Nunca usa créditos de restablecimiento." }
-    },
+    "autoPrimeWhat": "Un límite solo cuenta atrás hasta su próxima recarga cuando se usa la cuenta. Cuando se recarga y queda inactiva, Auto-prime envía un prompt mínimo para que la cuenta atrás empiece al instante.",
+    "autoPrimeNote": "Cuesta pocos tokens del modelo más barato por recarga y nunca usa créditos de restablecimiento. Cada inicio aparece como una marca P en el historial de cuota.",
     "autoPrimeDiagram": {
-      "refill": "Recarga",
-      "without": "No",
-      "with": "Sí",
-      "idle": "inactiva",
-      "nextRefill": "próxima recarga",
-      "caption": "Si la cuenta atrás empieza en la recarga, la próxima recarga llega lo antes posible."
+      "refill": "El límite se recarga",
+      "without": "Auto-prime desactivado",
+      "with": "Auto-prime activado",
+      "firstPrompt": "Tu primer prompt inicia la cuenta atrás",
+      "primePrompt": "Auto-prime envía un prompt al instante",
+      "idle": "Inactiva, sin cuenta atrás",
+      "sooner": "Tiempo ahorrado",
+      "nextRefill": "Próxima recarga"
     },
     "autoResetToggle": "Auto-reset",
     "autoResetWhenLabel": "Activar cuando",

@@ -8,63 +8,85 @@ interface AutoPrimeHelpProps {
   onClose: () => void;
 }
 
-const DETAIL_SECTIONS = ["why", "what", "quiet", "cost"] as const;
-
-/** Explains how starting the limit countdown moves the next refill earlier. */
+/** A short notice: what Auto-prime does, the timeline that shows it, and its cost. */
 export function AutoPrimeHelp({ isOpen, onClose }: AutoPrimeHelpProps) {
   const t = useTranslations("quota");
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-lg">
-      <ModalHeader>
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-md">
+      <ModalHeader className="mb-3 pb-2">
         <ModalTitle>{t("autoPrimeToggle")}</ModalTitle>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">{t("autoPrimeSummary")}</p>
       </ModalHeader>
-      <ModalContent className="space-y-5">
+      <ModalContent className="mb-0 space-y-3 text-sm">
+        <p className="text-[var(--text-secondary)]">{t("autoPrimeWhat")}</p>
         <PrimeTimeline />
-        <dl className="space-y-3 text-sm">
-          {DETAIL_SECTIONS.map((section) => (
-            <div key={section}>
-              <dt className="font-medium text-[var(--text-primary)]">{t(`autoPrimeDetails.${section}.title`)}</dt>
-              <dd className="mt-0.5 leading-relaxed text-[var(--text-secondary)]">{t(`autoPrimeDetails.${section}.body`)}</dd>
-            </div>
-          ))}
-        </dl>
+        <p className="text-xs text-[var(--text-muted)]">{t("autoPrimeNote")}</p>
       </ModalContent>
     </Modal>
   );
 }
 
-/** Two lanes on one time axis: the same refill, used later vs. started immediately. */
+/** Share of the timeline the account sits idle before its first prompt when Auto-prime is off. */
+const IDLE_SHARE = 40;
+const WINDOW_SHARE = 100 - IDLE_SHARE;
+
+/**
+ * Two lanes read left to right from the same refill: a prompt marker shows when the countdown starts,
+ * and the bar shows the countdown up to the next refill. HTML so every label wraps at any width.
+ */
 function PrimeTimeline() {
   const t = useTranslations("quota.autoPrimeDiagram");
-  const refillX = 24;
-  const idleEndX = 132;
-  const windowWidth = 156;
-  const lanes = [
-    { label: t("without"), start: idleEndX, y: 30 },
-    { label: t("with"), start: refillX, y: 74 },
-  ];
+  const nextRefill = t("nextRefill");
 
   return (
-    <figure className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 p-3">
-      <svg viewBox="0 0 320 104" className="w-full text-[var(--text-primary)]" role="img" aria-label={t("caption")}>
-        <line x1={refillX} y1="8" x2={refillX} y2="96" stroke="var(--text-muted)" strokeDasharray="2 3" />
-        <text x={refillX + 4} y="12" fontSize="9" fill="var(--text-muted)">{t("refill")}</text>
-        {lanes.map(({ label, start, y }) => (
-          <g key={label}>
-            <text x={refillX} y={y - 8} fontSize="10" fontWeight="500" fill="currentColor">{label}</text>
-            {start > refillX && (
-              <line x1={refillX} y1={y + 5} x2={start} y2={y + 5} stroke="var(--text-muted)" strokeDasharray="1 3" strokeLinecap="round" />
-            )}
-            <rect x={start} y={y} width={windowWidth} height="10" rx="3" fill="currentColor" opacity="0.85" />
-            <line x1={start + windowWidth} y1={y - 4} x2={start + windowWidth} y2={y + 14} stroke="currentColor" strokeWidth="1.5" />
-            <text x={start + windowWidth + 4} y={y + 9} fontSize="9" fill="var(--text-secondary)">{t("nextRefill")}</text>
-          </g>
-        ))}
-        <text x={(refillX + idleEndX) / 2} y="52" fontSize="9" textAnchor="middle" fill="var(--text-muted)">{t("idle")}</text>
-      </svg>
-      <figcaption className="mt-1 text-xs text-[var(--text-muted)]">{t("caption")}</figcaption>
+    <figure className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-muted)]/35 p-3 text-xs">
+      <div className="space-y-2.5 border-l border-dashed border-[var(--text-muted)] pl-2">
+        <p className="text-[var(--text-muted)]">{t("refill")}</p>
+        <TimelineLane title={t("without")} promptDelayed prompt={t("firstPrompt")} gapLabel={t("idle")} nextRefill={nextRefill} />
+        <TimelineLane title={t("with")} promptDelayed={false} prompt={t("primePrompt")} gapLabel={t("sooner")} nextRefill={nextRefill} />
+      </div>
     </figure>
+  );
+}
+
+interface TimelineLaneProps {
+  title: string;
+  /** Off: the first prompt comes after an idle gap. On: the prompt lands on the refill and the gap is time saved. */
+  promptDelayed: boolean;
+  prompt: string;
+  gapLabel: string;
+  nextRefill: string;
+}
+
+function TimelineLane({ title, promptDelayed, prompt, gapLabel, nextRefill }: TimelineLaneProps) {
+  const gapWidth = { width: `${IDLE_SHARE}%` };
+  const countdownWidth = { width: `${WINDOW_SHARE}%` };
+  const gap = (
+    <p
+      className={`min-w-0 shrink-0 px-1 text-center break-words ${promptDelayed ? "text-[var(--text-muted)]" : "font-medium text-[var(--accent)]"}`}
+      style={gapWidth}
+    >
+      {gapLabel}
+    </p>
+  );
+
+  return (
+    <div>
+      <p className="mb-1 font-medium text-[var(--text-primary)]">{title}</p>
+      <div className="flex">
+        {promptDelayed && <div className="shrink-0" style={gapWidth} />}
+        <p className="min-w-0 border-l-2 border-[var(--accent)] pb-1 pl-1 break-words text-[var(--accent)]" style={countdownWidth}>{prompt}</p>
+      </div>
+      <div className="flex h-2.5 items-center">
+        {promptDelayed && <div className="shrink-0 border-t-2 border-dotted border-[var(--text-muted)]" style={gapWidth} />}
+        <div className="h-full rounded-r-sm border-l-2 border-[var(--accent)] bg-[var(--text-primary)]/80" style={countdownWidth} />
+        {!promptDelayed && <div className="h-full shrink-0 rounded-sm border border-dashed border-[var(--accent)]" style={gapWidth} />}
+      </div>
+      <div className="mt-1 flex">
+        {promptDelayed && gap}
+        <p className="min-w-0 pr-1 text-right break-words text-[var(--text-secondary)]" style={countdownWidth}>{nextRefill}</p>
+        {!promptDelayed && gap}
+      </div>
+    </div>
   );
 }

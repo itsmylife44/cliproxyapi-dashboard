@@ -320,4 +320,26 @@ describe("quota history multi-account batching and valuation", () => {
     expect(history.windows["gemini-5h"]?.estimatedFullWindowUsd).toBeCloseTo(10);
     expect(history.windows["gemini-5h"]?.estimatedRemainingUsd).toBeCloseTo(5);
   });
+
+  it("calibrates a model from drops it dominates even when another model adds negligible spend", async () => {
+    const reset = new Date("2026-11-20T15:00:00Z");
+    const at = (minute: number) => new Date(Date.UTC(2026, 10, 20, 10, minute));
+    snapshotFindMany.mockResolvedValueOnce([
+      { authIndex: "mix", provider: "codex", groupId: "primary-window", modelId: "", remaining: 1.0, resetTime: reset, capturedAt: at(0) },
+      { authIndex: "mix", provider: "codex", groupId: "primary-window", modelId: "", remaining: 0.9, resetTime: reset, capturedAt: at(10) },
+      { authIndex: "mix", provider: "codex", groupId: "primary-window", modelId: "", remaining: 0.8, resetTime: reset, capturedAt: at(20) },
+    ]);
+    // $1 of gemini-2.5-pro per interval, plus a $0.001 request on another model in each.
+    usageFindMany.mockResolvedValueOnce([
+      { authIndex: "mix", model: "gemini-2.5-pro", inputTokens: 1_000, outputTokens: 0, cachedTokens: 0, timestamp: at(5) },
+      { authIndex: "mix", model: "gpt-6.1-terra", inputTokens: 1, outputTokens: 0, cachedTokens: 0, timestamp: at(6) },
+      { authIndex: "mix", model: "gemini-2.5-pro", inputTokens: 1_000, outputTokens: 0, cachedTokens: 0, timestamp: at(15) },
+      { authIndex: "mix", model: "gpt-6.1-terra", inputTokens: 1, outputTokens: 0, cachedTokens: 0, timestamp: at(16) },
+    ]);
+
+    const history = await getAccountQuotaHistory("mix", TEST_PRICING);
+    const pro = history.models.find((m) => m.modelId === "gemini-2.5-pro");
+    expect(pro?.estimatedFullWindowUsd).toBeCloseTo(2.002 / 0.2);
+    expect(history.models.find((m) => m.modelId === "gpt-6.1-terra")).toBeUndefined();
+  });
 });

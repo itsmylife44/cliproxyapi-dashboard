@@ -12,6 +12,8 @@ import { COMPLETED_QUOTA_WINDOWS_FOR_ESTIMATES, HISTORY_WINDOW_DAYS, RESET_TIME_
 
 const MIN_OBSERVED_DELTA = 0.02;
 const DELTA_EPSILON = 1e-9;
+/** Share of an interval's spend a model needs before that interval's quota drop counts toward its own rate. */
+const DOMINANT_MODEL_SPEND_SHARE = 0.95;
 
 export interface QuotaHistoryPoint {
   timestamp: string;
@@ -284,18 +286,18 @@ function calibrateSeries(
         if (!pendingHasUnpriced && pendingUsd > 0) {
           windowAcc.currentDelta += drop;
           windowAcc.currentUsd += pendingUsd;
-          if (pendingModels.size === 1) {
-            const [soleModel, soleUsd] = pendingModels.entries().next().value!;
-            if (soleUsd > 0) {
-              let modelAcc = modelAccs.get(soleModel);
-              if (!modelAcc) {
-                modelAcc = createAccumulator();
-                modelAccs.set(soleModel, modelAcc);
-                modelTimelines.set(soleModel, new Array(series.length).fill(null));
-              }
-              modelAcc.currentDelta += drop;
-              modelAcc.currentUsd += soleUsd;
+          // A model calibrates its own rate only from drops it clearly caused; a share threshold
+          // rather than "sole model" keeps negligible co-traffic from discarding most intervals.
+          for (const [model, modelUsd] of pendingModels) {
+            if (modelUsd / pendingUsd < DOMINANT_MODEL_SPEND_SHARE) continue;
+            let modelAcc = modelAccs.get(model);
+            if (!modelAcc) {
+              modelAcc = createAccumulator();
+              modelAccs.set(model, modelAcc);
+              modelTimelines.set(model, new Array(series.length).fill(null));
             }
+            modelAcc.currentDelta += drop;
+            modelAcc.currentUsd += pendingUsd;
           }
         }
         resetPending();
